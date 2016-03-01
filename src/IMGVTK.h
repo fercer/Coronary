@@ -20,12 +20,20 @@
 #include <vtkImageExtractComponents.h>
 #include <vtkPNGWriter.h>
 
-
 #include <gdcmImageReader.h>
 #include <gdcmImage.h>
 #include <gdcmReader.h>
 #include <gdcmTag.h>
 
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#include <math.h>
+#include <vector>
+#include <algorithm>    // std::sort
+
+#include <iostream>
 
 #include <omp.h>
 
@@ -79,7 +87,8 @@ class IMGVTK{
         void skeletonization();
         void umbralizar();
 
-        void Cargar(const bool enmascarar);
+        void Cargar( const gdcm::Image &gimage );
+        void Cargar( const bool enmascarar );
         void Cargar( const char *ruta, const bool enmascarar);
         void Cargar( char **rutas , const int n_imgs, const bool enmascarar);
 
@@ -109,7 +118,6 @@ class IMGVTK{
         unsigned char *base_ptr;
         unsigned char *skl_ptr;
         unsigned char *mask_ptr;
-        bool esDICOM;
 
         PIX_PAR *pix_caract;
 
@@ -117,10 +125,8 @@ class IMGVTK{
         // T I P O S        D E     D A T O S      P R I V A D O S
         /** ####:   **/
         // M E T O D O S      P R I V A D O S
-        void CargarDICOM( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const bool enmascarar );
-
+        void Cargar(const gdcm::Image &gimage, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src);
         void Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const bool enmascarar);
-        void Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const char *ruta, const bool enmascarar);
         void Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, char **rutas , const int n_imgs, const bool enmascarar);
 
         void mapaDistancias();
@@ -143,7 +149,6 @@ class IMGVTK{
         inline unsigned char dilMask(const unsigned char *mask_dil, const int x, const int y , const int mis_cols, const int mis_rens);
         inline unsigned char erosionMask(const unsigned char *ptr_tmp, const int x, const int y, const int mis_cols, const int mis_rens);
         void erosionar(unsigned char *ptr, const int mis_cols, const int mis_rens);
-
 
         void conexo(const unsigned char *ptr, const int x, const int y, int *conjuntos, unsigned int* n_etiquetados, bool* visitados, const int num_etiquetas, const int mis_cols, const int mis_rens);
         unsigned int *conjuntosConexosDinamico(const unsigned char *ptr, int *conjuntos, const int mis_cols, const int mis_rens);

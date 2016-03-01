@@ -8,20 +8,6 @@
 
 
 #include "IMGVTK.h"
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-#include <fftw3.h>
-
-#include <math.h>
-#include <vector>
-#include <algorithm>    // std::sort
-
-#include <iostream>
-
-
-
 
 // C L A S E: IMGVTK  ---------------------------------------------------------------------------------------------- v
 //----------------------------------------------------------------------------- PRIVATE ------- v
@@ -220,8 +206,6 @@ bool IMGVTK::regionFilling9( const unsigned char *ptr, const int x, const int y,
     Funcion: Rellena espacios vacios dentro del conjunto de pixeles resaltado.
 */
 bool IMGVTK::regionFilling7( const unsigned char *ptr, const int x, const int y, const int mis_cols, const int mis_rens){
-
-    esDICOM = true;
 
     int n_hits = 0;
 
@@ -1167,97 +1151,83 @@ void IMGVTK::umbralizar(){
 }
 
 
-/*  Metodo: CargarDICOM
+/*  Metodo: Cargar
     Funcion: Cargar desde un archivo DICOM la imagen a formato VTK.
 */
-void IMGVTK::CargarDICOM( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const bool enmascarar ){
-    gdcm::ImageReader reader;
-    reader.SetFileName( ruta_origen );
-
+void IMGVTK::Cargar(const gdcm::Image &gimage, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src){
     DEB_MSG("cargando: " << ruta_origen << " (Archivo DICOM)");
+    DEB_MSG("Buffer length: " << gimage.GetBufferLength());
+    char *buffer = new char[gimage.GetBufferLength()];
+    gimage.GetBuffer(buffer);
 
-    if(reader.Read()){
-        gdcm::File &file = reader.GetFile();
-        gdcm::DataSet &ds = file.GetDataSet();
+    const unsigned int* dimension = gimage.GetDimensions();
+    const int mis_cols = dimension[0];
+    const int mis_rens = dimension[1];
+    const int mis_niveles = dimension[2];
+    const int mis_rens_cols = mis_rens*mis_cols;
 
-        const gdcm::Image &gimage = reader.GetImage();
-        DEB_MSG(" Buffer length: " << gimage.GetBufferLength());
-        char *buffer = new char[gimage.GetBufferLength()];
-        gimage.GetBuffer(buffer);
+    DEB_MSG("Cols: " << mis_cols << ", rens: " << mis_rens  << ", niveles: " << mis_niveles);
 
-        const unsigned int* dimension = gimage.GetDimensions();
-        const int mis_cols = dimension[0];
-        const int mis_rens = dimension[1];
-        const int mis_niveles = dimension[2];
-        const int mis_rens_cols = mis_rens*mis_cols;
+    // Alojar memoria para la imagen:
+    img_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, mis_niveles-1);
+    img_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+    img_src->SetOrigin(0.0, 0.0, 0.0);
+    img_src->SetSpacing(1.0, 1.0, 1.0);
 
-        DEB_MSG("Cols: " << mis_cols << ", rens: " << mis_rens  << ", niveles: " << mis_niveles);
+    unsigned char *img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
 
-        // Alojar memoria para la imagen:
-        img_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, mis_niveles-1);
-        img_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
-        img_src->SetOrigin(0.0, 0.0, 0.0);
-        img_src->SetSpacing(1.0, 1.0, 1.0);
+    mask_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, mis_niveles-1);
+    mask_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+    mask_src->SetOrigin(0.0, 0.0, 0.0);
+    mask_src->SetSpacing(1.0, 1.0, 1.0);
 
-        unsigned char *img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
+    gdcm::PhotometricInterpretation scl_comps = gimage.GetPhotometricInterpretation();
+    gdcm::PixelFormat pix_format = gimage.GetPixelFormat();
 
-        mask_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, mis_niveles-1);
-        mask_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
-        mask_src->SetOrigin(0.0, 0.0, 0.0);
-        mask_src->SetSpacing(1.0, 1.0, 1.0);
-
-
-        gdcm::PhotometricInterpretation scl_comps = gimage.GetPhotometricInterpretation();
-        gdcm::PixelFormat pix_format = gimage.GetPixelFormat();
-
-        switch(scl_comps){
-            case gdcm::PhotometricInterpretation::RGB:{
-                    DEB_MSG("Imagen DICOM en RGB...");
-                    if( pix_format == gdcm::PixelFormat::UINT8 ){
-                        for( int z = 0; z < mis_niveles; z++){
-                            img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,z));
-                            for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
-                                img_tmp[xy/3] = (unsigned char)buffer[xy + z*mis_rens_cols];
-                            }
-                            definirMask(img_src, mask_src, z);
+    switch(scl_comps){
+        case gdcm::PhotometricInterpretation::RGB:{
+                DEB_MSG("Imagen DICOM en RGB...");
+                if( pix_format == gdcm::PixelFormat::UINT8 ){
+                    for( int z = 0; z < mis_niveles; z++){
+                        img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,z));
+                        for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
+                            img_tmp[xy/3] = (unsigned char)buffer[xy + z*mis_rens_cols];
                         }
-                    }else{
-                        using namespace std;
-                        cout << "============ ERROR AL CARGAR ARCHIVO DICOM ===========\nFormato de imagen RGB no soportado." << endl;
+                        definirMask(img_src, mask_src, z);
                     }
-                    break;
+                }else{
+                    using namespace std;
+                    cout << "============ ERROR AL CARGAR ARCHIVO DICOM ===========\nFormato de imagen RGB no soportado." << endl;
                 }
-            case gdcm::PhotometricInterpretation::MONOCHROME2:{
-                    DEB_MSG("Imagen DICOM en escala de grises...");
-                    if( pix_format == gdcm::PixelFormat::UINT8 ){
-                        DEB_MSG("Tipo UINT8");
-                        for( int z = 0; z < mis_niveles; z++){
-                            img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,z));
-                            memcpy( img_tmp, buffer + z*mis_rens_cols, mis_rens_cols*sizeof(unsigned char));
-                            definirMask(img_src, mask_src, z);
-                        }
-                    }else if( pix_format == gdcm::PixelFormat::UINT16 ){
-                        DEB_MSG("Tipo UINT16");
-                        unsigned short *buffer16 = (unsigned short*)buffer;
-                        for( int z = 0; z < mis_niveles; z++){
-                            img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,z));
-                            for( int xy = 0; xy < mis_rens_cols; xy+=3){
-                                img_tmp[xy] = (unsigned char)buffer16[xy + z*mis_rens_cols*3] / 16;
-                            }
-                            definirMask(img_src, mask_src, z);
-                        }
-                    }else{
-                        using namespace std;
-                        cout << "============ ERROR AL CARGAR ARCHIVO DICOM ===========\nFormato de imagen RGB no soportado." << endl;
+                break;
+            }
+        case gdcm::PhotometricInterpretation::MONOCHROME2:{
+                DEB_MSG("Imagen DICOM en escala de grises...");
+                if( pix_format == gdcm::PixelFormat::UINT8 ){
+                    DEB_MSG("Tipo UINT8");
+                    for( int z = 0; z < mis_niveles; z++){
+                        img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,z));
+                        memcpy( img_tmp, buffer + z*mis_rens_cols, mis_rens_cols*sizeof(unsigned char));
+                        definirMask(img_src, mask_src, z);
                     }
-                    break;
+                }else if( pix_format == gdcm::PixelFormat::UINT16 ){
+                    DEB_MSG("Tipo UINT16");
+                    unsigned short *buffer16 = (unsigned short*)buffer;
+                    for( int z = 0; z < mis_niveles; z++){
+                        img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,z));
+                        for( int xy = 0; xy < mis_rens_cols; xy+=3){
+                            img_tmp[xy] = (unsigned char)buffer16[xy + z*mis_rens_cols*3] / 16;
+                        }
+                        definirMask(img_src, mask_src, z);
+                    }
+                }else{
+                    using namespace std;
+                    cout << "============ ERROR AL CARGAR ARCHIVO DICOM ===========\nFormato de imagen RGB no soportado." << endl;
                 }
+                break;
+            }
 
-        }
     }
-
-
-
 }
 
 /*  Metodo: Cargar
@@ -1461,6 +1431,28 @@ void IMGVTK::Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkIm
 
 
 
+/*  Metodo: Cargar
+    Funcion: Cargar la imagen a formato VTK desde un archivo DICOM.
+*/
+void IMGVTK::Cargar(const gdcm::Image &gimage){
+    base = vtkSmartPointer<vtkImageData>::New();
+    mask = vtkSmartPointer<vtkImageData>::New();
+
+    Cargar(gimage, base, mask);
+
+    base_ptr = static_cast<unsigned char*>(base->GetScalarPointer(0, 0, 0));
+    mask_ptr = static_cast<unsigned char*>(mask->GetScalarPointer(0, 0, 0));
+
+    int dims[3];
+    base->GetDimensions( dims );
+
+    cols = dims[0];
+    rens = dims[1];
+    rens_cols = rens*cols;
+}
+
+
+
 
 /*  Metodo: Cargar
     Funcion: Cargar la imagen a formato VTK.
@@ -1469,19 +1461,7 @@ void IMGVTK::Cargar(const bool enmascarar){
     base = vtkSmartPointer<vtkImageData>::New();
     mask = vtkSmartPointer<vtkImageData>::New();
 
-    const int l_ruta = strlen(ruta_origen);
-    DEB_MSG( "Extension: " << (ruta_origen + (l_ruta - 3)) );
-    bool es_png = strcmp(ruta_origen + (l_ruta - 3), "png" ) == 0;
-    bool es_bmp = strcmp(ruta_origen + (l_ruta - 3), "bmp" ) == 0;
-    bool es_jpg = strcmp(ruta_origen + (l_ruta - 4), "jpeg" ) == 0;
-    es_jpg |= strcmp(ruta_origen + (l_ruta - 3), "jpg" ) == 0;
-
-    if( es_png || es_bmp || es_jpg ){
-        Cargar(base, mask, enmascarar);
-    }else{
-        // Es DICOM:
-        CargarDICOM(base, mask, enmascarar);
-    }
+    Cargar(base, mask, enmascarar);
 
     base_ptr = static_cast<unsigned char*>(base->GetScalarPointer(0, 0, 0));
     mask_ptr = static_cast<unsigned char*>(mask->GetScalarPointer(0, 0, 0));
@@ -1506,24 +1486,10 @@ void IMGVTK::Cargar(const char *ruta , const bool enmascarar){
         delete [] ruta_origen;
     }
     ruta_origen = setRuta(ruta);
-    const int l_ruta = strlen(ruta_origen);
-    DEB_MSG( "Extension: " << (ruta_origen + (l_ruta - 3)) );
-    bool es_png = strcmp(ruta_origen + (l_ruta - 3), "png" ) == 0;
-    bool es_bmp = strcmp(ruta_origen + (l_ruta - 3), "bmp" ) == 0;
-    bool es_jpg = strcmp(ruta_origen + (l_ruta - 4), "jpeg" ) == 0;
-    es_jpg |= strcmp(ruta_origen + (l_ruta - 3), "jpg" ) == 0;
-
-
-    if( es_png || es_bmp || es_jpg ){
-        Cargar(base, mask, enmascarar);
-    }else{
-        // Es DICOM:
-        CargarDICOM(base, mask, enmascarar);
-    }
+    Cargar(base, mask, enmascarar);
 
     base_ptr = static_cast<unsigned char*>(base->GetScalarPointer(0, 0, 0));
     mask_ptr = static_cast<unsigned char*>(mask->GetScalarPointer(0, 0, 0));
-
 
     int dims[3];
     base->GetDimensions( dims );
@@ -1531,12 +1497,6 @@ void IMGVTK::Cargar(const char *ruta , const bool enmascarar){
     cols = dims[0];
     rens = dims[1];
     rens_cols = rens*cols;
-
-#ifndef NDEBUG
-    if(enmascarar){
-        Guardar("/home/fercer/mask.png", PNG);
-    }
-#endif
 }
 
 
@@ -1574,7 +1534,7 @@ void IMGVTK::Guardar(){
         case PNG:{
             vtkSmartPointer<vtkPNGWriter> png_output = vtkSmartPointer<vtkPNGWriter>::New();
             png_output->SetFileName( ruta_salida );          
-            png_output->SetInputData( bsae );
+            png_output->SetInputData( base );
             png_output->Write();
             break;
         }
@@ -1609,8 +1569,6 @@ void IMGVTK::Guardar( const TIPO_IMG tipo_salida_src){
 /* CONSTRUCTORES */
 IMGVTK::IMGVTK(){
 
-    esDICOM = false;
-
     ruta_origen = NULL;
     ruta_salida = NULL;
     tipo_salida = PNG;
@@ -1626,8 +1584,6 @@ IMGVTK::IMGVTK(){
 
 IMGVTK::IMGVTK( const char *ruta_origen_src ){
 
-    esDICOM = false;
-
     ruta_salida = NULL;
     tipo_salida = PNG;
 
@@ -1641,8 +1597,6 @@ IMGVTK::IMGVTK( const char *ruta_origen_src ){
 
 
 IMGVTK::IMGVTK( const char *ruta_origen_src, const char *ruta_salida_src ){
-
-    esDICOM = false;
 
     tipo_salida = PNG;
 
@@ -1658,9 +1612,6 @@ IMGVTK::IMGVTK( const char *ruta_origen_src, const char *ruta_salida_src ){
 
 
 IMGVTK::IMGVTK( const char *ruta_origen_src, const char *ruta_salida_src, const TIPO_IMG tipo_salida_src ){
-
-    esDICOM = false;
-
     ruta_origen = setRuta(ruta_origen_src);
 
     Cargar(true);
@@ -1676,8 +1627,6 @@ IMGVTK::IMGVTK( const char *ruta_origen_src, const char *ruta_salida_src, const 
 
 IMGVTK::IMGVTK(char **rutas, const int n_imgs ){
 
-    esDICOM = false;
-
     ruta_origen = NULL;
     ruta_salida = NULL;
     tipo_salida = PNG;
@@ -1691,8 +1640,6 @@ IMGVTK::IMGVTK(char **rutas, const int n_imgs ){
 
 
 IMGVTK::IMGVTK(char **rutas, const int n_imgs, const char *ruta_salida_src ){
-
-    esDICOM = false;
 
     ruta_origen = NULL;
     tipo_salida = PNG;
@@ -1709,8 +1656,6 @@ IMGVTK::IMGVTK(char **rutas, const int n_imgs, const char *ruta_salida_src ){
 
 
 IMGVTK::IMGVTK( char **rutas, const int n_imgs, const char *ruta_salida_src, const TIPO_IMG tipo_salida_src ){
-
-    esDICOM = false;
 
     ruta_origen = NULL;
 

@@ -238,6 +238,8 @@ void RECONS3D::skeletonize(){
     Funcion: Recibe las rutas de las imagenes usadas como conjunto de entrenamiento.
 */
 RECONS3D::RECONS3D(char **rutasbase_input, char **rutasground_input, const int n_imgs){
+    esDICOM = false;
+
     // Cargar la imagen base como la concatenacion de todas las imagenes base:
     img_base.Cargar(rutasbase_input, n_imgs, true);
 
@@ -252,13 +254,18 @@ RECONS3D::RECONS3D(char **rutasbase_input, char **rutasground_input, const int n
     Funcion: Recibe las rutas de las imagenes usadas como conjunto de entrenamiento.
 */
 RECONS3D::RECONS3D(const char *rutabase_input, const char *rutaground_input){
-    img_base.Cargar( rutabase_input, true);
-    img_delin.Cargar( rutaground_input, false);
-    mi_renderer = vtkSmartPointer<vtkRenderer>::New();
 
-    if( img_base.esDICOM ){
+    esDICOM = true;
+
+    const int ruta_l = strlen(rutabase_input);
+    DEB_MSG("Extension del archivo de entrada: " << (rutabase_input + ruta_l - 3));
+    esDICOM *= strcmp(rutabase_input + ruta_l - 3, "png");
+    esDICOM *= strcmp(rutabase_input + ruta_l - 3, "jpg");
+    esDICOM *= strcmp(rutabase_input + ruta_l - 4, "jpeg");
+    esDICOM *= strcmp(rutabase_input + ruta_l - 3, "bmp");
+
+    if(esDICOM){
         gdcm::ImageReader DICOMreader;
-        DEB_MSG("ruta base: " << rutabase_input);
         DICOMreader.SetFileName( rutabase_input );
         DICOMreader.Read();
         gdcm::File &file = DICOMreader.GetFile();
@@ -267,13 +274,20 @@ RECONS3D::RECONS3D(const char *rutabase_input, const char *rutaground_input){
         strm.str("");
         const gdcm::Image &gimage = DICOMreader.GetImage();
         DEB_MSG(" Buffer length: " << gimage.GetBufferLength());
-        if( fmi.FindDataElement(gdcm::Tag (0x0002, 0x0002)) ){
-            fmi.GetDataElement( gdcm::Tag (0x0002, 0x0002) ).GetValue().Print(strm);
-            DEB_MSG("TAG[" << (0x0002) << "," << (0x0002) << "]: " << strm.str() );
+        if( fmi.FindDataElement(gdcm::Tag (0x8, 0x456)) ){
+            fmi.GetDataElement( gdcm::Tag (0x8, 0x456) ).GetValue().Print(strm);
+            DEB_MSG("TAG[" << (0x8) << "," << (0x456) << "]: " << strm.str() );
         }else{
             DEB_MSG("No funciona . . .");
         }
+        img_base.Cargar( gimage );
+    }else{
+        img_base.Cargar( rutabase_input, true);
     }
+
+    img_delin.Cargar( rutaground_input, false);
+
+    mi_renderer = vtkSmartPointer<vtkRenderer>::New();
 }
 
 //-------------------------------------------------------------------------------------------------- PUBLIC----- ^

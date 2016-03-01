@@ -9,8 +9,25 @@
 #ifndef FILTROS_H_INCLUDED
 #define FILTROS_H_INCLUDED
 
-#include "img_proc.h"
+
+
+#include <assert.h>
+
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
 #include <fftw3.h>
+
+#include <math.h>
+#include <omp.h>
+
+#include <iostream>
+
+#include <vtkSmartPointer.h>
+#include <vtkImageData.h>
+
+#include "IMGVTK.h"
 
 // C L A S E: FILTRO  ---------------------------------------------------------------------------------------------- v
 class FILTROS{

@@ -99,7 +99,7 @@ class RECONS3D{
         IMGVTK img_delin;
         IMGVTK img_segment;
 
-        gdcm::DataSet &ds;
+        bool esDICOM;
 
         // Miembros para visualizar la segmentacion 3D:
         vtkSmartPointer<vtkRenderer> mi_renderer;

@@ -9,22 +9,6 @@
 
 #include "filtros.h"
 
-#include <assert.h>
-
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-#include <fftw3.h>
-
-#include <math.h>
-#include <omp.h>
-
-#include <iostream>
-
-#include <vtkSmartPointer.h>
-#include <vtkImageData.h>
-
 
 #ifdef _OPENMP
     #define TIMERS double t_ini, t_fin
