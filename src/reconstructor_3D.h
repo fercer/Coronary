@@ -45,6 +45,7 @@
 #include <gdcmImage.h>
 #include <gdcmReader.h>
 #include <gdcmTag.h>
+#include <gdcmPrivateTag.h>
 
 #include <assert.h>
 
@@ -105,7 +106,7 @@ class RECONS3D{
         vtkSmartPointer<vtkRenderer> mi_renderer;
 
         void renderizar();
-        void mostrarImagen(vtkSmartPointer<vtkImageData> &imagen , const int nivel);
+        void mostrarImagen(vtkSmartPointer<vtkImageData> &imagen , int nivel);
         void agregarEsfera( const double x, const double y, const double z, const double radio, double color[3] );
 
 

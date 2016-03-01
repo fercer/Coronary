@@ -45,14 +45,22 @@ void RECONS3D::renderizar(){
 
     Funcion: Muestra la imagen en una ventana VTK.
 */
-void RECONS3D::mostrarImagen( vtkSmartPointer<vtkImageData> &img_src, const int nivel ){
+void RECONS3D::mostrarImagen( vtkSmartPointer<vtkImageData> &img_src, int nivel ){
 
-    int dimensions[3];
-    img_src->GetDimensions(dimensions);
-    const int mis_cols = dimensions[0];
-    const int mis_rens = dimensions[1];
+    int extension[6];
+    img_src->GetExtent(extension);
+    const int mis_cols = extension[1] - extension[0] + 1;
+    const int mis_rens = extension[3] - extension[2] + 1;
+    const int mis_niveles = extension[5] - extension[4] + 1;
     const int mis_rens_cols = mis_cols*mis_rens;
 
+    DEB_MSG("extension: {(" << extension[0] << "," << extension[1] << "), (" << extension[2] << "," << extension[3] << "), (" << extension[4] << "," << extension[5] << ")}" );
+
+
+    if( mis_niveles < nivel ){
+        DEB_MSG("La imagen solo tiene " << mis_niveles << " niveles...");
+        nivel = mis_niveles - 1;
+    }
 
     // Elegir el nivel que se quiere mostar:
     vtkSmartPointer<vtkImageData> img_temp = vtkSmartPointer<vtkImageData>::New();
@@ -77,7 +85,6 @@ void RECONS3D::mostrarImagen( vtkSmartPointer<vtkImageData> &img_src, const int 
         actor->SetInputData(img_temp);
     #endif
     DEB_MSG("Actor input despues: " << actor->GetInput() << ", " << img_temp);
-    actor->GetInput()->GetDimensions(dimensions);
 
 #ifndef NDEBUG
     double bounds[6];
@@ -265,21 +272,24 @@ RECONS3D::RECONS3D(const char *rutabase_input, const char *rutaground_input){
     esDICOM *= strcmp(rutabase_input + ruta_l - 3, "bmp");
 
     if(esDICOM){
+
+        // Abrir el archivo DICOM
         gdcm::ImageReader DICOMreader;
         DICOMreader.SetFileName( rutabase_input );
         DICOMreader.Read();
+
         gdcm::File &file = DICOMreader.GetFile();
-        gdcm::FileMetaInformation &fmi = file.GetHeader();
+        gdcm::DataSet &ds = file.GetDataSet();
         std::stringstream strm;
         strm.str("");
-        const gdcm::Image &gimage = DICOMreader.GetImage();
-        DEB_MSG(" Buffer length: " << gimage.GetBufferLength());
-        if( fmi.FindDataElement(gdcm::Tag (0x8, 0x456)) ){
-            fmi.GetDataElement( gdcm::Tag (0x8, 0x456) ).GetValue().Print(strm);
-            DEB_MSG("TAG[" << (0x8) << "," << (0x456) << "]: " << strm.str() );
+        DEB_MSG("TAG[" << (0x12) << "," << (0x456) << "]: ");
+        if( ds.FindDataElement(gdcm::PrivateTag (0x12, 0x456)) ){
+            ds.GetDataElement( gdcm::PrivateTag (0x12, 0x456) ).GetValue().Print(strm);
+            DEB_MSG( strm.str() );
         }else{
             DEB_MSG("No funciona . . .");
         }
+        const gdcm::Image &gimage = DICOMreader.GetImage();
         img_base.Cargar( gimage );
     }else{
         img_base.Cargar( rutabase_input, true);
@@ -288,6 +298,9 @@ RECONS3D::RECONS3D(const char *rutabase_input, const char *rutaground_input){
     img_delin.Cargar( rutaground_input, false);
 
     mi_renderer = vtkSmartPointer<vtkRenderer>::New();
+
+    mostrarImagen(img_base.base, 50);
+    renderizar();
 }
 
 //-------------------------------------------------------------------------------------------------- PUBLIC----- ^

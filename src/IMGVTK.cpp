@@ -1238,7 +1238,7 @@ void IMGVTK::Cargar( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkI
     vtkSmartPointer<vtkImageReader2Factory> readerFactory = vtkSmartPointer<vtkImageReader2Factory>::New();
     vtkSmartPointer<vtkImageReader2> imgReader = readerFactory->CreateImageReader2( ruta_origen );
 
-    DEB_MSG("cargando: " << ruta_origen)
+    DEB_MSG("cargando: " << ruta_origen << " (PNG, BMP, JPEG)")
 
 #ifndef NDEBUG
     FILE *fp = fopen(ruta_origen,"r");
