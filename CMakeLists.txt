@@ -2,8 +2,8 @@ MESSAGE(CMAKE_VERSION: ${CMAKE_VERSION})
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 SET(NOMBRE_PROYECTO Coronary)
-SET(HEADERS src/reconstructor_3D.h src/filtros.h src/img_proc.h)
-SET(SOURCES src/main.cpp src/reconstructor_3D.cpp src/filtros.cpp src/img_proc.cpp)
+SET(HEADERS src/reconstructor_3D.h src/filtros.h src/IMGVTK.h)
+SET(SOURCES src/main.cpp src/reconstructor_3D.cpp src/filtros.cpp src/IMGVTK.cpp)
 
 SET(CMAKE_C_FLAGS_DISTRIBUTION "--std=c99 -g -O3 -DNDEBUG -lm -fopenmp")
 SET(CMAKE_C_FLAGS_DEBUG "--std=c99 -g -lm -fopenmp")
