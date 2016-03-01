@@ -6,73 +6,8 @@
     SEP - 2015
 *****/
 
-// Librerias de uso comun:
-#include <vtkVersion.h>
-#include <vtkSmartPointer.h>
-
-// Librerias para trabajar con imagenes:
-#include <vtkImageData.h>
-#include <vtkImageReader2Factory.h>
-#include <vtkImageReader2.h>
-#include <vtkImageExtractComponents.h>
-#include <vtkImageActor.h>
-#include <vtkImageMapper3D.h>
-
-// Librerias para generar mallas:
-#include <vtkTriangle.h>
-#include <vtkCellArray.h>
-#include <vtkPolyData.h>
-#include <vtkPolyDataMapper.h>
-
-// Librerias para visualizacion
-#include <vtkActor.h>
-#include <vtkRenderWindow.h>
-#include <vtkRenderer.h>
-#include <vtkRenderWindowInteractor.h>
-#include <vtkOutlineFilter.h>
-#include <vtkInteractorStyleTrackballCamera.h>
-#include <vtkProperty.h>
-#include <vtkSphereSource.h>
 
 #include "reconstructor_3D.h"
-
-#include <assert.h>
-
-#include <string.h>
-#include <stdlib.h>
-
-#include <iostream>
-#include <fstream>
-
-#include <omp.h>
-
-
-#ifdef _OPENMP
-    #define TIMERS double t_ini, t_fin
-    #define GETTIME_INI t_ini = omp_get_wtime()
-    #define GETTIME_FIN t_fin = omp_get_wtime()
-    #define DIFTIME (t_fin - t_ini)
-#else
-    #include <sys/time.h>
-    #define TIMERS struct timeval t_ini, t_fin
-    #define GETTIME_INI gettimeofday( &t_ini, NULL)
-    #define GETTIME_FIN gettimeofday( &t_fin, NULL)
-    #define DIFTIME ((t_fin.tv_sec*1e6 + t_fin.tv_usec) - (t_ini.tv_sec*1e6 + t_ini.tv_usec) )/ 1e6
-    #define omp_get_num_threads() 1
-    #define omp_set_num_threads(cores)
-    #define omp_get_thread_num() 0
-#endif
-
-
-#define PI 3.14159265
-
-
-#ifndef NDEBUG
-    #define DEB_MSG(MENSAJE) using namespace std;\
-                             cout << MENSAJE << endl;
-#else
-    #define DEB_MSG(MENSAJE)
-#endif
 
 // C L A S E: RECONS3D  ------------------------------------------------------------------------ v
 
@@ -321,8 +256,24 @@ RECONS3D::RECONS3D(const char *rutabase_input, const char *rutaground_input){
     img_delin.Cargar( rutaground_input, false);
     mi_renderer = vtkSmartPointer<vtkRenderer>::New();
 
-
-    gdcm::File &file = reader.GetFile();
+    if( img_base.esDICOM ){
+        gdcm::ImageReader DICOMreader;
+        DEB_MSG("ruta base: " << rutabase_input);
+        DICOMreader.SetFileName( rutabase_input );
+        DICOMreader.Read();
+        gdcm::File &file = DICOMreader.GetFile();
+        gdcm::FileMetaInformation &fmi = file.GetHeader();
+        std::stringstream strm;
+        strm.str("");
+        const gdcm::Image &gimage = DICOMreader.GetImage();
+        DEB_MSG(" Buffer length: " << gimage.GetBufferLength());
+        if( fmi.FindDataElement(gdcm::Tag (0x0002, 0x0002)) ){
+            fmi.GetDataElement( gdcm::Tag (0x0002, 0x0002) ).GetValue().Print(strm);
+            DEB_MSG("TAG[" << (0x0002) << "," << (0x0002) << "]: " << strm.str() );
+        }else{
+            DEB_MSG("No funciona . . .");
+        }
+    }
 }
 
 //-------------------------------------------------------------------------------------------------- PUBLIC----- ^
