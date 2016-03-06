@@ -83,7 +83,6 @@ class IMGVTK{
 
         // M E T O D O S      P U B L I C O S
         void definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src );
-        void definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel );
         void skeletonization();
         void umbralizar();
 

@@ -109,7 +109,7 @@ class RECONS3D{
         std::vector< vtkSmartPointer<vtkRenderer> > mis_renderers;
         vtkSmartPointer<vtkRenderer> renderer_global;
 
-        void renderizar(const int renderer_id);
+        void renderizar(vtkSmartPointer<vtkRenderer> mi_renderer);
         void mostrarImagen(vtkSmartPointer<vtkImageData> &imagen, vtkSmartPointer<vtkRenderer> mi_renderer );
         void agregarEsfera(const double x, const double y, const double z, const double radio, double color[3], vtkSmartPointer<vtkRenderer> mi_renderer );
 
@@ -129,6 +129,8 @@ class RECONS3D{
     // M E T O D O S        P U B L I C O S
         void agregarInput(char **rutasbase_input, char **rutasground_input, const int n_imgs);
         void agregarInput(const char *rutabase_input, const char *rutaground_input, const int nivel);
+        void agregarPosicion(const double RAO_LAO, const double CAU_CRA, const double Distance_to_patient, const double Distance_source_to_detector, const double Window_Center, const double Window_Width);
+
         void segmentarImagenBase();
         void skeletonize();
 

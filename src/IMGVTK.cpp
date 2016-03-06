@@ -1071,31 +1071,6 @@ void IMGVTK::definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer
 
 
 
-/*  Metodo: definirMask
-    Funcion: Define una mascara para normalizar los pixeles de la imagen.
-*/
-void IMGVTK::definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel ){
-
-    unsigned char *img_tmp = static_cast<unsigned char *>(img_src->GetScalarPointer(0,0,nivel));
-
-    int dims[3];
-
-    img_src->GetDimensions( dims );
-
-    const int mis_cols = dims[0];
-    const int mis_rens = dims[1];
-
-    DEB_MSG("img cols: " << mis_cols << ", img rens" << mis_rens);
-
-    mask_src->SetOrigin(0.0, 0.0, (double)nivel);
-
-    unsigned char *mask_tmp = static_cast<unsigned char *>(mask_src->GetScalarPointer(0,0,nivel));
-    maskFOV( img_tmp, mask_tmp, mis_cols, mis_rens );
-    fillMask( img_tmp, mask_tmp, mis_cols, mis_rens );
-}
-
-
-
 
 
 
@@ -1193,7 +1168,7 @@ void IMGVTK::Cargar(const gdcm::Image &gimage, vtkSmartPointer<vtkImageData> img
                     for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
                         img_tmp[xy/3] = (unsigned char)buffer[xy + nivel*mis_rens_cols];
                     }
-                    definirMask(img_src, mask_src, nivel);
+                    definirMask(img_src, mask_src);
                 }else{
                     using namespace std;
                     cout << "============ ERROR AL CARGAR ARCHIVO DICOM ===========\nFormato de imagen RGB no soportado." << endl;
@@ -1207,7 +1182,7 @@ void IMGVTK::Cargar(const gdcm::Image &gimage, vtkSmartPointer<vtkImageData> img
 
                     img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
                     memcpy( img_tmp, buffer + nivel*mis_rens_cols, mis_rens_cols*sizeof(unsigned char));
-                    definirMask(img_src, mask_src, nivel);
+                    definirMask(img_src, mask_src);
 
                 }else if( pix_format == gdcm::PixelFormat::UINT16 ){
                     DEB_MSG("Tipo UINT16");
@@ -1217,7 +1192,7 @@ void IMGVTK::Cargar(const gdcm::Image &gimage, vtkSmartPointer<vtkImageData> img
                     for( int xy = 0; xy < mis_rens_cols; xy+=3){
                         img_tmp[xy] = (unsigned char)buffer16[xy + nivel*mis_rens_cols*3] / 16;
                     }
-                    definirMask(img_src, mask_src, nivel);
+                    definirMask(img_src, mask_src);
 
                 }else{
                     using namespace std;
@@ -1585,52 +1560,64 @@ IMGVTK::IMGVTK( const gdcm::Image &gimage, const int nivel ){
     ruta_salida = NULL;
     tipo_salida = PNG;
 
-    Cargar(gimage, nivel);
-
     map_ptr = NULL;
+    base_ptr = NULL;
     skl_ptr = NULL;
     pix_caract = NULL;
+    mask_ptr = NULL;
+
+    Cargar(gimage, nivel);
 }
 
 
 
 IMGVTK::IMGVTK(const char *ruta_origen_src ){
-
+    ruta_origen = NULL;
     ruta_salida = NULL;
     tipo_salida = PNG;
 
-    ruta_origen = setRuta(ruta_origen_src);
-    Cargar(true);
-
     map_ptr = NULL;
+    base_ptr = NULL;
     skl_ptr = NULL;
     pix_caract = NULL;
+    mask_ptr = NULL;
+
+    ruta_origen = setRuta(ruta_origen_src);
+    Cargar(true);
 }
 
 
 IMGVTK::IMGVTK(const char *ruta_origen_src, const char *ruta_salida_src ){
-
+    ruta_origen = NULL;
+    ruta_salida = NULL;
     tipo_salida = PNG;
+
+    map_ptr = NULL;
+    base_ptr = NULL;
+    skl_ptr = NULL;
+    pix_caract = NULL;
+    mask_ptr = NULL;
 
     ruta_origen = setRuta(ruta_origen_src);
     Cargar(true);
 
     ruta_salida = setRuta(ruta_salida_src);
-
-    map_ptr = NULL;
-    skl_ptr = NULL;
-    pix_caract = NULL;
 }
 
 
 IMGVTK::IMGVTK(const char *ruta_origen_src, const char *ruta_salida_src, const TIPO_IMG tipo_salida_src ){
-    ruta_origen = setRuta(ruta_origen_src);
-
-    Cargar(true);
+    ruta_origen = NULL;
+    ruta_salida = NULL;
+    tipo_salida = PNG;
 
     map_ptr = NULL;
+    base_ptr = NULL;
     skl_ptr = NULL;
     pix_caract = NULL;
+    mask_ptr = NULL;
+
+    ruta_origen = setRuta(ruta_origen_src);
+    Cargar(true);
 
     ruta_salida = setRuta(ruta_salida_src);
     tipo_salida = tipo_salida_src;
@@ -1638,47 +1625,52 @@ IMGVTK::IMGVTK(const char *ruta_origen_src, const char *ruta_salida_src, const T
 
 
 IMGVTK::IMGVTK(char **rutas, const int n_imgs ){
-
     ruta_origen = NULL;
     ruta_salida = NULL;
     tipo_salida = PNG;
 
-    Cargar( rutas, n_imgs, true);
-
     map_ptr = NULL;
+    base_ptr = NULL;
     skl_ptr = NULL;
     pix_caract = NULL;
+    mask_ptr = NULL;
+
+    Cargar( rutas, n_imgs, true);
 }
 
 
 IMGVTK::IMGVTK(char **rutas, const int n_imgs, const char *ruta_salida_src ){
-
     ruta_origen = NULL;
+    ruta_salida = NULL;
     tipo_salida = PNG;
 
+    map_ptr = NULL;
+    base_ptr = NULL;
+    skl_ptr = NULL;
+    pix_caract = NULL;
+    mask_ptr = NULL;
 
     Cargar( rutas, n_imgs, true);
 
     ruta_salida = setRuta(ruta_salida_src);
-
-    map_ptr = NULL;
-    skl_ptr = NULL;
-    pix_caract = NULL;
 }
 
 
 IMGVTK::IMGVTK( char **rutas, const int n_imgs, const char *ruta_salida_src, const TIPO_IMG tipo_salida_src ){
-
     ruta_origen = NULL;
+    ruta_salida = NULL;
+    tipo_salida = PNG;
+
+    map_ptr = NULL;
+    base_ptr = NULL;
+    skl_ptr = NULL;
+    pix_caract = NULL;
+    mask_ptr = NULL;
 
     Cargar( rutas, n_imgs, true);
 
     ruta_salida = setRuta(ruta_salida_src);
     tipo_salida = tipo_salida_src;
-
-    map_ptr = NULL;
-    skl_ptr = NULL;
-    pix_caract = NULL;
 }
 
 
@@ -1705,15 +1697,20 @@ IMGVTK::~IMGVTK(){
 IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
 
     if(origen.base_ptr){
-        if(ruta_origen){
-            delete [] ruta_origen;
-        }
-        ruta_origen = setRuta(origen.ruta_origen);
 
-        if(ruta_salida){
-            delete [] ruta_salida;
+        if(origen.ruta_origen){
+            if(ruta_origen){
+                delete [] ruta_origen;
+            }
+            ruta_origen = setRuta(origen.ruta_origen);
         }
-        ruta_salida = setRuta(origen.ruta_salida);
+
+        if(origen.ruta_salida){
+            if(ruta_salida){
+                delete [] ruta_salida;
+            }
+            ruta_salida = setRuta(origen.ruta_salida);
+        }
 
         tipo_salida = origen.tipo_salida;
 

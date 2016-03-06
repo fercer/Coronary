@@ -20,13 +20,13 @@
 
     Funcion: Renderiza los 'actores' contenidos en 'renderer' en una ventana de VTK.
 */
-void RECONS3D::renderizar( const int renderer_id ){
+void RECONS3D::renderizar( vtkSmartPointer<vtkRenderer> mi_renderer ){
 
-    mis_renderers[renderer_id]->ResetCamera();
+    mi_renderer->ResetCamera();
 
     // Crear una ventana temporal:
     vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
-    renderWindow->AddRenderer(mis_renderers[renderer_id]);
+    renderWindow->AddRenderer(mi_renderer);
 
     // Crear interactuador temporal:
     vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
@@ -135,10 +135,10 @@ void RECONS3D::agregarInput(const char *rutabase_input, const char *rutaground_i
 
     const int ruta_l = strlen(rutabase_input);
     DEB_MSG("Extension del archivo de entrada: " << (rutabase_input + ruta_l - 3));
-    esDICOM[n_angios-1] = esDICOM[n_angios-1] & strcmp(rutabase_input + ruta_l - 3, "png");
-    esDICOM[n_angios-1] = esDICOM[n_angios-1] & strcmp(rutabase_input + ruta_l - 3, "jpg");
-    esDICOM[n_angios-1] = esDICOM[n_angios-1] & strcmp(rutabase_input + ruta_l - 4, "jpeg");
-    esDICOM[n_angios-1] = esDICOM[n_angios-1] & strcmp(rutabase_input + ruta_l - 3, "bmp");
+    esDICOM[n_angios-1] = esDICOM[n_angios-1] * strcmp(rutabase_input + ruta_l - 3, "png");
+    esDICOM[n_angios-1] = esDICOM[n_angios-1] * strcmp(rutabase_input + ruta_l - 3, "jpg");
+    esDICOM[n_angios-1] = esDICOM[n_angios-1] * strcmp(rutabase_input + ruta_l - 4, "jpeg");
+    esDICOM[n_angios-1] = esDICOM[n_angios-1] * strcmp(rutabase_input + ruta_l - 3, "bmp");
 
     IMGVTK *imgs_temp = imgs_base;
     imgs_base = new IMGVTK [n_angios];
@@ -186,6 +186,19 @@ void RECONS3D::agregarInput(const char *rutabase_input, const char *rutaground_i
 
 
 
+
+
+/*  Metodo: agregarPosicion
+
+    Funcion: Define la posicion en que se encuentra alguna imagen base.
+*/
+void RECONS3D::agregarPosicion(const double RAO_LAO, const double CAU_CRA, const double Distance_to_patient, const double Distance_source_to_detector, const double Window_Center, const double Window_Width){
+
+}
+
+
+
+
 /*  Metodo: segmentarImagen()
 
     Funcion: Multiplica la imagen base por el filtro para extraer las intensidades de los pixeles segmentados
@@ -195,17 +208,16 @@ void RECONS3D::segmentarImagenBase(){
 
     mostrarImagen(imgs_base[0].mask, mis_renderers[0]);
 
+    renderizar( mis_renderers[0]);
 
-    renderizar(0);
 
-    /*
     FILTROS filtro_gabor;
-    filtro_gabor.setFiltro(FILTROS::GMF);
+    filtro_gabor.setFiltro(FILTROS::SS_GABOR);
     filtro_gabor.setFitness(FILTROS::ROC);
     filtro_gabor.setEvoMet(FILTROS::EDA_BUMDA, 50, 30);
-    filtro_gabor.setInput(img_base, img_delin);
-    filtro_gabor.setOutput(img_segment);
-    */
+    filtro_gabor.setInput(imgs_base[0], imgs_delin[0]);
+    filtro_gabor.setOutput(imgs_segment[0]);
+
 //    filtro_gabor.setPar(FILTROS::PAR_K, 12);
 //    filtro_gabor.setPar(FILTROS::PAR_DELTA, 1e-4);
 //    filtro_gabor.setPar(FILTROS::PAR_SIGMA, 2.83);
@@ -221,25 +233,24 @@ void RECONS3D::segmentarImagenBase(){
 //    filtro_gabor.setLim(FILTROS::PAR_L, 8.0, 15.0, 0.0001);
 //    filtro_gabor.setLim(FILTROS::PAR_T, 8.0, 15.0, 0.0001);
 //    filtro_gabor.setLim(FILTROS::PAR_SIGMA, 1.0, 5.0, 0.0001);
-    /*
+
     // Parametros fijos:
     filtro_gabor.setPar(FILTROS::PAR_T, 15);
-    filtro_gabor.setPar(FILTROS::PAR_L, 11);
-    filtro_gabor.setPar(FILTROS::PAR_SIGMA, 2.82);
-    filtro_gabor.setPar(FILTROS::PAR_K, 12);
+    filtro_gabor.setPar(FILTROS::PAR_L, 2.65);
+    filtro_gabor.setPar(FILTROS::PAR_K, 180);
     filtro_gabor.setPar(FILTROS::PAR_DELTA, 1e-4);
-    */
+
 //    filtro_gabor.setPar();
 
 //    GETTIME_FIN;
 //    FILTROS::INDIV elite = filtro_gabor.getPars();
 //    cout << "Tiempo: " << DIFTIME << " segundos" << endl << "Mejores parametros: T = " << elite.vars[0] << ", L = " << elite.vars[1] << ", K = " << elite.vars[2] << ", sigma = " << elite.vars[3] << ", delta = " << elite.vars[4] << endl;
-    /*
+
     filtro_gabor.filtrar();
-    img_segment.umbralizar();
-    mostrarImagen(img_segment.base);
-    renderizar();
-    */
+    imgs_segment[0].umbralizar();
+    mostrarImagen(imgs_segment[0].base, mis_renderers[0]);
+    renderizar(mis_renderers[0]);
+
 }
 
 
@@ -272,7 +283,7 @@ void RECONS3D::skeletonize(){
                 break;
         }
 
-        agregarEsfera( imgs_delin[0].pix_caract[c].x, imgs_delin[0].pix_caract[c].y, 0.0, 1.5, color, 0 );
+        //agregarEsfera( imgs_delin[0].pix_caract[c].x, imgs_delin[0].pix_caract[c].y, 0.0, 1.5, color, 0 );
     }
 
 //    const int rens = img_delin.rens;
@@ -290,7 +301,7 @@ void RECONS3D::skeletonize(){
 //    }
 
     mostrarImagen( imgs_delin[0].skeleton, mis_renderers[0] );
-    renderizar(0);
+    renderizar(mis_renderers[0]);
 }
 
 
@@ -302,6 +313,9 @@ void RECONS3D::skeletonize(){
 RECONS3D::RECONS3D(){
     esDICOM.push_back(false);
     mis_renderers.push_back( vtkSmartPointer<vtkRenderer>::New() );
+    double color[] = {1.0, 1.0, 1.0};
+    agregarEsfera(0.0, 0.0, 0.0, 5.0, color, renderer_global);
+    renderizar(renderer_global);
 
     n_angios = 0;
 }
@@ -316,6 +330,9 @@ RECONS3D::RECONS3D(char **rutasbase_input, char **rutasground_input, const int n
 
     // Preparar el renderer Global:
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
+    double color[] = {1.0, 1.0, 1.0};
+    agregarEsfera(0.0, 0.0, 0.0, 5.0, color, renderer_global);
+    renderizar(renderer_global);
 }
 
 
@@ -328,6 +345,9 @@ RECONS3D::RECONS3D(const char *rutabase_input, const char *rutaground_input, con
 
     // Preparar el renderer Global:
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
+    double color[] = {1.0, 1.0, 1.0};
+    agregarEsfera(0.0, 0.0, 0.0, 5.0, color, renderer_global);
+    renderizar(renderer_global);
 }
 
 
