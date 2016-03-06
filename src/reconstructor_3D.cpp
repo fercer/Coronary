@@ -20,13 +20,13 @@
 
     Funcion: Renderiza los 'actores' contenidos en 'renderer' en una ventana de VTK.
 */
-void RECONS3D::renderizar(){
+void RECONS3D::renderizar( const int renderer_id ){
 
-    mi_renderer->ResetCamera();
+    mis_renderers[renderer_id]->ResetCamera();
 
     // Crear una ventana temporal:
     vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
-    renderWindow->AddRenderer(mi_renderer);
+    renderWindow->AddRenderer(mis_renderers[renderer_id]);
 
     // Crear interactuador temporal:
     vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
@@ -45,53 +45,15 @@ void RECONS3D::renderizar(){
 
     Funcion: Muestra la imagen en una ventana VTK.
 */
-void RECONS3D::mostrarImagen( vtkSmartPointer<vtkImageData> &img_src, int nivel ){
-
-    int extension[6];
-    img_src->GetExtent(extension);
-    const int mis_cols = extension[1] - extension[0] + 1;
-    const int mis_rens = extension[3] - extension[2] + 1;
-    const int mis_niveles = extension[5] - extension[4] + 1;
-    const int mis_rens_cols = mis_cols*mis_rens;
-
-    DEB_MSG("extension: {(" << extension[0] << "," << extension[1] << "), (" << extension[2] << "," << extension[3] << "), (" << extension[4] << "," << extension[5] << ")}" );
-
-
-    if( mis_niveles < nivel ){
-        DEB_MSG("La imagen solo tiene " << mis_niveles << " niveles...");
-        nivel = mis_niveles - 1;
-    }
-
-    // Elegir el nivel que se quiere mostar:
-    vtkSmartPointer<vtkImageData> img_temp = vtkSmartPointer<vtkImageData>::New();
-
-    // Alojar memoria para la imagen:
-    img_temp->SetExtent(0, mis_cols-1, 0, mis_rens-1, nivel, nivel);
-    img_temp->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
-    img_temp->SetOrigin(0.0, 0.0, (double)nivel);
-    img_temp->SetSpacing(1.0, 1.0, 1.0);
-
-    unsigned char *img_ptr = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,nivel));
-    unsigned char *temp_ptr = static_cast<unsigned char*>(img_temp->GetScalarPointer(0,0,nivel));
-    memcpy(temp_ptr, img_ptr, mis_rens_cols*sizeof(unsigned char));
-
+void RECONS3D::mostrarImagen( vtkSmartPointer<vtkImageData> &img_src, vtkSmartPointer<vtkRenderer> mi_renderer){
     // Crear un actor temporal
     vtkSmartPointer<vtkImageActor> actor = vtkSmartPointer<vtkImageActor>::New();
 
-    DEB_MSG("Actor input antes: " << actor->GetInput() << ", " << img_temp);
     #if VTK_MAJOR_VERSION <= 5
-        actor->SetInput(img_temp);
+        actor->SetInput(img_src);
     #else
-        actor->SetInputData(img_temp);
+        actor->SetInputData(img_src);
     #endif
-    DEB_MSG("Actor input despues: " << actor->GetInput() << ", " << img_temp);
-
-#ifndef NDEBUG
-    double bounds[6];
-    actor->GetDisplayBounds(bounds);
-    DEB_MSG("Bounds: {x = [" << bounds[0] << "," << bounds[1] << "]; y = [" << bounds[2] << "," << bounds[3] << "]; z = [" << bounds[4] << "," << bounds[5] << "]}" );
-    DEB_MSG("Slice number: [" << actor->GetWholeZMin() << "," << actor->GetWholeZMax() << "]");
-#endif
 
     // Agregar el actor de la imagen al renderizador.
     mi_renderer->AddActor(actor);
@@ -105,7 +67,7 @@ void RECONS3D::mostrarImagen( vtkSmartPointer<vtkImageData> &img_src, int nivel 
 
     Funcion: Agrega una esfera al renderizador.
 */
-void RECONS3D::agregarEsfera( const double x, const double y, const double z, const double radio, double color[3] ){
+void RECONS3D::agregarEsfera(const double x, const double y, const double z, const double radio, double color[3], vtkSmartPointer<vtkRenderer> mi_renderer){
     vtkSmartPointer<vtkSphereSource> sphereSource = vtkSmartPointer<vtkSphereSource>::New();
 
     sphereSource->SetCenter(x, y, z);
@@ -130,18 +92,111 @@ void RECONS3D::agregarEsfera( const double x, const double y, const double z, co
 //-------------------------------------------------------------------------------------------------- PUBLIC----- v
 
 // M I E M B R O S      P U B L I C O S
+/*  Metodo: agregarInput
+
+    Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
+*/
+void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, const int n_imgs){
+    esDICOM.push_back(false);
+
+    n_angios++;
+    IMGVTK *imgs_temp = imgs_base;
+    imgs_base = new IMGVTK [n_angios];
+    memcpy(imgs_base, imgs_temp, (n_angios-1)*sizeof(IMGVTK));
+
+    // Cargar la imagen base como la concatenacion de todas las imagenes base:
+    imgs_base[n_angios-1].Cargar(rutasbase_input, n_imgs, true);
+
+    imgs_temp = imgs_delin;
+    imgs_delin = new IMGVTK [n_angios];
+    memcpy(imgs_delin, imgs_temp, (n_angios-1)*sizeof(IMGVTK));
+    // Cargar la imagen delineada como la concatenacion de todas las imagenes delineadas:
+    imgs_delin[n_angios-1].Cargar(rutasground_input, n_imgs, false);
+
+    imgs_temp = imgs_segment;
+    imgs_segment = new IMGVTK [n_angios];
+    memcpy(imgs_segment, imgs_temp, (n_angios-1)*sizeof(IMGVTK));
+
+    // Mostrar la imagen en un renderizador
+    mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
+    mostrarImagen(imgs_base[n_angios-1].base, mis_renderers[n_angios-1]);
+}
+
+
+
+/*  Metodo: agregarInput
+
+    Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
+*/
+void RECONS3D::agregarInput(const char *rutabase_input, const char *rutaground_input, const int nivel){
+    n_angios++;
+
+    esDICOM.push_back(true);
+
+    const int ruta_l = strlen(rutabase_input);
+    DEB_MSG("Extension del archivo de entrada: " << (rutabase_input + ruta_l - 3));
+    esDICOM[n_angios-1] = esDICOM[n_angios-1] & strcmp(rutabase_input + ruta_l - 3, "png");
+    esDICOM[n_angios-1] = esDICOM[n_angios-1] & strcmp(rutabase_input + ruta_l - 3, "jpg");
+    esDICOM[n_angios-1] = esDICOM[n_angios-1] & strcmp(rutabase_input + ruta_l - 4, "jpeg");
+    esDICOM[n_angios-1] = esDICOM[n_angios-1] & strcmp(rutabase_input + ruta_l - 3, "bmp");
+
+    IMGVTK *imgs_temp = imgs_base;
+    imgs_base = new IMGVTK [n_angios];
+    memcpy(imgs_base, imgs_temp, (n_angios-1)*sizeof(IMGVTK));
+
+    imgs_temp = imgs_delin;
+    imgs_delin = new IMGVTK [n_angios];
+    memcpy(imgs_delin, imgs_temp, (n_angios-1)*sizeof(IMGVTK));
+
+    imgs_temp = imgs_segment;
+    imgs_segment = new IMGVTK [n_angios];
+    memcpy(imgs_segment, imgs_temp, (n_angios-1)*sizeof(IMGVTK));
+
+    if(esDICOM[n_angios-1]){
+
+        // Abrir el archivo DICOM
+        gdcm::ImageReader DICOMreader;
+        DICOMreader.SetFileName( rutabase_input );
+        DICOMreader.Read();
+
+        gdcm::File &file = DICOMreader.GetFile();
+        gdcm::DataSet &ds = file.GetDataSet();
+        std::stringstream strm;
+        strm.str("");
+        DEB_MSG("TAG[" << (0x12) << "," << (0x456) << "]: ");
+        if( ds.FindDataElement(gdcm::PrivateTag (0x12, 0x456)) ){
+            ds.GetDataElement( gdcm::PrivateTag (0x12, 0x456) ).GetValue().Print(strm);
+            DEB_MSG( strm.str() );
+        }else{
+            DEB_MSG("No funciona . . .");
+        }
+        const gdcm::Image &gimage = DICOMreader.GetImage();
+        imgs_base[n_angios-1].Cargar(gimage, nivel);
+
+    }else{
+        imgs_base[n_angios-1].Cargar(rutabase_input, true);
+    }
+
+    imgs_delin[n_angios-1].Cargar(rutaground_input, false);
+
+    // Mostrar la imagen en un renderizador
+    mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
+    mostrarImagen(imgs_base[n_angios-1].base, mis_renderers[n_angios-1]);
+}
+
+
+
 /*  Metodo: segmentarImagen()
 
     Funcion: Multiplica la imagen base por el filtro para extraer las intensidades de los pixeles segmentados
 */
 void RECONS3D::segmentarImagenBase(){
-    img_segment = img_base;
+    imgs_segment[0] = imgs_base[0];
 
-    for( int i = 0; i < 57; i++){
-        mostrarImagen(img_base.mask, i);
-    }
+    mostrarImagen(imgs_base[0].mask, mis_renderers[0]);
 
-    renderizar();
+
+    renderizar(0);
 
     /*
     FILTROS filtro_gabor;
@@ -194,12 +249,12 @@ void RECONS3D::segmentarImagenBase(){
     Funcion: Obtiene el esqueleto de la imagen y muestra los puntos de interes.
 */
 void RECONS3D::skeletonize(){
-    img_delin.skeletonization();
-    int n_caracts = img_delin.n_caracts;
+    imgs_delin[0].skeletonization();
+    int n_caracts = imgs_delin[0].n_caracts;
 
     for( int c = 0; c < n_caracts; c++ ){
         double color[3];
-        switch( img_delin.pix_caract[c].pix_tipo){
+        switch( imgs_delin[0].pix_caract[c].pix_tipo){
             case IMGVTK::PIX_END:
                 color[0] = 1.0;
                 color[1] = 0.0;
@@ -217,7 +272,7 @@ void RECONS3D::skeletonize(){
                 break;
         }
 
-        agregarEsfera( img_delin.pix_caract[c].x, img_delin.pix_caract[c].y, 0.0, 1.5, color );
+        agregarEsfera( imgs_delin[0].pix_caract[c].x, imgs_delin[0].pix_caract[c].y, 0.0, 1.5, color, 0 );
     }
 
 //    const int rens = img_delin.rens;
@@ -234,73 +289,58 @@ void RECONS3D::skeletonize(){
 //        }
 //    }
 
-    mostrarImagen( img_delin.skeleton, 0 );
-    renderizar();
+    mostrarImagen( imgs_delin[0].skeleton, mis_renderers[0] );
+    renderizar(0);
 }
 
 
 
 // C O N S T R U C T O R E S    /   D E S T R U C T O R E S
+/*  Constructor ()
+    Funcion: Constructor por default.
+*/
+RECONS3D::RECONS3D(){
+    esDICOM.push_back(false);
+    mis_renderers.push_back( vtkSmartPointer<vtkRenderer>::New() );
+
+    n_angios = 0;
+}
+
+
 /*  Constructor (char **rutas_input, char **rutasground_input , char **rutasmask_input, const int n_imgs)
     Funcion: Recibe las rutas de las imagenes usadas como conjunto de entrenamiento.
 */
 RECONS3D::RECONS3D(char **rutasbase_input, char **rutasground_input, const int n_imgs){
-    esDICOM = false;
+    n_angios = 0;
+    agregarInput(rutasbase_input, rutasground_input, n_imgs);
 
-    // Cargar la imagen base como la concatenacion de todas las imagenes base:
-    img_base.Cargar(rutasbase_input, n_imgs, true);
-
-    // Cargar la imagen delineada como la concatenacion de todas las imagenes delineadas:
-    img_delin.Cargar(rutasground_input, n_imgs, false);
-
-    mi_renderer = vtkSmartPointer<vtkRenderer>::New();
+    // Preparar el renderer Global:
+    renderer_global = vtkSmartPointer<vtkRenderer>::New();
 }
 
 
 /*  Constructor ( const char *rutas_input )
     Funcion: Recibe las rutas de las imagenes usadas como conjunto de entrenamiento.
 */
-RECONS3D::RECONS3D(const char *rutabase_input, const char *rutaground_input){
+RECONS3D::RECONS3D(const char *rutabase_input, const char *rutaground_input, const int nivel){
+    n_angios = 0;
+    agregarInput(rutabase_input, rutaground_input, nivel);
 
-    esDICOM = true;
+    // Preparar el renderer Global:
+    renderer_global = vtkSmartPointer<vtkRenderer>::New();
+}
 
-    const int ruta_l = strlen(rutabase_input);
-    DEB_MSG("Extension del archivo de entrada: " << (rutabase_input + ruta_l - 3));
-    esDICOM *= strcmp(rutabase_input + ruta_l - 3, "png");
-    esDICOM *= strcmp(rutabase_input + ruta_l - 3, "jpg");
-    esDICOM *= strcmp(rutabase_input + ruta_l - 4, "jpeg");
-    esDICOM *= strcmp(rutabase_input + ruta_l - 3, "bmp");
 
-    if(esDICOM){
 
-        // Abrir el archivo DICOM
-        gdcm::ImageReader DICOMreader;
-        DICOMreader.SetFileName( rutabase_input );
-        DICOMreader.Read();
-
-        gdcm::File &file = DICOMreader.GetFile();
-        gdcm::DataSet &ds = file.GetDataSet();
-        std::stringstream strm;
-        strm.str("");
-        DEB_MSG("TAG[" << (0x12) << "," << (0x456) << "]: ");
-        if( ds.FindDataElement(gdcm::PrivateTag (0x12, 0x456)) ){
-            ds.GetDataElement( gdcm::PrivateTag (0x12, 0x456) ).GetValue().Print(strm);
-            DEB_MSG( strm.str() );
-        }else{
-            DEB_MSG("No funciona . . .");
-        }
-        const gdcm::Image &gimage = DICOMreader.GetImage();
-        img_base.Cargar( gimage );
-    }else{
-        img_base.Cargar( rutabase_input, true);
+/*  Destructor
+    Funcion: Libera la memoria utilizada para almacenar las imagenes.
+*/
+RECONS3D::~RECONS3D(){
+    if( n_angios ){
+        delete [] imgs_base;
+        delete [] imgs_delin;
+        delete [] imgs_segment;
     }
-
-    img_delin.Cargar( rutaground_input, false);
-
-    mi_renderer = vtkSmartPointer<vtkRenderer>::New();
-
-    mostrarImagen(img_base.base, 50);
-    renderizar();
 }
 
 //-------------------------------------------------------------------------------------------------- PUBLIC----- ^

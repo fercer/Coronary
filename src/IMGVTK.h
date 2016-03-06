@@ -87,7 +87,7 @@ class IMGVTK{
         void skeletonization();
         void umbralizar();
 
-        void Cargar( const gdcm::Image &gimage );
+        void Cargar( const gdcm::Image &gimage, const int nivel );
         void Cargar( const bool enmascarar );
         void Cargar( const char *ruta, const bool enmascarar);
         void Cargar( char **rutas , const int n_imgs, const bool enmascarar);
@@ -97,7 +97,8 @@ class IMGVTK{
         void Guardar( const TIPO_IMG tipo_salida_src);
 
         IMGVTK();
-        IMGVTK( const char *ruta_origen_src );
+        IMGVTK( const gdcm::Image &gimage, const int nivel );
+        IMGVTK( const char *ruta_origen_src);
         IMGVTK( const char *ruta_origen_src, const char *ruta_salida_src );
         IMGVTK( const char *ruta_origen_src, const char *ruta_salida_src, const TIPO_IMG tipo_salida_src );
         IMGVTK( char **rutas, const int n_imgs );
@@ -125,7 +126,7 @@ class IMGVTK{
         // T I P O S        D E     D A T O S      P R I V A D O S
         /** ####:   **/
         // M E T O D O S      P R I V A D O S
-        void Cargar(const gdcm::Image &gimage, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src);
+        void Cargar(const gdcm::Image &gimage, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel);
         void Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const bool enmascarar);
         void Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, char **rutas , const int n_imgs, const bool enmascarar);
 

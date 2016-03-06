@@ -302,7 +302,7 @@ void FILTROS::filtrar(){
 
     DEB_MSG("delta: " << mi_elite->vars[4])
 
-    calcROC(mi_elite, resp);
+    //calcROC(mi_elite, resp);
 
     delete [] resp;
 }

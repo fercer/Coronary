@@ -9,11 +9,11 @@
 
 int main(int argc, char** argv ){
 
-    if( argc < 3 ){
-        printf("usage: Segmentador <ruta_imagen_base> <ruta_ground_truth>\n");
+    if( argc < 4 ){
+        printf("usage: Segmentador <ruta_imagen_base> <ruta_ground_truth> <DICOM iamge level>\n");
         return EXIT_FAILURE;
     }
-    RECONS3D reconstructor( argv[1] , argv[2] );
+    RECONS3D reconstructor( argv[1] , argv[2], atoi(argv[3]) );
 
     /*
     *********************************************************************************************

@@ -1154,7 +1154,7 @@ void IMGVTK::umbralizar(){
 /*  Metodo: Cargar
     Funcion: Cargar desde un archivo DICOM la imagen a formato VTK.
 */
-void IMGVTK::Cargar(const gdcm::Image &gimage, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src){
+void IMGVTK::Cargar(const gdcm::Image &gimage, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel){
     DEB_MSG("cargando: " << ruta_origen << " (Archivo DICOM)");
     DEB_MSG("Buffer length: " << gimage.GetBufferLength());
     char *buffer = new char[gimage.GetBufferLength()];
@@ -1169,14 +1169,14 @@ void IMGVTK::Cargar(const gdcm::Image &gimage, vtkSmartPointer<vtkImageData> img
     DEB_MSG("Cols: " << mis_cols << ", rens: " << mis_rens  << ", niveles: " << mis_niveles);
 
     // Alojar memoria para la imagen:
-    img_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, mis_niveles-1);
+    img_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, 0);
     img_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
     img_src->SetOrigin(0.0, 0.0, 0.0);
     img_src->SetSpacing(1.0, 1.0, 1.0);
 
     unsigned char *img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
 
-    mask_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, mis_niveles-1);
+    mask_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0,0);
     mask_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
     mask_src->SetOrigin(0.0, 0.0, 0.0);
     mask_src->SetSpacing(1.0, 1.0, 1.0);
@@ -1188,13 +1188,12 @@ void IMGVTK::Cargar(const gdcm::Image &gimage, vtkSmartPointer<vtkImageData> img
         case gdcm::PhotometricInterpretation::RGB:{
                 DEB_MSG("Imagen DICOM en RGB...");
                 if( pix_format == gdcm::PixelFormat::UINT8 ){
-                    for( int z = 0; z < mis_niveles; z++){
-                        img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,z));
-                        for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
-                            img_tmp[xy/3] = (unsigned char)buffer[xy + z*mis_rens_cols];
-                        }
-                        definirMask(img_src, mask_src, z);
+
+                    img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
+                    for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
+                        img_tmp[xy/3] = (unsigned char)buffer[xy + nivel*mis_rens_cols];
                     }
+                    definirMask(img_src, mask_src, nivel);
                 }else{
                     using namespace std;
                     cout << "============ ERROR AL CARGAR ARCHIVO DICOM ===========\nFormato de imagen RGB no soportado." << endl;
@@ -1205,28 +1204,27 @@ void IMGVTK::Cargar(const gdcm::Image &gimage, vtkSmartPointer<vtkImageData> img
                 DEB_MSG("Imagen DICOM en escala de grises...");
                 if( pix_format == gdcm::PixelFormat::UINT8 ){
                     DEB_MSG("Tipo UINT8");
-                    for( int z = 0; z < mis_niveles; z++){
-                        img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,z));
-                        memcpy( img_tmp, buffer + z*mis_rens_cols, mis_rens_cols*sizeof(unsigned char));
-                        definirMask(img_src, mask_src, z);
-                    }
+
+                    img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
+                    memcpy( img_tmp, buffer + nivel*mis_rens_cols, mis_rens_cols*sizeof(unsigned char));
+                    definirMask(img_src, mask_src, nivel);
+
                 }else if( pix_format == gdcm::PixelFormat::UINT16 ){
                     DEB_MSG("Tipo UINT16");
                     unsigned short *buffer16 = (unsigned short*)buffer;
-                    for( int z = 0; z < mis_niveles; z++){
-                        img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,z));
-                        for( int xy = 0; xy < mis_rens_cols; xy+=3){
-                            img_tmp[xy] = (unsigned char)buffer16[xy + z*mis_rens_cols*3] / 16;
-                        }
-                        definirMask(img_src, mask_src, z);
+
+                    img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
+                    for( int xy = 0; xy < mis_rens_cols; xy+=3){
+                        img_tmp[xy] = (unsigned char)buffer16[xy + nivel*mis_rens_cols*3] / 16;
                     }
+                    definirMask(img_src, mask_src, nivel);
+
                 }else{
                     using namespace std;
                     cout << "============ ERROR AL CARGAR ARCHIVO DICOM ===========\nFormato de imagen RGB no soportado." << endl;
                 }
                 break;
             }
-
     }
 }
 
@@ -1434,11 +1432,11 @@ void IMGVTK::Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkIm
 /*  Metodo: Cargar
     Funcion: Cargar la imagen a formato VTK desde un archivo DICOM.
 */
-void IMGVTK::Cargar(const gdcm::Image &gimage){
+void IMGVTK::Cargar(const gdcm::Image &gimage, const int nivel){
     base = vtkSmartPointer<vtkImageData>::New();
     mask = vtkSmartPointer<vtkImageData>::New();
 
-    Cargar(gimage, base, mask);
+    Cargar(gimage, base, mask, nivel);
 
     base_ptr = static_cast<unsigned char*>(base->GetScalarPointer(0, 0, 0));
     mask_ptr = static_cast<unsigned char*>(mask->GetScalarPointer(0, 0, 0));
@@ -1582,7 +1580,21 @@ IMGVTK::IMGVTK(){
 }
 
 
-IMGVTK::IMGVTK( const char *ruta_origen_src ){
+IMGVTK::IMGVTK( const gdcm::Image &gimage, const int nivel ){
+    ruta_origen = NULL;
+    ruta_salida = NULL;
+    tipo_salida = PNG;
+
+    Cargar(gimage, nivel);
+
+    map_ptr = NULL;
+    skl_ptr = NULL;
+    pix_caract = NULL;
+}
+
+
+
+IMGVTK::IMGVTK(const char *ruta_origen_src ){
 
     ruta_salida = NULL;
     tipo_salida = PNG;
@@ -1596,7 +1608,7 @@ IMGVTK::IMGVTK( const char *ruta_origen_src ){
 }
 
 
-IMGVTK::IMGVTK( const char *ruta_origen_src, const char *ruta_salida_src ){
+IMGVTK::IMGVTK(const char *ruta_origen_src, const char *ruta_salida_src ){
 
     tipo_salida = PNG;
 
@@ -1611,7 +1623,7 @@ IMGVTK::IMGVTK( const char *ruta_origen_src, const char *ruta_salida_src ){
 }
 
 
-IMGVTK::IMGVTK( const char *ruta_origen_src, const char *ruta_salida_src, const TIPO_IMG tipo_salida_src ){
+IMGVTK::IMGVTK(const char *ruta_origen_src, const char *ruta_salida_src, const TIPO_IMG tipo_salida_src ){
     ruta_origen = setRuta(ruta_origen_src);
 
     Cargar(true);
@@ -1674,6 +1686,7 @@ IMGVTK::IMGVTK( char **rutas, const int n_imgs, const char *ruta_salida_src, con
 /* DESTRUCTOR */
 IMGVTK::~IMGVTK(){
     if(ruta_origen){
+        DEB_MSG("Intentando borrar: "  << ruta_origen);
         delete [] ruta_origen;
     }
     if(ruta_salida){
@@ -1692,6 +1705,18 @@ IMGVTK::~IMGVTK(){
 IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
 
     if(origen.base_ptr){
+        if(ruta_origen){
+            delete [] ruta_origen;
+        }
+        ruta_origen = setRuta(origen.ruta_origen);
+
+        if(ruta_salida){
+            delete [] ruta_salida;
+        }
+        ruta_salida = setRuta(origen.ruta_salida);
+
+        tipo_salida = origen.tipo_salida;
+
         cols = origen.cols;
         rens = origen.rens;
 

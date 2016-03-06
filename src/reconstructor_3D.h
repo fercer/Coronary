@@ -54,6 +54,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 #include <omp.h>
 
@@ -96,18 +97,21 @@ class RECONS3D{
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
     // M I E M B R O S      P R I V A D O S
         // Miembros para cargar las imagenes:
-        IMGVTK img_base;
-        IMGVTK img_delin;
-        IMGVTK img_segment;
+        IMGVTK *imgs_base;
+        IMGVTK *imgs_delin;
+        IMGVTK *imgs_segment;
 
-        bool esDICOM;
+        int n_angios;
+
+        std::vector<bool> esDICOM;
 
         // Miembros para visualizar la segmentacion 3D:
-        vtkSmartPointer<vtkRenderer> mi_renderer;
+        std::vector< vtkSmartPointer<vtkRenderer> > mis_renderers;
+        vtkSmartPointer<vtkRenderer> renderer_global;
 
-        void renderizar();
-        void mostrarImagen(vtkSmartPointer<vtkImageData> &imagen , int nivel);
-        void agregarEsfera( const double x, const double y, const double z, const double radio, double color[3] );
+        void renderizar(const int renderer_id);
+        void mostrarImagen(vtkSmartPointer<vtkImageData> &imagen, vtkSmartPointer<vtkRenderer> mi_renderer );
+        void agregarEsfera(const double x, const double y, const double z, const double radio, double color[3], vtkSmartPointer<vtkRenderer> mi_renderer );
 
 
     // M E T O D O S       P R I V A D O S
@@ -117,10 +121,14 @@ class RECONS3D{
     // M I E M B R O S      P U B L I C O S
 
     // C O N S T R U C T O R E S    /   D E S T R U C T O R E S
+        RECONS3D();
         RECONS3D(char **rutasbase_input , char **rutasground_input, const int n_imgs);
-        RECONS3D(const char *rutabase_input, const char *rutadelin_input);
+        RECONS3D(const char *rutabase_input, const char *rutaground_input, const int nivel);
+        ~RECONS3D();
 
     // M E T O D O S        P U B L I C O S
+        void agregarInput(char **rutasbase_input, char **rutasground_input, const int n_imgs);
+        void agregarInput(const char *rutabase_input, const char *rutaground_input, const int nivel);
         void segmentarImagenBase();
         void skeletonize();
 
