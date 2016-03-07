@@ -30,14 +30,14 @@ typedef union{
 
 typedef struct{
 	char pregunta[128];
-	char tag[7];
+    char short_tag[7], long_tag[28];
 	TIPO_ENTRADA mi_tipo;
 	ENTRADA mi_default;
 	ENTRADA mi_valor;
-	int opcional;
+    char opcional;
 }PARS_ENTRADA;
 
 void revisar_pars(PARS_ENTRADA* pars, const int n_pars, int *argc, char **argv);
-
+void mostrar_ayuda(PARS_ENTRADA* pars, const int n_pars, const char *nombre_programa);
 
 #endif //PARS_FERCER_H_INCLUDED

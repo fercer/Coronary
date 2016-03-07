@@ -192,7 +192,7 @@ void RECONS3D::agregarInput(const char *rutabase_input, const char *rutaground_i
 
     Funcion: Define la posicion en que se encuentra alguna imagen base.
 */
-void RECONS3D::agregarPosicion(const double RAO_LAO, const double CAU_CRA, const double Distance_to_patient, const double Distance_source_to_detector, const double Window_Center, const double Window_Width){
+void RECONS3D::agregarPosicion(const double RAO_LAO, const double CAU_CRA, const double Distance_to_patient, const double Distance_source_to_detector){
 
 }
 

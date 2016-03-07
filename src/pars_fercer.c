@@ -8,18 +8,15 @@
 
 #include "pars_fercer.h"
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 
-
-
 /*	FUNCION:	revisar_pars
 
 	DESCRIPCION:
-				Busca entre los parametros de entrada dados en la ejecucion del programa, la lista de parametros que se requierern.
+                Busca entre los parametros de entrada dados en la ejecucion del programa, la lista de parametros que se requieren.
 */
 void revisar_pars(PARS_ENTRADA* pars, const int n_pars, int *argc, char **argv){
 	// Para quitar el nombre con el que se ejecuto el programa:
@@ -34,7 +31,7 @@ void revisar_pars(PARS_ENTRADA* pars, const int n_pars, int *argc, char **argv){
 		int encontrado = 0;
 		do{
 			if(!retirados[n-1]){
-				if(!strcmp(pars[i].tag, argv[n])){	// El tag de la pregunta si se encontro:
+                if(!strcmp(pars[i].short_tag, argv[n]) || !strcmp(pars[i].long_tag, argv[n])){	// El tag de la pregunta si se encontro:
 					retirados[n-1] = 1;
 					encontrado = 1;
 					switch(pars[i].mi_tipo){
@@ -124,3 +121,31 @@ void revisar_pars(PARS_ENTRADA* pars, const int n_pars, int *argc, char **argv){
 
 
 
+
+/*	FUNCION:	mostrar_ayuda
+
+    DESCRIPCION:
+                Muestra las preguntas, los tags y los valores por defecto.
+*/
+void mostrar_ayuda(PARS_ENTRADA* pars, const int n_pars, const char *nombre_programa){
+    // Mostrar uno a uno los paraemtros que solicita el programa:
+    printf( "Usage: " ANSI_COLOR_GREEN "%s" ANSI_COLOR_RESET " [OPTION] Value\n", nombre_programa);
+    for( int i = 0; i < n_pars; i++){
+        if( pars[i].opcional ){
+            printf( ANSI_COLOR_MAGENTA "\t");
+        }else{
+            printf( ANSI_COLOR_CYAN "\t");
+        }
+        printf("%s %s\t\t\t" ANSI_COLOR_YELLOW "%s " ANSI_COLOR_RESET "(", pars[i].short_tag, pars[i].long_tag, pars[i].pregunta);
+        switch( pars[i].mi_tipo ){
+            case CHAR:
+                printf(ANSI_COLOR_BLUE "%s", pars[i].mi_default.par_s );
+            case INT:
+                printf(ANSI_COLOR_BLUE "%i", pars[i].mi_default.par_i );
+            case DOUBLE:
+                printf(ANSI_COLOR_BLUE "%f", pars[i].mi_default.par_d );
+        }
+        printf(ANSI_COLOR_RESET ")\n");
+    }
+    printf(ANSI_COLOR_RESET "\n\n");
+}
