@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "pars_fercer.h"
+#include "pars_fercer.c"
 #include "reconstructor_3D.h"
 
 #include <iostream>
