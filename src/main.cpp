@@ -90,9 +90,8 @@ int main(int argc, char** argv ){
     revisar_pars(parametros, 7, &argc, argv);
 
 
-
-
-    RECONS3D reconstructor( argv[1] , argv[2], atoi(argv[3]) );
+    RECONS3D reconstructor( parametros[0].mi_valor.par_s, parametros[1].mi_valor.par_s, parametros[2].mi_valor.par_i );
+    reconstructor.agregarPosicion(parametros[6].mi_valor.par_d, parametros[5].mi_valor.par_d, parametros[3].mi_valor.par_d, parametros[4].mi_valor.par_d);
 
     /*
     *********************************************************************************************
