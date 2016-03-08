@@ -1201,6 +1201,7 @@ void IMGVTK::Cargar(const gdcm::Image &gimage, vtkSmartPointer<vtkImageData> img
                 break;
             }
     }
+    delete [] buffer;
 }
 
 /*  Metodo: Cargar

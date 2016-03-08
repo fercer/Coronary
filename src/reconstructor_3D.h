@@ -15,30 +15,40 @@
 #include <vtkVersion.h>
 #include <vtkSmartPointer.h>
 
+// Actores:
+#include <vtkActor.h>
+#include <vtkImageActor.h>
+
+// Mappers:
+#include <vtkImageMapper3D.h>
+#include <vtkDataSetMapper.h>
+
 // Librerias para trabajar con imagenes:
 #include <vtkImageData.h>
 #include <vtkImageReader2Factory.h>
 #include <vtkImageReader2.h>
 #include <vtkImageExtractComponents.h>
-#include <vtkImageActor.h>
-#include <vtkImageMapper3D.h>
 
 // Librerias para generar mallas:
-#include <vtkTriangle.h>
 #include <vtkCellArray.h>
 #include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
+#include <vtkUnstructuredGrid.h>
+
 
 // Librerias para visualizacion
-#include <vtkActor.h>
+#include <vtkCamera.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkOutlineFilter.h>
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkProperty.h>
-#include <vtkSphereSource.h>
 
+// Librerias para formas geometricas:
+#include <vtkTriangle.h>
+#include <vtkSphereSource.h>
+#include <vtkPyramid.h>
 
 
 #include <gdcmImageReader.h>
@@ -95,6 +105,11 @@
 class RECONS3D{
 
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
+    // T I P O S        D E     D A T O S       Y       E S T R U C T U R A S       P R I V A D A S
+        // POS
+        typedef struct{
+            double puntos[5][3];
+        } POS;
     // M I E M B R O S      P R I V A D O S
         // Miembros para cargar las imagenes:
         IMGVTK *imgs_base;
@@ -113,6 +128,8 @@ class RECONS3D{
         void mostrarImagen(vtkSmartPointer<vtkImageData> &imagen, vtkSmartPointer<vtkRenderer> mi_renderer );
         void agregarEsfera(const double x, const double y, const double z, const double radio, double color[3], vtkSmartPointer<vtkRenderer> mi_renderer );
 
+        std::vector<POS> detector;
+        std::vector<POS> fuente;
 
     // M E T O D O S       P R I V A D O S
     //-------------------------------------------------------------------------------------- PRIVATE ----- ^
@@ -129,7 +146,8 @@ class RECONS3D{
     // M E T O D O S        P U B L I C O S
         void agregarInput(char **rutasbase_input, char **rutasground_input, const int n_imgs);
         void agregarInput(const char *rutabase_input, const char *rutaground_input, const int nivel);
-        void agregarPosicion(const double RAO_LAO, const double CAU_CRA, const double Distance_source_to_patient, const double Distance_source_to_detector);
+        POS posicionDefecto(const double ancho, const double alto, const double punta);
+        void moverPosicion(const int angio_ID, const double RAO_LAO, const double CAU_CRA, const double Distance_source_to_patient, const double Distance_source_to_detector);
 
         void segmentarImagenBase();
         void skeletonize();
