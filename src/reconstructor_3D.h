@@ -14,27 +14,31 @@
 // Librerias de uso comun:
 #include <vtkVersion.h>
 #include <vtkSmartPointer.h>
+#include <vtkTransform.h>
+#include <vtkPointData.h>
 
 // Actores:
 #include <vtkActor.h>
 #include <vtkImageActor.h>
+#include <vtkAxesActor.h>
 
 // Mappers:
 #include <vtkImageMapper3D.h>
 #include <vtkDataSetMapper.h>
+#include <vtkImageSliceMapper.h>
 
 // Librerias para trabajar con imagenes:
 #include <vtkImageData.h>
 #include <vtkImageReader2Factory.h>
 #include <vtkImageReader2.h>
 #include <vtkImageExtractComponents.h>
+#include <vtkImageSlice.h>
 
 // Librerias para generar mallas:
 #include <vtkCellArray.h>
 #include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkUnstructuredGrid.h>
-
 
 // Librerias para visualizacion
 #include <vtkCamera.h>
@@ -45,10 +49,14 @@
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkProperty.h>
 
+
+
 // Librerias para formas geometricas:
+#include <vtkArrowSource.h>
 #include <vtkTriangle.h>
 #include <vtkSphereSource.h>
 #include <vtkPyramid.h>
+#include <vtkGlyph3D.h>
 
 
 #include <gdcmImageReader.h>
@@ -126,6 +134,7 @@ class RECONS3D{
 
         void renderizar(vtkSmartPointer<vtkRenderer> mi_renderer);
         void mostrarImagen(vtkSmartPointer<vtkImageData> &imagen, vtkSmartPointer<vtkRenderer> mi_renderer );
+        void agregarEjes(vtkSmartPointer<vtkRenderer> mi_renderer);
         void agregarEsfera(const double x, const double y, const double z, const double radio, double color[3], vtkSmartPointer<vtkRenderer> mi_renderer );
 
         std::vector<POS> detector;

@@ -1130,7 +1130,7 @@ void IMGVTK::umbralizar(){
     Funcion: Cargar desde un archivo DICOM la imagen a formato VTK.
 */
 void IMGVTK::Cargar(const gdcm::Image &gimage, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel){
-    DEB_MSG("cargando: " << ruta_origen << " (Archivo DICOM)");
+    //DEB_MSG("cargando: " << ruta_origen << " (Archivo DICOM)");
     DEB_MSG("Buffer length: " << gimage.GetBufferLength());
     char *buffer = new char[gimage.GetBufferLength()];
     gimage.GetBuffer(buffer);

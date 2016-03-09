@@ -62,6 +62,156 @@ void RECONS3D::mostrarImagen( vtkSmartPointer<vtkImageData> &img_src, vtkSmartPo
 
 
 
+void RECONS3D::agregarEjes(vtkSmartPointer<vtkRenderer> mi_renderer){
+
+    // iamgen temporal para colocar los vectores:
+    vtkSmartPointer<vtkImageData> imageX = vtkSmartPointer<vtkImageData>::New();
+    imageX->SetDimensions(1,1,1);
+
+    vtkSmartPointer<vtkImageData> imageY= vtkSmartPointer<vtkImageData>::New();
+    imageY->SetDimensions(1,1,1);
+
+    vtkSmartPointer<vtkImageData> imageZ = vtkSmartPointer<vtkImageData>::New();
+    imageZ->SetDimensions(1,1,1);
+
+  #if VTK_MAJOR_VERSION <= 5
+    imageX->SetNumberOfScalarComponents(3);
+    imageX->SetScalarTypeToFloat();
+    imageX->AllocateScalars();
+
+    imageY->SetNumberOfScalarComponents(3);
+    imageY->SetScalarTypeToFloat();
+    imageY->AllocateScalars();
+
+    imageZ->SetNumberOfScalarComponents(3);
+    imageZ->SetScalarTypeToFloat();
+    imageZ->AllocateScalars();
+  #else
+    imageX->AllocateScalars(VTK_FLOAT,3);
+    imageY->AllocateScalars(VTK_FLOAT,3);
+    imageZ->AllocateScalars(VTK_FLOAT,3);
+  #endif
+
+    {
+    float* pixelX = static_cast<float*>(imageX->GetScalarPointer(0,0,0));
+    pixelX[0] = 700.0;
+    pixelX[1] = 0.0;
+    pixelX[2] = 0.0;
+    }
+
+    {
+    float* pixelY = static_cast<float*>(imageY->GetScalarPointer(0,0,0));
+    pixelY[0] = 0.0;
+    pixelY[1] = 700.0;
+    pixelY[2] = 0.0;
+    }
+
+    {
+    float* pixelZ = static_cast<float*>(imageZ->GetScalarPointer(0,0,0));
+    pixelZ[0] = 0.0;
+    pixelZ[1] = 0.0;
+    pixelZ[2] = 700.0;
+    }
+
+    imageX->GetPointData()->SetActiveVectors("ImageScalars");
+    imageY->GetPointData()->SetActiveVectors("ImageScalars");
+    imageZ->GetPointData()->SetActiveVectors("ImageScalars");
+
+    vtkSmartPointer<vtkArrowSource> arrowX = vtkSmartPointer<vtkArrowSource>::New();
+    arrowX->Update();
+
+    vtkSmartPointer<vtkArrowSource> arrowY = vtkSmartPointer<vtkArrowSource>::New();
+    arrowY->Update();
+
+    vtkSmartPointer<vtkArrowSource> arrowZ = vtkSmartPointer<vtkArrowSource>::New();
+    arrowZ->Update();
+
+
+
+    vtkSmartPointer<vtkGlyph3D> glyphX = vtkSmartPointer<vtkGlyph3D>::New();
+    vtkSmartPointer<vtkGlyph3D> glyphY = vtkSmartPointer<vtkGlyph3D>::New();
+    vtkSmartPointer<vtkGlyph3D> glyphZ = vtkSmartPointer<vtkGlyph3D>::New();
+
+
+
+    glyphX->SetSourceConnection(arrowX->GetOutputPort());
+    glyphX->OrientOn();
+    glyphX->SetVectorModeToUseVector();
+
+    glyphY->SetSourceConnection(arrowY->GetOutputPort());
+    glyphY->OrientOn();
+    glyphY->SetVectorModeToUseVector();
+
+    glyphZ->SetSourceConnection(arrowZ->GetOutputPort());
+    glyphZ->OrientOn();
+    glyphZ->SetVectorModeToUseVector();
+
+#if VTK_MAJOR_VERSION <= 5
+    glyphX->SetInputConnection(imageX->GetProducerPort());
+    glyphY->SetInputConnection(imageY->GetProducerPort());
+    glyphZ->SetInputConnection(imageZ->GetProducerPort());
+#else
+    glyphX->SetInputData(imageX);
+    glyphY->SetInputData(imageY);
+    glyphZ->SetInputData(imageZ);
+#endif
+
+    glyphX->Update();
+    glyphY->Update();
+    glyphZ->Update();
+
+
+    // Create actors
+    vtkSmartPointer<vtkImageSliceMapper> mapperX = vtkSmartPointer<vtkImageSliceMapper>::New();
+    vtkSmartPointer<vtkImageSliceMapper> mapperY = vtkSmartPointer<vtkImageSliceMapper>::New();
+    vtkSmartPointer<vtkImageSliceMapper> mapperZ = vtkSmartPointer<vtkImageSliceMapper>::New();
+
+#if VTK_MAJOR_VERSION <= 5
+    mapperX->SetInputConnection(imageX->GetProducerPort());
+    mapperY->SetInputConnection(imageY->GetProducerPort());
+    mapperZ->SetInputConnection(imageZ->GetProducerPort());
+#else
+    mapperX->SetInputData(imageX);
+    mapperY->SetInputData(imageY);
+    mapperZ->SetInputData(imageZ);
+#endif
+
+    vtkSmartPointer<vtkImageSlice> sliceX = vtkSmartPointer<vtkImageSlice>::New();
+    sliceX->SetMapper(mapperX);
+
+    vtkSmartPointer<vtkImageSlice> sliceY = vtkSmartPointer<vtkImageSlice>::New();
+    sliceY->SetMapper(mapperY);
+
+    vtkSmartPointer<vtkImageSlice> sliceZ = vtkSmartPointer<vtkImageSlice>::New();
+    sliceZ->SetMapper(mapperZ);
+
+
+
+    vtkSmartPointer<vtkPolyDataMapper> ejeXmapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    ejeXmapper->SetInputConnection(glyphX->GetOutputPort());
+
+    vtkSmartPointer<vtkPolyDataMapper> ejeYmapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    ejeYmapper->SetInputConnection(glyphY->GetOutputPort());
+
+    vtkSmartPointer<vtkPolyDataMapper> ejeZmapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    ejeZmapper->SetInputConnection(glyphZ->GetOutputPort());
+
+    vtkSmartPointer<vtkActor> actorX = vtkSmartPointer<vtkActor>::New();
+    vtkSmartPointer<vtkActor> actorY = vtkSmartPointer<vtkActor>::New();
+    vtkSmartPointer<vtkActor> actorZ = vtkSmartPointer<vtkActor>::New();
+
+    actorX->SetMapper(ejeXmapper);
+    actorY->SetMapper(ejeYmapper);
+    actorZ->SetMapper(ejeZmapper);
+
+//    mi_renderer->AddActor(actorX);
+    mi_renderer->AddActor(actorY);
+//    mi_renderer->AddActor(actorZ);
+}
+
+
+
+
 
 /*  Metodo: agregarEsfera
 
@@ -245,6 +395,9 @@ void RECONS3D::moverPosicion(const int angio_ID, const double RAO_LAO, const dou
     /// Mover el detector y fuente a las posiciones definidas:
     // Mover el detector a la posicion indicada como SID - SOD:
     const double Distance_patient_to_detector = Distance_source_to_detector - Distance_source_to_patient;
+
+    DEB_MSG("SID: " << Distance_source_to_patient << ", SOD: " << Distance_source_to_detector << ", DDP:" << Distance_patient_to_detector);
+
     POS det_pos = detector[angio_ID];
     POS fnt_pos = fuente[angio_ID];
 
@@ -298,11 +451,16 @@ void RECONS3D::moverPosicion(const int angio_ID, const double RAO_LAO, const dou
     det_actor->SetMapper(det_mapper);
     fnt_actor->SetMapper(fnt_mapper);
 
+    double det_col[] = {0.5, 0.0, 0.5};// Morado
+    double fnt_col[] = {1.0, 0.546875, 0.0};// Naranja
+
+    det_actor->GetProperty()->SetColor(det_col);
+    fnt_actor->GetProperty()->SetColor(fnt_col);
+
     renderer_global->AddActor(det_actor);
     renderer_global->AddActor(fnt_actor);
 
     renderizar(renderer_global);
-
 }
 
 
@@ -423,7 +581,8 @@ RECONS3D::RECONS3D(){
     esDICOM.push_back(false);
     mis_renderers.push_back( vtkSmartPointer<vtkRenderer>::New() );
     double color[] = {1.0, 1.0, 1.0};
-    agregarEsfera(0.0, 0.0, 0.0, 5.0, color, renderer_global);
+    //agregarEsfera(0.0, 0.0, 0.0, 256.0, color, renderer_global);
+    agregarEjes(renderer_global);
     renderizar(renderer_global);
 
     n_angios = 0;
@@ -440,7 +599,8 @@ RECONS3D::RECONS3D(char **rutasbase_input, char **rutasground_input, const int n
     // Preparar el renderer Global:
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
     double color[] = {1.0, 1.0, 1.0};
-    agregarEsfera(0.0, 0.0, 0.0, 5.0, color, renderer_global);
+    //agregarEsfera(0.0, 0.0, 0.0, 256.0, color, renderer_global);
+    agregarEjes(renderer_global);
     renderizar(renderer_global);
 }
 
@@ -455,7 +615,8 @@ RECONS3D::RECONS3D(const char *rutabase_input, const char *rutaground_input, con
     // Preparar el renderer Global:
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
     double color[] = {1.0, 1.0, 1.0};
-    agregarEsfera(0.0, 0.0, 0.0, 5.0, color, renderer_global);
+    //agregarEsfera(0.0, 0.0, 0.0, 256.0, color, renderer_global);
+    agregarEjes(renderer_global);
     renderizar(renderer_global);
 }
 
