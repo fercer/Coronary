@@ -64,149 +64,67 @@ void RECONS3D::mostrarImagen( vtkSmartPointer<vtkImageData> &img_src, vtkSmartPo
 
 void RECONS3D::agregarEjes(vtkSmartPointer<vtkRenderer> mi_renderer){
 
-    // iamgen temporal para colocar los vectores:
-    vtkSmartPointer<vtkImageData> imageX = vtkSmartPointer<vtkImageData>::New();
-    imageX->SetDimensions(1,1,1);
+    vtkSmartPointer<vtkPolyData> ejesPolyData = vtkSmartPointer<vtkPolyData>::New();
 
-    vtkSmartPointer<vtkImageData> imageY= vtkSmartPointer<vtkImageData>::New();
-    imageY->SetDimensions(1,1,1);
+    // Posicion de los puntos en el espacio:
+    double origen[3] = { 0.0, 0.0, 0.0 };
+    double X[3] = { 2096.0, 0.0, 0.0 };
+    double Y[3] = { 0.0, 2096.0, 0.0 };
+    double Z[3] = { 0.0, 0.0, 2096.0 };
 
-    vtkSmartPointer<vtkImageData> imageZ = vtkSmartPointer<vtkImageData>::New();
-    imageZ->SetDimensions(1,1,1);
+    // Create a vtkPoints container and store the points in it
+    vtkSmartPointer<vtkPoints> ejesPts = vtkSmartPointer<vtkPoints>::New();
+    ejesPts->InsertNextPoint(origen);
+    ejesPts->InsertNextPoint(X);
+    ejesPts->InsertNextPoint(Y);
+    ejesPts->InsertNextPoint(Z);
 
-  #if VTK_MAJOR_VERSION <= 5
-    imageX->SetNumberOfScalarComponents(3);
-    imageX->SetScalarTypeToFloat();
-    imageX->AllocateScalars();
+    ejesPolyData->SetPoints(ejesPts);
 
-    imageY->SetNumberOfScalarComponents(3);
-    imageY->SetScalarTypeToFloat();
-    imageY->AllocateScalars();
+    // Crear las lineas de los ejes:
+    vtkSmartPointer<vtkLine> ejeX = vtkSmartPointer<vtkLine>::New();
+    ejeX->GetPointIds()->SetId(0, 0);
+    ejeX->GetPointIds()->SetId(1, 1);
 
-    imageZ->SetNumberOfScalarComponents(3);
-    imageZ->SetScalarTypeToFloat();
-    imageZ->AllocateScalars();
-  #else
-    imageX->AllocateScalars(VTK_FLOAT,3);
-    imageY->AllocateScalars(VTK_FLOAT,3);
-    imageZ->AllocateScalars(VTK_FLOAT,3);
-  #endif
+    vtkSmartPointer<vtkLine> ejeY = vtkSmartPointer<vtkLine>::New();
+    ejeY->GetPointIds()->SetId(0, 0);
+    ejeY->GetPointIds()->SetId(1, 2);
 
-    {
-    float* pixelX = static_cast<float*>(imageX->GetScalarPointer(0,0,0));
-    pixelX[0] = 700.0;
-    pixelX[1] = 0.0;
-    pixelX[2] = 0.0;
-    }
+    vtkSmartPointer<vtkLine> ejeZ = vtkSmartPointer<vtkLine>::New();
+    ejeZ->GetPointIds()->SetId(0, 0);
+    ejeZ->GetPointIds()->SetId(1, 3);
 
-    {
-    float* pixelY = static_cast<float*>(imageY->GetScalarPointer(0,0,0));
-    pixelY[0] = 0.0;
-    pixelY[1] = 700.0;
-    pixelY[2] = 0.0;
-    }
+    vtkSmartPointer<vtkCellArray> ejes = vtkSmartPointer<vtkCellArray>::New();
+    ejes->InsertNextCell(ejeX);
+    ejes->InsertNextCell(ejeY);
+    ejes->InsertNextCell(ejeZ);
 
-    {
-    float* pixelZ = static_cast<float*>(imageZ->GetScalarPointer(0,0,0));
-    pixelZ[0] = 0.0;
-    pixelZ[1] = 0.0;
-    pixelZ[2] = 700.0;
-    }
+    ejesPolyData->SetLines(ejes);
 
-    imageX->GetPointData()->SetActiveVectors("ImageScalars");
-    imageY->GetPointData()->SetActiveVectors("ImageScalars");
-    imageZ->GetPointData()->SetActiveVectors("ImageScalars");
+    unsigned char colX[3] = { 255, 0, 0 };
+    unsigned char colY[3] = { 0, 255, 0 };
+    unsigned char colZ[3] = { 0, 0, 255 };
 
-    vtkSmartPointer<vtkArrowSource> arrowX = vtkSmartPointer<vtkArrowSource>::New();
-    arrowX->Update();
+    vtkSmartPointer<vtkUnsignedCharArray> colores = vtkSmartPointer<vtkUnsignedCharArray>::New();
+    colores->SetNumberOfComponents(3);
+    colores->InsertNextTupleValue(colX);
+    colores->InsertNextTupleValue(colY);
+    colores->InsertNextTupleValue(colZ);
+    ejesPolyData->GetCellData()->SetScalars(colores);
 
-    vtkSmartPointer<vtkArrowSource> arrowY = vtkSmartPointer<vtkArrowSource>::New();
-    arrowY->Update();
-
-    vtkSmartPointer<vtkArrowSource> arrowZ = vtkSmartPointer<vtkArrowSource>::New();
-    arrowZ->Update();
-
-
-
-    vtkSmartPointer<vtkGlyph3D> glyphX = vtkSmartPointer<vtkGlyph3D>::New();
-    vtkSmartPointer<vtkGlyph3D> glyphY = vtkSmartPointer<vtkGlyph3D>::New();
-    vtkSmartPointer<vtkGlyph3D> glyphZ = vtkSmartPointer<vtkGlyph3D>::New();
-
-
-
-    glyphX->SetSourceConnection(arrowX->GetOutputPort());
-    glyphX->OrientOn();
-    glyphX->SetVectorModeToUseVector();
-
-    glyphY->SetSourceConnection(arrowY->GetOutputPort());
-    glyphY->OrientOn();
-    glyphY->SetVectorModeToUseVector();
-
-    glyphZ->SetSourceConnection(arrowZ->GetOutputPort());
-    glyphZ->OrientOn();
-    glyphZ->SetVectorModeToUseVector();
+    // Setup the visualization pipeline
+    vtkSmartPointer<vtkPolyDataMapper> ejesMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
 
 #if VTK_MAJOR_VERSION <= 5
-    glyphX->SetInputConnection(imageX->GetProducerPort());
-    glyphY->SetInputConnection(imageY->GetProducerPort());
-    glyphZ->SetInputConnection(imageZ->GetProducerPort());
+    ejesMapper->SetInput(ejesPolyData);
 #else
-    glyphX->SetInputData(imageX);
-    glyphY->SetInputData(imageY);
-    glyphZ->SetInputData(imageZ);
+    ejesMapper->SetInputData(ejesPolyData);
 #endif
 
-    glyphX->Update();
-    glyphY->Update();
-    glyphZ->Update();
+    vtkSmartPointer<vtkActor> ejesActor = vtkSmartPointer<vtkActor>::New();
+    ejesActor->SetMapper(ejesMapper);
 
-
-    // Create actors
-    vtkSmartPointer<vtkImageSliceMapper> mapperX = vtkSmartPointer<vtkImageSliceMapper>::New();
-    vtkSmartPointer<vtkImageSliceMapper> mapperY = vtkSmartPointer<vtkImageSliceMapper>::New();
-    vtkSmartPointer<vtkImageSliceMapper> mapperZ = vtkSmartPointer<vtkImageSliceMapper>::New();
-
-#if VTK_MAJOR_VERSION <= 5
-    mapperX->SetInputConnection(imageX->GetProducerPort());
-    mapperY->SetInputConnection(imageY->GetProducerPort());
-    mapperZ->SetInputConnection(imageZ->GetProducerPort());
-#else
-    mapperX->SetInputData(imageX);
-    mapperY->SetInputData(imageY);
-    mapperZ->SetInputData(imageZ);
-#endif
-
-    vtkSmartPointer<vtkImageSlice> sliceX = vtkSmartPointer<vtkImageSlice>::New();
-    sliceX->SetMapper(mapperX);
-
-    vtkSmartPointer<vtkImageSlice> sliceY = vtkSmartPointer<vtkImageSlice>::New();
-    sliceY->SetMapper(mapperY);
-
-    vtkSmartPointer<vtkImageSlice> sliceZ = vtkSmartPointer<vtkImageSlice>::New();
-    sliceZ->SetMapper(mapperZ);
-
-
-
-    vtkSmartPointer<vtkPolyDataMapper> ejeXmapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    ejeXmapper->SetInputConnection(glyphX->GetOutputPort());
-
-    vtkSmartPointer<vtkPolyDataMapper> ejeYmapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    ejeYmapper->SetInputConnection(glyphY->GetOutputPort());
-
-    vtkSmartPointer<vtkPolyDataMapper> ejeZmapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    ejeZmapper->SetInputConnection(glyphZ->GetOutputPort());
-
-    vtkSmartPointer<vtkActor> actorX = vtkSmartPointer<vtkActor>::New();
-    vtkSmartPointer<vtkActor> actorY = vtkSmartPointer<vtkActor>::New();
-    vtkSmartPointer<vtkActor> actorZ = vtkSmartPointer<vtkActor>::New();
-
-    actorX->SetMapper(ejeXmapper);
-    actorY->SetMapper(ejeYmapper);
-    actorZ->SetMapper(ejeZmapper);
-
-//    mi_renderer->AddActor(actorX);
-    mi_renderer->AddActor(actorY);
-//    mi_renderer->AddActor(actorZ);
+    mi_renderer->AddActor( ejesActor );
 }
 
 
@@ -335,7 +253,6 @@ void RECONS3D::agregarInput(const char *rutabase_input, const char *rutaground_i
 
     // Agregar el detector y la fuente en posociones por defecto:
     detector.push_back( posicionDefecto( imgs_base[n_angios-1].cols, imgs_base[n_angios-1].rens, imgs_base[n_angios-1].rens/2 ) );
-    fuente.push_back( posicionDefecto( imgs_base[n_angios-1].cols, imgs_base[n_angios-1].rens, -imgs_base[n_angios-1].rens/2 ) );
 }
 
 
@@ -399,66 +316,68 @@ void RECONS3D::moverPosicion(const int angio_ID, const double RAO_LAO, const dou
     DEB_MSG("SID: " << Distance_source_to_patient << ", SOD: " << Distance_source_to_detector << ", DDP:" << Distance_patient_to_detector);
 
     POS det_pos = detector[angio_ID];
-    POS fnt_pos = fuente[angio_ID];
 
+    // Mover los puntos segun SID y SOD:
     for( int i = 0; i < 5; i++){
         det_pos.puntos[i][2] += Distance_patient_to_detector;
-        fnt_pos.puntos[i][2] -= Distance_source_to_patient;
+    }
+
+    // Rotar los puntos segun LAO/RAO y CAU/CRA:
+    const double crl = cos(RAO_LAO/180.0 * PI);
+    const double srl = sin(RAO_LAO/180.0 * PI);
+    const double ccc = cos(CAU_CRA/180.0 * PI);
+    const double scc = sin(CAU_CRA/180.0 * PI);
+
+    //// Rotacion usando el eje x como base:
+    for( int i = 0; i < 5; i++){
+        const double old_y = det_pos.puntos[i][1];
+        det_pos.puntos[i][1] = crl*old_y - srl*det_pos.puntos[i][2];
+        det_pos.puntos[i][2] = srl*old_y + crl*det_pos.puntos[i][2];
+    }
+
+    //// Rotacion usando el eje y como base:
+    for( int i = 0; i < 5; i++){
+        const double old_x = det_pos.puntos[i][0];
+        det_pos.puntos[i][0] = ccc*old_x - scc*det_pos.puntos[i][2];
+        det_pos.puntos[i][2] = scc*old_x + ccc*det_pos.puntos[i][2];
     }
 
     // Realizar los cambios en los puntos del detector y fuente:
     //// Generar una malla no estructurada:
     vtkSmartPointer<vtkUnstructuredGrid> det_ugrid = vtkSmartPointer<vtkUnstructuredGrid>::New();
-    vtkSmartPointer<vtkUnstructuredGrid> fnt_ugrid = vtkSmartPointer<vtkUnstructuredGrid>::New();
 
     // Definir los puntos del detector y puente
     vtkSmartPointer<vtkPoints> det_points = vtkSmartPointer<vtkPoints>::New();
-    vtkSmartPointer<vtkPoints> fnt_points = vtkSmartPointer<vtkPoints>::New();
 
     for(int i = 0; i < 5; i++){
         det_points->InsertNextPoint( det_pos.puntos[i] );
-        fnt_points->InsertNextPoint( fnt_pos.puntos[i] );
     }
 
     //// Definir la forma del detector y fuente:
     vtkSmartPointer<vtkPyramid> det_pyr = vtkSmartPointer<vtkPyramid>::New();
-    vtkSmartPointer<vtkPyramid> fnt_pyr = vtkSmartPointer<vtkPyramid>::New();
     for(int i = 0; i < 5; ++i){
         det_pyr->GetPointIds()->SetId(i, i);
-        fnt_pyr->GetPointIds()->SetId(i, i);
     }
 
     det_ugrid->SetPoints(det_points);
     det_ugrid->InsertNextCell(det_pyr->GetCellType(),det_pyr->GetPointIds());
 
-    fnt_ugrid->SetPoints(fnt_points);
-    fnt_ugrid->InsertNextCell(fnt_pyr->GetCellType(),fnt_pyr->GetPointIds());
-
     vtkSmartPointer<vtkDataSetMapper> det_mapper = vtkSmartPointer<vtkDataSetMapper>::New();
     vtkSmartPointer<vtkActor> det_actor = vtkSmartPointer<vtkActor>::New();
 
-    vtkSmartPointer<vtkDataSetMapper> fnt_mapper = vtkSmartPointer<vtkDataSetMapper>::New();
-    vtkSmartPointer<vtkActor> fnt_actor = vtkSmartPointer<vtkActor>::New();
-
 #if VTK_MAJOR_VERSION <= 5
     det_mapper->SetInputConnection(det_ugrid->GetProducerPort());
-    fnt_mapper->SetInputConnection(fnt_ugrid->GetProducerPort());
 #else
     det_mapper->SetInputData(det_ugrid);
-    fnt_mapper->SetInputData(fnt_ugrid);
 #endif
 
     det_actor->SetMapper(det_mapper);
-    fnt_actor->SetMapper(fnt_mapper);
 
     double det_col[] = {0.5, 0.0, 0.5};// Morado
-    double fnt_col[] = {1.0, 0.546875, 0.0};// Naranja
 
     det_actor->GetProperty()->SetColor(det_col);
-    fnt_actor->GetProperty()->SetColor(fnt_col);
 
     renderer_global->AddActor(det_actor);
-    renderer_global->AddActor(fnt_actor);
 
     renderizar(renderer_global);
 }
@@ -581,9 +500,8 @@ RECONS3D::RECONS3D(){
     esDICOM.push_back(false);
     mis_renderers.push_back( vtkSmartPointer<vtkRenderer>::New() );
     double color[] = {1.0, 1.0, 1.0};
-    //agregarEsfera(0.0, 0.0, 0.0, 256.0, color, renderer_global);
+    agregarEsfera(0.0, 0.0, 0.0, 100.0, color, renderer_global);
     agregarEjes(renderer_global);
-    renderizar(renderer_global);
 
     n_angios = 0;
 }
@@ -599,9 +517,9 @@ RECONS3D::RECONS3D(char **rutasbase_input, char **rutasground_input, const int n
     // Preparar el renderer Global:
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
     double color[] = {1.0, 1.0, 1.0};
-    //agregarEsfera(0.0, 0.0, 0.0, 256.0, color, renderer_global);
+    agregarEsfera(0.0, 0.0, 0.0, 100.0, color, renderer_global);
     agregarEjes(renderer_global);
-    renderizar(renderer_global);
+
 }
 
 
@@ -615,9 +533,9 @@ RECONS3D::RECONS3D(const char *rutabase_input, const char *rutaground_input, con
     // Preparar el renderer Global:
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
     double color[] = {1.0, 1.0, 1.0};
-    //agregarEsfera(0.0, 0.0, 0.0, 256.0, color, renderer_global);
+    agregarEsfera(0.0, 0.0, 0.0, 100.0, color, renderer_global);
     agregarEjes(renderer_global);
-    renderizar(renderer_global);
+
 }
 
 

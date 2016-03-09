@@ -1,4 +1,4 @@
-/******
+    /******
     CENTRO DE INVESTIGACION EN MATEMATICAS
     MAESTRIA EN COMPUTACION Y MATEMATICAS INDUSTRIALES
 
@@ -16,6 +16,7 @@
 #include <vtkSmartPointer.h>
 #include <vtkTransform.h>
 #include <vtkPointData.h>
+#include <vtkUnsignedCharArray.h>
 
 // Actores:
 #include <vtkActor.h>
@@ -37,6 +38,7 @@
 // Librerias para generar mallas:
 #include <vtkCellArray.h>
 #include <vtkPolyData.h>
+#include <vtkCellData.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkUnstructuredGrid.h>
 
@@ -49,10 +51,8 @@
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkProperty.h>
 
-
-
 // Librerias para formas geometricas:
-#include <vtkArrowSource.h>
+#include <vtkLine.h>
 #include <vtkTriangle.h>
 #include <vtkSphereSource.h>
 #include <vtkPyramid.h>
@@ -138,7 +138,6 @@ class RECONS3D{
         void agregarEsfera(const double x, const double y, const double z, const double radio, double color[3], vtkSmartPointer<vtkRenderer> mi_renderer );
 
         std::vector<POS> detector;
-        std::vector<POS> fuente;
 
     // M E T O D O S       P R I V A D O S
     //-------------------------------------------------------------------------------------- PRIVATE ----- ^

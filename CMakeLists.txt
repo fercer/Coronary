@@ -5,13 +5,13 @@ SET(NOMBRE_PROYECTO Coronary)
 SET(HEADERS src/reconstructor_3D.h src/filtros.h src/IMGVTK.h src/pars_fercer.h)
 SET(SOURCES src/main.cpp src/reconstructor_3D.cpp src/filtros.cpp src/IMGVTK.cpp src/pars_fercer.c)
 
-SET(CMAKE_C_FLAGS_DISTRIBUTION "-std=c99 -g -O3 -DNDEBUG -lm -fopenmp")
-SET(CMAKE_C_FLAGS_DEBUG "-std=c99 -g -lm -fopenmp")
-SET(CMAKE_CXX_FLAGS_DISTRIBUTION "-g -O3 -DNDEBUG -fopenmp")
+SET(CMAKE_C_FLAGS_DISTRIBUTION "-O3 -DNDEBUG -lm -fopenmp")
+SET(CMAKE_C_FLAGS_DEBUG "-g -lm -fopenmp")
+SET(CMAKE_CXX_FLAGS_DISTRIBUTION "-O3 -DNDEBUG -fopenmp")
 SET(CMAKE_CXX_FLAGS_DEBUG "-g -fopenmp")
 
 PROJECT( ${NOMBRE_PROYECTO} )
-
+ADD_DEFINITIONS(-std=c99)
 ADD_EXECUTABLE( ${NOMBRE_PROYECTO} ${SOURCES} ${HEADERS})
 
 find_path (FFTW_INCLUDES fftw3.h)
