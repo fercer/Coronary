@@ -229,15 +229,23 @@ void RECONS3D::agregarInput(const char *rutabase_input, const char *rutaground_i
 
         gdcm::File &file = DICOMreader.GetFile();
         gdcm::DataSet &ds = file.GetDataSet();
-        std::stringstream strm;
-        strm.str("");
-        DEB_MSG("TAG[" << (0x12) << "," << (0x456) << "]: ");
-        if( ds.FindDataElement(gdcm::PrivateTag (0x12, 0x456)) ){
-            ds.GetDataElement( gdcm::PrivateTag (0x12, 0x456) ).GetValue().Print(strm);
-            DEB_MSG( strm.str() );
-        }else{
-            DEB_MSG("No funciona . . .");
+        //gdcm::DataSet &ds = file.GetDataSet();
+        gdcm::DataSet::ConstIterator it = ds.Begin();
+
+        for(; it != ds.End(); ++it){
+            const gdcm::DataElement &de = *it;
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            const gdcm::Tag &t = de.GetTag();
+            DEB_MSG("TAG: " << t);
+
+
+            std::stringstream strm;
+            strm.str("");
+
+            //de.GetValue().Print(strm);
+            DEB_MSG("VAL: " << de);
         }
+
         const gdcm::Image &gimage = DICOMreader.GetImage();
         imgs_base[n_angios-1].Cargar(gimage, nivel);
 
