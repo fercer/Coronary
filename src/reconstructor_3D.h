@@ -27,6 +27,7 @@
 #include <vtkImageMapper3D.h>
 #include <vtkDataSetMapper.h>
 #include <vtkImageSliceMapper.h>
+#include <vtkPolyDataMapper.h>
 
 // Librerias para trabajar con imagenes:
 #include <vtkImageData.h>
@@ -34,12 +35,12 @@
 #include <vtkImageReader2.h>
 #include <vtkImageExtractComponents.h>
 #include <vtkImageSlice.h>
+#include <vtkImageDataGeometryFilter.h>
 
 // Librerias para generar mallas:
 #include <vtkCellArray.h>
 #include <vtkPolyData.h>
 #include <vtkCellData.h>
-#include <vtkPolyDataMapper.h>
 #include <vtkUnstructuredGrid.h>
 
 // Librerias para visualizacion
@@ -125,6 +126,7 @@ class RECONS3D{
         IMGVTK *imgs_segment;
 
         int n_angios;
+        double pixX, pixY;
 
         std::vector<bool> esDICOM;
 
@@ -148,7 +150,7 @@ class RECONS3D{
     // C O N S T R U C T O R E S    /   D E S T R U C T O R E S
         RECONS3D();
         RECONS3D(char **rutasbase_input , char **rutasground_input, const int n_imgs);
-        RECONS3D(const char *rutabase_input, const char *rutaground_input, const int nivel);
+        RECONS3D(const char *rutabase_input, const char *rutaground_input, const int nivel, const double ancho_pix, const double alto_pix);
         ~RECONS3D();
 
     // M E T O D O S        P U B L I C O S

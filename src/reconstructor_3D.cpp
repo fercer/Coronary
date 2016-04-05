@@ -49,6 +49,7 @@ void RECONS3D::mostrarImagen( vtkSmartPointer<vtkImageData> &img_src, vtkSmartPo
     // Crear un actor temporal
     vtkSmartPointer<vtkImageActor> actor = vtkSmartPointer<vtkImageActor>::New();
 
+
     #if VTK_MAJOR_VERSION <= 5
         actor->SetInput(img_src);
     #else
@@ -229,15 +230,23 @@ void RECONS3D::agregarInput(const char *rutabase_input, const char *rutaground_i
 
         gdcm::File &file = DICOMreader.GetFile();
         gdcm::DataSet &ds = file.GetDataSet();
-        std::stringstream strm;
-        strm.str("");
-        DEB_MSG("TAG[" << (0x12) << "," << (0x456) << "]: ");
-        if( ds.FindDataElement(gdcm::PrivateTag (0x12, 0x456)) ){
-            ds.GetDataElement( gdcm::PrivateTag (0x12, 0x456) ).GetValue().Print(strm);
-            DEB_MSG( strm.str() );
-        }else{
-            DEB_MSG("No funciona . . .");
+        //gdcm::DataSet &ds = file.GetDataSet();
+        gdcm::DataSet::ConstIterator it = ds.Begin();
+
+        for(; it != ds.End(); ++it){
+            const gdcm::DataElement &de = *it;
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            const gdcm::Tag &t = de.GetTag();
+            DEB_MSG("TAG: " << t);
+
+
+            std::stringstream strm;
+            strm.str("");
+
+            //de.GetValue().Print(strm);
+            DEB_MSG("VAL: " << bv);
         }
+
         const gdcm::Image &gimage = DICOMreader.GetImage();
         imgs_base[n_angios-1].Cargar(gimage, nivel);
 
@@ -396,7 +405,7 @@ void RECONS3D::segmentarImagenBase(){
 
     renderizar( mis_renderers[0]);
 
-
+/*
     FILTROS filtro_gabor;
     filtro_gabor.setFiltro(FILTROS::SS_GABOR);
     filtro_gabor.setFitness(FILTROS::ROC);
@@ -436,7 +445,7 @@ void RECONS3D::segmentarImagenBase(){
     imgs_segment[0].umbralizar();
     mostrarImagen(imgs_segment[0].base, mis_renderers[0]);
     renderizar(mis_renderers[0]);
-
+*/
 }
 
 
@@ -526,15 +535,18 @@ RECONS3D::RECONS3D(char **rutasbase_input, char **rutasground_input, const int n
 /*  Constructor ( const char *rutas_input )
     Funcion: Recibe las rutas de las imagenes usadas como conjunto de entrenamiento.
 */
-RECONS3D::RECONS3D(const char *rutabase_input, const char *rutaground_input, const int nivel){
+RECONS3D::RECONS3D(const char *rutabase_input, const char *rutaground_input, const int nivel, const double ancho_pix, const double alto_pix){
     n_angios = 0;
     agregarInput(rutabase_input, rutaground_input, nivel);
 
-    // Preparar el renderer Global:
+    // Preparar el renderer Global:, const double ancho_pix, const double alto_pix
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
     double color[] = {1.0, 1.0, 1.0};
     agregarEsfera(0.0, 0.0, 0.0, 100.0, color, renderer_global);
     agregarEjes(renderer_global);
+
+    pixX = ancho_pix;
+    pixY = alto_pix;
 
 }
 
