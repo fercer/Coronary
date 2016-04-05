@@ -93,6 +93,9 @@ int main(int argc, char** argv ){
     RECONS3D reconstructor( parametros[0].mi_valor.par_s, parametros[1].mi_valor.par_s, parametros[2].mi_valor.par_i );
     reconstructor.moverPosicion( 0, parametros[6].mi_valor.par_d, parametros[5].mi_valor.par_d, parametros[4].mi_valor.par_d, parametros[3].mi_valor.par_d);
 
+    reconstructor.agregarInput(parametros[0].mi_valor.par_s, parametros[1].mi_valor.par_s, parametros[2].mi_valor.par_i );
+    reconstructor.moverPosicion( 1, -parametros[6].mi_valor.par_d, -parametros[5].mi_valor.par_d, parametros[4].mi_valor.par_d, parametros[3].mi_valor.par_d);
+
     /*
     *********************************************************************************************
                 BUSQUEDA EXHAUSTIVA DE LOS PARAMETROS:
