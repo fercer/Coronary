@@ -1126,93 +1126,164 @@ void IMGVTK::umbralizar(){
 }
 
 
-/*  Metodo: Cargar
-    Funcion: Cargar desde un archivo DICOM la imagen a formato VTK.
-*/
-void IMGVTK::Cargar(const gdcm::Image &gimage, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel){
-    //DEB_MSG("cargando: " << ruta_origen << " (Archivo DICOM)");
-    DEB_MSG("Buffer length: " << gimage.GetBufferLength());
-    char *buffer = new char[gimage.GetBufferLength()];
-    gimage.GetBuffer(buffer);
-
-    const unsigned int* dimension = gimage.GetDimensions();
-    const int mis_cols = dimension[0];
-    const int mis_rens = dimension[1];
-    const int mis_niveles = dimension[2];
-    const int mis_rens_cols = mis_rens*mis_cols;
-
-    DEB_MSG("Cols: " << mis_cols << ", rens: " << mis_rens  << ", niveles: " << mis_niveles);
-
-    // Alojar memoria para la imagen:
-    img_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, 0);
-    img_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
-    img_src->SetOrigin(0.0, 0.0, 0.0);
-    img_src->SetSpacing(1.0, 1.0, 1.0);
-
-    unsigned char *img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
-
-    mask_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0,0);
-    mask_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
-    mask_src->SetOrigin(0.0, 0.0, 0.0);
-    mask_src->SetSpacing(1.0, 1.0, 1.0);
-
-    gdcm::PhotometricInterpretation scl_comps = gimage.GetPhotometricInterpretation();
-    gdcm::PixelFormat pix_format = gimage.GetPixelFormat();
-
-    switch(scl_comps){
-        case gdcm::PhotometricInterpretation::RGB:{
-                DEB_MSG("Imagen DICOM en RGB...");
-                if( pix_format == gdcm::PixelFormat::UINT8 ){
-
-                    img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
-                    for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
-                        img_tmp[xy/3] = (unsigned char)buffer[xy + nivel*mis_rens_cols];
-                    }
-                    definirMask(img_src, mask_src);
-                }else{
-                    using namespace std;
-                    cout << "============ ERROR AL CARGAR ARCHIVO DICOM ===========\nFormato de imagen RGB no soportado." << endl;
-                }
-                break;
-            }
-        case gdcm::PhotometricInterpretation::MONOCHROME2:{
-                DEB_MSG("Imagen DICOM en escala de grises...");
-                if( pix_format == gdcm::PixelFormat::UINT8 ){
-                    DEB_MSG("Tipo UINT8");
-
-                    img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
-                    memcpy( img_tmp, buffer + nivel*mis_rens_cols, mis_rens_cols*sizeof(unsigned char));
-                    definirMask(img_src, mask_src);
-
-                }else if( pix_format == gdcm::PixelFormat::UINT16 ){
-                    DEB_MSG("Tipo UINT16");
-                    unsigned short *buffer16 = (unsigned short*)buffer;
-
-                    img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
-                    for( int xy = 0; xy < mis_rens_cols; xy+=3){
-                        img_tmp[xy] = (unsigned char)buffer16[xy + nivel*mis_rens_cols*3] / 16;
-                    }
-                    definirMask(img_src, mask_src);
-
-                }else{
-                    using namespace std;
-                    cout << "============ ERROR AL CARGAR ARCHIVO DICOM ===========\nFormato de imagen RGB no soportado." << endl;
-                }
-                break;
-            }
-    }
-    delete [] buffer;
-}
 
 /*  Metodo: Cargar
-    Funcion: Cargar la imagen a formato VTK.
+    Funcion: Cargar desde un archivo DICOM/JPEG/PNG/BMP la imagen a formato VTK.
 */
-void IMGVTK::Cargar( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const bool enmascarar ){
-    // Leer la imagen en RBG o Escala de Grises:
-    vtkSmartPointer<vtkImageReader2Factory> readerFactory = vtkSmartPointer<vtkImageReader2Factory>::New();
-    vtkSmartPointer<vtkImageReader2> imgReader = readerFactory->CreateImageReader2( ruta_origen );
+void IMGVTK::Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel, const bool enmascarar){
 
-    DEB_MSG("cargando: " << ruta_origen << " (PNG, BMP, JPEG)")
+    const int ruta_l = strlen(ruta_origen);
+DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
+    esDICOM = true;
+    esDICOM *= strcmp(ruta_origen + ruta_l - 3, "png");
+    esDICOM *= strcmp(ruta_origen + ruta_l - 3, "jpg");
+    esDICOM *= strcmp(ruta_origen + ruta_l - 4, "jpeg");
+    esDICOM *= strcmp(ruta_origen + ruta_l - 3, "bmp");
+
+    if( esDICOM ){
+        gdcm::ImageReader DICOMreader;
+        DICOMreader.SetFileName( ruta_origen );
+        DICOMreader.Read();
+
+        gdcm::File &file = DICOMreader.GetFile();
+        gdcm::DataSet &ds = file.GetDataSet();
+
+////---------- Extraer SID (Distancia de la fuente al detector): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1110) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                SID = atof( strm.c_str() );
+            }
+        }
+////---------- Extraer SOD (Distancia de la fuente al paciente): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1111) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                SOD = atof( strm.c_str() );
+            }
+        }
+////---------- Extraer DDP (Distancia del detector al paciente): ---------------------------------------------------------------------
+        DDP = SID - SOD;
+////---------- Extraer pixY\pixX (Distancia entre el centro de los pixeles en el eje Y\X): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1164) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                char *pixXYstr = new char [bv->GetLength()];
+                memcpy(pixXYstr, strm.c_str(), bv->GetLength() * sizeof(char ));
+                char *tmp = strchr(pixXYstr,'\\');
+DEB_MSG("original: " << pixXYstr);
+                pixXYstr[ tmp - pixXYstr ] = '\0';
+DEB_MSG("trimmed: Y = " << pixXYstr << ", X = " << (tmp+1));
+
+                pixY = atof(pixXYstr);
+                pixX = atof(tmp+1);
+            }
+        }
+////---------- Extraer LAO/RAO (Angulo del detector en direccion izquierda(-) a derecha(+)): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1510) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                LAORAO = atof( strm.c_str() );
+            }
+        }
+////---------- Extraer CRA/CAU (Angulo del detector en direccion cranial(-) a caudal(+)): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1511) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                CRACAU = atof( strm.c_str() );
+            }
+        }
+
+        const gdcm::Image &gimage = DICOMreader.GetImage();
+DEB_MSG("Buffer length: " << gimage.GetBufferLength());
+        char *buffer = new char[gimage.GetBufferLength()];
+        gimage.GetBuffer(buffer);
+
+        const unsigned int* dimension = gimage.GetDimensions();
+        const int mis_cols = dimension[0];
+        const int mis_rens = dimension[1];
+        const int mis_niveles = dimension[2];
+        const int mis_rens_cols = mis_rens*mis_cols;
+
+DEB_MSG("Cols: " << mis_cols << ", rens: " << mis_rens  << ", niveles: " << mis_niveles);
+
+        // Alojar memoria para la imagen:
+        img_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, 0);
+        img_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+        img_src->SetOrigin(0.0, 0.0, 0.0);
+        img_src->SetSpacing(1.0, 1.0, 1.0);
+
+        unsigned char *img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
+
+        mask_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0,0);
+        mask_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+        mask_src->SetOrigin(0.0, 0.0, 0.0);
+        mask_src->SetSpacing(1.0, 1.0, 1.0);
+
+        gdcm::PhotometricInterpretation scl_comps = gimage.GetPhotometricInterpretation();
+        gdcm::PixelFormat pix_format = gimage.GetPixelFormat();
+
+        switch(scl_comps){
+            case gdcm::PhotometricInterpretation::RGB:{
+DEB_MSG("Imagen DICOM en RGB...");
+                    if( pix_format == gdcm::PixelFormat::UINT8 ){
+
+                        img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
+                        for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
+                            img_tmp[xy/3] = (unsigned char)buffer[xy + nivel*mis_rens_cols];
+                        }
+                    }else{
+                        using namespace std;
+                        cout << "============ ERROR AL CARGAR ARCHIVO DICOM ===========\nFormato de imagen RGB no soportado." << endl;
+                    }
+                    break;
+                }
+            case gdcm::PhotometricInterpretation::MONOCHROME2:{
+DEB_MSG("Imagen DICOM en escala de grises...");
+                    if( pix_format == gdcm::PixelFormat::UINT8 ){
+DEB_MSG("Tipo UINT8");
+
+                        img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
+                        memcpy( img_tmp, buffer + nivel*mis_rens_cols, mis_rens_cols*sizeof(unsigned char));
+
+                    }else if( pix_format == gdcm::PixelFormat::UINT16 ){
+DEB_MSG("Tipo UINT16");
+                        unsigned short *buffer16 = (unsigned short*)buffer;
+
+                        img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
+                        for( int xy = 0; xy < mis_rens_cols; xy+=3){
+                            img_tmp[xy] = (unsigned char)buffer16[xy + nivel*mis_rens_cols*3] / 16;
+                        }
+
+                    }else{
+                        using namespace std;
+                        cout << "============ ERROR AL CARGAR ARCHIVO DICOM ===========\nFormato de imagen RGB no soportado." << endl;
+                    }
+                    break;
+                }
+        }
+        delete [] buffer;
+
+
+    }else{ ///------------------------------------------------------------------------------------------------
+
+
+
+        // Leer la imagen en RBG o Escala de Grises:
+        vtkSmartPointer<vtkImageReader2Factory> readerFactory = vtkSmartPointer<vtkImageReader2Factory>::New();
+        vtkSmartPointer<vtkImageReader2> imgReader = readerFactory->CreateImageReader2( ruta_origen );
+
+DEB_MSG("cargando: " << ruta_origen << " (PNG, BMP, JPEG)")
 
 #ifndef NDEBUG
     FILE *fp = fopen(ruta_origen,"r");
@@ -1220,142 +1291,140 @@ void IMGVTK::Cargar( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkI
     if(fp) fclose( fp );
 #endif
 
-    imgReader->SetFileName( ruta_origen );
-    imgReader->Update();
+        imgReader->SetFileName( ruta_origen );
+        imgReader->Update();
 
-    // Pasar temporalmente la imagen de RGB a escala de grises en la imagen de entrada.
-    int dims[3];
-    imgReader->GetOutput()->GetDimensions( dims );
+        // Pasar temporalmente la imagen de RGB a escala de grises en la imagen de entrada.
+        int dims[3];
+        imgReader->GetOutput()->GetDimensions( dims );
 
-    int scl_comps = imgReader->GetOutput()->GetNumberOfScalarComponents();
+        int scl_comps = imgReader->GetOutput()->GetNumberOfScalarComponents();
 
-    const int mis_cols = dims[0];
-    const int mis_rens = dims[1];
-    const int mis_rens_cols = mis_rens*mis_cols;
+        const int mis_cols = dims[0];
+        const int mis_rens = dims[1];
+        const int mis_rens_cols = mis_rens*mis_cols;
 
-    // Alojar memoria para la imagen:
-    img_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, 0);
-    img_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
-    img_src->SetOrigin(0.0, 0.0, 0.0);
-    img_src->SetSpacing(1.0, 1.0, 1.0);
+        // Alojar memoria para la imagen:
+        img_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, 0);
+        img_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+        img_src->SetOrigin(0.0, 0.0, 0.0);
+        img_src->SetSpacing(1.0, 1.0, 1.0);
 
 
-    switch(scl_comps){
-        // La imagen esta en escala de grises:
-        case 1:{
-            DEB_MSG("La imagen esta en escala de grises")
-            vtkSmartPointer<vtkImageExtractComponents> extractGreyFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-            extractGreyFilter->SetInputConnection(imgReader->GetOutputPort());
-            extractGreyFilter->SetComponents(0);
-            extractGreyFilter->Update();
+        switch(scl_comps){
+            // La imagen esta en escala de grises:
+            case 1:{
+DEB_MSG("La imagen esta en escala de grises")
+                vtkSmartPointer<vtkImageExtractComponents> extractGreyFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
+                extractGreyFilter->SetInputConnection(imgReader->GetOutputPort());
+                extractGreyFilter->SetComponents(0);
+                extractGreyFilter->Update();
 
-            unsigned char *gris = static_cast<unsigned char*>(extractGreyFilter->GetOutput()->GetScalarPointer(0,0,0));
-            unsigned char *img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
+                unsigned char *gris = static_cast<unsigned char*>(extractGreyFilter->GetOutput()->GetScalarPointer(0,0,0));
+                unsigned char *img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
 
-            memcpy(img_tmp, gris, mis_rens_cols*sizeof(unsigned char));
-            break;
-        }
-        // La imagen esta en RGB:
-        case 3:{
-            DEB_MSG("La imagen esta en RGB")
-            vtkSmartPointer<vtkImageExtractComponents> extractRedFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-            extractRedFilter->SetInputConnection(imgReader->GetOutputPort());
-            extractRedFilter->SetComponents(0);
-            extractRedFilter->Update();
-
-            vtkSmartPointer<vtkImageExtractComponents> extractGreenFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-            extractGreenFilter->SetInputConnection(imgReader->GetOutputPort());
-            extractGreenFilter->SetComponents(1);
-            extractGreenFilter->Update();
-
-            vtkSmartPointer<vtkImageExtractComponents> extractBlueFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-            extractBlueFilter->SetInputConnection(imgReader->GetOutputPort());
-            extractBlueFilter->SetComponents(2);
-            extractBlueFilter->Update();
-
-            vtkImageData *ptR = extractRedFilter->GetOutput();
-            vtkImageData *ptG = extractGreenFilter->GetOutput();
-            vtkImageData *ptB = extractBlueFilter->GetOutput();
-
-            double color;
-
-            for( int i = 0 ; i < mis_rens; i++){
-                for( int j = 0; j < mis_cols; j++ ){
-                    color = ((0.297)*ptR->GetScalarComponentAsDouble(j,i,0,0) +
-                             (0.589)*ptG->GetScalarComponentAsDouble(j,i,0,0) +
-                             (0.114)*ptB->GetScalarComponentAsDouble(j,i,0,0));
-
-                    img_src->SetScalarComponentFromDouble(j,i,0,0,color);
-                }
+                memcpy(img_tmp, gris, mis_rens_cols*sizeof(unsigned char));
+                break;
             }
-            break;
-        }
-        // La imagen esta en RGBA:
-        case 4:{
+            // La imagen esta en RGB:
+            case 3:{
+DEB_MSG("La imagen esta en RGB")
+                vtkSmartPointer<vtkImageExtractComponents> extractRedFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
+                extractRedFilter->SetInputConnection(imgReader->GetOutputPort());
+                extractRedFilter->SetComponents(0);
+                extractRedFilter->Update();
 
-            DEB_MSG("La Imagen esta en RGB{A}")
-            vtkSmartPointer<vtkImageExtractComponents> extractRedFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-            extractRedFilter->SetInputConnection(imgReader->GetOutputPort());
-            extractRedFilter->SetComponents(0);
-            extractRedFilter->Update();
+                vtkSmartPointer<vtkImageExtractComponents> extractGreenFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
+                extractGreenFilter->SetInputConnection(imgReader->GetOutputPort());
+                extractGreenFilter->SetComponents(1);
+                extractGreenFilter->Update();
 
-            vtkSmartPointer<vtkImageExtractComponents> extractGreenFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-            extractGreenFilter->SetInputConnection(imgReader->GetOutputPort());
-            extractGreenFilter->SetComponents(1);
-            extractGreenFilter->Update();
+                vtkSmartPointer<vtkImageExtractComponents> extractBlueFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
+                extractBlueFilter->SetInputConnection(imgReader->GetOutputPort());
+                extractBlueFilter->SetComponents(2);
+                extractBlueFilter->Update();
 
-            vtkSmartPointer<vtkImageExtractComponents> extractBlueFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-            extractBlueFilter->SetInputConnection(imgReader->GetOutputPort());
-            extractBlueFilter->SetComponents(2);
-            extractBlueFilter->Update();
+                vtkImageData *ptR = extractRedFilter->GetOutput();
+                vtkImageData *ptG = extractGreenFilter->GetOutput();
+                vtkImageData *ptB = extractBlueFilter->GetOutput();
 
-            vtkSmartPointer<vtkImageExtractComponents> extractAlphaFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-            extractAlphaFilter->SetInputConnection(imgReader->GetOutputPort());
-            extractAlphaFilter->SetComponents(3);
-            extractAlphaFilter->Update();
+                double color;
 
-            vtkImageData *ptR = extractRedFilter->GetOutput();
-            vtkImageData *ptG = extractGreenFilter->GetOutput();
-            vtkImageData *ptB = extractBlueFilter->GetOutput();
-            //vtkImageData *ptA = extractAlphaFilter->GetOutput();
-            double color;
+                for( int i = 0 ; i < mis_rens; i++){
+                    for( int j = 0; j < mis_cols; j++ ){
+                        color = ((0.297)*ptR->GetScalarComponentAsDouble(j,i,0,0) +
+                                 (0.589)*ptG->GetScalarComponentAsDouble(j,i,0,0) +
+                                 (0.114)*ptB->GetScalarComponentAsDouble(j,i,0,0));
 
-            for( int i = 0 ; i < mis_rens; i++){
-                for( int j = 0; j < mis_cols; j++ ){
-                    color = ((0.297)*ptR->GetScalarComponentAsDouble(j,i,0,0) +
-                             (0.589)*ptG->GetScalarComponentAsDouble(j,i,0,0) +
-                             (0.114)*ptB->GetScalarComponentAsDouble(j,i,0,0));
-
-                    img_src->SetScalarComponentFromDouble(j,i,0,0,color);// * ptA->GetScalarComponentAsDouble(j,i,0,0));
+                        img_src->SetScalarComponentFromDouble(j,i,0,0,color);
+                    }
                 }
+                break;
             }
-            break;
+            // La imagen esta en RGBA:
+            case 4:{
+DEB_MSG("La Imagen esta en RGB{A}")
+                vtkSmartPointer<vtkImageExtractComponents> extractRedFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
+                extractRedFilter->SetInputConnection(imgReader->GetOutputPort());
+                extractRedFilter->SetComponents(0);
+                extractRedFilter->Update();
+
+                vtkSmartPointer<vtkImageExtractComponents> extractGreenFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
+                extractGreenFilter->SetInputConnection(imgReader->GetOutputPort());
+                extractGreenFilter->SetComponents(1);
+                extractGreenFilter->Update();
+
+                vtkSmartPointer<vtkImageExtractComponents> extractBlueFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
+                extractBlueFilter->SetInputConnection(imgReader->GetOutputPort());
+                extractBlueFilter->SetComponents(2);
+                extractBlueFilter->Update();
+
+                vtkSmartPointer<vtkImageExtractComponents> extractAlphaFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
+                extractAlphaFilter->SetInputConnection(imgReader->GetOutputPort());
+                extractAlphaFilter->SetComponents(3);
+                extractAlphaFilter->Update();
+
+                vtkImageData *ptR = extractRedFilter->GetOutput();
+                vtkImageData *ptG = extractGreenFilter->GetOutput();
+                vtkImageData *ptB = extractBlueFilter->GetOutput();
+                //vtkImageData *ptA = extractAlphaFilter->GetOutput();
+                double color;
+
+                for( int i = 0 ; i < mis_rens; i++){
+                    for( int j = 0; j < mis_cols; j++ ){
+                        color = ((0.297)*ptR->GetScalarComponentAsDouble(j,i,0,0) +
+                                 (0.589)*ptG->GetScalarComponentAsDouble(j,i,0,0) +
+                                 (0.114)*ptB->GetScalarComponentAsDouble(j,i,0,0));
+
+                        img_src->SetScalarComponentFromDouble(j,i,0,0,color);// * ptA->GetScalarComponentAsDouble(j,i,0,0));
+                    }
+                }
+                break;
+            }
         }
+
+        imgReader->Delete();
     }
 
-    imgReader->Delete();
-    DEB_MSG("Imagen cargada");
+DEB_MSG("Imagen cargada");
 
-    if( enmascarar ){
+    if(enmascarar){
         definirMask(img_src, mask_src);
+DEB_MSG("Mascara obtenida");
     }
-
 }
 
 
 
 /*  Metodo: Cargar
-    Funcion: Cargar la imagen a formato VTK desde varios archivos.
+    Funcion: Cargar la imagen a formato VTK desde varios archivos (Solo para imagenes JPEG, BMP o PNG).
 */
-void IMGVTK::Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, char **rutas , const int n_imgs, const bool enmascarar){
-    if(ruta_origen){
-        delete [] ruta_origen;
-    }
-
+void IMGVTK::Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, char **rutas, const int n_imgs, const bool enmascarar){
     vtkSmartPointer<vtkImageData> auxiliar = vtkSmartPointer<vtkImageData>::New();
     vtkSmartPointer<vtkImageData> mask_auxiliar = vtkSmartPointer<vtkImageData>::New();
-    ruta_origen = setRuta(rutas[0]);
-    Cargar(auxiliar, mask_auxiliar, enmascarar);
+
+    Cargar(rutas[0], auxiliar, mask_auxiliar, 0, enmascarar);
+
     unsigned char *aux_tmp = static_cast<unsigned char*>(auxiliar->GetScalarPointer(0, 0, 0));
     unsigned char *mskaux_tmp = static_cast<unsigned char*>(mask_auxiliar->GetScalarPointer(0, 0, 0));
 
@@ -1388,9 +1457,7 @@ void IMGVTK::Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkIm
     }
 
     for( int img_i = 1; img_i < n_imgs; img_i++){
-        delete [] ruta_origen;
-        ruta_origen = setRuta(rutas[img_i]);
-        Cargar(auxiliar, mask_auxiliar, enmascarar);
+        Cargar(rutas[img_i], auxiliar, mask_auxiliar, 0, enmascarar);
         aux_tmp = static_cast<unsigned char*>(auxiliar->GetScalarPointer(0, 0, 0));
         mskaux_tmp = static_cast<unsigned char*>(mask_auxiliar->GetScalarPointer(0, 0, 0));
 
@@ -1406,61 +1473,13 @@ void IMGVTK::Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkIm
 
 
 /*  Metodo: Cargar
-    Funcion: Cargar la imagen a formato VTK desde un archivo DICOM.
-*/
-void IMGVTK::Cargar(const gdcm::Image &gimage, const int nivel){
-    base = vtkSmartPointer<vtkImageData>::New();
-    mask = vtkSmartPointer<vtkImageData>::New();
-
-    Cargar(gimage, base, mask, nivel);
-
-    base_ptr = static_cast<unsigned char*>(base->GetScalarPointer(0, 0, 0));
-    mask_ptr = static_cast<unsigned char*>(mask->GetScalarPointer(0, 0, 0));
-
-    int dims[3];
-    base->GetDimensions( dims );
-
-    cols = dims[0];
-    rens = dims[1];
-    rens_cols = rens*cols;
-}
-
-
-
-
-/*  Metodo: Cargar
-    Funcion: Cargar la imagen a formato VTK.
-*/
-void IMGVTK::Cargar(const bool enmascarar){
-    base = vtkSmartPointer<vtkImageData>::New();
-    mask = vtkSmartPointer<vtkImageData>::New();
-
-    Cargar(base, mask, enmascarar);
-
-    base_ptr = static_cast<unsigned char*>(base->GetScalarPointer(0, 0, 0));
-    mask_ptr = static_cast<unsigned char*>(mask->GetScalarPointer(0, 0, 0));
-
-    int dims[3];
-    base->GetDimensions( dims );
-
-    cols = dims[0];
-    rens = dims[1];
-    rens_cols = rens*cols;
-}
-
-
-
-/*  Metodo: Cargar
     Funcion: Cargar la imagen a formato VTK desde un archivo.
 */
-void IMGVTK::Cargar(const char *ruta , const bool enmascarar){
+void IMGVTK::Cargar(const char *ruta_origen, const bool enmascarar, const int nivel){
     base = vtkSmartPointer<vtkImageData>::New();
     mask = vtkSmartPointer<vtkImageData>::New();
-    if(ruta_origen){
-        delete [] ruta_origen;
-    }
-    ruta_origen = setRuta(ruta);
-    Cargar(base, mask, enmascarar);
+
+    Cargar(ruta_origen, base, mask, nivel, enmascarar);
 
     base_ptr = static_cast<unsigned char*>(base->GetScalarPointer(0, 0, 0));
     mask_ptr = static_cast<unsigned char*>(mask->GetScalarPointer(0, 0, 0));
@@ -1482,7 +1501,7 @@ void IMGVTK::Cargar(char **rutas , const int n_imgs, const bool enmascarar){
     base = vtkSmartPointer<vtkImageData>::New();
     mask = vtkSmartPointer<vtkImageData>::New();
 
-    Cargar( base, mask, rutas, n_imgs, enmascarar);
+    Cargar( base, mask, rutas, n_imgs, enmascarar );
 
     base_ptr = static_cast<unsigned char*>(base->GetScalarPointer(0, 0, 0));
     mask_ptr = static_cast<unsigned char*>(mask->GetScalarPointer(0, 0, 0));
@@ -1494,6 +1513,7 @@ void IMGVTK::Cargar(char **rutas , const int n_imgs, const bool enmascarar){
     rens = dims[1];
     rens_cols = rens*cols;
 }
+
 
 
 /*  Metodo: Guardar
@@ -1531,19 +1551,8 @@ void IMGVTK::Guardar( const char *ruta, const TIPO_IMG tipo_salida_src ){
 
 
 
-/*  Metodo: Guardar
-    Funcion: Guarda la imagen con la extension especificada.
-*/
-void IMGVTK::Guardar( const TIPO_IMG tipo_salida_src){
-    tipo_salida = tipo_salida_src;
-    Guardar();
-}
-
-
-/* CONSTRUCTORES */
+/* CONSTRUCTOR */
 IMGVTK::IMGVTK(){
-
-    ruta_origen = NULL;
     ruta_salida = NULL;
     tipo_salida = PNG;
 
@@ -1553,135 +1562,21 @@ IMGVTK::IMGVTK(){
     pix_caract = NULL;
     mask_ptr = NULL;
 
-}
+    // Defaults:
+    SID = 1100.0;
+    SOD = 400.0;
+    DDP = SID - SOD;
+    LAORAO = 20.0;
+    CRACAU = 20.0;
+    pixX = 0.308;
+    pixY = 0.308;
 
-
-IMGVTK::IMGVTK( const gdcm::Image &gimage, const int nivel ){
-    ruta_origen = NULL;
-    ruta_salida = NULL;
-    tipo_salida = PNG;
-
-    map_ptr = NULL;
-    base_ptr = NULL;
-    skl_ptr = NULL;
-    pix_caract = NULL;
-    mask_ptr = NULL;
-
-    Cargar(gimage, nivel);
-}
-
-
-
-IMGVTK::IMGVTK(const char *ruta_origen_src ){
-    ruta_origen = NULL;
-    ruta_salida = NULL;
-    tipo_salida = PNG;
-
-    map_ptr = NULL;
-    base_ptr = NULL;
-    skl_ptr = NULL;
-    pix_caract = NULL;
-    mask_ptr = NULL;
-
-    ruta_origen = setRuta(ruta_origen_src);
-    Cargar(true);
-}
-
-
-IMGVTK::IMGVTK(const char *ruta_origen_src, const char *ruta_salida_src ){
-    ruta_origen = NULL;
-    ruta_salida = NULL;
-    tipo_salida = PNG;
-
-    map_ptr = NULL;
-    base_ptr = NULL;
-    skl_ptr = NULL;
-    pix_caract = NULL;
-    mask_ptr = NULL;
-
-    ruta_origen = setRuta(ruta_origen_src);
-    Cargar(true);
-
-    ruta_salida = setRuta(ruta_salida_src);
-}
-
-
-IMGVTK::IMGVTK(const char *ruta_origen_src, const char *ruta_salida_src, const TIPO_IMG tipo_salida_src ){
-    ruta_origen = NULL;
-    ruta_salida = NULL;
-    tipo_salida = PNG;
-
-    map_ptr = NULL;
-    base_ptr = NULL;
-    skl_ptr = NULL;
-    pix_caract = NULL;
-    mask_ptr = NULL;
-
-    ruta_origen = setRuta(ruta_origen_src);
-    Cargar(true);
-
-    ruta_salida = setRuta(ruta_salida_src);
-    tipo_salida = tipo_salida_src;
-}
-
-
-IMGVTK::IMGVTK(char **rutas, const int n_imgs ){
-    ruta_origen = NULL;
-    ruta_salida = NULL;
-    tipo_salida = PNG;
-
-    map_ptr = NULL;
-    base_ptr = NULL;
-    skl_ptr = NULL;
-    pix_caract = NULL;
-    mask_ptr = NULL;
-
-    Cargar( rutas, n_imgs, true);
-}
-
-
-IMGVTK::IMGVTK(char **rutas, const int n_imgs, const char *ruta_salida_src ){
-    ruta_origen = NULL;
-    ruta_salida = NULL;
-    tipo_salida = PNG;
-
-    map_ptr = NULL;
-    base_ptr = NULL;
-    skl_ptr = NULL;
-    pix_caract = NULL;
-    mask_ptr = NULL;
-
-    Cargar( rutas, n_imgs, true);
-
-    ruta_salida = setRuta(ruta_salida_src);
-}
-
-
-IMGVTK::IMGVTK( char **rutas, const int n_imgs, const char *ruta_salida_src, const TIPO_IMG tipo_salida_src ){
-    ruta_origen = NULL;
-    ruta_salida = NULL;
-    tipo_salida = PNG;
-
-    map_ptr = NULL;
-    base_ptr = NULL;
-    skl_ptr = NULL;
-    pix_caract = NULL;
-    mask_ptr = NULL;
-
-    Cargar( rutas, n_imgs, true);
-
-    ruta_salida = setRuta(ruta_salida_src);
-    tipo_salida = tipo_salida_src;
 }
 
 
 
 /* DESTRUCTOR */
 IMGVTK::~IMGVTK(){
-    if(ruta_origen){
-        DEB_MSG("Intentando borrar: "  << ruta_origen);
-        delete [] ruta_origen;
-    }
     if(ruta_salida){
         delete [] ruta_salida;
     }
@@ -1697,14 +1592,16 @@ IMGVTK::~IMGVTK(){
 // El operador de copia extrae unicamente el contenido de la imagen original
 IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
 
-    if(origen.base_ptr){
+    // Defaults:
+    SID = origen.SID;
+    SOD = origen.SOD;
+    DDP = SID - SOD;
+    LAORAO = origen.LAORAO;
+    CRACAU = origen.CRACAU;
+    pixX = origen.pixX;
+    pixY = origen.pixY;
 
-        if(origen.ruta_origen){
-            if(ruta_origen){
-                delete [] ruta_origen;
-            }
-            ruta_origen = setRuta(origen.ruta_origen);
-        }
+    if(origen.base_ptr){
 
         if(origen.ruta_salida){
             if(ruta_salida){

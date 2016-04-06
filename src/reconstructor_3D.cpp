@@ -166,7 +166,6 @@ void RECONS3D::agregarEsfera(const double x, const double y, const double z, con
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
 void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, const int n_imgs){
-    esDICOM.push_back(false);
 
     n_angios++;
     IMGVTK *imgs_temp = imgs_base;
@@ -200,65 +199,8 @@ void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, co
 void RECONS3D::agregarInput(const char *rutabase_input, const char *rutaground_input, const int nivel){
     n_angios++;
 
-    const int ruta_l = strlen(rutabase_input);
-    DEB_MSG("Extension del archivo de entrada: " << (rutabase_input + ruta_l - 3));
-    esDICOM[n_angios-1] = esDICOM[n_angios-1] * strcmp(rutabase_input + ruta_l - 3, "png");
-    esDICOM[n_angios-1] = esDICOM[n_angios-1] * strcmp(rutabase_input + ruta_l - 3, "jpg");
-    esDICOM[n_angios-1] = esDICOM[n_angios-1] * strcmp(rutabase_input + ruta_l - 4, "jpeg");
-    esDICOM[n_angios-1] = esDICOM[n_angios-1] * strcmp(rutabase_input + ruta_l - 3, "bmp");
-
-    IMGVTK *imgs_temp = imgs_base;
-    imgs_base = new IMGVTK [n_angios];
-    memcpy(imgs_base, imgs_temp, (n_angios-1)*sizeof(IMGVTK));
-
-    imgs_temp = imgs_delin;
-    imgs_delin = new IMGVTK [n_angios];
-    memcpy(imgs_delin, imgs_temp, (n_angios-1)*sizeof(IMGVTK));
-
-    imgs_temp = imgs_segment;
-    imgs_segment = new IMGVTK [n_angios];
-    memcpy(imgs_segment, imgs_temp, (n_angios-1)*sizeof(IMGVTK));
-
-    if(esDICOM[n_angios-1]){
-
-        // Abrir el archivo DICOM
-        gdcm::ImageReader DICOMreader;
-        DICOMreader.SetFileName( rutabase_input );
-        DICOMreader.Read();
-
-        gdcm::File &file = DICOMreader.GetFile();
-        gdcm::DataSet &ds = file.GetDataSet();
-        gdcm::DataSet::ConstIterator it = ds.Begin();
-
-//        for(int idx = 0; it != ds.End(); ++it, idx++){
-        int idx = 0;
-            const gdcm::Tag &t1 = gdcm::Tag(0x18, 0x1110);
-DEB_MSG("{" << t1 << "} ");
-            const gdcm::DataElement &de = ds.GetDataElement( t1 );//*it;
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            const gdcm::Tag &t = de.GetTag();
-            if( bv ){
-                gdcm::VL len = bv->GetLength();
-                if( len < 64 ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-                DEB_MSG("[" << idx << "] TAG: " << t << " VAL: " << strm << " LEN: " << len);
-                }else{
-                    DEB_MSG("[" << idx << "] TAG: " << t << " VAL: NULL LEN: " << len);
-                }
-
-            }else{
-                DEB_MSG("[" << idx << "] TAG: " << t << " VAL: NULL LEN: 0");
-            }
-//        }
-
-        const gdcm::Image &gimage = DICOMreader.GetImage();
-        imgs_base[n_angios-1].Cargar(gimage, nivel);
-
-    }else{
-        imgs_base[n_angios-1].Cargar(rutabase_input, true);
-    }
-
-    imgs_delin[n_angios-1].Cargar(rutaground_input, false);
+    imgs_base[n_angios-1].Cargar(rutabase_input, true, nivel);
+    imgs_delin[n_angios-1].Cargar(rutaground_input, false, 0);
 
     // Mostrar la imagen en un renderizador
     mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
@@ -266,6 +208,9 @@ DEB_MSG("{" << t1 << "} ");
 
     // Agregar el detector y la fuente en posociones por defecto:
     detector.push_back( posicionDefecto( imgs_base[n_angios-1].cols, imgs_base[n_angios-1].rens, imgs_base[n_angios-1].rens/2 ) );
+
+    // Mover el detector a su posicion definida por el archivo DICOM:
+    moverPosicion(n_angios-1);
 }
 
 
@@ -321,25 +266,20 @@ RECONS3D::POS RECONS3D::posicionDefecto( const double ancho, const double alto, 
 
     Funcion: Define la posicion en que se encuentra alguna imagen base.
 */
-void RECONS3D::moverPosicion(const int angio_ID, const double RAO_LAO, const double CAU_CRA, const double Distance_source_to_patient, const double Distance_source_to_detector){
+void RECONS3D::moverPosicion(const int angio_ID){
     /// Mover el detector y fuente a las posiciones definidas:
-    // Mover el detector a la posicion indicada como SID - SOD:
-    const double Distance_patient_to_detector = Distance_source_to_detector - Distance_source_to_patient;
-
-    DEB_MSG("SID: " << Distance_source_to_patient << ", SOD: " << Distance_source_to_detector << ", DDP:" << Distance_patient_to_detector);
-
     POS det_pos = detector[angio_ID];
 
     // Mover los puntos segun SID y SOD:
     for( int i = 0; i < 5; i++){
-        det_pos.puntos[i][2] += Distance_patient_to_detector;
+        det_pos.puntos[i][2] += imgs_base[angio_ID].DDP;
     }
 
     // Rotar los puntos segun LAO/RAO y CAU/CRA:
-    const double crl = cos(RAO_LAO/180.0 * PI);
-    const double srl = sin(RAO_LAO/180.0 * PI);
-    const double ccc = cos(CAU_CRA/180.0 * PI);
-    const double scc = sin(CAU_CRA/180.0 * PI);
+    const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * PI);
+    const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * PI);
+    const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * PI);
+    const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
 
     //// Rotacion usando el eje x como base:
     for( int i = 0; i < 5; i++){
@@ -510,7 +450,6 @@ void RECONS3D::skeletonize(){
     Funcion: Constructor por default.
 */
 RECONS3D::RECONS3D(){
-    esDICOM.push_back(false);
     mis_renderers.push_back( vtkSmartPointer<vtkRenderer>::New() );
     double color[] = {1.0, 1.0, 1.0};
     agregarEsfera(0.0, 0.0, 0.0, 100.0, color, renderer_global);
@@ -532,26 +471,21 @@ RECONS3D::RECONS3D(char **rutasbase_input, char **rutasground_input, const int n
     double color[] = {1.0, 1.0, 1.0};
     agregarEsfera(0.0, 0.0, 0.0, 100.0, color, renderer_global);
     agregarEjes(renderer_global);
-
 }
 
 
 /*  Constructor ( const char *rutas_input )
     Funcion: Recibe las rutas de las imagenes usadas como conjunto de entrenamiento.
 */
-RECONS3D::RECONS3D(const char *rutabase_input, const char *rutaground_input, const int nivel, const double ancho_pix, const double alto_pix){
+RECONS3D::RECONS3D(const char *rutabase_input, const char *rutaground_input, const int nivel){
     n_angios = 0;
     agregarInput(rutabase_input, rutaground_input, nivel);
 
-    // Preparar el renderer Global:, const double ancho_pix, const double alto_pix
+    // Preparar el renderer Global:
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
     double color[] = {1.0, 1.0, 1.0};
     agregarEsfera(0.0, 0.0, 0.0, 100.0, color, renderer_global);
     agregarEjes(renderer_global);
-
-    pixX = ancho_pix;
-    pixY = alto_pix;
-
 }
 
 

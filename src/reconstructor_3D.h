@@ -119,6 +119,7 @@ class RECONS3D{
         typedef struct{
             double puntos[5][3];
         } POS;
+
     // M I E M B R O S      P R I V A D O S
         // Miembros para cargar las imagenes:
         IMGVTK *imgs_base;
@@ -126,9 +127,6 @@ class RECONS3D{
         IMGVTK *imgs_segment;
 
         int n_angios;
-        double pixX, pixY;
-
-        std::vector<bool> esDICOM;
 
         // Miembros para visualizar la segmentacion 3D:
         std::vector< vtkSmartPointer<vtkRenderer> > mis_renderers;
@@ -150,14 +148,14 @@ class RECONS3D{
     // C O N S T R U C T O R E S    /   D E S T R U C T O R E S
         RECONS3D();
         RECONS3D(char **rutasbase_input , char **rutasground_input, const int n_imgs);
-        RECONS3D(const char *rutabase_input, const char *rutaground_input, const int nivel, const double ancho_pix, const double alto_pix);
+        RECONS3D(const char *rutabase_input, const char *rutaground_input, const int nivel);
         ~RECONS3D();
 
     // M E T O D O S        P U B L I C O S
         void agregarInput(char **rutasbase_input, char **rutasground_input, const int n_imgs);
         void agregarInput(const char *rutabase_input, const char *rutaground_input, const int nivel);
         POS posicionDefecto(const double ancho, const double alto, const double punta);
-        void moverPosicion(const int angio_ID, const double RAO_LAO, const double CAU_CRA, const double Distance_source_to_patient, const double Distance_source_to_detector);
+        void moverPosicion(const int angio_ID);
 
         void segmentarImagenBase();
         void skeletonize();
