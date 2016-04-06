@@ -230,22 +230,28 @@ void RECONS3D::agregarInput(const char *rutabase_input, const char *rutaground_i
 
         gdcm::File &file = DICOMreader.GetFile();
         gdcm::DataSet &ds = file.GetDataSet();
-        //gdcm::DataSet &ds = file.GetDataSet();
         gdcm::DataSet::ConstIterator it = ds.Begin();
 
-        for(; it != ds.End(); ++it){
-            const gdcm::DataElement &de = *it;
+//        for(int idx = 0; it != ds.End(); ++it, idx++){
+        int idx = 0;
+            const gdcm::Tag &t1 = gdcm::Tag(0x18, 0x1110);
+DEB_MSG("{" << t1 << "} ");
+            const gdcm::DataElement &de = ds.GetDataElement( t1 );//*it;
             const gdcm::ByteValue *bv = de.GetByteValue();
             const gdcm::Tag &t = de.GetTag();
-            DEB_MSG("TAG: " << t);
+            if( bv ){
+                gdcm::VL len = bv->GetLength();
+                if( len < 64 ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                DEB_MSG("[" << idx << "] TAG: " << t << " VAL: " << strm << " LEN: " << len);
+                }else{
+                    DEB_MSG("[" << idx << "] TAG: " << t << " VAL: NULL LEN: " << len);
+                }
 
-
-            std::stringstream strm;
-            strm.str("");
-
-            //de.GetValue().Print(strm);
-            DEB_MSG("VAL: " << bv);
-        }
+            }else{
+                DEB_MSG("[" << idx << "] TAG: " << t << " VAL: NULL LEN: 0");
+            }
+//        }
 
         const gdcm::Image &gimage = DICOMreader.GetImage();
         imgs_base[n_angios-1].Cargar(gimage, nivel);
@@ -401,7 +407,7 @@ void RECONS3D::moverPosicion(const int angio_ID, const double RAO_LAO, const dou
 void RECONS3D::segmentarImagenBase(){
     imgs_segment[0] = imgs_base[0];
 
-    mostrarImagen(imgs_base[0].mask, mis_renderers[0]);
+    mostrarImagen(imgs_base[0].base, mis_renderers[0]);
 
     renderizar( mis_renderers[0]);
 
