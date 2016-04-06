@@ -119,6 +119,12 @@ class IMGVTK{
         unsigned char *skl_ptr;
         unsigned char *mask_ptr;
 
+        //// Datos extraidos del archivo DICOM:
+        double SID, SOD, DDP;
+        double LAO, CRA;
+        double pixX, pixY, cenX, cenY;
+        bool esDICOM;
+
         PIX_PAR *pix_caract;
 
     private: //----------------------------------------------------------------------------- PRIVATE ----- v

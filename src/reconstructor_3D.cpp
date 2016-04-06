@@ -200,8 +200,6 @@ void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, co
 void RECONS3D::agregarInput(const char *rutabase_input, const char *rutaground_input, const int nivel){
     n_angios++;
 
-    esDICOM.push_back(true);
-
     const int ruta_l = strlen(rutabase_input);
     DEB_MSG("Extension del archivo de entrada: " << (rutabase_input + ruta_l - 3));
     esDICOM[n_angios-1] = esDICOM[n_angios-1] * strcmp(rutabase_input + ruta_l - 3, "png");
