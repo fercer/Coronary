@@ -122,9 +122,9 @@ class RECONS3D{
 
     // M I E M B R O S      P R I V A D O S
         // Miembros para cargar las imagenes:
-        IMGVTK *imgs_base;
-        IMGVTK *imgs_delin;
-        IMGVTK *imgs_segment;
+        std::vector< IMGVTK > imgs_base;
+        std::vector< IMGVTK > imgs_delin;
+        std::vector< IMGVTK > imgs_segment;
 
         int n_angios;
 
@@ -147,8 +147,6 @@ class RECONS3D{
 
     // C O N S T R U C T O R E S    /   D E S T R U C T O R E S
         RECONS3D();
-        RECONS3D(char **rutasbase_input , char **rutasground_input, const int n_imgs);
-        RECONS3D(const char *rutabase_input, const char *rutaground_input, const int nivel);
         ~RECONS3D();
 
     // M E T O D O S        P U B L I C O S
@@ -157,7 +155,7 @@ class RECONS3D{
         POS posicionDefecto(const double ancho, const double alto, const double punta);
         void moverPosicion(const int angio_ID);
 
-        void segmentarImagenBase();
+        void segmentarImagenBase( const int angio_ID );
         void skeletonize();
 
     // O P E R A D O R E S  S O B R E C A R G A D O S

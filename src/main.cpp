@@ -45,16 +45,18 @@ int main(int argc, char** argv ){
     // Definir los parametros de entrada:
     PARS_ENTRADA *parametros = new PARS_ENTRADA [3];
     definirParametros( parametros );
+
     if( argc < 2 ){
         mostrar_ayuda(parametros, 3, "Coronary");
+        delete [] parametros;
         return EXIT_FAILURE;
     }
     // Revisar los parametros de entrada:
     revisar_pars(parametros, 3, &argc, argv);
 
-
-    RECONS3D reconstructor( parametros[0].mi_valor.par_s, parametros[1].mi_valor.par_s, parametros[2].mi_valor.par_i);
-
+DEB_MSG("Parametros revisados ...");
+    RECONS3D reconstructor;
+    reconstructor.agregarInput(parametros[0].mi_valor.par_s, parametros[1].mi_valor.par_s, parametros[2].mi_valor.par_i);
     reconstructor.agregarInput(parametros[0].mi_valor.par_s, parametros[1].mi_valor.par_s, parametros[2].mi_valor.par_i );
 
     /*
@@ -83,7 +85,9 @@ int main(int argc, char** argv ){
 */
 
     //reconstructor.skeletonize();
-    reconstructor.segmentarImagenBase();
+    reconstructor.segmentarImagenBase( 0 );
+
+    delete [] parametros;
 
     return EXIT_SUCCESS;
 }

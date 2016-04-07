@@ -174,12 +174,11 @@ FILTROS::~FILTROS(){
 
 
 
-/*  Metodo: setInput
+/*  Metodo: setInputOriginal
     Funcion: Establece las imagenes origen yu ground truth.
 */
-void FILTROS::setInput( IMGVTK &img_org, IMGVTK &img_ground){
+void FILTROS::setInputOriginal( IMGVTK &img_org){
     org = img_org.base_ptr;
-    ground_truth = img_ground.base_ptr;
     mask = img_org.mask_ptr;
 
     // Obtener las dimensiones de la imagen:
@@ -192,6 +191,15 @@ void FILTROS::setInput( IMGVTK &img_org, IMGVTK &img_ground){
             fftImgOrigen();
             break;
     }
+}
+
+
+
+/*  Metodo: setInputGround
+    Funcion: Establece las imagenes origen yu ground truth.
+*/
+void FILTROS::setInputGround( IMGVTK &img_ground){
+    ground_truth = img_ground.base_ptr;
 }
 
 
@@ -341,6 +349,8 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     const int ancho_tmp = T + 3; // El ancho del template es el ancho de la gaussiana + 2 pixeles a cada lado para dejar espacio a la rotacion.
     const int alto_tmp = L + 6; // El alto del template es el largo de la gaussiana dado por L + 3 pixeles abajo y otros 3 arriba para dar espacio a la rotacion.
 
+    DEB_MSG("alto: " << alto_tmp << ", ancho: " << ancho_tmp);
+
     const int ex_alto = alto_tmp%2;
     const int ex_ancho = ancho_tmp%2;
 
@@ -361,6 +371,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     //// Se resta la media a todo el template, y se divide entre la suma:
     for( int x = -(int)(T/2); x <= (int)(T/2); x++){
         *(gaussiana_org + x) = (*(gaussiana_org + x) - media) / (sum*L);
+        DEB_MSG("[" << x << "] = " << (*(gaussiana_org + x)));
     }
 
     //// Se termina de construir el template a 0°:
@@ -380,6 +391,32 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         rotarImg( templates[0], templates[k], theta, alto_tmp, ancho_tmp);
     }
     DEB_MSG("Templates generados: " << K);
+
+#ifndef NDEBUG
+    static int only_one = 0;
+
+    if( !only_one ){
+        only_one = 1;
+
+        char salida[] = "template_XX.efy";
+
+        FILE *fp = NULL;
+
+        for( int k = 0; k < K; k++ ){
+
+            sprintf(salida, "template_%i.efy", k);
+
+            fp = fopen(salida, "w");
+            for( int y = 0; y < alto_tmp; y++ ){
+                for( int x = 0; x < ancho_tmp; x++ ){
+                    fprintf(fp, "%f ", templates[k][y*ancho_tmp+x]);
+                }
+                fprintf(fp, "\n");
+            }
+        }
+    }
+#endif
+
 
     ////--------------------------------------------------------- Aplicacion del filtro:
     // Imagen auxiliar:

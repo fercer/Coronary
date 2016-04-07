@@ -49,12 +49,11 @@ void RECONS3D::mostrarImagen( vtkSmartPointer<vtkImageData> &img_src, vtkSmartPo
     // Crear un actor temporal
     vtkSmartPointer<vtkImageActor> actor = vtkSmartPointer<vtkImageActor>::New();
 
-
-    #if VTK_MAJOR_VERSION <= 5
-        actor->SetInput(img_src);
-    #else
-        actor->SetInputData(img_src);
-    #endif
+#if VTK_MAJOR_VERSION <= 5
+    actor->SetInput(img_src);
+#else
+    actor->SetInputData(img_src);
+#endif
 
     // Agregar el actor de la imagen al renderizador.
     mi_renderer->AddActor(actor);
@@ -166,28 +165,15 @@ void RECONS3D::agregarEsfera(const double x, const double y, const double z, con
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
 void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, const int n_imgs){
-
-    n_angios++;
-    IMGVTK *imgs_temp = imgs_base;
-    imgs_base = new IMGVTK [n_angios];
-    memcpy(imgs_base, imgs_temp, (n_angios-1)*sizeof(IMGVTK));
-
-    // Cargar la imagen base como la concatenacion de todas las imagenes base:
-    imgs_base[n_angios-1].Cargar(rutasbase_input, n_imgs, true);
-
-    imgs_temp = imgs_delin;
-    imgs_delin = new IMGVTK [n_angios];
-    memcpy(imgs_delin, imgs_temp, (n_angios-1)*sizeof(IMGVTK));
-    // Cargar la imagen delineada como la concatenacion de todas las imagenes delineadas:
-    imgs_delin[n_angios-1].Cargar(rutasground_input, n_imgs, false);
-
-    imgs_temp = imgs_segment;
-    imgs_segment = new IMGVTK [n_angios];
-    memcpy(imgs_segment, imgs_temp, (n_angios-1)*sizeof(IMGVTK));
+    imgs_base.push_back(IMGVTK(rutasbase_input, n_imgs, true));
+    imgs_delin.push_back(IMGVTK(rutasground_input, n_imgs, false));
+    imgs_segment.push_back(IMGVTK());
 
     // Mostrar la imagen en un renderizador
     mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
-    mostrarImagen(imgs_base[n_angios-1].base, mis_renderers[n_angios-1]);
+    mostrarImagen(imgs_base[n_angios].base, mis_renderers[n_angios]);
+
+    n_angios++;
 }
 
 
@@ -197,20 +183,21 @@ void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, co
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
 void RECONS3D::agregarInput(const char *rutabase_input, const char *rutaground_input, const int nivel){
-    n_angios++;
-
-    imgs_base[n_angios-1].Cargar(rutabase_input, true, nivel);
-    imgs_delin[n_angios-1].Cargar(rutaground_input, false, 0);
+    imgs_base.push_back(IMGVTK(rutabase_input, true, nivel));
+    imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
+    imgs_segment.push_back(IMGVTK());
 
     // Mostrar la imagen en un renderizador
     mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
-    mostrarImagen(imgs_base[n_angios-1].base, mis_renderers[n_angios-1]);
+    mostrarImagen(imgs_base[n_angios].base, mis_renderers[n_angios]);
 
     // Agregar el detector y la fuente en posociones por defecto:
-    detector.push_back( posicionDefecto( imgs_base[n_angios-1].cols, imgs_base[n_angios-1].rens, imgs_base[n_angios-1].rens/2 ) );
+    detector.push_back( posicionDefecto( imgs_base[n_angios].cols, imgs_base[n_angios].rens, imgs_base[n_angios].rens/2 ) );
 
     // Mover el detector a su posicion definida por el archivo DICOM:
-    moverPosicion(n_angios-1);
+    moverPosicion(n_angios);
+
+    n_angios++;
 }
 
 
@@ -332,7 +319,7 @@ void RECONS3D::moverPosicion(const int angio_ID){
 
     renderer_global->AddActor(det_actor);
 
-    renderizar(renderer_global);
+    //renderizar(renderer_global);
 }
 
 
@@ -342,54 +329,32 @@ void RECONS3D::moverPosicion(const int angio_ID){
 
     Funcion: Multiplica la imagen base por el filtro para extraer las intensidades de los pixeles segmentados
 */
-void RECONS3D::segmentarImagenBase(){
-    imgs_segment[0] = imgs_base[0];
+void RECONS3D::segmentarImagenBase( const int angio_ID ){
+    imgs_segment[angio_ID] = imgs_base[angio_ID];
 
-    mostrarImagen(imgs_base[0].base, mis_renderers[0]);
 
-    renderizar( mis_renderers[0]);
+    FILTROS filtro;
+    filtro.setFiltro(FILTROS::GMF);
+    filtro.setFitness(FILTROS::ROC);
+    filtro.setEvoMet(FILTROS::EDA_BUMDA, 50, 30);
 
-/*
-    FILTROS filtro_gabor;
-    filtro_gabor.setFiltro(FILTROS::SS_GABOR);
-    filtro_gabor.setFitness(FILTROS::ROC);
-    filtro_gabor.setEvoMet(FILTROS::EDA_BUMDA, 50, 30);
-    filtro_gabor.setInput(imgs_base[0], imgs_delin[0]);
-    filtro_gabor.setOutput(imgs_segment[0]);
+    filtro.setInputOriginal(imgs_base[angio_ID]);
+    filtro.setInputGround(imgs_delin[angio_ID]);
 
-//    filtro_gabor.setPar(FILTROS::PAR_K, 12);
-//    filtro_gabor.setPar(FILTROS::PAR_DELTA, 1e-4);
-//    filtro_gabor.setPar(FILTROS::PAR_SIGMA, 2.83);
-//    filtro_gabor.setPar(FILTROS::PAR_L, 13);
-//    filtro_gabor.setPar(FILTROS::PAR_T, 15);
-
-//    filtro_gabor.filtrar();
-    //using namespace std;
-//    TIMERS;
-//    GETTIME_INI;
-
-    // Parametros a optimizar:
-//    filtro_gabor.setLim(FILTROS::PAR_L, 8.0, 15.0, 0.0001);
-//    filtro_gabor.setLim(FILTROS::PAR_T, 8.0, 15.0, 0.0001);
-//    filtro_gabor.setLim(FILTROS::PAR_SIGMA, 1.0, 5.0, 0.0001);
+    filtro.setOutput(imgs_segment[angio_ID]);
 
     // Parametros fijos:
-    filtro_gabor.setPar(FILTROS::PAR_T, 15);
-    filtro_gabor.setPar(FILTROS::PAR_L, 2.65);
-    filtro_gabor.setPar(FILTROS::PAR_K, 180);
-    filtro_gabor.setPar(FILTROS::PAR_DELTA, 1e-4);
+    filtro.setPar(FILTROS::PAR_L, 13);
+    filtro.setPar(FILTROS::PAR_T, 15);
+    filtro.setPar(FILTROS::PAR_SIGMA, 2.82);
+    filtro.setPar(FILTROS::PAR_K, 12);
+    filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
+    filtro.filtrar();
 
-//    filtro_gabor.setPar();
+    imgs_segment[angio_ID].umbralizar();
+    mostrarImagen(imgs_segment[angio_ID].base, mis_renderers[angio_ID]);
+    renderizar(mis_renderers[angio_ID]);
 
-//    GETTIME_FIN;
-//    FILTROS::INDIV elite = filtro_gabor.getPars();
-//    cout << "Tiempo: " << DIFTIME << " segundos" << endl << "Mejores parametros: T = " << elite.vars[0] << ", L = " << elite.vars[1] << ", K = " << elite.vars[2] << ", sigma = " << elite.vars[3] << ", delta = " << elite.vars[4] << endl;
-
-    filtro_gabor.filtrar();
-    imgs_segment[0].umbralizar();
-    mostrarImagen(imgs_segment[0].base, mis_renderers[0]);
-    renderizar(mis_renderers[0]);
-*/
 }
 
 
@@ -425,22 +390,25 @@ void RECONS3D::skeletonize(){
         //agregarEsfera( imgs_delin[0].pix_caract[c].x, imgs_delin[0].pix_caract[c].y, 0.0, 1.5, color, 0 );
     }
 
-//    const int rens = img_delin.rens;
-//    const int cols = img_delin.cols;
-//    double color_skl[] = {1.0, 1.0, 1.0};
+    /*
+    /// Obtener el esqueleto de la imagen delineada (segmentada) y graficar esferas en cada punto caracteristico
+    const int rens = img_delin.rens;
+    const int cols = img_delin.cols;
+    double color_skl[] = {1.0, 1.0, 1.0};
 
-//    unsigned char *skl_ptr = img_delin.skl_ptr;
+    unsigned char *skl_ptr = img_delin.skl_ptr;
 
-//    for( int y = 0; y < rens; y++){
-//        for( int x = 0; x < cols; x++){
-//            if( skl_ptr[(x+1)+(y+1)*(cols+1)] > 0 ){
-//                agregarEsfera( x, y, 0.0, 0.5, color_skl );
-//            }
-//        }
-//    }
+    for( int y = 0; y < rens; y++){
+        for( int x = 0; x < cols; x++){
+            if( skl_ptr[(x+1)+(y+1)*(cols+1)] > 0 ){
+                agregarEsfera( x, y, 0.0, 0.5, color_skl );
+            }
+        }
+    }
+    */
 
     mostrarImagen( imgs_delin[0].skeleton, mis_renderers[0] );
-    renderizar(mis_renderers[0]);
+    //renderizar(mis_renderers[0]);
 }
 
 
@@ -450,42 +418,13 @@ void RECONS3D::skeletonize(){
     Funcion: Constructor por default.
 */
 RECONS3D::RECONS3D(){
-    mis_renderers.push_back( vtkSmartPointer<vtkRenderer>::New() );
-    double color[] = {1.0, 1.0, 1.0};
-    agregarEsfera(0.0, 0.0, 0.0, 100.0, color, renderer_global);
-    agregarEjes(renderer_global);
-
-    n_angios = 0;
-}
-
-
-/*  Constructor (char **rutas_input, char **rutasground_input , char **rutasmask_input, const int n_imgs)
-    Funcion: Recibe las rutas de las imagenes usadas como conjunto de entrenamiento.
-*/
-RECONS3D::RECONS3D(char **rutasbase_input, char **rutasground_input, const int n_imgs){
-    n_angios = 0;
-    agregarInput(rutasbase_input, rutasground_input, n_imgs);
-
-    // Preparar el renderer Global:
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
+
     double color[] = {1.0, 1.0, 1.0};
     agregarEsfera(0.0, 0.0, 0.0, 100.0, color, renderer_global);
     agregarEjes(renderer_global);
-}
 
-
-/*  Constructor ( const char *rutas_input )
-    Funcion: Recibe las rutas de las imagenes usadas como conjunto de entrenamiento.
-*/
-RECONS3D::RECONS3D(const char *rutabase_input, const char *rutaground_input, const int nivel){
     n_angios = 0;
-    agregarInput(rutabase_input, rutaground_input, nivel);
-
-    // Preparar el renderer Global:
-    renderer_global = vtkSmartPointer<vtkRenderer>::New();
-    double color[] = {1.0, 1.0, 1.0};
-    agregarEsfera(0.0, 0.0, 0.0, 100.0, color, renderer_global);
-    agregarEjes(renderer_global);
 }
 
 
@@ -494,11 +433,7 @@ RECONS3D::RECONS3D(const char *rutabase_input, const char *rutaground_input, con
     Funcion: Libera la memoria utilizada para almacenar las imagenes.
 */
 RECONS3D::~RECONS3D(){
-    if( n_angios ){
-        delete [] imgs_base;
-        delete [] imgs_delin;
-        delete [] imgs_segment;
-    }
+
 }
 
 //-------------------------------------------------------------------------------------------------- PUBLIC----- ^

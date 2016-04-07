@@ -1143,6 +1143,8 @@ DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
     if( esDICOM ){
         gdcm::ImageReader DICOMreader;
         DICOMreader.SetFileName( ruta_origen );
+
+/*
         DICOMreader.Read();
 
         gdcm::File &file = DICOMreader.GetFile();
@@ -1203,7 +1205,9 @@ DEB_MSG("trimmed: Y = " << pixXYstr << ", X = " << (tmp+1));
                 CRACAU = atof( strm.c_str() );
             }
         }
+*/
 
+        DICOMreader.Read();
         const gdcm::Image &gimage = DICOMreader.GetImage();
 DEB_MSG("Buffer length: " << gimage.GetBufferLength());
         char *buffer = new char[gimage.GetBufferLength()];
@@ -1551,7 +1555,7 @@ void IMGVTK::Guardar( const char *ruta, const TIPO_IMG tipo_salida_src ){
 
 
 
-/* CONSTRUCTOR */
+/* CONSTRUCTORES */
 IMGVTK::IMGVTK(){
     ruta_salida = NULL;
     tipo_salida = PNG;
@@ -1570,9 +1574,102 @@ IMGVTK::IMGVTK(){
     CRACAU = 20.0;
     pixX = 0.308;
     pixY = 0.308;
-
 }
 
+
+
+IMGVTK::IMGVTK( const IMGVTK &original ){
+    ruta_salida = NULL;
+    tipo_salida = PNG;
+
+    map_ptr = NULL;
+    base_ptr = NULL;
+    skl_ptr = NULL;
+    pix_caract = NULL;
+    mask_ptr = NULL;
+
+    // Defaults:
+    SID = original.SID;
+    SOD = original.SOD;
+    DDP = SID - SOD;
+    LAORAO = original.LAORAO;
+    CRACAU = original.CRACAU;
+    pixX = original.pixX;
+    pixY = original.pixY;
+
+    if(original.base_ptr){
+
+        if(original.ruta_salida){
+            if(ruta_salida){
+                delete [] ruta_salida;
+            }
+            ruta_salida = setRuta(original.ruta_salida);
+        }
+
+        tipo_salida = original.tipo_salida;
+
+        cols = original.cols;
+        rens = original.rens;
+
+        base = vtkSmartPointer<vtkImageData>::New();
+        base->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+        base->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+        base->SetOrigin(0.0, 0.0, 0.0);
+        base->SetSpacing(1.0, 1.0, 1.0);
+
+        base_ptr = static_cast<unsigned char*>(base->GetScalarPointer(0, 0, 0));
+        rens_cols = rens * cols;
+
+        memcpy(base_ptr, original.base_ptr, rens_cols*sizeof(unsigned char));
+    }
+}
+
+
+
+IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
+    ruta_salida = NULL;
+    tipo_salida = PNG;
+
+    map_ptr = NULL;
+    base_ptr = NULL;
+    skl_ptr = NULL;
+    pix_caract = NULL;
+    mask_ptr = NULL;
+
+    // Defaults:
+    SID = 1100.0;
+    SOD = 400.0;
+    DDP = SID - SOD;
+    LAORAO = 20.0;
+    CRACAU = 20.0;
+    pixX = 0.308;
+    pixY = 0.308;
+
+    Cargar(rutas_origen,n_imgs, enmascarar );
+}
+
+
+IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel){
+    ruta_salida = NULL;
+    tipo_salida = PNG;
+
+    map_ptr = NULL;
+    base_ptr = NULL;
+    skl_ptr = NULL;
+    pix_caract = NULL;
+    mask_ptr = NULL;
+
+    // Defaults:
+    SID = 1100.0;
+    SOD = 400.0;
+    DDP = SID - SOD;
+    LAORAO = 20.0;
+    CRACAU = 20.0;
+    pixX = 0.308;
+    pixY = 0.308;
+
+    Cargar(ruta_origen, enmascarar, nivel);
+}
 
 
 /* DESTRUCTOR */

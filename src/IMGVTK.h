@@ -93,6 +93,10 @@ class IMGVTK{
         void Guardar( const char *ruta, const TIPO_IMG tipo_salida_src );
 
         IMGVTK();
+        IMGVTK( const IMGVTK &original );
+        IMGVTK(char **rutas_origen, const int n_imgs, const bool enmascarar);
+        IMGVTK(const char *ruta_origen, const bool enmascarar, const int nivel);
+
         ~IMGVTK();
 
         // O P E R A D O R E S  S O B R E C A R G A D O S
