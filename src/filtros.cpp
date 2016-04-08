@@ -183,6 +183,7 @@ double **coeficientesBiCubico( const double *org, const double *dX, const double
     const int n_coefs = (rens-1)*(cols-1);
 
     double **coeficientes = new double* [n_coefs];
+
     for( int a = 0; a < n_coefs; a++){
         coeficientes[a] = new double [16];
 
@@ -583,25 +584,22 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 using namespace std;
 cout << "Obtener derivadas: " << DIFTIME << endl;
 
-    if( !only_one ){
-        FILE *fpX = fopen("derivX", "w");
-        FILE *fpY = fopen("derivY", "w");
-        FILE *fpXY = fopen("derivXY", "w");
+    /// Obtener los coeficientes para la interpolacion bicubica
+    GETTIME_INI;
+    double **coefsBICUB = coeficientesBiCubico(templates[0], dX, dY, dXY, alto_tmp, ancho_tmp);
+    GETTIME_FIN;
 
-        for( int y = 0; y < alto_tmp; y++ ){
-            for( int x = 0; x < ancho_tmp; x++ ){
-                fprintf(fpX, "%f ", dX[y*ancho_tmp+x]);
-                fprintf(fpY, "%f ", dY[y*ancho_tmp+x]);
-                fprintf(fpXY, "%f ", dXY[y*ancho_tmp+x]);
-            }
-            fprintf(fpX, "\n");
-            fprintf(fpY, "\n");
-            fprintf(fpXY, "\n");
-        }
-        fclose(fpX);
-        fclose(fpY);
-        fclose(fpXY);
+using namespace std;
+cout << "Obtener coeficientes: " << DIFTIME << endl;
+
+    for( int a = 0; a < (ancho_tmp-1)*(alto_tmp-1); a ++){
+        delete [] coefsBICUB[a];
     }
+    delete [] coefsBICUB;
+
+    delete [] dX;
+    delete [] dY;
+    delete [] dXY;
 #endif
 
 
