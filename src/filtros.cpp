@@ -66,17 +66,21 @@ void deriv( const double *org, double *dX, double *dY, double *dXY, const int re
     dXamp[(rens+1)*(cols+2)] = *(org+(rens-1)*cols);
     dXamp[(rens+1)*(cols+2)+1] = *(org+(rens-1)*cols+1);
 
+
     /// Esquina inferior derecha:
     dXamp[(rens+1)*(cols+2)-1] = -*(org+(rens-1)*cols-1) - 2* *(org + rens*cols -1);
     dXamp[(rens+2)*(cols+2)-1] = -*(org+rens*cols-1);
     dXamp[(rens+2)*(cols+2)-2] = -*(org+rens*cols-2);
-
 
     // Determinar dX y dY en el espacio de la imagen:
     /// Esquina superior izquierda:
     dXamp[ cols+3 ] = 2* *(org+1) + *(org+cols+1);
     dX[0] = dXamp[ cols+3 ];
     dY[0] = 2* *(org+cols) + *(org+cols+1);
+
+    DEB_MSG("1: " << dXamp[(rens+1)*(cols+2)-1]);
+    DEB_MSG("2: " << dXamp[(rens+2)*(cols+2)-1]);
+    DEB_MSG("3: " << dXamp[(rens+2)*(cols+2)-2]);
 
     /// Esquina superior derecha:
     dXamp[ 2*cols+2 ] = -2* *(org+cols-2) - *(org+2*cols-2);
@@ -171,11 +175,67 @@ void deriv( const double *org, double *dX, double *dY, double *dXY, const int re
 }
 
 
+/*  Metodo: coeficientesBiCubico
+    Funcion: Calcula los coeficientes para la interpolacion BiCubica para cada cuatro pixeles.
+*/
+double **coeficientesBiCubico( const double *org, const double *dX, const double *dY, const double *dXY, const int rens, const int cols){
+
+    const int n_coefs = (rens-1)*(cols-1);
+
+    double **coeficientes = new double* [n_coefs];
+    for( int a = 0; a < n_coefs; a++){
+        coeficientes[a] = new double [16];
+
+        const int x = a%(cols-1);
+        const int y = a/(cols-1);
+
+        const double f00 = *(org +   x   +   y  *cols);
+        const double f10 = *(org + (x+1) +   y  *cols);
+        const double f01 = *(org +   x   + (y+1)*cols);
+        const double f11 = *(org + (x+1) + (y+1)*cols);
+
+        const double fx00 = *(dX +   x   +   y  *cols);
+        const double fx10 = *(dX + (x+1) +   y  *cols);
+        const double fx01 = *(dX +   x   + (y+1)*cols);
+        const double fx11 = *(dX + (x+1) + (y+1)*cols);
+
+        const double fy00 = *(dY +   x   +   y  *cols);
+        const double fy10 = *(dY + (x+1) +   y  *cols);
+        const double fy01 = *(dY +   x   + (y+1)*cols);
+        const double fy11 = *(dY + (x+1) + (y+1)*cols);
+
+        const double fxy00 = *(dXY +   x   +   y  *cols);
+        const double fxy10 = *(dXY + (x+1) +   y  *cols);
+        const double fxy01 = *(dXY +   x   + (y+1)*cols);
+        const double fxy11 = *(dXY + (x+1) + (y+1)*cols);
+
+        coeficientes[a][0] = f00;
+        coeficientes[a][1] = fx00;
+        coeficientes[a][2] = -3*f00 + 3*f10 - 2*fx00 - fx10;
+        coeficientes[a][3] = 2*f00 - 2*f10 + fx00 + fx10;
+        coeficientes[a][4] = fy00;
+        coeficientes[a][5] = fxy00;
+        coeficientes[a][6] = -3*fy00 + 3*fy10 - 2*fxy00 - fxy10;
+        coeficientes[a][7] = 2*fy00 - 2*fy10 + fxy00 + fxy10;
+        coeficientes[a][8] = -3*f00 + 3*f01 - 2*fy00 - fy01;
+        coeficientes[a][9] = -3*fx00 + 3*fx01 - 2*fxy00 - fxy01;
+        coeficientes[a][10] =  9*f00 - 9*f10 - 9*f01 + 9*f11 + 6*fx00 + 3*fx10 - 6*fx01 - 3*fx11 + 6*fy00 - 6*fy10 + 3*fy01 - 3*fy11 + 4*fxy00 + 2*fxy10 + 2*fxy01 + fxy11;
+        coeficientes[a][11] = -6*f00 + 6*f10 + 6*f01 - 6*f11 - 3*fx00 - 3*fx10 + 3*fx01 + 3*fx11 - 4*fy00 + 4*fy10 - 2*fy01 + 2*fy11 - 2*fxy00 - 2*fxy10 - fxy01 - fxy11;
+        coeficientes[a][12] =  2*f00 - 2*f01 + fy00 + fy01;
+        coeficientes[a][13] =  2*fx00 - 2*fx01 + fxy00 + fxy01;
+        coeficientes[a][14] = -6*f00 + 6*f10 + 6*f01 - 6*f11 - 4*fx00 - 2*fx10 + 4*fx01 + 2*fx11 - 3*fy00 + 3*fy10 - 3*fy01 + 3*fy11 - 2*fxy00 - fxy10 - 2*fxy01 - fxy11;
+        coeficientes[a][15] =  4*f00 - 4*f10 - 4*f01 + 4*f11 + 2*fx00 + 2*fx10 - 2*fx01 - 2*fx11 + 2*fy00 - 2*fy10 + 2*fy01 - 2*fy11 + fxy00 + fxy10 + fxy01 + fxy11;
+    }
+
+    return coeficientes;
+}
+
+
 
 /*  Metodo: interpolacion(const double *pix, const int x, const int y, const double delta_x, const double delta_y)
     Funcion: Interpola el valor del pixel destino en base a los 4 pixeles origen.
 */
-inline double interpolacion(const double *pix, const int x, const int y, const double delta_x, const double delta_y, const int cols){
+inline double interpolacionLineal(const double *pix, const int x, const int y, const double delta_x, const double delta_y, const int cols){
     return ( (1.0-delta_x)*(1.0-delta_y) * *(pix + y*cols + x) +
              (  delta_x  )*(1.0-delta_y) * *(pix + y*cols + x+1) +
              (1.0-delta_x)*(  delta_y  ) * *(pix + (y+1)*cols + x) +
@@ -212,7 +272,7 @@ void rotarImg( const double *org, double *rot, const double theta, const int ren
             delta_x = x - (double)x_i;
             delta_y = y - (double)y_i;
 
-            *(rot + y_i*cols + x_i) = interpolacion(org, j, i, delta_x, delta_y, cols);
+            *(rot + y_i*cols + x_i) = interpolacionLineal(org, j, i, delta_x, delta_y, cols);
         }
     }
 }
@@ -462,7 +522,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
     TIMERS;
 
-    GETTIME_INI;
+    //GETTIME_INI;
     const int L = (int)test->vars[0];
     const int T = (int)test->vars[1];
     const int K = (int)test->vars[2];
@@ -509,6 +569,42 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         memcpy( gaussiana_cpy + y*ancho_tmp, gaussiana_org, ancho_tmp*sizeof(double) );
     }
 
+    static int only_one = 0;
+
+#ifndef NDEBUG
+    /// Obtener la derivada del template:
+    double *dX = new double [alto_tmp*ancho_tmp];
+    double *dY = new double [alto_tmp*ancho_tmp];
+    double *dXY = new double [alto_tmp*ancho_tmp];
+    GETTIME_INI;
+    deriv(templates[0], dX, dY, dXY, alto_tmp, ancho_tmp);
+    GETTIME_FIN;
+
+using namespace std;
+cout << "Obtener derivadas: " << DIFTIME << endl;
+
+    if( !only_one ){
+        FILE *fpX = fopen("derivX", "w");
+        FILE *fpY = fopen("derivY", "w");
+        FILE *fpXY = fopen("derivXY", "w");
+
+        for( int y = 0; y < alto_tmp; y++ ){
+            for( int x = 0; x < ancho_tmp; x++ ){
+                fprintf(fpX, "%f ", dX[y*ancho_tmp+x]);
+                fprintf(fpY, "%f ", dY[y*ancho_tmp+x]);
+                fprintf(fpXY, "%f ", dXY[y*ancho_tmp+x]);
+            }
+            fprintf(fpX, "\n");
+            fprintf(fpY, "\n");
+            fprintf(fpXY, "\n");
+        }
+        fclose(fpX);
+        fclose(fpY);
+        fclose(fpXY);
+    }
+#endif
+
+
     // Rotar el template segun el numero de rotaciones 'K':
     const double theta_inc = 180.0 / (double)K;
     double theta = 180.0;
@@ -521,7 +617,6 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     DEB_MSG("Templates generados: " << K);
 
 #ifndef NDEBUG
-    static int only_one = 0;
 
     if( !only_one ){
         only_one = 1;
@@ -541,6 +636,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
                 }
                 fprintf(fp, "\n");
             }
+            fclose(fp);
         }
     }
 #endif
@@ -606,7 +702,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         delete [] Img_aux[y];
     }
     delete [] Img_aux;
-    GETTIME_FIN;
+    //GETTIME_FIN;
 }
 
 
