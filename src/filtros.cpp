@@ -45,131 +45,131 @@
 /*  Metodo: deriv
     Funcion: Obtiene la derivada en X de la imagen (usa las mascaras de Sobel).
 */
-void deriv( const double *org, double *dX, double *dY, double *dXY, const int rens, const int cols ){
+void FILTROS::deriv( const double *org, double *dX, double *dY, double *dXY, const int mis_rens, const int mis_cols ){
 
     // Ampliar la matriz de la derivada en X para poder obtener dXY:
-    double *dXamp = new double [(rens+2)*(cols+2)];
+    double *dXamp = new double [(mis_rens+2)*(mis_cols+2)];
 
     // Calcular las esquinas de DXamp:
     /// Esquina superior izquierda:
     dXamp[0] = *(org);
     dXamp[1] = *(org+1);
-    dXamp[cols+2] = 2* *(org) + *(org+cols);
+    dXamp[mis_cols+2] = 2* *(org) + *(org+mis_cols);
 
     /// Esquina superior derecha:
-    dXamp[cols] = -*(org+cols-2);
-    dXamp[cols+1] = -*(org+cols-1);
-    dXamp[2*(cols+2)-1] = -2* *(org+cols-1) - *(org+2*cols-1);
+    dXamp[mis_cols] = -*(org+mis_cols-2);
+    dXamp[mis_cols+1] = -*(org+mis_cols-1);
+    dXamp[2*(mis_cols+2)-1] = -2* *(org+mis_cols-1) - *(org+2*mis_cols-1);
 
     /// Esquina inferior izquierda:
-    dXamp[rens*(cols+2)] = *(org+(rens-2)*cols) + 2* *(org + (rens-1)*cols);
-    dXamp[(rens+1)*(cols+2)] = *(org+(rens-1)*cols);
-    dXamp[(rens+1)*(cols+2)+1] = *(org+(rens-1)*cols+1);
+    dXamp[mis_rens*(mis_cols+2)] = *(org+(mis_rens-2)*mis_cols) + 2* *(org + (mis_rens-1)*mis_cols);
+    dXamp[(mis_rens+1)*(mis_cols+2)] = *(org+(mis_rens-1)*mis_cols);
+    dXamp[(mis_rens+1)*(mis_cols+2)+1] = *(org+(mis_rens-1)*mis_cols+1);
 
 
     /// Esquina inferior derecha:
-    dXamp[(rens+1)*(cols+2)-1] = -*(org+(rens-1)*cols-1) - 2* *(org + rens*cols -1);
-    dXamp[(rens+2)*(cols+2)-1] = -*(org+rens*cols-1);
-    dXamp[(rens+2)*(cols+2)-2] = -*(org+rens*cols-2);
+    dXamp[(mis_rens+1)*(mis_cols+2)-1] = -*(org+(mis_rens-1)*mis_cols-1) - 2* *(org + mis_rens*mis_cols -1);
+    dXamp[(mis_rens+2)*(mis_cols+2)-1] = -*(org+mis_rens*mis_cols-1);
+    dXamp[(mis_rens+2)*(mis_cols+2)-2] = -*(org+mis_rens*mis_cols-2);
 
     // Determinar dX y dY en el espacio de la imagen:
     /// Esquina superior izquierda:
-    dXamp[ cols+3 ] = 2* *(org+1) + *(org+cols+1);
-    dX[0] = dXamp[ cols+3 ];
-    dY[0] = 2* *(org+cols) + *(org+cols+1);
+    dXamp[ mis_cols+3 ] = 2* *(org+1) + *(org+mis_cols+1);
+    dX[0] = dXamp[ mis_cols+3 ];
+    dY[0] = 2* *(org+mis_cols) + *(org+mis_cols+1);
 
-    DEB_MSG("1: " << dXamp[(rens+1)*(cols+2)-1]);
-    DEB_MSG("2: " << dXamp[(rens+2)*(cols+2)-1]);
-    DEB_MSG("3: " << dXamp[(rens+2)*(cols+2)-2]);
+    DEB_MSG("1: " << dXamp[(mis_rens+1)*(mis_cols+2)-1]);
+    DEB_MSG("2: " << dXamp[(mis_rens+2)*(mis_cols+2)-1]);
+    DEB_MSG("3: " << dXamp[(mis_rens+2)*(mis_cols+2)-2]);
 
     /// Esquina superior derecha:
-    dXamp[ 2*cols+2 ] = -2* *(org+cols-2) - *(org+2*cols-2);
-    dX[cols-1] = dXamp[ 2*cols+2 ];
-    dY[cols-1] = *(org+2*cols-2) + 2* *(org+2*cols-1);
+    dXamp[ 2*mis_cols+2 ] = -2* *(org+mis_cols-2) - *(org+2*mis_cols-2);
+    dX[mis_cols-1] = dXamp[ 2*mis_cols+2 ];
+    dY[mis_cols-1] = *(org+2*mis_cols-2) + 2* *(org+2*mis_cols-1);
 
     /// Esquina inferior izquierda:
-    dXamp[ rens*(cols+2)+1 ] = *(org+(rens-2)*cols+1) + 2* *(org+(rens-1)*cols+1);
-    dX[(rens-1)*cols] = dXamp[ rens*(cols+2)+1 ];
-    dY[(rens-1)*cols] = -2* *(org+(rens-2)*cols) - *(org+(rens-2)*cols+1);
+    dXamp[ mis_rens*(mis_cols+2)+1 ] = *(org+(mis_rens-2)*mis_cols+1) + 2* *(org+(mis_rens-1)*mis_cols+1);
+    dX[(mis_rens-1)*mis_cols] = dXamp[ mis_rens*(mis_cols+2)+1 ];
+    dY[(mis_rens-1)*mis_cols] = -2* *(org+(mis_rens-2)*mis_cols) - *(org+(mis_rens-2)*mis_cols+1);
 
     /// Esquina inferior derecha:
-    dXamp[ (rens-1)*(cols+2)-2 ] = -2* *(org+rens*cols-2) - *(org+(rens-1)*cols-2);
-    dX[rens*cols-1] = dXamp[ (rens-1)*(cols+2)-2 ];
-    dY[rens*cols-1] = -*(org+(rens-1)*cols-2) - 2* *(org+(rens-1)*cols-1);
+    dXamp[ (mis_rens-1)*(mis_cols+2)-2 ] = -2* *(org+mis_rens*mis_cols-2) - *(org+(mis_rens-1)*mis_cols-2);
+    dX[mis_rens*mis_cols-1] = dXamp[ (mis_rens-1)*(mis_cols+2)-2 ];
+    dY[mis_rens*mis_cols-1] = -*(org+(mis_rens-1)*mis_cols-2) - 2* *(org+(mis_rens-1)*mis_cols-1);
 
     // Ciclo para la derivada en la primera y ultima filas:
-    for( int x = 1; x < (cols-1); x++){
+    for( int x = 1; x < (mis_cols-1); x++){
         /// Primera fila:
         dXamp[x+1] = *(org+x+1) - *(org+x-1);
-        dXamp[x+cols+3] = 2* *(org+x+1) + *(org+x+1+cols) - 2* *(org+x-1) - *(org+x-1+cols);
-        dX[x] = dXamp[x+cols+3];
-        dY[x] = *(org+x-1+cols) + 2* *(org+x+cols) + *(org+x+1+cols);
+        dXamp[x+mis_cols+3] = 2* *(org+x+1) + *(org+x+1+mis_cols) - 2* *(org+x-1) - *(org+x-1+mis_cols);
+        dX[x] = dXamp[x+mis_cols+3];
+        dY[x] = *(org+x-1+mis_cols) + 2* *(org+x+mis_cols) + *(org+x+1+mis_cols);
 
         /// Ultima fila
-        dXamp[(rens+1)*(cols+2)+1+x] = *(org+(rens-1)*cols+x+1) - *(org+(rens-1)*cols+x-1);
-        dXamp[rens*(cols+2)+1+x] = 2* *(org+(rens-1)*cols+x+1) + *(org+(rens-2)*cols+x+1) - 2* *(org+(rens-1)*cols+x-1) - *(org+(rens-2)*cols+x-1);
-        dX[(rens-1)*cols+x] = dXamp[rens*(cols+2)+1+x];
-        dY[(rens-1)*cols+x] = -*(org+(rens-2)*cols+x-1) - 2* *(org+(rens-2)*cols+x) - *(org+(rens-2)*cols+x+1);
+        dXamp[(mis_rens+1)*(mis_cols+2)+1+x] = *(org+(mis_rens-1)*mis_cols+x+1) - *(org+(mis_rens-1)*mis_cols+x-1);
+        dXamp[mis_rens*(mis_cols+2)+1+x] = 2* *(org+(mis_rens-1)*mis_cols+x+1) + *(org+(mis_rens-2)*mis_cols+x+1) - 2* *(org+(mis_rens-1)*mis_cols+x-1) - *(org+(mis_rens-2)*mis_cols+x-1);
+        dX[(mis_rens-1)*mis_cols+x] = dXamp[mis_rens*(mis_cols+2)+1+x];
+        dY[(mis_rens-1)*mis_cols+x] = -*(org+(mis_rens-2)*mis_cols+x-1) - 2* *(org+(mis_rens-2)*mis_cols+x) - *(org+(mis_rens-2)*mis_cols+x+1);
     }
 
     // Ciclo para la derivada en la primera y ultima columnas:
-    for(int y = 1; y < (rens-1); y++){
+    for(int y = 1; y < (mis_rens-1); y++){
         /// Primera columna:
-        dXamp[(cols+2)*y] = *(org + (y-1)*cols) + 2* *(org + y*cols) + *(org + (y+1)*cols);
-        dXamp[(cols+2)*y+1] = *(org + (y-1)*cols+1) + 2* *(org + y*cols+1) + *(org + (y+1)*cols+1);
-        dX[cols*y] = dXamp[(cols+2)*y+1];
-        dY[cols*y] = 2* *(org + cols*(y+1)) + *(org + cols*(y+1)+1) - 2* *(org + cols*(y-1)) - *(org + cols*(y-1)+1);
+        dXamp[(mis_cols+2)*y] = *(org + (y-1)*mis_cols) + 2* *(org + y*mis_cols) + *(org + (y+1)*mis_cols);
+        dXamp[(mis_cols+2)*y+1] = *(org + (y-1)*mis_cols+1) + 2* *(org + y*mis_cols+1) + *(org + (y+1)*mis_cols+1);
+        dX[mis_cols*y] = dXamp[(mis_cols+2)*y+1];
+        dY[mis_cols*y] = 2* *(org + mis_cols*(y+1)) + *(org + mis_cols*(y+1)+1) - 2* *(org + mis_cols*(y-1)) - *(org + mis_cols*(y-1)+1);
 
         /// Ultima columna:
-        dXamp[(cols+2)*(y+1)-1] = -*(org + y*cols-1) - 2* *(org + (y+1)*cols-1) + *(org + (y+2)*cols-1);
-        dXamp[(cols+2)*(y+1)-2] = -*(org + y*cols-2) - 2* *(org + (y+1)*cols-2) + *(org + (y+2)*cols-2);
-        dX[(y+1)*cols-1] = dXamp[(cols+2)*(y+1)-2];
-        dY[(y+1)*cols-1] = *(org + (y+2)*cols-2) + 2* *(org + (y+2)*cols-1) - *(org + y*cols-2) - 2* *(org + y*cols-1);
+        dXamp[(mis_cols+2)*(y+1)-1] = -*(org + y*mis_cols-1) - 2* *(org + (y+1)*mis_cols-1) + *(org + (y+2)*mis_cols-1);
+        dXamp[(mis_cols+2)*(y+1)-2] = -*(org + y*mis_cols-2) - 2* *(org + (y+1)*mis_cols-2) + *(org + (y+2)*mis_cols-2);
+        dX[(y+1)*mis_cols-1] = dXamp[(mis_cols+2)*(y+1)-2];
+        dY[(y+1)*mis_cols-1] = *(org + (y+2)*mis_cols-2) + 2* *(org + (y+2)*mis_cols-1) - *(org + y*mis_cols-2) - 2* *(org + y*mis_cols-1);
     }
 
     // Ciclo para la derivada dentro de la imagen (- 1 fila):
-    for( int y = 1; y < (rens-2); y++){
-        for( int x = 1; x < (cols-1); x++){
+    for( int y = 1; y < (mis_rens-2); y++){
+        for( int x = 1; x < (mis_cols-1); x++){
             /// Derivada en X:
-            dXamp[(y+1)*(cols+2)+x+1] = *(org+(y-1)*cols+x+1) + 2* *(org+y*cols+x+1) + *(org+(y+1)*cols+x+1) - *(org+(y-1)*cols+x-1) - 2* *(org+y*cols+x-1) - *(org+(y+1)*cols+x-1);
-            dX[y*cols+x] = dXamp[(y+1)*(cols+2)+x+1];
+            dXamp[(y+1)*(mis_cols+2)+x+1] = *(org+(y-1)*mis_cols+x+1) + 2* *(org+y*mis_cols+x+1) + *(org+(y+1)*mis_cols+x+1) - *(org+(y-1)*mis_cols+x-1) - 2* *(org+y*mis_cols+x-1) - *(org+(y+1)*mis_cols+x-1);
+            dX[y*mis_cols+x] = dXamp[(y+1)*(mis_cols+2)+x+1];
 
             /// Derivada en Y:
-            dY[y*cols+x] = *(org+(y+1)*cols+x-1) + 2* *(org+(y+1)*cols+x) + *(org+(y+1)*cols+x+1) - *(org+(y-1)*cols+x-1) + 2* *(org+(y-1)*cols+x) + *(org+(y-1)*cols+x+1);
+            dY[y*mis_cols+x] = *(org+(y+1)*mis_cols+x-1) + 2* *(org+(y+1)*mis_cols+x) + *(org+(y+1)*mis_cols+x+1) - *(org+(y-1)*mis_cols+x-1) + 2* *(org+(y-1)*mis_cols+x) + *(org+(y-1)*mis_cols+x+1);
 
             /// Derivada en XY:
-            dXY[(y-1)*cols+x-1] = dXamp[(y+1)*(cols+2)+x-1] + 2*dXamp[(y+1)*(cols+2)+x] + dXamp[(y+1)*(cols+2)+x+1] - dXamp[(y-1)*(cols+2)+x-1] - 2*dXamp[(y-1)*(cols+2)+x] - dXamp[(y-1)*(cols+2)+x+1];
+            dXY[(y-1)*mis_cols+x-1] = dXamp[(y+1)*(mis_cols+2)+x-1] + 2*dXamp[(y+1)*(mis_cols+2)+x] + dXamp[(y+1)*(mis_cols+2)+x+1] - dXamp[(y-1)*(mis_cols+2)+x-1] - 2*dXamp[(y-1)*(mis_cols+2)+x] - dXamp[(y-1)*(mis_cols+2)+x+1];
         }
 
         /// Derivadda en XY de la penultima y ultima columna:
-        dXY[y*cols-2] = dXamp[(y+1)*(cols+2)+cols-2] + 2*dXamp[(y+1)*(cols+2)+cols-1] + dXamp[(y+1)*(cols+2)+cols] - dXamp[(y-1)*(cols+2)+cols-2] - 2*dXamp[(y-1)*(cols+2)+cols-1] - dXamp[(y-1)*(cols+2)+cols];
-        dXY[y*cols-1] = dXamp[(y+1)*(cols+2)+cols-1] + 2*dXamp[(y+1)*(cols+2)+cols] + dXamp[(y+1)*(cols+2)+cols+1] - dXamp[(y-1)*(cols+2)+cols-1] - 2*dXamp[(y-1)*(cols+2)+cols] - dXamp[(y-1)*(cols+2)+cols+1];
+        dXY[y*mis_cols-2] = dXamp[(y+1)*(mis_cols+2)+mis_cols-2] + 2*dXamp[(y+1)*(mis_cols+2)+mis_cols-1] + dXamp[(y+1)*(mis_cols+2)+mis_cols] - dXamp[(y-1)*(mis_cols+2)+mis_cols-2] - 2*dXamp[(y-1)*(mis_cols+2)+mis_cols-1] - dXamp[(y-1)*(mis_cols+2)+mis_cols];
+        dXY[y*mis_cols-1] = dXamp[(y+1)*(mis_cols+2)+mis_cols-1] + 2*dXamp[(y+1)*(mis_cols+2)+mis_cols] + dXamp[(y+1)*(mis_cols+2)+mis_cols+1] - dXamp[(y-1)*(mis_cols+2)+mis_cols-1] - 2*dXamp[(y-1)*(mis_cols+2)+mis_cols] - dXamp[(y-1)*(mis_cols+2)+mis_cols+1];
     }
 
     /// Derivada en XY en la primer y ultima columnas de la penultima fila:
-    dXY[(rens-2)*cols] = dXamp[rens*(cols+2)] + 2*dXamp[rens*(cols+2)+1] + dXamp[rens*(cols+2)+2] - dXamp[(rens-2)*(cols+2)] - 2*dXamp[(rens-2)*(cols+2)+1] - dXamp[(rens-2)*(cols+2)+2];
-    dXY[(rens-1)*cols-1] = dXamp[(rens+1)*(cols+2)-3] + 2*dXamp[(rens+1)*(cols+2)-2] + dXamp[(rens+1)*(cols+2)-1] - dXamp[(rens-1)*(cols+2)-3] - 2*dXamp[(rens-1)*(cols+2)-2] - dXamp[(rens-1)*(cols+2)-1];
+    dXY[(mis_rens-2)*mis_cols] = dXamp[mis_rens*(mis_cols+2)] + 2*dXamp[mis_rens*(mis_cols+2)+1] + dXamp[mis_rens*(mis_cols+2)+2] - dXamp[(mis_rens-2)*(mis_cols+2)] - 2*dXamp[(mis_rens-2)*(mis_cols+2)+1] - dXamp[(mis_rens-2)*(mis_cols+2)+2];
+    dXY[(mis_rens-1)*mis_cols-1] = dXamp[(mis_rens+1)*(mis_cols+2)-3] + 2*dXamp[(mis_rens+1)*(mis_cols+2)-2] + dXamp[(mis_rens+1)*(mis_cols+2)-1] - dXamp[(mis_rens-1)*(mis_cols+2)-3] - 2*dXamp[(mis_rens-1)*(mis_cols+2)-2] - dXamp[(mis_rens-1)*(mis_cols+2)-1];
 
     // Penultima fila:
-    for( int x = 1; x < (cols-1); x++){
+    for( int x = 1; x < (mis_cols-1); x++){
         /// Derivada en X:
-        dXamp[(rens-1)*(cols+2)+x+1] = *(org+(rens-3)*cols+x+1) + 2* *(org+(rens-2)*cols+x+1) + *(org+(rens-1)*cols+x+1) - *(org+(rens-3)*cols+x-1) - 2* *(org+(rens-2)*cols+x-1) - *(org+(rens-1)*cols+x-1);
-        dX[(rens-2)*cols+x] = dXamp[(rens-1)*(cols+2)+x+1];
+        dXamp[(mis_rens-1)*(mis_cols+2)+x+1] = *(org+(mis_rens-3)*mis_cols+x+1) + 2* *(org+(mis_rens-2)*mis_cols+x+1) + *(org+(mis_rens-1)*mis_cols+x+1) - *(org+(mis_rens-3)*mis_cols+x-1) - 2* *(org+(mis_rens-2)*mis_cols+x-1) - *(org+(mis_rens-1)*mis_cols+x-1);
+        dX[(mis_rens-2)*mis_cols+x] = dXamp[(mis_rens-1)*(mis_cols+2)+x+1];
 
         /// Derivada en Y:
-        dY[(rens-2)*cols+x] = *(org+(rens-1)*cols+x-1) + 2* *(org+(rens-1)*cols+x) + *(org+(rens-1)*cols+x+1) - *(org+(rens-3)*cols+x-1) + 2* *(org+(rens-3)*cols+x) + *(org+(rens-3)*cols+x+1);
+        dY[(mis_rens-2)*mis_cols+x] = *(org+(mis_rens-1)*mis_cols+x-1) + 2* *(org+(mis_rens-1)*mis_cols+x) + *(org+(mis_rens-1)*mis_cols+x+1) - *(org+(mis_rens-3)*mis_cols+x-1) + 2* *(org+(mis_rens-3)*mis_cols+x) + *(org+(mis_rens-3)*mis_cols+x+1);
 
         /// Derivada en XY (antepenultima, penultima y ultima filas):
-        dXY[(rens-3)*cols+x-1] = dXamp[(rens-1)*(cols+2)+x-1] + 2*dXamp[(rens-1)*(cols+2)+x] + dXamp[(rens-1)*(cols+2)+x+1] - dXamp[(rens-3)*(cols+2)+x-1] - 2*dXamp[(rens-3)*(cols+2)+x] - dXamp[(rens-3)*(cols+2)+x+1];
-        dXY[(rens-2)*cols+x-1] = dXamp[rens*(cols+2)+x-1] + 2*dXamp[rens*(cols+2)+x] + dXamp[rens*(cols+2)+x+1] - dXamp[(rens-2)*(cols+2)+x-1] - 2*dXamp[(rens-2)*(cols+2)+x] - dXamp[(rens-2)*(cols+2)+x+1];
-        dXY[(rens-1)*cols+x-1] = dXamp[(rens+1)*(cols+2)+x-1] + 2*dXamp[(rens+1)*(cols+2)+x] + dXamp[(rens+1)*(cols+2)+x+1] - dXamp[(rens-1)*(cols+2)+x-1] - 2*dXamp[(rens-1)*(cols+2)+x] - dXamp[(rens-1)*(cols+2)+x+1];
+        dXY[(mis_rens-3)*mis_cols+x-1] = dXamp[(mis_rens-1)*(mis_cols+2)+x-1] + 2*dXamp[(mis_rens-1)*(mis_cols+2)+x] + dXamp[(mis_rens-1)*(mis_cols+2)+x+1] - dXamp[(mis_rens-3)*(mis_cols+2)+x-1] - 2*dXamp[(mis_rens-3)*(mis_cols+2)+x] - dXamp[(mis_rens-3)*(mis_cols+2)+x+1];
+        dXY[(mis_rens-2)*mis_cols+x-1] = dXamp[mis_rens*(mis_cols+2)+x-1] + 2*dXamp[mis_rens*(mis_cols+2)+x] + dXamp[mis_rens*(mis_cols+2)+x+1] - dXamp[(mis_rens-2)*(mis_cols+2)+x-1] - 2*dXamp[(mis_rens-2)*(mis_cols+2)+x] - dXamp[(mis_rens-2)*(mis_cols+2)+x+1];
+        dXY[(mis_rens-1)*mis_cols+x-1] = dXamp[(mis_rens+1)*(mis_cols+2)+x-1] + 2*dXamp[(mis_rens+1)*(mis_cols+2)+x] + dXamp[(mis_rens+1)*(mis_cols+2)+x+1] - dXamp[(mis_rens-1)*(mis_cols+2)+x-1] - 2*dXamp[(mis_rens-1)*(mis_cols+2)+x] - dXamp[(mis_rens-1)*(mis_cols+2)+x+1];
     }
 
     /// Derivada XY en la penultima y ultima columnas de la antepenultima y ultima filas:
-    dXY[(rens-2)*cols-2] = dXamp[rens*(cols+2)-4] + 2*dXamp[rens*(cols+2)-3] + dXamp[rens*(cols+2)-2] - dXamp[(rens-2)*(cols+2)-4] - 2*dXamp[(rens-2)*(cols+2)-3] - dXamp[(rens-2)*(cols+2)-2];
-    dXY[(rens-2)*cols-1] = dXamp[rens*(cols+2)-3] + 2*dXamp[rens*(cols+2)-2] + dXamp[rens*(cols+2)-1] - dXamp[(rens-2)*(cols+2)-3] - 2*dXamp[(rens-2)*(cols+2)-2] - dXamp[(rens-2)*(cols+2)-1];
-    dXY[rens*cols-2] = dXamp[(rens+2)*(cols+2)-4] + 2*dXamp[(rens+2)*(cols+2)-3] + dXamp[(rens+2)*(cols+2)-2] - dXamp[rens*(cols+2)-4] - 2*dXamp[rens*(cols+2)-3] - dXamp[rens*(cols+2)-2];
-    dXY[rens*cols-1] = dXamp[(rens+2)*(cols+2)-3] + 2*dXamp[(rens+2)*(cols+2)-2] + dXamp[(rens+2)*(cols+2)-1] - dXamp[rens*(cols+2)-3] - 2*dXamp[rens*(cols+2)-2] - dXamp[rens*(cols+2)-1];
+    dXY[(mis_rens-2)*mis_cols-2] = dXamp[mis_rens*(mis_cols+2)-4] + 2*dXamp[mis_rens*(mis_cols+2)-3] + dXamp[mis_rens*(mis_cols+2)-2] - dXamp[(mis_rens-2)*(mis_cols+2)-4] - 2*dXamp[(mis_rens-2)*(mis_cols+2)-3] - dXamp[(mis_rens-2)*(mis_cols+2)-2];
+    dXY[(mis_rens-2)*mis_cols-1] = dXamp[mis_rens*(mis_cols+2)-3] + 2*dXamp[mis_rens*(mis_cols+2)-2] + dXamp[mis_rens*(mis_cols+2)-1] - dXamp[(mis_rens-2)*(mis_cols+2)-3] - 2*dXamp[(mis_rens-2)*(mis_cols+2)-2] - dXamp[(mis_rens-2)*(mis_cols+2)-1];
+    dXY[mis_rens*mis_cols-2] = dXamp[(mis_rens+2)*(mis_cols+2)-4] + 2*dXamp[(mis_rens+2)*(mis_cols+2)-3] + dXamp[(mis_rens+2)*(mis_cols+2)-2] - dXamp[mis_rens*(mis_cols+2)-4] - 2*dXamp[mis_rens*(mis_cols+2)-3] - dXamp[mis_rens*(mis_cols+2)-2];
+    dXY[mis_rens*mis_cols-1] = dXamp[(mis_rens+2)*(mis_cols+2)-3] + 2*dXamp[(mis_rens+2)*(mis_cols+2)-2] + dXamp[(mis_rens+2)*(mis_cols+2)-1] - dXamp[mis_rens*(mis_cols+2)-3] - 2*dXamp[mis_rens*(mis_cols+2)-2] - dXamp[mis_rens*(mis_cols+2)-1];
 
     delete [] dXamp;
 }
@@ -178,37 +178,37 @@ void deriv( const double *org, double *dX, double *dY, double *dXY, const int re
 /*  Metodo: coeficientesBiCubico
     Funcion: Calcula los coeficientes para la interpolacion BiCubica para cada cuatro pixeles.
 */
-double **coeficientesBiCubico( const double *org, const double *dX, const double *dY, const double *dXY, const int rens, const int cols){
+double **FILTROS::coeficientesBiCubico( const double *org, const double *dX, const double *dY, const double *dXY, const int mis_rens, const int mis_cols){
 
-    const int n_coefs = (rens-1)*(cols-1);
+    const int n_coefs = (mis_rens-1)*(mis_cols-1);
 
     double **coeficientes = new double* [n_coefs];
 
     for( int a = 0; a < n_coefs; a++){
         coeficientes[a] = new double [16];
 
-        const int x = a%(cols-1);
-        const int y = a/(cols-1);
+        const int x = a%(mis_cols-1);
+        const int y = a/(mis_cols-1);
 
-        const double f00 = *(org +   x   +   y  *cols);
-        const double f10 = *(org + (x+1) +   y  *cols);
-        const double f01 = *(org +   x   + (y+1)*cols);
-        const double f11 = *(org + (x+1) + (y+1)*cols);
+        const double f00 = *(org +   x   +   y  *mis_cols);
+        const double f10 = *(org + (x+1) +   y  *mis_cols);
+        const double f01 = *(org +   x   + (y+1)*mis_cols);
+        const double f11 = *(org + (x+1) + (y+1)*mis_cols);
 
-        const double fx00 = *(dX +   x   +   y  *cols);
-        const double fx10 = *(dX + (x+1) +   y  *cols);
-        const double fx01 = *(dX +   x   + (y+1)*cols);
-        const double fx11 = *(dX + (x+1) + (y+1)*cols);
+        const double fx00 = *(dX +   x   +   y  *mis_cols);
+        const double fx10 = *(dX + (x+1) +   y  *mis_cols);
+        const double fx01 = *(dX +   x   + (y+1)*mis_cols);
+        const double fx11 = *(dX + (x+1) + (y+1)*mis_cols);
 
-        const double fy00 = *(dY +   x   +   y  *cols);
-        const double fy10 = *(dY + (x+1) +   y  *cols);
-        const double fy01 = *(dY +   x   + (y+1)*cols);
-        const double fy11 = *(dY + (x+1) + (y+1)*cols);
+        const double fy00 = *(dY +   x   +   y  *mis_cols);
+        const double fy10 = *(dY + (x+1) +   y  *mis_cols);
+        const double fy01 = *(dY +   x   + (y+1)*mis_cols);
+        const double fy11 = *(dY + (x+1) + (y+1)*mis_cols);
 
-        const double fxy00 = *(dXY +   x   +   y  *cols);
-        const double fxy10 = *(dXY + (x+1) +   y  *cols);
-        const double fxy01 = *(dXY +   x   + (y+1)*cols);
-        const double fxy11 = *(dXY + (x+1) + (y+1)*cols);
+        const double fxy00 = *(dXY +   x   +   y  *mis_cols);
+        const double fxy10 = *(dXY + (x+1) +   y  *mis_cols);
+        const double fxy01 = *(dXY +   x   + (y+1)*mis_cols);
+        const double fxy11 = *(dXY + (x+1) + (y+1)*mis_cols);
 
         coeficientes[a][0] = f00;
         coeficientes[a][1] = fx00;
@@ -233,47 +233,64 @@ double **coeficientesBiCubico( const double *org, const double *dX, const double
 
 
 
-/*  Metodo: interpolacion(const double *pix, const int x, const int y, const double delta_x, const double delta_y)
+/*  Metodo: interpolacion (Bicubica)
+    Funcion: Interpola el valor del pixel a partir de los cuatro vecinos usando la interpolacion bicubica.
+*/
+inline double FILTROS::interpolacion(const double *pix, const int x, const int y, const double delta_x, const double delta_y, const int mis_cols, double **coeficientes){
+    double *mis_coefs = coeficientes[x + y*(mis_cols-1)];
+    const double XX = delta_x;
+    const double YY = delta_y;
+
+    return ( mis_coefs[ 0]          + mis_coefs[ 1]*XX          + mis_coefs[ 2]*XX*XX          + mis_coefs[ 3]*XX*XX*XX          +
+             mis_coefs[ 4]*YY       + mis_coefs[ 5]*XX*YY       + mis_coefs[ 6]*XX*XX*YY       + mis_coefs[ 7]*XX*XX*XX*YY       +
+             mis_coefs[ 8]*YY*YY    + mis_coefs[ 9]*XX*YY*YY    + mis_coefs[10]*XX*XX*YY*YY    + mis_coefs[11]*XX*XX*XX*YY*YY    +
+             mis_coefs[12]*YY*YY*YY + mis_coefs[13]*XX*YY*YY*YY + mis_coefs[14]*XX*XX*YY*YY*YY + mis_coefs[15]*XX*XX*XX*YY*YY*YY
+           );
+}
+
+
+
+/*  Metodo: interpolacion (Lineal)
     Funcion: Interpola el valor del pixel destino en base a los 4 pixeles origen.
 */
-inline double interpolacionLineal(const double *pix, const int x, const int y, const double delta_x, const double delta_y, const int cols){
-    return ( (1.0-delta_x)*(1.0-delta_y) * *(pix + y*cols + x) +
-             (  delta_x  )*(1.0-delta_y) * *(pix + y*cols + x+1) +
-             (1.0-delta_x)*(  delta_y  ) * *(pix + (y+1)*cols + x) +
-             (  delta_x  )*(  delta_y  ) * *(pix + (y+1)*cols + x+1)
+inline double FILTROS::interpolacion(const double *pix, const int x, const int y, const double delta_x, const double delta_y, const int mis_cols){
+    return ( (1.0-delta_x)*(1.0-delta_y) * *(pix + y*mis_cols + x) +
+             (  delta_x  )*(1.0-delta_y) * *(pix + y*mis_cols + x+1) +
+             (1.0-delta_x)*(  delta_y  ) * *(pix + (y+1)*mis_cols + x) +
+             (  delta_x  )*(  delta_y  ) * *(pix + (y+1)*mis_cols + x+1)
            );
 }
 
 
 
 
-/*  Metodo: rotarImg( const double *org, double *rot, const double theta, const int rens, const int cols)
+/*  Metodo: rotarImg
     Funcion: Rota una imagen almacenada como intensidad de 0 a 1 en un angulo theta.
 */
-void rotarImg( const double *org, double *rot, const double theta, const int rens, const int cols){
+void FILTROS::rotarImg( const double *org, double *rot, const double theta, const int mis_rens, const int mis_cols, double **coeficientes ){
     int x_i, y_i;
     double stheta = sin( theta * PI/180.0 );
     double ctheta = cos( theta * PI/180.0 );
 
     double delta_x, delta_y, x, y;
 
-    for(register int i = 0; i < (rens-1); i++){
-        for(register int j = 0; j < (cols-1); j++){
-            x = (double)(j - cols/2)*ctheta - (double)(i - rens/2)*stheta + cols/2;
-            y = (double)(j - cols/2)*stheta + (double)(i - rens/2)*ctheta + rens/2;
+    for(register int i = 0; i < (mis_rens-1); i++){
+        for(register int j = 0; j < (mis_cols-1); j++){
+            x = (double)(j - mis_cols/2)*ctheta - (double)(i - mis_rens/2)*stheta + mis_cols/2;
+            y = (double)(j - mis_cols/2)*stheta + (double)(i - mis_rens/2)*ctheta + mis_rens/2;
 
             x_i = (int)x;
             y_i = (int)y;
 
             // Si el pixel rotado sale de los limites del template, se descarta:
-            if( x_i >= cols || x_i <= 0 || y_i >= rens || y_i <= 0){
+            if( x_i >= mis_cols || x_i <= 0 || y_i >= mis_rens || y_i <= 0){
                 continue;
             }
 
             delta_x = x - (double)x_i;
             delta_y = y - (double)y_i;
 
-            *(rot + y_i*cols + x_i) = interpolacionLineal(org, j, i, delta_x, delta_y, cols);
+            *(rot + y_i*mis_cols + x_i) = interpolacion(org, j, i, delta_x, delta_y, mis_cols, coeficientes);
         }
     }
 }
@@ -572,7 +589,6 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
     static int only_one = 0;
 
-#ifndef NDEBUG
     /// Obtener la derivada del template:
     double *dX = new double [alto_tmp*ancho_tmp];
     double *dY = new double [alto_tmp*ancho_tmp];
@@ -581,16 +597,26 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     deriv(templates[0], dX, dY, dXY, alto_tmp, ancho_tmp);
     GETTIME_FIN;
 
-using namespace std;
-cout << "Obtener derivadas: " << DIFTIME << endl;
+DEB_MSG("Obtener derivadas: " << DIFTIME);
 
     /// Obtener los coeficientes para la interpolacion bicubica
     GETTIME_INI;
     double **coefsBICUB = coeficientesBiCubico(templates[0], dX, dY, dXY, alto_tmp, ancho_tmp);
     GETTIME_FIN;
 
-using namespace std;
-cout << "Obtener coeficientes: " << DIFTIME << endl;
+DEB_MSG("Obtener coeficientes: " << DIFTIME);
+
+    // Rotar el template segun el numero de rotaciones 'K':
+    const double theta_inc = 180.0 / (double)K;
+    double theta = 180.0;
+    for( int k = 1; k < K; k++){
+        theta -= theta_inc;
+        templates[k] = new double[alto_tmp*ancho_tmp];
+        memset(templates[k], 0, alto_tmp*ancho_tmp*sizeof(double));
+        rotarImg( templates[0], templates[k], theta, alto_tmp, ancho_tmp, coefsBICUB);
+    }
+    DEB_MSG("Templates generados: " << K);
+
 
     for( int a = 0; a < (ancho_tmp-1)*(alto_tmp-1); a ++){
         delete [] coefsBICUB[a];
@@ -600,19 +626,6 @@ cout << "Obtener coeficientes: " << DIFTIME << endl;
     delete [] dX;
     delete [] dY;
     delete [] dXY;
-#endif
-
-
-    // Rotar el template segun el numero de rotaciones 'K':
-    const double theta_inc = 180.0 / (double)K;
-    double theta = 180.0;
-    for( int k = 1; k < K; k++){
-        theta -= theta_inc;
-        templates[k] = new double[alto_tmp*ancho_tmp];
-        memset(templates[k], 0, alto_tmp*ancho_tmp*sizeof(double));
-        rotarImg( templates[0], templates[k], theta, alto_tmp, ancho_tmp);
-    }
-    DEB_MSG("Templates generados: " << K);
 
 #ifndef NDEBUG
 
