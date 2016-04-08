@@ -42,6 +42,134 @@
 #define PI 3.14159265
 
 
+/*  Metodo: deriv
+    Funcion: Obtiene la derivada en X de la imagen (usa las mascaras de Sobel).
+*/
+void deriv( const double *org, double *dX, double *dY, double *dXY, const int rens, const int cols ){
+
+    // Ampliar la matriz de la derivada en X para poder obtener dXY:
+    double *dXamp = new double [(rens+2)*(cols+2)];
+
+    // Calcular las esquinas de DXamp:
+    /// Esquina superior izquierda:
+    dXamp[0] = *(org);
+    dXamp[1] = *(org+1);
+    dXamp[cols+2] = 2* *(org) + *(org+cols);
+
+    /// Esquina superior derecha:
+    dXamp[cols] = -*(org+cols-2);
+    dXamp[cols+1] = -*(org+cols-1);
+    dXamp[2*(cols+2)-1] = -2* *(org+cols-1) - *(org+2*cols-1);
+
+    /// Esquina inferior izquierda:
+    dXamp[rens*(cols+2)] = *(org+(rens-2)*cols) + 2* *(org + (rens-1)*cols);
+    dXamp[(rens+1)*(cols+2)] = *(org+(rens-1)*cols);
+    dXamp[(rens+1)*(cols+2)+1] = *(org+(rens-1)*cols+1);
+
+    /// Esquina inferior derecha:
+    dXamp[(rens+1)*(cols+2)-1] = -*(org+(rens-1)*cols-1) - 2* *(org + rens*cols -1);
+    dXamp[(rens+2)*(cols+2)-1] = -*(org+rens*cols-1);
+    dXamp[(rens+2)*(cols+2)-2] = -*(org+rens*cols-2);
+
+
+    // Determinar dX y dY en el espacio de la imagen:
+    /// Esquina superior izquierda:
+    dXamp[ cols+3 ] = 2* *(org+1) + *(org+cols+1);
+    dX[0] = dXamp[ cols+3 ];
+    dY[0] = 2* *(org+cols) + *(org+cols+1);
+
+    /// Esquina superior derecha:
+    dXamp[ 2*cols+2 ] = -2* *(org+cols-2) - *(org+2*cols-2);
+    dX[cols-1] = dXamp[ 2*cols+2 ];
+    dY[cols-1] = *(org+2*cols-2) + 2* *(org+2*cols-1);
+
+    /// Esquina inferior izquierda:
+    dXamp[ rens*(cols+2)+1 ] = *(org+(rens-2)*cols+1) + 2* *(org+(rens-1)*cols+1);
+    dX[(rens-1)*cols] = dXamp[ rens*(cols+2)+1 ];
+    dY[(rens-1)*cols] = -2* *(org+(rens-2)*cols) - *(org+(rens-2)*cols+1);
+
+    /// Esquina inferior derecha:
+    dXamp[ (rens-1)*(cols+2)-2 ] = -2* *(org+rens*cols-2) - *(org+(rens-1)*cols-2);
+    dX[rens*cols-1] = dXamp[ (rens-1)*(cols+2)-2 ];
+    dY[rens*cols-1] = -*(org+(rens-1)*cols-2) - 2* *(org+(rens-1)*cols-1);
+
+    // Ciclo para la derivada en la primera y ultima filas:
+    for( int x = 1; x < (cols-1); x++){
+        /// Primera fila:
+        dXamp[x+1] = *(org+x+1) - *(org+x-1);
+        dXamp[x+cols+3] = 2* *(org+x+1) + *(org+x+1+cols) - 2* *(org+x-1) - *(org+x-1+cols);
+        dX[x] = dXamp[x+cols+3];
+        dY[x] = *(org+x-1+cols) + 2* *(org+x+cols) + *(org+x+1+cols);
+
+        /// Ultima fila
+        dXamp[(rens+1)*(cols+2)+1+x] = *(org+(rens-1)*cols+x+1) - *(org+(rens-1)*cols+x-1);
+        dXamp[rens*(cols+2)+1+x] = 2* *(org+(rens-1)*cols+x+1) + *(org+(rens-2)*cols+x+1) - 2* *(org+(rens-1)*cols+x-1) - *(org+(rens-2)*cols+x-1);
+        dX[(rens-1)*cols+x] = dXamp[rens*(cols+2)+1+x];
+        dY[(rens-1)*cols+x] = -*(org+(rens-2)*cols+x-1) - 2* *(org+(rens-2)*cols+x) - *(org+(rens-2)*cols+x+1);
+    }
+
+    // Ciclo para la derivada en la primera y ultima columnas:
+    for(int y = 1; y < (rens-1); y++){
+        /// Primera columna:
+        dXamp[(cols+2)*y] = *(org + (y-1)*cols) + 2* *(org + y*cols) + *(org + (y+1)*cols);
+        dXamp[(cols+2)*y+1] = *(org + (y-1)*cols+1) + 2* *(org + y*cols+1) + *(org + (y+1)*cols+1);
+        dX[cols*y] = dXamp[(cols+2)*y+1];
+        dY[cols*y] = 2* *(org + cols*(y+1)) + *(org + cols*(y+1)+1) - 2* *(org + cols*(y-1)) - *(org + cols*(y-1)+1);
+
+        /// Ultima columna:
+        dXamp[(cols+2)*(y+1)-1] = -*(org + y*cols-1) - 2* *(org + (y+1)*cols-1) + *(org + (y+2)*cols-1);
+        dXamp[(cols+2)*(y+1)-2] = -*(org + y*cols-2) - 2* *(org + (y+1)*cols-2) + *(org + (y+2)*cols-2);
+        dX[(y+1)*cols-1] = dXamp[(cols+2)*(y+1)-2];
+        dY[(y+1)*cols-1] = *(org + (y+2)*cols-2) + 2* *(org + (y+2)*cols-1) - *(org + y*cols-2) - 2* *(org + y*cols-1);
+    }
+
+    // Ciclo para la derivada dentro de la imagen (- 1 fila):
+    for( int y = 1; y < (rens-2); y++){
+        for( int x = 1; x < (cols-1); x++){
+            /// Derivada en X:
+            dXamp[(y+1)*(cols+2)+x+1] = *(org+(y-1)*cols+x+1) + 2* *(org+y*cols+x+1) + *(org+(y+1)*cols+x+1) - *(org+(y-1)*cols+x-1) - 2* *(org+y*cols+x-1) - *(org+(y+1)*cols+x-1);
+            dX[y*cols+x] = dXamp[(y+1)*(cols+2)+x+1];
+
+            /// Derivada en Y:
+            dY[y*cols+x] = *(org+(y+1)*cols+x-1) + 2* *(org+(y+1)*cols+x) + *(org+(y+1)*cols+x+1) - *(org+(y-1)*cols+x-1) + 2* *(org+(y-1)*cols+x) + *(org+(y-1)*cols+x+1);
+
+            /// Derivada en XY:
+            dXY[(y-1)*cols+x-1] = dXamp[(y+1)*(cols+2)+x-1] + 2*dXamp[(y+1)*(cols+2)+x] + dXamp[(y+1)*(cols+2)+x+1] - dXamp[(y-1)*(cols+2)+x-1] - 2*dXamp[(y-1)*(cols+2)+x] - dXamp[(y-1)*(cols+2)+x+1];
+        }
+
+        /// Derivadda en XY de la penultima y ultima columna:
+        dXY[y*cols-2] = dXamp[(y+1)*(cols+2)+cols-2] + 2*dXamp[(y+1)*(cols+2)+cols-1] + dXamp[(y+1)*(cols+2)+cols] - dXamp[(y-1)*(cols+2)+cols-2] - 2*dXamp[(y-1)*(cols+2)+cols-1] - dXamp[(y-1)*(cols+2)+cols];
+        dXY[y*cols-1] = dXamp[(y+1)*(cols+2)+cols-1] + 2*dXamp[(y+1)*(cols+2)+cols] + dXamp[(y+1)*(cols+2)+cols+1] - dXamp[(y-1)*(cols+2)+cols-1] - 2*dXamp[(y-1)*(cols+2)+cols] - dXamp[(y-1)*(cols+2)+cols+1];
+    }
+
+    /// Derivada en XY en la primer y ultima columnas de la penultima fila:
+    dXY[(rens-2)*cols] = dXamp[rens*(cols+2)] + 2*dXamp[rens*(cols+2)+1] + dXamp[rens*(cols+2)+2] - dXamp[(rens-2)*(cols+2)] - 2*dXamp[(rens-2)*(cols+2)+1] - dXamp[(rens-2)*(cols+2)+2];
+    dXY[(rens-1)*cols-1] = dXamp[(rens+1)*(cols+2)-3] + 2*dXamp[(rens+1)*(cols+2)-2] + dXamp[(rens+1)*(cols+2)-1] - dXamp[(rens-1)*(cols+2)-3] - 2*dXamp[(rens-1)*(cols+2)-2] - dXamp[(rens-1)*(cols+2)-1];
+
+    // Penultima fila:
+    for( int x = 1; x < (cols-1); x++){
+        /// Derivada en X:
+        dXamp[(rens-1)*(cols+2)+x+1] = *(org+(rens-3)*cols+x+1) + 2* *(org+(rens-2)*cols+x+1) + *(org+(rens-1)*cols+x+1) - *(org+(rens-3)*cols+x-1) - 2* *(org+(rens-2)*cols+x-1) - *(org+(rens-1)*cols+x-1);
+        dX[(rens-2)*cols+x] = dXamp[(rens-1)*(cols+2)+x+1];
+
+        /// Derivada en Y:
+        dY[(rens-2)*cols+x] = *(org+(rens-1)*cols+x-1) + 2* *(org+(rens-1)*cols+x) + *(org+(rens-1)*cols+x+1) - *(org+(rens-3)*cols+x-1) + 2* *(org+(rens-3)*cols+x) + *(org+(rens-3)*cols+x+1);
+
+        /// Derivada en XY (antepenultima, penultima y ultima filas):
+        dXY[(rens-3)*cols+x-1] = dXamp[(rens-1)*(cols+2)+x-1] + 2*dXamp[(rens-1)*(cols+2)+x] + dXamp[(rens-1)*(cols+2)+x+1] - dXamp[(rens-3)*(cols+2)+x-1] - 2*dXamp[(rens-3)*(cols+2)+x] - dXamp[(rens-3)*(cols+2)+x+1];
+        dXY[(rens-2)*cols+x-1] = dXamp[rens*(cols+2)+x-1] + 2*dXamp[rens*(cols+2)+x] + dXamp[rens*(cols+2)+x+1] - dXamp[(rens-2)*(cols+2)+x-1] - 2*dXamp[(rens-2)*(cols+2)+x] - dXamp[(rens-2)*(cols+2)+x+1];
+        dXY[(rens-1)*cols+x-1] = dXamp[(rens+1)*(cols+2)+x-1] + 2*dXamp[(rens+1)*(cols+2)+x] + dXamp[(rens+1)*(cols+2)+x+1] - dXamp[(rens-1)*(cols+2)+x-1] - 2*dXamp[(rens-1)*(cols+2)+x] - dXamp[(rens-1)*(cols+2)+x+1];
+    }
+
+    /// Derivada XY en la penultima y ultima columnas de la antepenultima y ultima filas:
+    dXY[(rens-2)*cols-2] = dXamp[rens*(cols+2)-4] + 2*dXamp[rens*(cols+2)-3] + dXamp[rens*(cols+2)-2] - dXamp[(rens-2)*(cols+2)-4] - 2*dXamp[(rens-2)*(cols+2)-3] - dXamp[(rens-2)*(cols+2)-2];
+    dXY[(rens-2)*cols-1] = dXamp[rens*(cols+2)-3] + 2*dXamp[rens*(cols+2)-2] + dXamp[rens*(cols+2)-1] - dXamp[(rens-2)*(cols+2)-3] - 2*dXamp[(rens-2)*(cols+2)-2] - dXamp[(rens-2)*(cols+2)-1];
+    dXY[rens*cols-2] = dXamp[(rens+2)*(cols+2)-4] + 2*dXamp[(rens+2)*(cols+2)-3] + dXamp[(rens+2)*(cols+2)-2] - dXamp[rens*(cols+2)-4] - 2*dXamp[rens*(cols+2)-3] - dXamp[rens*(cols+2)-2];
+    dXY[rens*cols-1] = dXamp[(rens+2)*(cols+2)-3] + 2*dXamp[(rens+2)*(cols+2)-2] + dXamp[(rens+2)*(cols+2)-1] - dXamp[rens*(cols+2)-3] - 2*dXamp[rens*(cols+2)-2] - dXamp[rens*(cols+2)-1];
+
+    delete [] dXamp;
+}
+
 
 
 /*  Metodo: interpolacion(const double *pix, const int x, const int y, const double delta_x, const double delta_y)
