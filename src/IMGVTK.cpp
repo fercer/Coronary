@@ -1079,27 +1079,43 @@ void IMGVTK::definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer
     Funcion: Utiliza el metodo de Otsu para umbralizar la imagen y separar el fondo y el primer plano de la imagen.
 */
 void IMGVTK::umbralizar(){
-    unsigned int histograma[256];
-    memset(histograma, 0, 256*sizeof(unsigned int));
+
+    const int clases = 256;
+
+    unsigned int *histograma = new unsigned int [clases];
+    memset(histograma, 0, clases*sizeof(unsigned int));
+
+    double max =-1e100;
+    double min = 1e100;
+
+    for( int xy = 0; xy < rens_cols; xy++){
+        if(base_ptr[xy] < min){
+            min = base_ptr[xy];
+        }
+        if(base_ptr[xy] > max){
+            max = base_ptr[xy];
+        }
+    }
 
     // Obtener el histograma de frecuencias a cada nivel de grises de la imagen:
-    for( int xy = 0; xy < rens_cols; xy++){
-        histograma[ base_ptr[xy] ]++;
+    for( int xy = 0; xy < rens_cols; xy ++){
+        histograma[ (int)(clases*(base_ptr[xy]-min) / max) ]++;
     }
+
 
     // Obtener las frecuencias acumuladas:
     double suma = 0.0;
-    for( int k = 1; k < 256; k++){
+    for( int k = 1; k < clases; k++){
         suma += (double)(histograma[k] * k);
     }
 
     double suma_back = 0;
     double media_fore, media_back;
     double peso_fore, peso_back = 0.0;
-    double varianza_entre, max_varianza_entre = -1.0, ant_varianza_entre = -1.0;
+    double varianza_entre, max_varianza_entre = -1.0;
     unsigned char umbral;
 
-    for( int k = 0; k < 256; k++){
+    for( int k = 0; k < clases; k++){
         // Calcular el peso del back y fore-ground:
         peso_back += (double)histograma[k];
         peso_fore = (double)rens_cols - peso_back;
@@ -1123,6 +1139,7 @@ void IMGVTK::umbralizar(){
         base_ptr[xy] = (base_ptr[xy] >= umbral) ? 255 : 0;
     }
 
+    delete [] histograma;
 }
 
 
@@ -1560,6 +1577,9 @@ IMGVTK::IMGVTK(){
     ruta_salida = NULL;
     tipo_salida = PNG;
 
+    cols = 0;
+    rens = 0;
+
     map_ptr = NULL;
     base_ptr = NULL;
     skl_ptr = NULL;
@@ -1611,6 +1631,9 @@ IMGVTK::IMGVTK( const IMGVTK &original ){
         cols = original.cols;
         rens = original.rens;
 
+DEB_MSG("cols = " << cols);
+DEB_MSG("rens = " << rens);
+
         base = vtkSmartPointer<vtkImageData>::New();
         base->SetExtent(0, cols-1, 0, rens-1, 0, 0);
         base->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
@@ -1618,9 +1641,22 @@ IMGVTK::IMGVTK( const IMGVTK &original ){
         base->SetSpacing(1.0, 1.0, 1.0);
 
         base_ptr = static_cast<unsigned char*>(base->GetScalarPointer(0, 0, 0));
+
+        mask = vtkSmartPointer<vtkImageData>::New();
+        mask->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+        mask->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+        mask->SetOrigin(0.0, 0.0, 0.0);
+        mask->SetSpacing(1.0, 1.0, 1.0);
+        mask_ptr = static_cast<unsigned char*>(mask->GetScalarPointer(0, 0, 0));
         rens_cols = rens * cols;
 
         memcpy(base_ptr, original.base_ptr, rens_cols*sizeof(unsigned char));
+
+        if(original.mask_ptr){
+            memcpy(mask_ptr, original.mask_ptr, rens_cols*sizeof(unsigned char));
+        }else{
+            memset(mask_ptr, 0, rens_cols*sizeof(unsigned char));
+        }
     }
 }
 
@@ -1645,7 +1681,7 @@ IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
     pixX = 0.308;
     pixY = 0.308;
 
-    Cargar(rutas_origen,n_imgs, enmascarar );
+    Cargar(rutas_origen, n_imgs, enmascarar );
 }
 
 
@@ -1719,11 +1755,28 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
         base->SetSpacing(1.0, 1.0, 1.0);
 
         base_ptr = static_cast<unsigned char*>(base->GetScalarPointer(0, 0, 0));
+
+
+        mask = vtkSmartPointer<vtkImageData>::New();
+        mask->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+        mask->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+        mask->SetOrigin(0.0, 0.0, 0.0);
+        mask->SetSpacing(1.0, 1.0, 1.0);
+        mask_ptr = static_cast<unsigned char*>(mask->GetScalarPointer(0, 0, 0));
         rens_cols = rens * cols;
 
-        memcpy(base_ptr, origen.base_ptr, rens_cols*sizeof(unsigned char));
-    }
+        if(origen.base_ptr){
+            memcpy(base_ptr, origen.base_ptr, rens_cols*sizeof(unsigned char));
+        }else{
+            memset(mask_ptr, 0, rens_cols*sizeof(unsigned char));
+        }
 
+        if(origen.mask_ptr){
+            memcpy(mask_ptr, origen.mask_ptr, rens_cols*sizeof(unsigned char));
+        }else{
+            memset(mask_ptr, 0, rens_cols*sizeof(unsigned char));
+        }
+    }
 }
 
 

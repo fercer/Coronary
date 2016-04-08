@@ -108,7 +108,7 @@ class IMGVTK{
         vtkSmartPointer<vtkImageData> skeleton;
         int rens, cols, rens_cols;
         int n_caracts;
-        unsigned char *base_ptr;
+        double *base_ptr;
         unsigned char *skl_ptr;
         unsigned char *mask_ptr;
 

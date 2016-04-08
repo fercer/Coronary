@@ -183,6 +183,7 @@ void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, co
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
 void RECONS3D::agregarInput(const char *rutabase_input, const char *rutaground_input, const int nivel){
+
     imgs_base.push_back(IMGVTK(rutabase_input, true, nivel));
     imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
     imgs_segment.push_back(IMGVTK());
@@ -334,20 +335,19 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
 
     FILTROS filtro;
-    filtro.setFiltro(FILTROS::GMF);
+    filtro.setFiltro(FILTROS::SS_GABOR);
     filtro.setFitness(FILTROS::ROC);
     filtro.setEvoMet(FILTROS::EDA_BUMDA, 50, 30);
 
     filtro.setInputOriginal(imgs_base[angio_ID]);
-    filtro.setInputGround(imgs_delin[angio_ID]);
+    //filtro.setInputGround(imgs_delin[angio_ID]);
 
     filtro.setOutput(imgs_segment[angio_ID]);
 
     // Parametros fijos:
-    filtro.setPar(FILTROS::PAR_L, 13);
+    filtro.setPar(FILTROS::PAR_L, 2.65);
     filtro.setPar(FILTROS::PAR_T, 15);
-    filtro.setPar(FILTROS::PAR_SIGMA, 2.82);
-    filtro.setPar(FILTROS::PAR_K, 12);
+    filtro.setPar(FILTROS::PAR_K, 180);
     filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
     filtro.filtrar();
 

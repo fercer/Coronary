@@ -87,11 +87,8 @@ class FILTROS{
         typedef double (*GEN_PNT) (const double par1, const double par2);
 
         // M E T O D O S      P R I V A D O S
-        void deriv( const double *org, double *dX, double *dY, double *dXY, const int mis_rens, const int mis_cols );
-        double **coeficientesBiCubico( const double *org, const double *dX, const double *dY, const double *dXY, const int mis_rens, const int mis_cols);
-        inline double interpolacion(const double *pix, const int x, const int y, const double delta_x, const double delta_y, const int mis_cols, double **coeficientes);
         inline double interpolacion(const double *pix, const int x, const int y, const double delta_x, const double delta_y, const int mis_cols);
-        void rotarImg( const double *org, double *rot, const double theta, const int mis_rens, const int mis_cols, double **coeficientes );
+        void rotarImg( const double *org, double *rot, const double theta, const int mis_rens, const int mis_cols);
 
         static int compIndiv(const void* A, const void* B);
 
