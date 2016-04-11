@@ -49,10 +49,43 @@ void RECONS3D::mostrarImagen( vtkSmartPointer<vtkImageData> &img_src, vtkSmartPo
     // Crear un actor temporal
     vtkSmartPointer<vtkImageActor> actor = vtkSmartPointer<vtkImageActor>::New();
 
+    // Crear una copia temporal de la imagen para ajustarla a escala de 0 a 255:
+    vtkSmartPointer<vtkImageData> img_tmp = vtkSmartPointer<vtkImageData>::New();
+
+    int* dimension = img_src->GetDimensions();
+    const int mis_cols = dimension[0];
+    const int mis_rens = dimension[1];
+    const int mis_rens_cols = mis_rens*mis_cols;
+
+    img_tmp->SetExtent( 0, mis_cols-1, 0, mis_rens-1, 0, 0 );
+    img_tmp->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+    img_tmp->SetOrigin(0.0, 0.0, 0.0);
+    img_tmp->SetSpacing(1.0, 1.0, 1.0);
+
+    unsigned char *img_tmp_ptr = static_cast<unsigned char*>(img_tmp->GetScalarPointer(0,0,0));
+    double *img_src_ptr = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
+
+    double max =-1e100;
+    double min = 1e100;
+
+    for( int xy = 0; xy < mis_rens_cols; xy++){
+        if(*(img_src_ptr + xy) < min){
+            min = *(img_src_ptr + xy);
+        }
+        if(*(img_src_ptr + xy) > max){
+            max = *(img_src_ptr + xy);
+        }
+    }
+
+    const double rango = max - min;
+    for( int xy = 0; xy < mis_rens_cols; xy++){
+        *(img_tmp_ptr + xy) = (unsigned char)(255.0 * (*(img_src_ptr + xy) - min) / rango);
+    }
+
 #if VTK_MAJOR_VERSION <= 5
-    actor->SetInput(img_src);
+    actor->SetInput(img_tmp);
 #else
-    actor->SetInputData(img_src);
+    actor->SetInputData(img_tmp);
 #endif
 
     // Agregar el actor de la imagen al renderizador.
@@ -340,7 +373,7 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     filtro.setEvoMet(FILTROS::EDA_BUMDA, 50, 30);
 
     filtro.setInputOriginal(imgs_base[angio_ID]);
-    //filtro.setInputGround(imgs_delin[angio_ID]);
+    filtro.setInputGround(imgs_delin[angio_ID]);
 
     filtro.setOutput(imgs_segment[angio_ID]);
 
@@ -351,9 +384,31 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
     filtro.filtrar();
 
+#ifndef NDEBUG
+//    mostrarImagen(imgs_segment[angio_ID].base, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
+#endif
+
     imgs_segment[angio_ID].umbralizar();
-    mostrarImagen(imgs_segment[angio_ID].base, mis_renderers[angio_ID]);
-    renderizar(mis_renderers[angio_ID]);
+
+    /// Falta el linking broken vessels ..................
+
+#ifndef NDEBUG
+//    mostrarImagen(imgs_segment[angio_ID].base, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
+#endif
+    imgs_segment[angio_ID].lengthFilter(1000);
+
+#ifndef NDEBUG
+//    mostrarImagen(imgs_segment[angio_ID].base, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
+#endif
+    imgs_segment[angio_ID].regionFill();
+
+#ifndef NDEBUG
+//    mostrarImagen(imgs_segment[angio_ID].base, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
+#endif
 
 }
 
@@ -363,13 +418,13 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
     Funcion: Obtiene el esqueleto de la imagen y muestra los puntos de interes.
 */
-void RECONS3D::skeletonize(){
-    imgs_delin[0].skeletonization();
-    int n_caracts = imgs_delin[0].n_caracts;
+void RECONS3D::skeletonize(const int angio_ID){
+    imgs_segment[angio_ID].skeletonization();
+    int n_caracts = imgs_segment[angio_ID].n_caracts;
 
     for( int c = 0; c < n_caracts; c++ ){
         double color[3];
-        switch( imgs_delin[0].pix_caract[c].pix_tipo){
+        switch( imgs_segment[angio_ID].pix_caract[c].pix_tipo){
             case IMGVTK::PIX_END:
                 color[0] = 1.0;
                 color[1] = 0.0;
@@ -387,28 +442,13 @@ void RECONS3D::skeletonize(){
                 break;
         }
 
-        //agregarEsfera( imgs_delin[0].pix_caract[c].x, imgs_delin[0].pix_caract[c].y, 0.0, 1.5, color, 0 );
+        agregarEsfera( imgs_segment[angio_ID].pix_caract[c].x, imgs_segment[angio_ID].pix_caract[c].y, 0.0, 1.5, color, 0 );
     }
 
-    /*
-    /// Obtener el esqueleto de la imagen delineada (segmentada) y graficar esferas en cada punto caracteristico
-    const int rens = img_delin.rens;
-    const int cols = img_delin.cols;
-    double color_skl[] = {1.0, 1.0, 1.0};
 
-    unsigned char *skl_ptr = img_delin.skl_ptr;
-
-    for( int y = 0; y < rens; y++){
-        for( int x = 0; x < cols; x++){
-            if( skl_ptr[(x+1)+(y+1)*(cols+1)] > 0 ){
-                agregarEsfera( x, y, 0.0, 0.5, color_skl );
-            }
-        }
-    }
-    */
-
-    mostrarImagen( imgs_delin[0].skeleton, mis_renderers[0] );
-    //renderizar(mis_renderers[0]);
+    /// Obtener el esqueleto de la imagen segmentada y graficar esferas en cada punto caracteristico
+    mostrarImagen( imgs_segment[angio_ID].skeleton, mis_renderers[angio_ID] );
+    renderizar(mis_renderers[angio_ID]);
 }
 
 

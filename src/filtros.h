@@ -181,8 +181,8 @@ class FILTROS{
         INDIV *mi_elite;
 
         // Entradas comunes:
-        unsigned char *org, *dest;
-        unsigned char *ground_truth, *mask;
+        double *org, *dest;
+        double *ground_truth, *mask;
         int rens, cols, rens_cols, n_pob, max_iters;
 
         double min_vars[5], lim_inf[5], lim_sup[5];

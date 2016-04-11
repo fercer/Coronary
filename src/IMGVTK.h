@@ -31,7 +31,8 @@
 
 #include <math.h>
 #include <vector>
-#include <algorithm>    // std::sort
+#include <algorithm>    // std::sort, std::fill_n
+#include <iterator>
 
 #include <iostream>
 
@@ -85,6 +86,8 @@ class IMGVTK{
         void definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src );
         void skeletonization();
         void umbralizar();
+        void lengthFilter(const int min_length);
+        void regionFill();
 
         void Cargar(const char *ruta_origen, const bool enmascarar, const int nivel);
         void Cargar(char **rutas , const int n_imgs, const bool enmascarar);
@@ -108,9 +111,9 @@ class IMGVTK{
         vtkSmartPointer<vtkImageData> skeleton;
         int rens, cols, rens_cols;
         int n_caracts;
-        unsigned char *base_ptr;
-        unsigned char *skl_ptr;
-        unsigned char *mask_ptr;
+        double *base_ptr;
+        double *skl_ptr;
+        double *mask_ptr;
 
         //// Datos extraidos del archivo DICOM:
         double SID, SOD, DDP;
@@ -131,29 +134,29 @@ class IMGVTK{
         void mapaDistancias();
 
 
-        void maskFOV(unsigned char *img_tmp, unsigned char *mask_tmp, const int mis_cols, const int mis_rens);
-        void fillMask(unsigned char *img_tmp, unsigned char *mask_tmp, const int mis_cols, const int mis_rens);
+        void maskFOV(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
+        void fillMask(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
 
         void extraerCaract();
 
         // ---------------- Mascaras para region filling
-        bool regionFilling9( const unsigned char *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
-        bool regionFilling7( const unsigned char *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
-        bool regionFilling5( const unsigned char *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
-        bool regionFilling3(const unsigned char *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
-        void regionFill(unsigned char *ptr, const int mis_cols, const int mis_rens);
+        bool regionFilling9( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
+        bool regionFilling7( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
+        bool regionFilling5( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
+        bool regionFilling3( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
+        void regionFill( double *ptr, const int mis_cols, const int mis_rens);
 
-        inline unsigned char sklMask(const unsigned char *skl_ptr, const int x, const int y, const int mis_cols, const int mis_rens);
+        inline unsigned char sklMask(const double *skl_ptr, const int x, const int y, const int mis_cols, const int mis_rens);
 
-        inline unsigned char dilMask(const unsigned char *mask_dil, const int x, const int y , const int mis_cols, const int mis_rens);
-        inline unsigned char erosionMask(const unsigned char *ptr_tmp, const int x, const int y, const int mis_cols, const int mis_rens);
-        void erosionar(unsigned char *ptr, const int mis_cols, const int mis_rens);
+        inline unsigned char dilMask(const double *mask_dil, const int x, const int y , const int mis_cols, const int mis_rens);
+        inline unsigned char erosionMask(const double *ptr_tmp, const int x, const int y, const int mis_cols, const int mis_rens);
+        void erosionar(double *ptr, const int mis_cols, const int mis_rens);
 
-        void conexo(const unsigned char *ptr, const int x, const int y, int *conjuntos, unsigned int* n_etiquetados, bool* visitados, const int num_etiquetas, const int mis_cols, const int mis_rens);
-        unsigned int *conjuntosConexosDinamico(const unsigned char *ptr, int *conjuntos, const int mis_cols, const int mis_rens);
+        void conexo(const double *ptr, const int x, const int y, int *conjuntos, unsigned int* n_etiquetados, bool* visitados, const int num_etiquetas, const int mis_cols, const int mis_rens);
+        unsigned int *conjuntosConexosDinamico(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens);
 
-        unsigned int *conjuntosConexos(unsigned char *ptr, int *conjuntos, const int mis_cols, const int mis_rens);
-        void lengthFilter(unsigned char *ptr, const int min_length , const int mis_cols, const int mis_rens);
+        unsigned int *conjuntosConexos(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens);
+        void lengthFilter(double *ptr, const int min_length , const int mis_cols, const int mis_rens);
 
         char* setRuta( const char *ruta_input );
 
@@ -162,7 +165,7 @@ class IMGVTK{
         char *ruta_salida;
 
         vtkSmartPointer<vtkImageData> mapa_dist;
-        unsigned char *map_ptr;
+        double *map_ptr;
 
 
 };

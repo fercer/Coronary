@@ -156,7 +156,7 @@ class RECONS3D{
         void moverPosicion(const int angio_ID);
 
         void segmentarImagenBase( const int angio_ID );
-        void skeletonize();
+        void skeletonize(const int angio_ID);
 
     // O P E R A D O R E S  S O B R E C A R G A D O S
     //--------------------------------------------------------------------------------------- PUBLIC ----- ^

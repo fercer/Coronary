@@ -288,25 +288,8 @@ void FILTROS::filtrar(){
             break;
     }
 
-    double min_resp =  1e100;
-    double max_resp = -1e100;
-
-    for(int xy = 0; xy < rens_cols; xy++){
-        if( resp[xy] < min_resp ){
-            min_resp = resp[xy];
-        }
-        if( resp[xy] > max_resp ){
-            max_resp = resp[xy];
-        }
-    }
-    const double rango_resp = max_resp - min_resp;
-    for( int xy = 0; xy < rens_cols; xy++){
-        dest[xy] = (unsigned char)(255.0 * (resp[xy] - min_resp) / rango_resp);
-    }
-
-    DEB_MSG("delta: " << mi_elite->vars[4])
-
-    //calcROC(mi_elite, resp);
+    memcpy(dest, resp, rens_cols*sizeof(double));
+    calcROC(mi_elite, resp);
 
     delete [] resp;
 }
@@ -424,12 +407,12 @@ void FILTROS::respGMF(INDIV *test, double *resp){
                 for( int y = -alto_tmp/2; y < alto_tmp/2 - (1 - ex_alto); y++){
                     for( int x = -ancho_tmp/2; x < ancho_tmp/2 - (1 - ex_ancho); x++){
 
-                        resp_k += *(templates[k] + (y+alto_tmp/2)*ancho_tmp + (x+ancho_tmp/2)) * (double)Img_aux[yI + y + alto_tmp][xI + x + ancho_tmp] / 255.0;
+                        resp_k += *(templates[k] + (y+alto_tmp/2)*ancho_tmp + (x+ancho_tmp/2)) * Img_aux[yI + y + alto_tmp][xI + x + ancho_tmp];
 #ifndef NDEBUG
                         if( resp_k > 1000000  || resp_k < -1000000){
                             DEB_MSG("Woa woa algo anda mal aqui [" << x << "," <<  y << "] {" << xI << ", " << yI << "}: " << resp_k);
                             DEB_MSG("con el template[" << k << "]: " << (*(templates[k] + (y+alto_tmp/2)*ancho_tmp + (x+ancho_tmp/2))) << " en: " << (y-alto_tmp/2)*ancho_tmp + (x+ancho_tmp/2) << " de: " << alto_tmp*ancho_tmp);
-                            DEB_MSG("O con la imagen " << ((double)Img_aux[yI + y + alto_tmp][xI + x + ancho_tmp] / 255.0));
+                            DEB_MSG("O con la imagen " << Img_aux[yI + y + alto_tmp][xI + x + ancho_tmp]);
                             exit(0);
                         }
 #endif
@@ -483,7 +466,7 @@ void FILTROS::fftImgOrigen(){
         Img_org = new double[rens_cols];
         Img_fft = (fftw_complex*) fftw_malloc(rens*(cols/2+1)*sizeof(fftw_complex));
         for(int xy = 0; xy < rens_cols; xy++){
-            Img_org[xy] = 1.0 - (double)org[xy] / 255.0;
+            Img_org[xy] = 1.0 - org[xy];
         }
         fftw_plan p_r2c = fftw_plan_dft_r2c_2d( rens, cols, Img_org, Img_fft, FFTW_ESTIMATE);
         fftw_execute(p_r2c);
@@ -526,7 +509,6 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     }
 
     //// Generar HPF como la gaussiana, se hace por partes para cambiar los cuadrantes (como fftshift en Matlab)
-    //// Convertir la imagen del rango de 0 a 255 a uno continuo de 0 a 1:
     double *HPF = new double[rens_cols];
 
     for( int y = 0; y < rens/2; y++ ){
@@ -634,7 +616,7 @@ void FILTROS::respGabor(INDIV *test, double *resp){
 
     for( int xy = 0; xy < rens_cols; xy++){
         // La inversa de la FFT retorna los valores multiplicados por el tamaño del arreglo que se mete como argumento, por eso se divide entre el tamaño del arreglo.
-        resp[xy] = (mask[xy] > 125) ? (max_resp[xy] / rens_cols) : 0.0;
+        resp[xy] = (mask[xy] > 0.5) ? (max_resp[xy] / rens_cols) : 0.0;
 #ifndef NDEBUG
         if(resp[xy] > max_global){
             max_global = resp[xy];
@@ -692,12 +674,11 @@ double FILTROS::calcROC(INDIV *test, double *resp){
     //// Contar la cantidad de pixeles blancos (unos) y negros (ceros)
     int n_unos = 0, n_ceros = 0;
     for( int xy = 0; xy < rens_cols; xy++){
-        if( ground_truth[xy] > 125 ){
+        if( ground_truth[xy] > 0.5 ){
             n_unos++;
         }else{
             n_ceros++;
         }
-
     }
 
 
@@ -710,7 +691,7 @@ double FILTROS::calcROC(INDIV *test, double *resp){
     double min_resp = 1e100;
 
     for( int xy = 0; xy < rens_cols; xy++){
-        if( ground_truth[xy] > 125 ){
+        if( ground_truth[xy] > 0.5 ){
             arr_unos[n_unos] = resp[xy];
             n_unos++;
         }else{

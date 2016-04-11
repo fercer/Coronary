@@ -23,15 +23,15 @@
     Funcion: Obtiene el mapa de distancias de los pixeles a los bordes.
 */
 void IMGVTK::mapaDistancias(){
-    float INF = 1e9;
+    double INF = 1e9;
 
-    float *map_tmp = new float [rens_cols];
+    double *map_tmp = new double [rens_cols];
 
     for( int xy = 0 ; xy < rens_cols; xy++ ){
         map_tmp[xy] = (base_ptr[xy] == 0) ? 0.0 : INF;
     }
 
-    float *f = new float[ rens > cols ? rens : cols  ];
+    double *f = new double[ rens > cols ? rens : cols  ];
 
     // transform along columns
     for (int x = 0; x < cols; x++){
@@ -39,16 +39,16 @@ void IMGVTK::mapaDistancias(){
             f[y] = *(map_tmp + y*cols + x);
         }
 
-        float *dh = new float[ rens ];
+        double *dh = new double[ rens ];
         int *vh= new int[ rens ];
-        float *zh = new float[ rens+1 ];
+        double *zh = new double[ rens+1 ];
         int k = 0;
         vh[0] = 0;
         zh[0] = -INF;
         zh[1] = +INF;
 
         for (int q = 1; q < rens; q++){
-            float s  = ((f[q]+(q*q))-(f[vh[k]]+(vh[k]*vh[k])))/(2*q-2*vh[k]);
+            double s  = ((f[q]+(q*q))-(f[vh[k]]+(vh[k]*vh[k])))/(2*q-2*vh[k]);
 
             while(s <= zh[k]){
                 k--;
@@ -73,7 +73,7 @@ void IMGVTK::mapaDistancias(){
     }
 
     //normalizarlas a [0,255] y mostrar base
-    float mini = INF, maxi = -INF;
+    double mini = INF, maxi = -INF;
 
     // transform along rows
     for (int y = 0; y < rens; y++){
@@ -81,16 +81,16 @@ void IMGVTK::mapaDistancias(){
             f[x] = map_tmp[y*cols+ x];
         }
 
-        float *dw = new float[cols];
+        double *dw = new double[cols];
         int *vw = new int[cols];
-        float *zw = new float[cols+1];
+        double *zw = new double[cols+1];
         int k = 0;
         vw[0] = 0;
         zw[0] = -INF;
         zw[1] = +INF;
 
         for (int q = 1; q < cols; q++){
-            float s  = ((f[q]+(q*q))-(f[vw[k]]+(vw[k]*vw[k])))/(2*q-2*vw[k]);
+            double s  = ((f[q]+(q*q))-(f[vw[k]]+(vw[k]*vw[k])))/(2*q-2*vw[k]);
             while (s <= zw[k]){
                 k--;
                 s  = ((f[q]+(q*q))-(f[vw[k]]+(vw[k]*vw[k])))/(2*q-2*vw[k]);
@@ -128,15 +128,13 @@ void IMGVTK::mapaDistancias(){
     }
 
     mapa_dist->SetExtent(0, cols-1, 0, rens-1, 0, 0);
-    mapa_dist->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+    mapa_dist->AllocateScalars( VTK_DOUBLE, 1);
     mapa_dist->SetOrigin(0.0, 0.0, 0.0);
     mapa_dist->SetSpacing(1.0, 1.0, 1.0);
 
-    map_ptr = static_cast<unsigned char *>(mapa_dist->GetScalarPointer(0,0,0));
+    map_ptr = static_cast<double*>(mapa_dist->GetScalarPointer(0,0,0));
 
-    for(int xy=0; xy < rens_cols; xy++){
-        map_ptr[xy] = (unsigned char)((255.0/maxi-mini)*( map_tmp[xy] - mini));
-    }
+    memcpy(map_ptr, map_tmp, rens_cols*sizeof(double));
 
     delete [] map_tmp;
 }
@@ -146,7 +144,7 @@ void IMGVTK::mapaDistancias(){
 /*  Metodo: regionFilling9
     Funcion: Rellena espacios vacios dentro del conjunto de pixeles resaltado.
 */
-bool IMGVTK::regionFilling9( const unsigned char *ptr, const int x, const int y, const int mis_cols, const int mis_rens){
+bool IMGVTK::regionFilling9( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rens){
     int n_hits = 0;
 
     for( int m = 0; m < 9; m++){
@@ -194,9 +192,6 @@ bool IMGVTK::regionFilling9( const unsigned char *ptr, const int x, const int y,
             n_hits++;
         }
     }
-
-    DEB_MSG("n_hits 9 [" << x << "," << y << "]:" << n_hits);
-
     return (n_hits == 36);
 }
 
@@ -205,7 +200,7 @@ bool IMGVTK::regionFilling9( const unsigned char *ptr, const int x, const int y,
 /*  Metodo: regionFilling7
     Funcion: Rellena espacios vacios dentro del conjunto de pixeles resaltado.
 */
-bool IMGVTK::regionFilling7( const unsigned char *ptr, const int x, const int y, const int mis_cols, const int mis_rens){
+bool IMGVTK::regionFilling7( const double*ptr, const int x, const int y, const int mis_cols, const int mis_rens){
 
     int n_hits = 0;
 
@@ -255,8 +250,6 @@ bool IMGVTK::regionFilling7( const unsigned char *ptr, const int x, const int y,
         }
     }
 
-    DEB_MSG("n_hits 7 [" << x << "," << y << "]:" << n_hits);
-
     return (n_hits == 28);
 }
 
@@ -265,7 +258,7 @@ bool IMGVTK::regionFilling7( const unsigned char *ptr, const int x, const int y,
 /*  Metodo: regionFilling5
     Funcion: Rellena espacios vacios dentro del conjunto de pixeles resaltado.
 */
-bool IMGVTK::regionFilling5( const unsigned char *ptr, const int x, const int y, const int mis_cols, const int mis_rens){
+bool IMGVTK::regionFilling5( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rens){
     int n_hits = 0;
 
     for( int m = 0; m < 5; m++){
@@ -314,8 +307,6 @@ bool IMGVTK::regionFilling5( const unsigned char *ptr, const int x, const int y,
         }
     }
 
-    DEB_MSG("n_hits 5 [" << x << "," << y << "]:" << n_hits);
-
     return (n_hits == 20);
 }
 
@@ -324,7 +315,7 @@ bool IMGVTK::regionFilling5( const unsigned char *ptr, const int x, const int y,
 /*  Metodo: regionFilling3
     Funcion: Rellena espacios vacios dentro del conjunto de pixeles resaltado.
 */
-bool IMGVTK::regionFilling3( const unsigned char *ptr, const int x, const int y, const int mis_cols, const int mis_rens ){
+bool IMGVTK::regionFilling3( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rens ){
     int n_hits = 0;
 
     for( int m = 0; m < 3; m++){
@@ -373,8 +364,6 @@ bool IMGVTK::regionFilling3( const unsigned char *ptr, const int x, const int y,
         }
     }
 
-    DEB_MSG("n_hits 3 [" << x << "," << y << "]:" << n_hits);
-
     return (n_hits == 12);
 }
 
@@ -383,11 +372,11 @@ bool IMGVTK::regionFilling3( const unsigned char *ptr, const int x, const int y,
 /*  Metodo: conexo
     Funcion: Metodo recursivo (dinamico) para encontrar los conjuntos conexos utilizando la conectividad 8.
 */
-void IMGVTK::conexo(const unsigned char *ptr, const int x, const int y, int *conjuntos, unsigned int* n_etiquetados, bool* visitados, const int num_etiquetas, const int mis_cols, const int mis_rens){
+void IMGVTK::conexo(const double *ptr, const int x, const int y, int *conjuntos, unsigned int* n_etiquetados, bool* visitados, const int num_etiquetas, const int mis_cols, const int mis_rens){
     visitados[x + y*mis_cols] = true;
 
     // Si el pixel es parte del fondo, no se hace nada:
-    if( ptr[x + y*mis_cols] < 255){
+    if( ptr[x + y*mis_cols] < 1.0){
         return;
     }else{
         conjuntos[x + y*mis_cols] = num_etiquetas;
@@ -460,23 +449,20 @@ void IMGVTK::conexo(const unsigned char *ptr, const int x, const int y, int *con
 /*  Metodo: conjuntosConexos
     Funcion: Obtiene los conjuntos conexos de la imagen usando programacion dinamica (Llega a generar stackoverflow ... ).
 */
-unsigned int* IMGVTK::conjuntosConexosDinamico(const unsigned char *ptr, int *conjuntos, const int mis_cols, const int mis_rens){
+unsigned int* IMGVTK::conjuntosConexosDinamico(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens){
     int num_etiquetas = 0;
 
     const int mis_rens_cols = mis_cols*mis_rens;
 
     bool *visitados = new bool [mis_rens_cols];
-    memset(visitados, 0, mis_rens_cols*sizeof(unsigned char));
-DEB_MSG("visitados listo !");
+    memset(visitados, 0, mis_rens_cols*sizeof(bool));
+
     unsigned int *tmp = new unsigned int [mis_rens_cols];
     memset(tmp, 0, sizeof(unsigned int)*mis_rens_cols);
-DEB_MSG("tmp listo !");
+
 
     memset(conjuntos, -1, sizeof(int) * mis_rens_cols);
-DEB_MSG("conjuntos listo !");
 
-
-DEB_MSG("pixeles: " << mis_rens_cols);
     for( int y = 0; y< mis_rens; y++){
         for( int x = 0; x < mis_cols; x++){
             /// Se mueve la etiqueta si el pixel es de un nuevo conjunto:
@@ -507,7 +493,7 @@ DEB_MSG("pixeles: " << mis_rens_cols);
 /*  Metodo: conjuntosConexos
     Funcion: Obtiene los conjuntos conexos de la imagen.
 */
-unsigned int* IMGVTK::conjuntosConexos(unsigned char *ptr, int *conjuntos, const int mis_cols, const int mis_rens){
+unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens){
 
 
     const int mis_rens_cols = mis_cols*mis_rens;
@@ -516,7 +502,7 @@ unsigned int* IMGVTK::conjuntosConexos(unsigned char *ptr, int *conjuntos, const
 
     //// Primer escaneo para determinar las etiquetas:
     // Verificar el primer pixel:
-    if( ptr[0] == 255 ){
+    if( *(ptr) > 0.0 ){
         conjuntos[0] = 0;
     }
 
@@ -527,7 +513,7 @@ unsigned int* IMGVTK::conjuntosConexos(unsigned char *ptr, int *conjuntos, const
 
     // Verificar primer fila:
     for( int x = 1; x < mis_cols; x++){
-        if( ptr[x] == 255 ){
+        if( *(ptr + x) > 0.0 ){
             eq = conjuntos[x-1];
             ex = eq;
             if( eq == -1 ){
@@ -539,9 +525,9 @@ unsigned int* IMGVTK::conjuntosConexos(unsigned char *ptr, int *conjuntos, const
         }
     }
 
-    // Verifiar primer columna:
+    // Verificar primer columna:
     for( int y = 1; y < mis_rens; y++){
-        if( ptr[y*mis_cols] == 255 ){
+        if( *(ptr + y*mis_cols) > 0.0 ){
             ep = conjuntos[(y-1)*mis_cols];
             ex = ep;
             if( ep == -1){
@@ -556,7 +542,7 @@ unsigned int* IMGVTK::conjuntosConexos(unsigned char *ptr, int *conjuntos, const
     // Verificar el resto de la imagen:
     for( int y = 1; y < mis_rens; y++){
         for( int x = 1; x < mis_cols; x++){
-            if( ptr[x + y*mis_cols] == 255 ){
+            if( *(ptr + x + y*mis_cols) > 0.0 ){
                 ep = conjuntos[x + (y-1)*mis_cols];
                 eq = conjuntos[(x-1) + y*mis_cols];
                 ex = ep;
@@ -599,7 +585,7 @@ unsigned int* IMGVTK::conjuntosConexos(unsigned char *ptr, int *conjuntos, const
         }
     }
 
-    DEB_MSG("Numero de etiquetas diferentes: " << (diferentes.size()));
+DEB_MSG("Numero de etiquetas diferentes: " << (diferentes.size()));
     unsigned int *n_etiquetados = new unsigned int [num_etiquetas+1];
     memset( n_etiquetados, 0, (num_etiquetas+1)*sizeof(unsigned int) );
     n_etiquetados[0] = num_etiquetas;
@@ -627,7 +613,7 @@ unsigned int* IMGVTK::conjuntosConexos(unsigned char *ptr, int *conjuntos, const
 /*  Metodo:  sklMask
     Funcion: Mascara usada para la extraccion del esqueleto.
 */
-inline unsigned char IMGVTK::sklMask( const unsigned char *skl_ptr, const int x, const int y, const int mis_cols, const int mis_rens ){
+inline unsigned char IMGVTK::sklMask( const double *skl_ptr, const int x, const int y, const int mis_cols, const int mis_rens ){
     return   1*(skl_ptr[(x-1) + (y-1)*mis_cols] > 0) + /* P2 */
              2*(skl_ptr[  x   + (y-1)*mis_cols] > 0) + /* P3 */
              4*(skl_ptr[(x+1) + (y-1)*mis_cols] > 0) + /* P4 */
@@ -644,19 +630,18 @@ inline unsigned char IMGVTK::sklMask( const unsigned char *skl_ptr, const int x,
 /*  Metodo: lengthFiltering
     Funcion: Filtra los conjuntos con numero de pixeles menor a 'min_length'
 */
-void IMGVTK::lengthFilter(unsigned char *ptr, const int min_length, const int mis_cols, const int mis_rens ){
+void IMGVTK::lengthFilter(double *ptr, const int min_length, const int mis_cols, const int mis_rens ){
 
     const int mis_rens_cols = mis_cols*mis_rens;
 
     int *mis_conjuntos = new int [mis_rens_cols];
 
-    DEB_MSG("cols: " << mis_cols << ", " << mis_rens);
-    unsigned int *mis_n_etiquetados = conjuntosConexos(ptr, mis_conjuntos, mis_cols, mis_rens);
-    DEB_MSG("n etiquetas: " << mis_n_etiquetados[0] );
+    unsigned int *mis_n_etiquetados = conjuntosConexosDinamico(ptr, mis_conjuntos, mis_cols, mis_rens);
+DEB_MSG("n etiquetas: " << mis_n_etiquetados[0] );
 
     for( int xy = 0; xy < mis_rens_cols; xy++){
-        if( (mis_conjuntos[ xy ] >= 0) && (mis_n_etiquetados[ mis_conjuntos[ xy ]+1 ] < min_length) ){
-            ptr[ xy ] = 0;
+        if( (mis_conjuntos[ xy ] >= 0) && (mis_n_etiquetados[ mis_conjuntos[ xy ]+1 ] < min_length)){
+            ptr[ xy ] = 0.0;
         }
     }
 
@@ -666,39 +651,47 @@ void IMGVTK::lengthFilter(unsigned char *ptr, const int min_length, const int mi
 
 
 
+/*  Metodo: lengthFiltering (Publica)
+    Funcion: Filtra los conjuntos con numero de pixeles menor a 'min_length'
+*/
+void IMGVTK::lengthFilter(const int min_length){
+    lengthFilter(base_ptr, min_length, cols, rens);
+}
+
+
 /*  Metodo: regionFill
     Funcion: Rellena vacios dentro del cuerpo de la arteria segmentada.
 */
-void IMGVTK::regionFill( unsigned char *ptr, const int mis_cols, const int mis_rens  ){
+void IMGVTK::regionFill( double *ptr, const int mis_cols, const int mis_rens  ){
     // -------- Mascara 9x9
     for( int y = 0; y < mis_rens; y++){
         for( int x = 0; x < mis_cols; x++){
-            if( ptr[x+y*mis_cols] == 0 ){
-                ptr[x+y*mis_cols] = (regionFilling9(ptr, x, y, mis_cols, mis_rens) ? 255 : 0);
+            if( ptr[x+y*mis_cols] < 1.0 ){
+                ptr[x+y*mis_cols] = (regionFilling9(ptr, x, y, mis_cols, mis_rens) ? 1.0 : 0.0);
             }
         }
     }
     // -------- Mascara 7x7
     for( int y = 0; y < mis_rens; y++){
         for( int x = 0; x < mis_cols; x++){
-            if( ptr[x+y*mis_cols] == 0 ){
-                ptr[x+y*mis_cols] = (regionFilling7(ptr, x, y, mis_cols, mis_rens) ? 255 : 0);
+            if( ptr[x+y*mis_cols] < 1.0 ){
+                ptr[x+y*mis_cols] = (regionFilling7(ptr, x, y, mis_cols, mis_rens) ? 1.0 : 0.0);
             }
         }
     }
     // -------- Mascara 5x5
     for( int y = 0; y < mis_rens; y++){
         for( int x = 0; x < mis_cols; x++){
-            if( ptr[x+y*mis_cols] == 0 ){
-                ptr[x+y*mis_cols] = (regionFilling5(ptr, x, y, mis_cols, mis_rens) ? 255 : 0);
+            if( ptr[x+y*mis_cols] < 1.0 ){
+                ptr[x+y*mis_cols] = (regionFilling5(ptr, x, y, mis_cols, mis_rens) ? 1.0 : 0.0);
             }
         }
     }
     // -------- Mascara 3x3
     for( int y = 0; y < mis_rens; y++){
         for( int x = 0; x < mis_cols; x++){
-            if( ptr[x+y*mis_cols] == 0 ){
-                ptr[x+y*mis_cols] = (regionFilling3(ptr, x, y, mis_cols, mis_rens) ? 255 : 0);
+            if( ptr[x+y*mis_cols] < 1.0 ){
+                ptr[x+y*mis_cols] = (regionFilling3(ptr, x, y, mis_cols, mis_rens) ? 1.0 : 0.0);
             }
         }
     }
@@ -707,11 +700,19 @@ void IMGVTK::regionFill( unsigned char *ptr, const int mis_cols, const int mis_r
 
 
 
+/*  Metodo: regionFill (Publica)
+    Funcion: Rellena vacios dentro del cuerpo de la arteria segmentada.
+*/
+void IMGVTK::regionFill(){
+    regionFill(base_ptr, cols, rens);
+}
+
+
 
 /*  Metodo:  dilMask
     Funcion: Mascara usada para dilatar unaimagen.
 */
-inline unsigned char IMGVTK::dilMask( const unsigned char *mask_dil, const int x, const int y, const int mis_cols, const int mis_rens){
+inline unsigned char IMGVTK::dilMask( const double *mask_dil, const int x, const int y, const int mis_cols, const int mis_rens){
     return (mask_dil[( x ) + (y-1)*mis_cols] > 0) +
            (mask_dil[(x+1) + ( y )*mis_cols] > 0) +
            (mask_dil[( x ) + (y+1)*mis_cols] > 0) +
@@ -723,7 +724,7 @@ inline unsigned char IMGVTK::dilMask( const unsigned char *mask_dil, const int x
 /*  Metodo:  erosionMask
     Funcion: Mascara para erosion usando un disco de radio 5
 */
-inline unsigned char IMGVTK::erosionMask( const unsigned char *ptr_tmp, const int x, const int y, const int mis_cols, const int mis_rens ){
+inline unsigned char IMGVTK::erosionMask( const double *ptr_tmp, const int x, const int y, const int mis_cols, const int mis_rens ){
     return                                                                                   (ptr_tmp[(x-2) + (y-4)*mis_cols] > 0) + (ptr_tmp[(x-1) + (y-4)*mis_cols] > 0) + (ptr_tmp[( x ) + (y-4)*mis_cols] > 0) + (ptr_tmp[(x+1) + (y-4)*mis_cols] > 0) + (ptr_tmp[(x+2) + (y-1)*mis_cols] > 0) +
                                                      (ptr_tmp[(x-3) + (y-3)*mis_cols] > 0) + (ptr_tmp[(x-2) + (y-3)*mis_cols] > 0) + (ptr_tmp[(x-1) + (y-3)*mis_cols] > 0) + (ptr_tmp[( x ) + (y-3)*mis_cols] > 0) + (ptr_tmp[(x+1) + (y-3)*mis_cols] > 0) + (ptr_tmp[(x+2) + (y-2)*mis_cols] > 0) + (ptr_tmp[(x+3) + (y-3)*mis_cols] > 0) +
              (ptr_tmp[(x-4) + (y-2)*mis_cols] > 0) + (ptr_tmp[(x-3) + (y-2)*mis_cols] > 0) + (ptr_tmp[(x-2) + (y-2)*mis_cols] > 0) + (ptr_tmp[(x-1) + (y-2)*mis_cols] > 0) + (ptr_tmp[( x ) + (y-2)*mis_cols] > 0) + (ptr_tmp[(x+1) + (y-2)*mis_cols] > 0) + (ptr_tmp[(x+2) + (y-3)*mis_cols] > 0) + (ptr_tmp[(x+3) + (y-2)*mis_cols] > 0) + (ptr_tmp[(x+4) + (y-2)*mis_cols] > 0) +
@@ -740,12 +741,15 @@ inline unsigned char IMGVTK::erosionMask( const unsigned char *ptr_tmp, const in
 /*  Metodo: erosionar
     Funcion: Rellena vacios dentro del cuerpo de la arteria segmentada.
 */
-void IMGVTK::erosionar( unsigned char *ptr , const int mis_cols, const int mis_rens){
-    unsigned char *ptr_tmp = new unsigned char [(mis_rens+8)*(mis_cols+8)];
-    memset(ptr_tmp, 255, (mis_rens+8)*(mis_cols+8)*sizeof(unsigned char));
+void IMGVTK::erosionar( double *ptr , const int mis_cols, const int mis_rens){
+    double *ptr_tmp = new double [(mis_rens+8)*(mis_cols+8)];
+
+    for(int xy = 0; xy < (mis_rens+8)*(mis_cols+8); xy++){
+        ptr_tmp[xy] = 1.0;
+    }
 
     for(int y = 0; y < mis_rens; y++){
-        memcpy( ptr_tmp + (y+4)*(mis_cols+8) + 4, ptr + y*mis_cols, mis_cols*sizeof(unsigned char));
+        memcpy( ptr_tmp + (y+4)*(mis_cols+8) + 4, ptr + y*mis_cols, mis_cols*sizeof(double));
     }
 
     for( int y = 0; y < mis_rens; y++){
@@ -753,7 +757,7 @@ void IMGVTK::erosionar( unsigned char *ptr , const int mis_cols, const int mis_r
             if(ptr_tmp[(x+4)+(y+4)*(mis_cols+8)] > 0){
                 const unsigned char resp = erosionMask(ptr_tmp, x+4, y+4, mis_cols+8, mis_rens);
                 if( (0 < resp) && (resp < 68) ){
-                    ptr[x+y*mis_cols] = 0;
+                    ptr[x+y*mis_cols] = 0.0;
                 }
             }
         }
@@ -767,13 +771,13 @@ void IMGVTK::erosionar( unsigned char *ptr , const int mis_cols, const int mis_r
 /*  Metodo: maskFOV
     Funcion: Obtiene la mascara del contorno
 */
-void IMGVTK::maskFOV( unsigned char * img_tmp, unsigned char *mask_tmp, const int mis_cols, const int mis_rens){
+void IMGVTK::maskFOV( double * img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens){
 
     const int mis_rens_cols = mis_cols * mis_rens;
 
     // Se umbraliza al 0.1 la imagen original
     for( int xy = 0; xy < mis_rens_cols; xy++){
-        mask_tmp[xy] = ((double)img_tmp[xy] / 255.0 < 0.1) ? 0 : 255;
+        mask_tmp[xy] = (img_tmp[xy] < 0.1) ? 0.0 : 1.0;
     }
 
     // Se eliminan los conjuntos pequeños
@@ -785,7 +789,7 @@ void IMGVTK::maskFOV( unsigned char * img_tmp, unsigned char *mask_tmp, const in
     // Se eliminan los conjuntos grandes que no esten en las esquinas:
     // Se extraen las etiquetas de los conjuntos que se conectan a las esquinas:
     for( int xy = 0; xy < mis_rens_cols; xy++){
-        mask_tmp[xy] = 255*!mask_tmp[xy];
+        mask_tmp[xy] = 1.0*!mask_tmp[xy];
     }
 
     int *mis_conjuntos = new int [mis_rens_cols];
@@ -803,9 +807,9 @@ void IMGVTK::maskFOV( unsigned char * img_tmp, unsigned char *mask_tmp, const in
 
     for( int xy = 0; xy < mis_rens_cols; xy++){
         if( (mis_conjuntos[xy] >= 0) && ((mis_conjuntos[xy] == NO) || (mis_conjuntos[xy] == NE) || (mis_conjuntos[xy] == SO) || (mis_conjuntos[xy] == SE)) ){
-            mask_tmp[xy] = 0;
+            mask_tmp[xy] = 0.0;
         }else{
-            mask_tmp[xy] = 255;
+            mask_tmp[xy] = 1.0;
         }
     }
 
@@ -817,15 +821,18 @@ void IMGVTK::maskFOV( unsigned char * img_tmp, unsigned char *mask_tmp, const in
 /*  Metodo: fillMask
     Funcion: Se llenan los espacios de la mascara con la media de la imagen circundante.
 */
-void IMGVTK::fillMask( unsigned char *img_tmp, unsigned char *mask_tmp, const int mis_cols, const int mis_rens ){
+void IMGVTK::fillMask( double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens ){
 
     PIX_PAR par_tmp;
     par_tmp.pix_tipo = PIX_CROSS;
 
-    unsigned char *mask_dil = new unsigned char [(mis_rens+2)*(mis_cols+2)];
-    memset(mask_dil, 255, (mis_rens+2)*(mis_cols+2)*sizeof( unsigned char ));
+    double *mask_dil = new double [(mis_rens+2)*(mis_cols+2)];
+    for( int xy = 0; xy < (mis_rens+2)*(mis_cols+2); xy++){
+        mask_dil[xy] = 1.0  ;
+    }
+
     for( int y = 0; y < mis_rens; y++){
-        memcpy( mask_dil + (y+1)*(mis_cols+2) + 1, mask_tmp + y*mis_cols, mis_cols*sizeof(unsigned char));
+        memcpy( mask_dil + (y+1)*(mis_cols+2) + 1, mask_tmp + y*mis_cols, mis_cols*sizeof(double));
     }
 
     int iter = 0;
@@ -836,7 +843,7 @@ void IMGVTK::fillMask( unsigned char *img_tmp, unsigned char *mask_tmp, const in
         // Si es la primer pasada, se verifican todos los pixeles para encontrar el borde
         for( int y = 0; y < mis_rens; y++){
             for( int x = 0; x < mis_cols; x++){
-                if( mask_dil[(x+1) + (y+1)*(mis_cols+2)] < 255 ){
+                if( mask_dil[(x+1) + (y+1)*(mis_cols+2)] < 1.0 ){
                     // Si es HIT se considera como borde, si es FIT no:
                     const unsigned char resp = dilMask(mask_dil, x+1, y+1, mis_cols+2, mis_rens);
                     if( resp > 0){
@@ -879,7 +886,7 @@ void IMGVTK::fillMask( unsigned char *img_tmp, unsigned char *mask_tmp, const in
             }
 
             img_tmp[x_act + y_act*mis_cols] = (unsigned char)( suma / n_vecinos );
-            mask_dil[(x_act+1) + (y_act+1)*(mis_cols+2)] = 255;
+            mask_dil[(x_act+1) + (y_act+1)*(mis_cols+2)] = 1.0;
         }
         iter++;
     }
@@ -969,19 +976,19 @@ void IMGVTK::skeletonization(){
     }
 
     skeleton->SetExtent(0, cols, 0, rens, 0, 0);
-    skeleton->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+    skeleton->AllocateScalars( VTK_DOUBLE, 1);
     skeleton->SetOrigin(0.0, 0.0, 0.0);
     skeleton->SetSpacing(1.0, 1.0, 1.0);
 
-    skl_ptr = static_cast<unsigned char *>(skeleton->GetScalarPointer(0,0,0));
-    memset(skl_ptr, 0, (rens+1)*(cols+1)*sizeof(unsigned char));
+    skl_ptr = static_cast<double*>(skeleton->GetScalarPointer(0,0,0));
+    memset(skl_ptr, 0, (rens+1)*(cols+1)*sizeof(double));
 
     for( int y = 0; y < rens; y++ ){
-        memcpy( skl_ptr + (y+1)*(cols+1)+1, base_ptr + y*cols, cols*sizeof(unsigned char) );
+        memcpy( skl_ptr + (y+1)*(cols+1)+1, base_ptr + y*cols, cols*sizeof(double) );
     }
 
-    unsigned char *skl_mark = new unsigned char [(rens+1)*(cols+1)];
-    memcpy(skl_mark, skl_ptr, (rens+1)*(cols+1)*sizeof(unsigned char));
+    double *skl_mark = new double [(rens+1)*(cols+1)];
+    memcpy(skl_mark, skl_ptr, (rens+1)*(cols+1)*sizeof(double));
 
     const unsigned char tabla[] = {
         0, 0, 0, 1, 0, 0, 1, 3, 0, 0, 3, 1, 1, 0, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 3, 0, 3, 3,
@@ -1002,14 +1009,14 @@ void IMGVTK::skeletonization(){
                 if(skl_ptr[x+y*(cols+1)] > 0){
                     const unsigned char resp = tabla[ sklMask(skl_ptr, x, y, cols+1, rens) ];
                     if(resp == 1 || resp == 3 ){
-                        skl_mark[x+y*(cols+1)] = 0;
+                        skl_mark[x+y*(cols+1)] = 0.0;
                         n_borrado++;
                     }
                 }
             }
         }
 
-        memcpy(skl_ptr, skl_mark, (rens+1)*(cols+1)*sizeof(unsigned char));
+        memcpy(skl_ptr, skl_mark, (rens+1)*(cols+1)*sizeof(double));
 
         // Segundo paso:
         for(int y = 1; y <= rens; y++){
@@ -1017,22 +1024,18 @@ void IMGVTK::skeletonization(){
                 if(skl_ptr[x+y*(cols+1)] > 0){
                     unsigned char resp = tabla[ sklMask(skl_ptr, x, y, cols, rens) ];
                     if(resp == 2 || resp == 3 ){
-                        skl_mark[x+y*(cols+1)] = 0;
+                        skl_mark[x+y*(cols+1)] = 0.0;
                         n_borrado++;
                     }
                 }
             }
         }
 
-        memcpy(skl_ptr, skl_mark, (rens+1)*(cols+1)*sizeof(unsigned char));
+        memcpy(skl_ptr, skl_mark, (rens+1)*(cols+1)*sizeof(double));
 
         DEB_MSG("Borrados: " << n_borrado);
 
     }while( n_borrado > 0 );
-
-//    for( int y = 0; y < rens; y++ ){
-//        memcpy( base_ptr + y*cols, skl_ptr + (y+1)*(cols+1)+1, cols*sizeof(unsigned char) );
-//    }
 
     delete [] skl_mark;
 
@@ -1047,7 +1050,7 @@ void IMGVTK::skeletonization(){
 */
 void IMGVTK::definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src ){
 
-    unsigned char *img_tmp = static_cast<unsigned char *>(img_src->GetScalarPointer(0,0,0));
+    double *img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
 
     int dims[3];
 
@@ -1059,11 +1062,11 @@ void IMGVTK::definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer
     DEB_MSG("img cols: " << mis_cols << ", img rens" << mis_rens);
 
     mask_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, 0);
-    mask_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+    mask_src->AllocateScalars( VTK_DOUBLE, 1);
     mask_src->SetOrigin(0.0, 0.0, 0.0);
     mask_src->SetSpacing(1.0, 1.0, 1.0);
 
-    unsigned char *mask_tmp = static_cast<unsigned char *>(mask_src->GetScalarPointer(0,0,0));
+    double *mask_tmp = static_cast<double*>(mask_src->GetScalarPointer(0,0,0));
     maskFOV( img_tmp, mask_tmp, mis_cols, mis_rens );
     fillMask( img_tmp, mask_tmp, mis_cols, mis_rens );
 }
@@ -1080,10 +1083,6 @@ void IMGVTK::definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer
 */
 void IMGVTK::umbralizar(){
 
-    const int clases = 256;
-
-    unsigned int *histograma = new unsigned int [clases];
-    memset(histograma, 0, clases*sizeof(unsigned int));
 
     double max =-1e100;
     double min = 1e100;
@@ -1097,49 +1096,52 @@ void IMGVTK::umbralizar(){
         }
     }
 
-    // Obtener el histograma de frecuencias a cada nivel de grises de la imagen:
-    for( int xy = 0; xy < rens_cols; xy ++){
-        histograma[ (int)(clases*(base_ptr[xy]-min) / max) ]++;
-    }
+    // Obtener con la regla de Sturges:
+    const int clases = (int)(1.0 + 3.322*log10(rens_cols));
 
+    double *histograma_frecuencias = new double [clases];
+    memset(histograma_frecuencias, 0, clases*sizeof(double));
 
-    // Obtener las frecuencias acumuladas:
+    // Obtener el histograma de frecuencias a cada nivel de grises de la imagen y las frecuencias acumuladas:
     double suma = 0.0;
-    for( int k = 1; k < clases; k++){
-        suma += (double)(histograma[k] * k);
+    for( int xy = 0; xy < rens_cols; xy ++){
+        const int clase_i = (int)(clases*(base_ptr[xy]-min)/(max+1e-12));
+        histograma_frecuencias[ clase_i ] += 1.0 / rens_cols;
+        suma += (double)(clase_i+1) / (double)rens_cols;
     }
 
     double suma_back = 0;
-    double media_fore, media_back;
-    double peso_fore, peso_back = 0.0;
+    double peso_back = 0.0;
     double varianza_entre, max_varianza_entre = -1.0;
-    unsigned char umbral;
+    double umbral;
 
     for( int k = 0; k < clases; k++){
         // Calcular el peso del back y fore-ground:
-        peso_back += (double)histograma[k];
-        peso_fore = (double)rens_cols - peso_back;
+        peso_back += (double)histograma_frecuencias[k];
 
         // Calcular la media del back y fore-ground:
-        suma_back += (double)(histograma[k]*k);
-        media_back = suma_back / peso_back;
-        media_fore = (suma - suma_back) / peso_fore;
+        suma_back += (double)(histograma_frecuencias[k]*(k+1));
 
         // Calcular la varianza entre el fore y back ground:
-        varianza_entre = peso_back*peso_fore*(media_back - media_fore)*(media_back - media_fore);
+        varianza_entre = (suma*peso_back - suma_back);
+        varianza_entre *= varianza_entre;
+        varianza_entre /= (peso_back*(1.0 - peso_back));
+        //varianza_entre = peso_back*peso_fore*(media_back - media_fore)*(media_back - media_fore);
 
         if( varianza_entre > max_varianza_entre ){
             max_varianza_entre = varianza_entre;
-            umbral = (unsigned char)k;
+            umbral = ((double)k / (double)clases) * (max - min);
+DEB_MSG("Umbral: " << umbral);
         }
     }
 
-    // Se umbraliza la imagen:
+
+    // Se umbraliza la imagen con el valor optimo encontrado:
     for( int xy = 0; xy < rens_cols; xy++){
-        base_ptr[xy] = (base_ptr[xy] >= umbral) ? 255 : 0;
+        base_ptr[xy] = (base_ptr[xy] >= umbral) ? 1.0 : 0;
     }
 
-    delete [] histograma;
+    delete [] histograma_frecuencias;
 }
 
 
@@ -1161,7 +1163,6 @@ DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
         gdcm::ImageReader DICOMreader;
         DICOMreader.SetFileName( ruta_origen );
 
-/*
         DICOMreader.Read();
 
         gdcm::File &file = DICOMreader.GetFile();
@@ -1202,6 +1203,7 @@ DEB_MSG("trimmed: Y = " << pixXYstr << ", X = " << (tmp+1));
 
                 pixY = atof(pixXYstr);
                 pixX = atof(tmp+1);
+DEB_MSG("pixY: " << pixY << ", pixX: " << pixX);
             }
         }
 ////---------- Extraer LAO/RAO (Angulo del detector en direccion izquierda(-) a derecha(+)): -----------------------------------------
@@ -1211,6 +1213,7 @@ DEB_MSG("trimmed: Y = " << pixXYstr << ", X = " << (tmp+1));
             if( bv ){
                 std::string strm(bv->GetPointer(), bv->GetLength());
                 LAORAO = atof( strm.c_str() );
+DEB_MSG("LAO: " << LAORAO);
             }
         }
 ////---------- Extraer CRA/CAU (Angulo del detector en direccion cranial(-) a caudal(+)): -----------------------------------------
@@ -1220,9 +1223,9 @@ DEB_MSG("trimmed: Y = " << pixXYstr << ", X = " << (tmp+1));
             if( bv ){
                 std::string strm(bv->GetPointer(), bv->GetLength());
                 CRACAU = atof( strm.c_str() );
+DEB_MSG("CRA: " << CRACAU);
             }
         }
-*/
 
         DICOMreader.Read();
         const gdcm::Image &gimage = DICOMreader.GetImage();
@@ -1240,14 +1243,14 @@ DEB_MSG("Cols: " << mis_cols << ", rens: " << mis_rens  << ", niveles: " << mis_
 
         // Alojar memoria para la imagen:
         img_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, 0);
-        img_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+        img_src->AllocateScalars( VTK_DOUBLE, 1);
         img_src->SetOrigin(0.0, 0.0, 0.0);
         img_src->SetSpacing(1.0, 1.0, 1.0);
 
-        unsigned char *img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
+        double *img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
 
         mask_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0,0);
-        mask_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+        mask_src->AllocateScalars( VTK_DOUBLE, 1);
         mask_src->SetOrigin(0.0, 0.0, 0.0);
         mask_src->SetSpacing(1.0, 1.0, 1.0);
 
@@ -1259,9 +1262,9 @@ DEB_MSG("Cols: " << mis_cols << ", rens: " << mis_rens  << ", niveles: " << mis_
 DEB_MSG("Imagen DICOM en RGB...");
                     if( pix_format == gdcm::PixelFormat::UINT8 ){
 
-                        img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
+                        img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
                         for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
-                            img_tmp[xy/3] = (unsigned char)buffer[xy + nivel*mis_rens_cols];
+                            *(img_tmp + xy/3) = (double)*(buffer + xy + nivel*mis_rens_cols) / 255.0;
                         }
                     }else{
                         using namespace std;
@@ -1274,16 +1277,18 @@ DEB_MSG("Imagen DICOM en escala de grises...");
                     if( pix_format == gdcm::PixelFormat::UINT8 ){
 DEB_MSG("Tipo UINT8");
 
-                        img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
-                        memcpy( img_tmp, buffer + nivel*mis_rens_cols, mis_rens_cols*sizeof(unsigned char));
+                        img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
+                        for( int xy = 0; xy < mis_rens_cols; xy++){
+                            *(img_tmp + xy) = (double)*(buffer + nivel*mis_rens_cols + xy) / 255.0;
+                        }
 
                     }else if( pix_format == gdcm::PixelFormat::UINT16 ){
 DEB_MSG("Tipo UINT16");
                         unsigned short *buffer16 = (unsigned short*)buffer;
 
-                        img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
-                        for( int xy = 0; xy < mis_rens_cols; xy+=3){
-                            img_tmp[xy] = (unsigned char)buffer16[xy + nivel*mis_rens_cols*3] / 16;
+                        img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
+                        for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
+                            *(img_tmp + xy/3) = (double)(*(buffer16 + xy + nivel*mis_rens_cols*3) / 16) / 255.0;
                         }
 
                     }else{
@@ -1304,14 +1309,6 @@ DEB_MSG("Tipo UINT16");
         vtkSmartPointer<vtkImageReader2Factory> readerFactory = vtkSmartPointer<vtkImageReader2Factory>::New();
         vtkSmartPointer<vtkImageReader2> imgReader = readerFactory->CreateImageReader2( ruta_origen );
 
-DEB_MSG("cargando: " << ruta_origen << " (PNG, BMP, JPEG)")
-
-#ifndef NDEBUG
-    FILE *fp = fopen(ruta_origen,"r");
-    DEB_MSG("Existe el archivo?: " << (fp?"si":"no") );
-    if(fp) fclose( fp );
-#endif
-
         imgReader->SetFileName( ruta_origen );
         imgReader->Update();
 
@@ -1327,9 +1324,11 @@ DEB_MSG("cargando: " << ruta_origen << " (PNG, BMP, JPEG)")
 
         // Alojar memoria para la imagen:
         img_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, 0);
-        img_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+        img_src->AllocateScalars( VTK_DOUBLE, 1);
         img_src->SetOrigin(0.0, 0.0, 0.0);
         img_src->SetSpacing(1.0, 1.0, 1.0);
+
+        double *img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
 
 
         switch(scl_comps){
@@ -1342,9 +1341,10 @@ DEB_MSG("La imagen esta en escala de grises")
                 extractGreyFilter->Update();
 
                 unsigned char *gris = static_cast<unsigned char*>(extractGreyFilter->GetOutput()->GetScalarPointer(0,0,0));
-                unsigned char *img_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0,0,0));
 
-                memcpy(img_tmp, gris, mis_rens_cols*sizeof(unsigned char));
+                for( int xy = 0; xy < mis_rens_cols; xy++){
+                    *(img_tmp + xy) = (double)*(gris+xy) / 255.0;
+                }
                 break;
             }
             // La imagen esta en RGB:
@@ -1377,7 +1377,7 @@ DEB_MSG("La imagen esta en RGB")
                                  (0.589)*ptG->GetScalarComponentAsDouble(j,i,0,0) +
                                  (0.114)*ptB->GetScalarComponentAsDouble(j,i,0,0));
 
-                        img_src->SetScalarComponentFromDouble(j,i,0,0,color);
+                        *(img_tmp + j + i*mis_cols) = color / 255.0;
                     }
                 }
                 break;
@@ -1417,7 +1417,7 @@ DEB_MSG("La Imagen esta en RGB{A}")
                                  (0.589)*ptG->GetScalarComponentAsDouble(j,i,0,0) +
                                  (0.114)*ptB->GetScalarComponentAsDouble(j,i,0,0));
 
-                        img_src->SetScalarComponentFromDouble(j,i,0,0,color);// * ptA->GetScalarComponentAsDouble(j,i,0,0));
+                        *(img_tmp + j + i*mis_cols) = color / 255.0;
                     }
                 }
                 break;
@@ -1446,8 +1446,8 @@ void IMGVTK::Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkIm
 
     Cargar(rutas[0], auxiliar, mask_auxiliar, 0, enmascarar);
 
-    unsigned char *aux_tmp = static_cast<unsigned char*>(auxiliar->GetScalarPointer(0, 0, 0));
-    unsigned char *mskaux_tmp = static_cast<unsigned char*>(mask_auxiliar->GetScalarPointer(0, 0, 0));
+    double *aux_tmp = static_cast<double*>(auxiliar->GetScalarPointer(0, 0, 0));
+    double *mskaux_tmp = static_cast<double*>(mask_auxiliar->GetScalarPointer(0, 0, 0));
 
     int dims[3];
     auxiliar->GetDimensions(dims);
@@ -1459,33 +1459,33 @@ void IMGVTK::Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkIm
 
     // Extract data:
     img_src->SetExtent(0, n_cols-1, 0, mis_rens-1, 0, 0);
-    img_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+    img_src->AllocateScalars( VTK_DOUBLE, 1);
     img_src->SetOrigin(0.0, 0.0, 0.0);
     img_src->SetSpacing(1.0, 1.0, 1.0);
 
     mask_src->SetExtent(0, n_cols-1, 0, mis_rens-1, 0, 0);
-    mask_src->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+    mask_src->AllocateScalars( VTK_DOUBLE, 1);
     mask_src->SetOrigin(0.0, 0.0, 0.0);
     mask_src->SetSpacing(1.0, 1.0, 1.0);
 
-    unsigned char *base_ptr_tmp = static_cast<unsigned char*>(img_src->GetScalarPointer(0, 0, 0));
-    unsigned char *mask_ptr_tmp = static_cast<unsigned char*>(mask_src->GetScalarPointer(0, 0, 0));
+    double *base_ptr_tmp = static_cast<double*>(img_src->GetScalarPointer(0, 0, 0));
+    double *mask_ptr_tmp = static_cast<double*>(mask_src->GetScalarPointer(0, 0, 0));
     for( int y = 0; y < mis_rens; y++){
-        memcpy(base_ptr_tmp + y*n_cols, aux_tmp + y*mis_cols, mis_cols*sizeof(unsigned char));
+        memcpy(base_ptr_tmp + y*n_cols, aux_tmp + y*mis_cols, mis_cols*sizeof(double));
         if(enmascarar){
-            memcpy(mask_ptr_tmp + y*n_cols, mskaux_tmp + y*mis_cols, mis_cols*sizeof(unsigned char));
+            memcpy(mask_ptr_tmp + y*n_cols, mskaux_tmp + y*mis_cols, mis_cols*sizeof(double));
         }
     }
 
     for( int img_i = 1; img_i < n_imgs; img_i++){
         Cargar(rutas[img_i], auxiliar, mask_auxiliar, 0, enmascarar);
-        aux_tmp = static_cast<unsigned char*>(auxiliar->GetScalarPointer(0, 0, 0));
-        mskaux_tmp = static_cast<unsigned char*>(mask_auxiliar->GetScalarPointer(0, 0, 0));
+        aux_tmp = static_cast<double*>(auxiliar->GetScalarPointer(0, 0, 0));
+        mskaux_tmp = static_cast<double*>(mask_auxiliar->GetScalarPointer(0, 0, 0));
 
         for( int y = 0; y < mis_rens; y++){
-            memcpy(base_ptr_tmp + y*n_cols + img_i*mis_cols, aux_tmp+ y*mis_cols, mis_cols*sizeof(unsigned char));
+            memcpy(base_ptr_tmp + y*n_cols + img_i*mis_cols, aux_tmp+ y*mis_cols, mis_cols*sizeof(double));
             if(enmascarar){
-                memcpy(mask_ptr_tmp + y*n_cols + img_i*mis_cols, mskaux_tmp + y*mis_cols, mis_cols*sizeof(unsigned char));
+                memcpy(mask_ptr_tmp + y*n_cols + img_i*mis_cols, mskaux_tmp + y*mis_cols, mis_cols*sizeof(double));
             }
         }
     }
@@ -1502,8 +1502,8 @@ void IMGVTK::Cargar(const char *ruta_origen, const bool enmascarar, const int ni
 
     Cargar(ruta_origen, base, mask, nivel, enmascarar);
 
-    base_ptr = static_cast<unsigned char*>(base->GetScalarPointer(0, 0, 0));
-    mask_ptr = static_cast<unsigned char*>(mask->GetScalarPointer(0, 0, 0));
+    base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
+    mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
 
     int dims[3];
     base->GetDimensions( dims );
@@ -1524,8 +1524,8 @@ void IMGVTK::Cargar(char **rutas , const int n_imgs, const bool enmascarar){
 
     Cargar( base, mask, rutas, n_imgs, enmascarar );
 
-    base_ptr = static_cast<unsigned char*>(base->GetScalarPointer(0, 0, 0));
-    mask_ptr = static_cast<unsigned char*>(mask->GetScalarPointer(0, 0, 0));
+    base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
+    mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
 
     int dims[3];
     base->GetDimensions( dims );
@@ -1631,32 +1631,32 @@ IMGVTK::IMGVTK( const IMGVTK &original ){
         cols = original.cols;
         rens = original.rens;
 
-DEB_MSG("cols = " << cols);
-DEB_MSG("rens = " << rens);
-
         base = vtkSmartPointer<vtkImageData>::New();
         base->SetExtent(0, cols-1, 0, rens-1, 0, 0);
-        base->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+        base->AllocateScalars( VTK_DOUBLE, 1);
         base->SetOrigin(0.0, 0.0, 0.0);
         base->SetSpacing(1.0, 1.0, 1.0);
 
-        base_ptr = static_cast<unsigned char*>(base->GetScalarPointer(0, 0, 0));
+        base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
 
         mask = vtkSmartPointer<vtkImageData>::New();
         mask->SetExtent(0, cols-1, 0, rens-1, 0, 0);
-        mask->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+        mask->AllocateScalars( VTK_DOUBLE, 1);
         mask->SetOrigin(0.0, 0.0, 0.0);
         mask->SetSpacing(1.0, 1.0, 1.0);
-        mask_ptr = static_cast<unsigned char*>(mask->GetScalarPointer(0, 0, 0));
+        mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
         rens_cols = rens * cols;
 
-        memcpy(base_ptr, original.base_ptr, rens_cols*sizeof(unsigned char));
+        memcpy(base_ptr, original.base_ptr, rens_cols*sizeof(double));
 
         if(original.mask_ptr){
-            memcpy(mask_ptr, original.mask_ptr, rens_cols*sizeof(unsigned char));
+            memcpy(mask_ptr, original.mask_ptr, rens_cols*sizeof(double));
         }else{
-            memset(mask_ptr, 0, rens_cols*sizeof(unsigned char));
+            memset(mask_ptr, 0, rens_cols*sizeof(double));
         }
+    }else{
+        mask_ptr = NULL;
+        base_ptr = NULL;
     }
 }
 
@@ -1750,32 +1750,33 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
 
         base = vtkSmartPointer<vtkImageData>::New();
         base->SetExtent(0, cols-1, 0, rens-1, 0, 0);
-        base->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+        base->AllocateScalars( VTK_DOUBLE, 1);
         base->SetOrigin(0.0, 0.0, 0.0);
         base->SetSpacing(1.0, 1.0, 1.0);
 
-        base_ptr = static_cast<unsigned char*>(base->GetScalarPointer(0, 0, 0));
+        base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
 
 
         mask = vtkSmartPointer<vtkImageData>::New();
         mask->SetExtent(0, cols-1, 0, rens-1, 0, 0);
-        mask->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+        mask->AllocateScalars( VTK_DOUBLE, 1);
         mask->SetOrigin(0.0, 0.0, 0.0);
         mask->SetSpacing(1.0, 1.0, 1.0);
-        mask_ptr = static_cast<unsigned char*>(mask->GetScalarPointer(0, 0, 0));
+        mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
         rens_cols = rens * cols;
 
-        if(origen.base_ptr){
-            memcpy(base_ptr, origen.base_ptr, rens_cols*sizeof(unsigned char));
-        }else{
-            memset(mask_ptr, 0, rens_cols*sizeof(unsigned char));
-        }
+
+
+        memcpy(base_ptr, origen.base_ptr, rens_cols*sizeof(double));
 
         if(origen.mask_ptr){
-            memcpy(mask_ptr, origen.mask_ptr, rens_cols*sizeof(unsigned char));
+            memcpy(mask_ptr, origen.mask_ptr, rens_cols*sizeof(double));
         }else{
-            memset(mask_ptr, 0, rens_cols*sizeof(unsigned char));
+            memset(mask_ptr, 0, rens_cols*sizeof(double));
         }
+    }else{
+        mask_ptr = NULL;
+        base_ptr = NULL;
     }
 }
 

@@ -84,8 +84,8 @@ DEB_MSG("Parametros revisados ...");
     }
 */
 
-    //reconstructor.skeletonize();
     reconstructor.segmentarImagenBase( 0 );
+    reconstructor.skeletonize(0);
 
     delete [] parametros;
 
