@@ -289,7 +289,8 @@ void FILTROS::filtrar(){
     }
 
     memcpy(dest, resp, rens_cols*sizeof(double));
-    calcROC(mi_elite, resp);
+
+//    calcROC(mi_elite, resp);
 
     delete [] resp;
 }

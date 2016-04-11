@@ -57,7 +57,6 @@ int main(int argc, char** argv ){
 DEB_MSG("Parametros revisados ...");
     RECONS3D reconstructor;
     reconstructor.agregarInput(parametros[0].mi_valor.par_s, parametros[1].mi_valor.par_s, parametros[2].mi_valor.par_i);
-    reconstructor.agregarInput(parametros[0].mi_valor.par_s, parametros[1].mi_valor.par_s, parametros[2].mi_valor.par_i );
 
     /*
     *********************************************************************************************

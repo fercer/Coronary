@@ -223,7 +223,8 @@ void RECONS3D::agregarInput(const char *rutabase_input, const char *rutaground_i
 
     // Mostrar la imagen en un renderizador
     mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
-    //mostrarImagen(imgs_base[n_angios].base, mis_renderers[n_angios]);
+    mostrarImagen(imgs_base[n_angios].base, mis_renderers[n_angios]);
+    renderizar( mis_renderers[n_angios] );
 
     // Agregar el detector y la fuente en posociones por defecto:
     detector.push_back( posicionDefecto( imgs_base[n_angios].cols, imgs_base[n_angios].rens, imgs_base[n_angios].rens/2 ) );
@@ -385,8 +386,8 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     filtro.filtrar();
 
 #ifndef NDEBUG
-//    mostrarImagen(imgs_segment[angio_ID].base, mis_renderers[angio_ID]);
-//    renderizar(mis_renderers[angio_ID]);
+    mostrarImagen(imgs_segment[angio_ID].base, mis_renderers[angio_ID]);
+    renderizar(mis_renderers[angio_ID]);
 #endif
 
     imgs_segment[angio_ID].umbralizar();
@@ -394,20 +395,20 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     /// Falta el linking broken vessels ..................
 
 #ifndef NDEBUG
-//    mostrarImagen(imgs_segment[angio_ID].base, mis_renderers[angio_ID]);
-//    renderizar(mis_renderers[angio_ID]);
+    mostrarImagen(imgs_segment[angio_ID].base, mis_renderers[angio_ID]);
+    renderizar(mis_renderers[angio_ID]);
 #endif
-    imgs_segment[angio_ID].lengthFilter(1000);
+    imgs_segment[angio_ID].lengthFilter(imgs_segment[angio_ID].cols * 5);
 
 #ifndef NDEBUG
-//    mostrarImagen(imgs_segment[angio_ID].base, mis_renderers[angio_ID]);
-//    renderizar(mis_renderers[angio_ID]);
+    mostrarImagen(imgs_segment[angio_ID].base, mis_renderers[angio_ID]);
+    renderizar(mis_renderers[angio_ID]);
 #endif
     imgs_segment[angio_ID].regionFill();
 
 #ifndef NDEBUG
-//    mostrarImagen(imgs_segment[angio_ID].base, mis_renderers[angio_ID]);
-//    renderizar(mis_renderers[angio_ID]);
+    mostrarImagen(imgs_segment[angio_ID].base, mis_renderers[angio_ID]);
+    renderizar(mis_renderers[angio_ID]);
 #endif
 
 }

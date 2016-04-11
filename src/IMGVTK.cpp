@@ -1226,6 +1226,26 @@ DEB_MSG("LAO: " << LAORAO);
 DEB_MSG("CRA: " << CRACAU);
             }
         }
+////---------- Extraer Window Center (Centro de los vlaores de interes): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x28, 0x1050) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                WCenter = atof( strm.c_str() );
+DEB_MSG("Window Center: " << WCenter);
+            }
+        }
+////---------- Extraer Window Width (Ancho de la ventana donde se encuentran los valores de interes): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x28, 0x1051) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                WWidth = atof( strm.c_str() );
+DEB_MSG("Window Width: " << WWidth);
+            }
+        }
 
         DICOMreader.Read();
         const gdcm::Image &gimage = DICOMreader.GetImage();
@@ -1264,7 +1284,15 @@ DEB_MSG("Imagen DICOM en RGB...");
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
                         for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
-                            *(img_tmp + xy/3) = (double)*(buffer + xy + nivel*mis_rens_cols) / 255.0;
+                            double pix = (double)(unsigned char)*(buffer + xy + nivel*mis_rens_cols) - WCenter + 0.5;
+                            if( pix <= -((WWidth-1) / 2)){
+                                pix = 0.0;
+                            }else if(pix > ((WWidth-1) / 2)){
+                                pix = 1.0;
+                            }else{
+                                pix = pix / (WWidth -1) + 0.5;
+                            }
+                            *(img_tmp + xy/3) = pix;
                         }
                     }else{
                         using namespace std;
@@ -1279,7 +1307,15 @@ DEB_MSG("Tipo UINT8");
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
                         for( int xy = 0; xy < mis_rens_cols; xy++){
-                            *(img_tmp + xy) = (double)*(buffer + nivel*mis_rens_cols + xy) / 255.0;
+                            double pix = (double)(unsigned char)*(buffer + nivel*mis_rens_cols + xy)  - WCenter + 0.5;
+                            if( pix <= -((WWidth-1) / 2)){
+                                pix = 0.0;
+                            }else if(pix > ((WWidth-1) / 2)){
+                                pix = 1.0;
+                            }else{
+                                pix = pix / (WWidth -1) + 0.5;
+                            }
+                            *(img_tmp + xy) = pix;
                         }
 
                     }else if( pix_format == gdcm::PixelFormat::UINT16 ){
@@ -1288,7 +1324,15 @@ DEB_MSG("Tipo UINT16");
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
                         for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
-                            *(img_tmp + xy/3) = (double)(*(buffer16 + xy + nivel*mis_rens_cols*3) / 16) / 255.0;
+                            double pix = (double)((unsigned char)*(buffer16 + xy + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
+                            if( pix <= -((WWidth-1) / 2)){
+                                pix = 0.0;
+                            }else if(pix > ((WWidth-1) / 2)){
+                                pix = 1.0;
+                            }else{
+                                pix = pix / (WWidth -1) + 0.5;
+                            }
+                            *(img_tmp + xy/3) =  pix;
                         }
 
                     }else{

@@ -118,6 +118,7 @@ class IMGVTK{
         //// Datos extraidos del archivo DICOM:
         double SID, SOD, DDP;
         double LAORAO, CRACAU;
+        double WCenter, WWidth;
         double pixX, pixY, cenX, cenY;
         bool esDICOM;
 
