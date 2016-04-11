@@ -223,7 +223,7 @@ void RECONS3D::agregarInput(const char *rutabase_input, const char *rutaground_i
 
     // Mostrar la imagen en un renderizador
     mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
-    mostrarImagen(imgs_base[n_angios].base, mis_renderers[n_angios]);
+    //mostrarImagen(imgs_base[n_angios].base, mis_renderers[n_angios]);
 
     // Agregar el detector y la fuente en posociones por defecto:
     detector.push_back( posicionDefecto( imgs_base[n_angios].cols, imgs_base[n_angios].rens, imgs_base[n_angios].rens/2 ) );
@@ -420,6 +420,7 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 */
 void RECONS3D::skeletonize(const int angio_ID){
     imgs_segment[angio_ID].skeletonization();
+
     int n_caracts = imgs_segment[angio_ID].n_caracts;
 
     for( int c = 0; c < n_caracts; c++ ){
@@ -442,13 +443,13 @@ void RECONS3D::skeletonize(const int angio_ID){
                 break;
         }
 
-        agregarEsfera( imgs_segment[angio_ID].pix_caract[c].x, imgs_segment[angio_ID].pix_caract[c].y, 0.0, 1.5, color, 0 );
+        agregarEsfera( imgs_segment[angio_ID].pix_caract[c].x, imgs_segment[angio_ID].pix_caract[c].y, 0.0, 1.5, color,  mis_renderers[angio_ID] );
     }
 
 
     /// Obtener el esqueleto de la imagen segmentada y graficar esferas en cada punto caracteristico
     mostrarImagen( imgs_segment[angio_ID].skeleton, mis_renderers[angio_ID] );
-    renderizar(mis_renderers[angio_ID]);
+    renderizar( mis_renderers[angio_ID] );
 }
 
 

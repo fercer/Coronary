@@ -915,8 +915,8 @@ void IMGVTK:: extraerCaract(){
     // Buscar "End points", "Branch points" y "Cross points"
     for( int y = 1; y <= rens; y++){
         for( int x = 1; x <= cols; x++){
-            if( skl_ptr[x+y*(cols+1)] > 0 ){
-                const unsigned char resp = tabla[ sklMask( skl_ptr, x, y, cols+1, rens) ];
+            if( skl_ptr[x+y*(cols+2)] > 0 ){
+                const unsigned char resp = tabla[ sklMask( skl_ptr, x, y, cols+2, rens) ];
                 switch( resp ){
                     case 1:{ /* END point*/
                         temp.x = x;
@@ -975,20 +975,20 @@ void IMGVTK::skeletonization(){
         skeleton = vtkSmartPointer<vtkImageData>::New();
     }
 
-    skeleton->SetExtent(0, cols, 0, rens, 0, 0);
+    skeleton->SetExtent(0, cols+1, 0, rens+1, 0, 0);
     skeleton->AllocateScalars( VTK_DOUBLE, 1);
     skeleton->SetOrigin(0.0, 0.0, 0.0);
     skeleton->SetSpacing(1.0, 1.0, 1.0);
 
     skl_ptr = static_cast<double*>(skeleton->GetScalarPointer(0,0,0));
-    memset(skl_ptr, 0, (rens+1)*(cols+1)*sizeof(double));
+    memset(skl_ptr, 0, (rens+2)*(cols+2)*sizeof(double));
 
     for( int y = 0; y < rens; y++ ){
-        memcpy( skl_ptr + (y+1)*(cols+1)+1, base_ptr + y*cols, cols*sizeof(double) );
+        memcpy( skl_ptr + (y+1)*(cols+2)+1, base_ptr + y*cols, cols*sizeof(double) );
     }
 
-    double *skl_mark = new double [(rens+1)*(cols+1)];
-    memcpy(skl_mark, skl_ptr, (rens+1)*(cols+1)*sizeof(double));
+    double *skl_mark = new double [(rens+2)*(cols+2)];
+    memcpy(skl_mark, skl_ptr, (rens+2)*(cols+2)*sizeof(double));
 
     const unsigned char tabla[] = {
         0, 0, 0, 1, 0, 0, 1, 3, 0, 0, 3, 1, 1, 0, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 3, 0, 3, 3,
@@ -1006,25 +1006,25 @@ void IMGVTK::skeletonization(){
         // Primer paso:
         for(int y = 1; y <= rens; y++){
             for(int x = 1; x <= cols; x++){
-                if(skl_ptr[x+y*(cols+1)] > 0){
-                    const unsigned char resp = tabla[ sklMask(skl_ptr, x, y, cols+1, rens) ];
+                if(skl_ptr[x+y*(cols+2)] > 0){
+                    const unsigned char resp = tabla[ sklMask(skl_ptr, x, y, cols+2, rens) ];
                     if(resp == 1 || resp == 3 ){
-                        skl_mark[x+y*(cols+1)] = 0.0;
+                        skl_mark[x+y*(cols+2)] = 0.0;
                         n_borrado++;
                     }
                 }
             }
         }
 
-        memcpy(skl_ptr, skl_mark, (rens+1)*(cols+1)*sizeof(double));
+        memcpy(skl_ptr, skl_mark, (rens+2)*(cols+2)*sizeof(double));
 
         // Segundo paso:
         for(int y = 1; y <= rens; y++){
             for(int x = 1; x <= cols; x++){
-                if(skl_ptr[x+y*(cols+1)] > 0){
-                    unsigned char resp = tabla[ sklMask(skl_ptr, x, y, cols, rens) ];
+                if(skl_ptr[x+y*(cols+2)] > 0){
+                    unsigned char resp = tabla[ sklMask(skl_ptr, x, y, cols+2, rens) ];
                     if(resp == 2 || resp == 3 ){
-                        skl_mark[x+y*(cols+1)] = 0.0;
+                        skl_mark[x+y*(cols+2)] = 0.0;
                         n_borrado++;
                     }
                 }
