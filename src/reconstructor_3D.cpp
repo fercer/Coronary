@@ -449,7 +449,7 @@ void RECONS3D::skeletonize(const int angio_ID){
 
 
     /// Obtener el esqueleto de la imagen segmentada y graficar esferas en cada punto caracteristico
-    mostrarImagen( imgs_segment[angio_ID].skeleton, mis_renderers[angio_ID] );
+    //mostrarImagen( imgs_segment[angio_ID].skeleton, mis_renderers[angio_ID] );
     renderizar( mis_renderers[angio_ID] );
 }
 
