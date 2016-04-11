@@ -53,10 +53,8 @@ class FILTROS{
         void setFiltro( const SEG_FILTRO seg_fil);
         void setFitness( const FITNESS fit_fun);
 
-        void setInputOriginal(IMGVTK &img_org);
+        void setInput(IMGVTK &img_org);
         void setInputGround(IMGVTK &img_ground);
-
-        void setOutput( IMGVTK &img_dest);
 
         void setPar();
         void setPar( const PARAMETRO par, const double val);

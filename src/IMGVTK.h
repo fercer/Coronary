@@ -68,7 +68,11 @@
 // C L A S E: IMGVTK  ---------------------------------------------------------------------------------------------- v
 class IMGVTK{
     public: //----------------------------------------------------------------------------- PUBLIC ------- v
-        // T I P O S        D E     D A T O S       Y       E S T R U C T U R A S      P U B L I C A S
+        // T I P O S        D E     D A T O S       Y       E S T R U C T U R A S      P U B L I C A S        // IMG_IDX
+        /** IMG_IDX:   **/
+        typedef enum{ BASE, MASK, SKELETON, SEGMENT } IMG_IDX;
+
+
         /** TIPO_IMG:   **/
         typedef enum{ PNG, PGM } TIPO_IMG;
 
@@ -84,19 +88,18 @@ class IMGVTK{
 
         // M E T O D O S      P U B L I C O S
         void definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src );
-        void skeletonization();
-        void umbralizar();
+        void skeletonization(IMG_IDX img_idx);
+        void umbralizar(IMG_IDX img_idx);
         void lengthFilter(const int min_length);
         void regionFill();
 
         void Cargar(const char *ruta_origen, const bool enmascarar, const int nivel);
         void Cargar(char **rutas , const int n_imgs, const bool enmascarar);
 
-        void Guardar();
-        void Guardar( const char *ruta, const TIPO_IMG tipo_salida_src );
+        void Guardar(const char *ruta, const TIPO_IMG tipo_salida );
 
         IMGVTK();
-        IMGVTK( const IMGVTK &original );
+        IMGVTK(const IMGVTK &origen );
         IMGVTK(char **rutas_origen, const int n_imgs, const bool enmascarar);
         IMGVTK(const char *ruta_origen, const bool enmascarar, const int nivel);
 
@@ -109,11 +112,14 @@ class IMGVTK{
         vtkSmartPointer<vtkImageData> base;
         vtkSmartPointer<vtkImageData> mask;
         vtkSmartPointer<vtkImageData> skeleton;
+        vtkSmartPointer<vtkImageData> segment;
+
         int rens, cols, rens_cols;
         int n_caracts;
         double *base_ptr;
         double *skl_ptr;
         double *mask_ptr;
+        double *segment_ptr;
 
         //// Datos extraidos del archivo DICOM:
         double SID, SOD, DDP;
@@ -133,7 +139,6 @@ class IMGVTK{
         void Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, char **rutas, const int n_imgs, const bool enmascarar);
 
         void mapaDistancias();
-
 
         void maskFOV(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
         void fillMask(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
@@ -162,9 +167,6 @@ class IMGVTK{
         char* setRuta( const char *ruta_input );
 
         // M I E M B R O S      P R I V A D O S
-        TIPO_IMG tipo_salida;
-        char *ruta_salida;
-
         vtkSmartPointer<vtkImageData> mapa_dist;
         double *map_ptr;
 

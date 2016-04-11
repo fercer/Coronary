@@ -173,9 +173,10 @@ FILTROS::~FILTROS(){
 /*  Metodo: setInputOriginal
     Funcion: Establece las imagenes origen yu ground truth.
 */
-void FILTROS::setInputOriginal(IMGVTK &img_org){
+void FILTROS::setInput(IMGVTK &img_org){
     org = img_org.base_ptr;
     mask = img_org.mask_ptr;
+    dest = img_org.segment_ptr;
 
     // Obtener las dimensiones de la imagen:
     cols = img_org.cols;
@@ -198,13 +199,6 @@ void FILTROS::setInputGround( IMGVTK &img_ground){
     ground_truth = img_ground.base_ptr;
 }
 
-
-/*  Metodo: setOutput
-    Funcion: Establece sobre que objeto se escribira la imagen resultante del filtro.
-*/
-void FILTROS::setOutput( IMGVTK &img_dest){
-    dest = img_dest.base_ptr;
-}
 
 
 /*  Metodo: setPar
