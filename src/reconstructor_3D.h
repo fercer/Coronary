@@ -16,7 +16,10 @@
 #include <vtkSmartPointer.h>
 #include <vtkTransform.h>
 #include <vtkPointData.h>
+
+// Arreglos de VTK:
 #include <vtkUnsignedCharArray.h>
+#include <vtkDoubleArray.h>
 
 // Actores:
 #include <vtkActor.h>

@@ -54,10 +54,10 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
     const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * PI);
     const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
 
-    const int mis_cols = imgs_base[angio_ID].cols;
-    const int mis_rens = imgs_base[angio_ID].rens;
+    const int mis_cols = imgs_base[angio_ID].cols+1;
+    const int mis_rens = imgs_base[angio_ID].rens+1;
 
-    puntos[angio_ID]->SetNumberOfPoints((mis_cols+1)*(mis_rens+1));
+   // puntos[angio_ID]->SetNumberOfPoints((mis_cols+1)*(mis_rens+1));
 
     const double mi_pixX = imgs_base[angio_ID].pixX;
     const double mi_pixY = imgs_base[angio_ID].pixY;
@@ -65,7 +65,6 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
     const double mi_DDP = imgs_base[angio_ID].DDP;
 
     double yy = - mis_rens/2 * mi_pixY;
-    int idx = 0;
 
     for( int y = 0; y < mis_rens; y++){
         double xx = - mis_cols/2 * mi_pixX;
@@ -84,13 +83,12 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
             xx_3D = ccc*xx - scc*zz_3D;
             zz_3D = scc*xx + ccc*zz_3D;
 
-            puntos[angio_ID]->SetPoint(idx, xx_3D, yy_3D, zz_3D);
-            idx++;
-
+            puntos[angio_ID]->InsertNextPoint(xx_3D, yy_3D, zz_3D);
             xx += mi_pixX;
         }
         yy += mi_pixY;
     }
+
 }
 
 
@@ -189,6 +187,10 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
     }
 
     vtkSmartPointer<vtkCellArray> quads = vtkSmartPointer<vtkCellArray>::New();
+    vtkSmartPointer<vtkDoubleArray> intensidades = vtkSmartPointer<vtkDoubleArray>::New();
+
+    intensidades->SetNumberOfComponents(3);
+    intensidades->SetName("Intensidad");
 
     for( int i = 0; i < mis_rens; i++){
         for(int j = 0; j < mis_cols; j++){
@@ -199,27 +201,21 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
             quad->GetPointIds()->SetId(3,( j )+(i+1)*(mis_cols+1));
 
             quads->InsertNextCell(quad);
+            intensidades->InsertNextValue(img_ptr[i*mis_cols + j]);
         }
     }
 
     vtkSmartPointer<vtkPolyData> rejilla = vtkSmartPointer<vtkPolyData>::New();
     rejilla->SetPoints( puntos[angio_ID] );
     rejilla->SetPolys(quads);
+    rejilla->GetCellData()->SetScalars(intensidades);
 
-    vtkSmartPointer<vtkStructuredGrid> structuredGrid = vtkSmartPointer<vtkStructuredGrid>::New();
-    structuredGrid->SetPoints(puntos[angio_ID]);
-
-    vtkSmartPointer<vtkStructuredGridGeometryFilter> geometryFilter = vtkSmartPointer<vtkStructuredGridGeometryFilter>::New();
-    geometryFilter->SetInputData(structuredGrid);
-    geometryFilter->Update();
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputConnection(geometryFilter->GetOutputPort());
-    //mapper->SetInputData(rejilla);
+    mapper->SetInputData(rejilla);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
-    actor->GetProperty()->SetPointSize(3);
 
     // Setup render window, renderer, and interactor
     renderer_global->AddActor(actor);
