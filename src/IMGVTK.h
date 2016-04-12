@@ -72,7 +72,6 @@ class IMGVTK{
         /** IMG_IDX:   **/
         typedef enum{ BASE, MASK, SKELETON, SEGMENT } IMG_IDX;
 
-
         /** TIPO_IMG:   **/
         typedef enum{ PNG, PGM } TIPO_IMG;
 
@@ -96,7 +95,7 @@ class IMGVTK{
         void Cargar(const char *ruta_origen, const bool enmascarar, const int nivel);
         void Cargar(char **rutas , const int n_imgs, const bool enmascarar);
 
-        void Guardar(const char *ruta, const TIPO_IMG tipo_salida );
+        void Guardar( IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida );
 
         IMGVTK();
         IMGVTK(const IMGVTK &origen );

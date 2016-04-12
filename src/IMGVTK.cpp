@@ -1236,13 +1236,11 @@ DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
                 char *pixXYstr = new char [bv->GetLength()];
                 memcpy(pixXYstr, strm.c_str(), bv->GetLength() * sizeof(char ));
                 char *tmp = strchr(pixXYstr,'\\');
-DEB_MSG("original: " << pixXYstr);
                 pixXYstr[ tmp - pixXYstr ] = '\0';
-DEB_MSG("trimmed: Y = " << pixXYstr << ", X = " << (tmp+1));
-
                 pixY = atof(pixXYstr);
                 pixX = atof(tmp+1);
 DEB_MSG("pixY: " << pixY << ", pixX: " << pixX);
+                delete [] pixXYstr;
             }
         }
 ////---------- Extraer LAO/RAO (Angulo del detector en direccion izquierda(-) a derecha(+)): -----------------------------------------
@@ -1641,7 +1639,24 @@ void IMGVTK::Cargar(char **rutas , const int n_imgs, const bool enmascarar){
 /*  Metodo: Guardar
     Funcion: Guarda la imagen en la ruta especificada con la extension especificada.
 */
-void IMGVTK::Guardar( const char *ruta, const TIPO_IMG tipo_salida ){
+void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida ){
+    vtkSmartPointer<vtkImageData> img_ptr = NULL;
+    switch( img_idx ){
+        case BASE:
+            img_ptr = base;
+            break;
+        case MASK:
+            img_ptr = mask;
+            break;
+        case SKELETON:
+            img_ptr = skeleton;
+            break;
+        case SEGMENT:
+            img_ptr = segment;
+            break;
+    }
+
+
     switch(tipo_salida){
         case PGM:{
             break;
@@ -1650,7 +1665,7 @@ void IMGVTK::Guardar( const char *ruta, const TIPO_IMG tipo_salida ){
         case PNG:{
             vtkSmartPointer<vtkPNGWriter> png_output = vtkSmartPointer<vtkPNGWriter>::New();
             png_output->SetFileName( ruta );
-            png_output->SetInputData( base );
+            png_output->SetInputData( img_ptr );
             png_output->Write();
             break;
         }

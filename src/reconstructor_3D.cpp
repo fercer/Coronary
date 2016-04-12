@@ -189,7 +189,7 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
     vtkSmartPointer<vtkCellArray> quads = vtkSmartPointer<vtkCellArray>::New();
     vtkSmartPointer<vtkDoubleArray> intensidades = vtkSmartPointer<vtkDoubleArray>::New();
 
-    intensidades->SetNumberOfComponents(3);
+    intensidades->SetNumberOfComponents(1);
     intensidades->SetName("Intensidad");
 
     for( int i = 0; i < mis_rens; i++){
@@ -465,27 +465,44 @@ void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, co
 
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
-void RECONS3D::agregarInput(const char *rutabase_input, const char *rutaground_input, const int nivel){
+void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input){
 
-    imgs_base.push_back(IMGVTK(rutabase_input, true, nivel));
-    imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
-    imgs_base.push_back(IMGVTK());
+DEB_MSG("Ruta ground: " << rutaground_input);
+    if( nivel_u > nivel_l ){
+        for( int i = nivel_l; i <= nivel_u; i++){
+            imgs_base.push_back(IMGVTK(rutabase_input, true, i));
+            imgs_base.push_back(IMGVTK());
+            mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
+            puntos.push_back(vtkSmartPointer<vtkPoints>::New());
 
-    // Mostrar la imagen en un renderizador
-    mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
-    puntos.push_back(vtkSmartPointer<vtkPoints>::New());
+            // Mover el detector a su posicion definida por el archivo DICOM:
+            mallarPuntos(n_angios);
+            //mostrarImagen(n_angios, IMGVTK::BASE);
+            mostrarDetector(n_angios);
+            existe_ground.push_back( false );
+            n_angios++;
+        }
+    }else{
 
+        imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
+        imgs_base.push_back(IMGVTK());
+        mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
+        puntos.push_back(vtkSmartPointer<vtkPoints>::New());
 
-    // Mover el detector a su posicion definida por el archivo DICOM:
-    mallarPuntos(n_angios);
-    //mostrarDetector(n_angios);
+        // Mover el detector a su posicion definida por el archivo DICOM:
+        mallarPuntos(n_angios);
 
-    mostrarImagen(n_angios, IMGVTK::BASE);
+        //mostrarImagen(n_angios, IMGVTK::BASE);
+        mostrarDetector(n_angios);
 
-    renderizar( renderer_global );
-
-
-    n_angios++;
+        if( strcmp(rutaground_input, "NULL") ){
+            imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
+            existe_ground.push_back( true );
+        }else{
+            existe_ground.push_back( false );
+        }
+        n_angios++;
+    }
 }
 
 
@@ -493,7 +510,21 @@ void RECONS3D::agregarInput(const char *rutabase_input, const char *rutaground_i
 
 /*  Metodo: segmentarImagen()
 
-    Funcion: Multiplica la imagen base por el filtro para extraer las intensidades de los pixeles segmentados
+    Funcion: Aplica el filtro a todas las imagenes.
+*/
+void RECONS3D::segmentarImagenBase(){
+    //renderizar(renderer_global);
+//    for( int i = 0; i < n_angios; i++){
+//        segmentarImagenBase( i );
+//    }
+}
+
+
+
+
+/*  Metodo: segmentarImagen()
+
+    Funcion: Aplica el filtro de Gabor con los parametros definidos como mejors( tras la optimizacion con un algoritmo de evolucion computacional)
 */
 void RECONS3D::segmentarImagenBase( const int angio_ID ){
     FILTROS filtro;
@@ -502,7 +533,9 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     filtro.setEvoMet(FILTROS::EDA_BUMDA, 50, 30);
 
     filtro.setInput(imgs_base[angio_ID]);
-    filtro.setInputGround(imgs_delin[angio_ID]);
+    if( existe_ground[angio_ID] ){
+        filtro.setInputGround(imgs_delin[angio_ID]);
+    }
 
     // Parametros fijos:
     filtro.setPar(FILTROS::PAR_L, 2.65);
@@ -512,8 +545,8 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     filtro.filtrar();
 
 #ifndef NDEBUG
-    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
-    renderizar(mis_renderers[angio_ID]);
+//    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
 #endif
 
     imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT);
@@ -521,20 +554,20 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     /// Falta el linking broken vessels ..................
 
 #ifndef NDEBUG
-    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
-    renderizar(mis_renderers[angio_ID]);
+//    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
 #endif
     imgs_base[angio_ID].lengthFilter(imgs_base[angio_ID].cols * 5);
 
 #ifndef NDEBUG
-    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
-    renderizar(mis_renderers[angio_ID]);
+//    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
 #endif
     imgs_base[angio_ID].regionFill();
 
 #ifndef NDEBUG
-    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
-    renderizar(mis_renderers[angio_ID]);
+//    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
 #endif
 
 }
