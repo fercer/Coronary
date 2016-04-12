@@ -189,7 +189,8 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
     vtkSmartPointer<vtkCellArray> quads = vtkSmartPointer<vtkCellArray>::New();
     vtkSmartPointer<vtkDoubleArray> intensidades = vtkSmartPointer<vtkDoubleArray>::New();
 
-    intensidades->SetNumberOfComponents(3);
+    intensidades->SetNumberOfComponents(1);
+    //intensidades->SetNumberOfTuples(mis_cols*mis_rens);
     intensidades->SetName("Intensidad");
 
     for( int i = 0; i < mis_rens; i++){
@@ -201,6 +202,9 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
             quad->GetPointIds()->SetId(3,( j )+(i+1)*(mis_cols+1));
 
             quads->InsertNextCell(quad);
+            //const double intensidad = img_ptr[i*mis_cols + j];
+
+            //intensidades->SetTuple3(i*mis_cols+j, intensidad, intensidad, intensidad);
             intensidades->InsertNextValue(img_ptr[i*mis_cols + j]);
         }
     }
@@ -208,6 +212,7 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
     vtkSmartPointer<vtkPolyData> rejilla = vtkSmartPointer<vtkPolyData>::New();
     rejilla->SetPoints( puntos[angio_ID] );
     rejilla->SetPolys(quads);
+
     rejilla->GetCellData()->SetScalars(intensidades);
 
 

@@ -1323,7 +1323,11 @@ DEB_MSG("Imagen DICOM en RGB...");
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
                         for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
-                            double pix = (double)(unsigned char)*(buffer + xy + nivel*mis_rens_cols) - WCenter + 0.5;
+                            const double pixR = (double)(unsigned char)*(buffer + xy + nivel*mis_rens_cols) - WCenter + 0.5;
+                            const double pixG = (double)(unsigned char)*(buffer + xy+1 + nivel*mis_rens_cols) - WCenter + 0.5;
+                            const double pixB = (double)(unsigned char)*(buffer + xy+2 + nivel*mis_rens_cols) - WCenter + 0.5;
+                            double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
+
                             if( pix <= -((WWidth-1) / 2)){
                                 pix = 0.0;
                             }else if(pix > ((WWidth-1) / 2)){
@@ -1363,7 +1367,11 @@ DEB_MSG("Tipo UINT16");
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
                         for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
-                            double pix = (double)((unsigned char)*(buffer16 + xy + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
+                            const double pixR = (double)((unsigned char)*(buffer16 + xy + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
+                            const double pixG = (double)((unsigned char)*(buffer16 + xy+1 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
+                            const double pixB = (double)((unsigned char)*(buffer16 + xy+2 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
+                            double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
+
                             if( pix <= -((WWidth-1) / 2)){
                                 pix = 0.0;
                             }else if(pix > ((WWidth-1) / 2)){
