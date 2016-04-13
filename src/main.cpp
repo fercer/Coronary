@@ -168,7 +168,7 @@ int main(int argc, char** argv ){
 */
 
     reconstructor.segmentarImagenBase();
-//    reconstructor.skeletonize( 0 );
+    reconstructor.skeletonize();
 
     delete [] parametros;
 

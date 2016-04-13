@@ -1283,7 +1283,16 @@ DEB_MSG("Window Center: " << WCenter);
 DEB_MSG("Window Width: " << WWidth);
             }
         }
-
+////---------- Intentnar extraer el ECG: -----------------------------------------
+        {
+            const gdcm::PrivateTag ptag(1518, 16);
+            const gdcm::DataElement &de = ds.GetDataElement( ptag );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                DEB_MSG("Waveform Sequence: " << strm);
+            }
+        }
         DICOMreader.Read();
         const gdcm::Image &gimage = DICOMreader.GetImage();
 DEB_MSG("Buffer length: " << gimage.GetBufferLength());

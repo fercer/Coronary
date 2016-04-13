@@ -122,7 +122,7 @@ void RECONS3D::mostrarImagen( IMGVTK &img_src, IMGVTK::IMG_IDX img_idx, vtkSmart
             img_ptr = img_src.segment;
             break;
     }
-
+DEB_MSG("("<< img_idx <<"/" << IMGVTK::BASE << ") img_ptr: " << img_ptr);
     const int mis_rens_cols = mis_rens*mis_cols;
 
     /// Crear una imagen temporal:
@@ -169,9 +169,9 @@ void RECONS3D::mostrarImagen( IMGVTK &img_src, IMGVTK::IMG_IDX img_idx, vtkSmart
 */
 void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
 
-    int mis_cols = imgs_base[angio_ID].cols;
-    int mis_rens = imgs_base[angio_ID].rens;
-
+    const int mis_cols = imgs_base[angio_ID].cols;
+    const int mis_rens = imgs_base[angio_ID].rens;
+    int offset_y = 0, offset_x = 0;
     double *img_ptr = NULL;
 
     switch(img_idx){
@@ -180,6 +180,11 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
             break;
         case IMGVTK::MASK:
             img_ptr = imgs_base[angio_ID].mask_ptr;
+            break;
+        case IMGVTK::SKELETON:
+            img_ptr = imgs_base[angio_ID].skl_ptr;
+            offset_x=1;
+            offset_y=1;
             break;
         case IMGVTK::SEGMENT:
             img_ptr = imgs_base[angio_ID].segment_ptr;
@@ -201,7 +206,7 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
             quad->GetPointIds()->SetId(3,( j )+(i+1)*(mis_cols+1));
 
             quads->InsertNextCell(quad);
-            intensidades->InsertNextValue(img_ptr[i*mis_cols + j]);
+            intensidades->InsertNextValue(img_ptr[(i + offset_y)*(mis_cols+offset_x*2) + j + offset_x]);
         }
     }
 
@@ -368,12 +373,13 @@ inline RECONS3D::POS RECONS3D::posicionDefecto( const double ancho, const double
     Funcion: Mueve los puntos de la imagen base hasta la orientacion definida por los angulos (en el archivo DICOM)
 */
 void RECONS3D::mostrarDetector(const int angio_ID){
-
     // Rotar los puntos segun LAO/RAO y CAU/CRA:
     const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * PI);
     const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * PI);
     const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * PI);
     const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
+
+DEB_MSG("Mostrando detector para: " << angio_ID << ", LAORAO: " << imgs_base[angio_ID].LAORAO << ", CRACAU: " << imgs_base[angio_ID].CRACAU << ", SID: " << imgs_base[angio_ID].SID << ", SOD: " << imgs_base[angio_ID].SOD );
 
     const int mis_rens = imgs_base[n_angios].rens;
     const int mis_cols = imgs_base[n_angios].cols;
@@ -410,16 +416,19 @@ void RECONS3D::mostrarDetector(const int angio_ID){
 
     // Definir los puntos del detector y puente
     vtkSmartPointer<vtkPoints> det_points = vtkSmartPointer<vtkPoints>::New();
-
-    for(int i = 0; i < 5; i++){
-        det_points->InsertNextPoint( det_pos.puntos[i] );
-    }
+    det_points->InsertNextPoint( det_pos.puntos[0] );
+    det_points->InsertNextPoint( det_pos.puntos[1] );
+    det_points->InsertNextPoint( det_pos.puntos[2] );
+    det_points->InsertNextPoint( det_pos.puntos[3] );
+    det_points->InsertNextPoint( det_pos.puntos[4] );
 
     //// Definir la forma del detector y fuente:
     vtkSmartPointer<vtkPyramid> det_pyr = vtkSmartPointer<vtkPyramid>::New();
-    for(int i = 0; i < 5; ++i){
-        det_pyr->GetPointIds()->SetId(i, i);
-    }
+    det_pyr->GetPointIds()->SetId(0, 0);
+    det_pyr->GetPointIds()->SetId(1, 1);
+    det_pyr->GetPointIds()->SetId(2, 2);
+    det_pyr->GetPointIds()->SetId(3, 3);
+    det_pyr->GetPointIds()->SetId(4, 4);
 
     det_ugrid->SetPoints(det_points);
     det_ugrid->InsertNextCell(det_pyr->GetCellType(),det_pyr->GetPointIds());
@@ -468,32 +477,34 @@ void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, co
 void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input){
 
 DEB_MSG("Ruta ground: " << rutaground_input);
-    if( nivel_u > nivel_l ){
+    if( nivel_u > nivel_l ){ // Si hay varios niveles:
+
         for( int i = nivel_l; i <= nivel_u; i++){
             imgs_base.push_back(IMGVTK(rutabase_input, true, i));
-            imgs_base.push_back(IMGVTK());
             mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
             puntos.push_back(vtkSmartPointer<vtkPoints>::New());
 
             // Mover el detector a su posicion definida por el archivo DICOM:
+            mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
             mallarPuntos(n_angios);
             //mostrarImagen(n_angios, IMGVTK::BASE);
-            mostrarDetector(n_angios);
+            //mostrarDetector(n_angios);
+
             existe_ground.push_back( false );
             n_angios++;
         }
+
     }else{
 
         imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
-        imgs_base.push_back(IMGVTK());
         mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
         puntos.push_back(vtkSmartPointer<vtkPoints>::New());
 
         // Mover el detector a su posicion definida por el archivo DICOM:
         mallarPuntos(n_angios);
-
+        //mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
         //mostrarImagen(n_angios, IMGVTK::BASE);
-        mostrarDetector(n_angios);
+        //mostrarDetector(n_angios);
 
         if( strcmp(rutaground_input, "NULL") ){
             imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
@@ -513,10 +524,12 @@ DEB_MSG("Ruta ground: " << rutaground_input);
     Funcion: Aplica el filtro a todas las imagenes.
 */
 void RECONS3D::segmentarImagenBase(){
+
+    for( int i = 0; i < n_angios; i++){
+        segmentarImagenBase( i );
+        //mostrarImagen(i, IMGVTK::SEGMENT);
+    }
     //renderizar(renderer_global);
-//    for( int i = 0; i < n_angios; i++){
-//        segmentarImagenBase( i );
-//    }
 }
 
 
@@ -544,37 +557,33 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
     filtro.filtrar();
 
-#ifndef NDEBUG
-//    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
-//    renderizar(mis_renderers[angio_ID]);
-#endif
-
     imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT);
-
     /// Falta el linking broken vessels ..................
-
-#ifndef NDEBUG
-//    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
-//    renderizar(mis_renderers[angio_ID]);
-#endif
     imgs_base[angio_ID].lengthFilter(imgs_base[angio_ID].cols * 5);
-
-#ifndef NDEBUG
-//    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
-//    renderizar(mis_renderers[angio_ID]);
-#endif
     imgs_base[angio_ID].regionFill();
 
-#ifndef NDEBUG
-//    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
-//    renderizar(mis_renderers[angio_ID]);
-#endif
 
 }
 
 
 
-/*  Metodo: skeletonize()
+
+/*  Metodo: skeletonize
+
+    Funcion: Obtiene el esqueleto de todas las imagenes:
+*/
+void RECONS3D::skeletonize(){
+
+    for( int i = 0; i < n_angios; i++){
+        skeletonize( i );
+        mostrarImagen(i, IMGVTK::SKELETON);
+    }
+    renderizar(renderer_global);
+}
+
+
+
+/*  Metodo: skeletonize
 
     Funcion: Obtiene el esqueleto de la imagen y muestra los puntos de interes.
 */
