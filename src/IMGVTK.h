@@ -70,13 +70,13 @@ class IMGVTK{
     public: //----------------------------------------------------------------------------- PUBLIC ------- v
         // T I P O S        D E     D A T O S       Y       E S T R U C T U R A S      P U B L I C A S        // IMG_IDX
         /** IMG_IDX:   **/
-        typedef enum{ BASE, MASK, SKELETON, SEGMENT } IMG_IDX;
+        typedef enum{ BASE, MASK, SKELETON, SEGMENT, THRESHOLD } IMG_IDX;
 
         /** TIPO_IMG:   **/
         typedef enum{ PNG, PGM } TIPO_IMG;
 
         /** TIPO_CARACT:   **/
-        typedef enum{ PIX_END, PIX_BRANCH, PIX_CROSS } TIPO_CARACT;
+        typedef enum{ PIX_END, PIX_BRANCH, PIX_CROSS, PIX_SKL } TIPO_CARACT;
 
         /** PIX_PAR:   **/
         typedef struct{
@@ -88,9 +88,10 @@ class IMGVTK{
         // M E T O D O S      P U B L I C O S
         void definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src );
         void skeletonization(IMG_IDX img_idx);
+        void umbralizar(IMG_IDX img_idx, const double umbral);
         void umbralizar(IMG_IDX img_idx);
-        void lengthFilter(const int min_length);
-        void regionFill();
+        void lengthFilter(IMG_IDX img_idx, const int min_length);
+        void regionFill(IMG_IDX img_idx);
 
         void Cargar(const char *ruta_origen, const bool enmascarar, const int nivel);
         void Cargar(char **rutas , const int n_imgs, const bool enmascarar);
@@ -112,6 +113,7 @@ class IMGVTK{
         vtkSmartPointer<vtkImageData> mask;
         vtkSmartPointer<vtkImageData> skeleton;
         vtkSmartPointer<vtkImageData> segment;
+        vtkSmartPointer<vtkImageData> threshold;
 
         int rens, cols, rens_cols;
         int n_caracts;
@@ -119,6 +121,7 @@ class IMGVTK{
         double *skl_ptr;
         double *mask_ptr;
         double *segment_ptr;
+        double *threshold_ptr;
 
         //// Datos extraidos del archivo DICOM:
         double SID, SOD, DDP;

@@ -82,7 +82,6 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
             //// Rotacion usando el eje 'y' como base:
             xx_3D = ccc*xx - scc*zz_3D;
             zz_3D = scc*xx + ccc*zz_3D;
-
             puntos[angio_ID]->InsertNextPoint(xx_3D, yy_3D, zz_3D);
             xx += mi_pixX;
         }
@@ -121,7 +120,11 @@ void RECONS3D::mostrarImagen( IMGVTK &img_src, IMGVTK::IMG_IDX img_idx, vtkSmart
         case IMGVTK::SEGMENT:
             img_ptr = img_src.segment;
             break;
+        case IMGVTK::THRESHOLD:
+            img_ptr = img_src.threshold;
+            break;
     }
+
 DEB_MSG("("<< img_idx <<"/" << IMGVTK::BASE << ") img_ptr: " << img_ptr);
     const int mis_rens_cols = mis_rens*mis_cols;
 
@@ -188,6 +191,9 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
             break;
         case IMGVTK::SEGMENT:
             img_ptr = imgs_base[angio_ID].segment_ptr;
+            break;
+        case IMGVTK::THRESHOLD:
+            img_ptr = imgs_base[angio_ID].threshold_ptr;
             break;
     }
 
@@ -487,8 +493,6 @@ DEB_MSG("Ruta ground: " << rutaground_input);
             // Mover el detector a su posicion definida por el archivo DICOM:
             mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
             mallarPuntos(n_angios);
-            //mostrarImagen(n_angios, IMGVTK::BASE);
-            //mostrarDetector(n_angios);
 
             existe_ground.push_back( false );
             n_angios++;
@@ -502,9 +506,12 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
         // Mover el detector a su posicion definida por el archivo DICOM:
         mallarPuntos(n_angios);
-        //mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
-        //mostrarImagen(n_angios, IMGVTK::BASE);
-        //mostrarDetector(n_angios);
+//        mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
+//        renderizar(mis_renderers[n_angios]);
+//        mostrarImagen(imgs_base[n_angios], IMGVTK::MASK, mis_renderers[n_angios]);
+//        mostrarImagen(n_angios, IMGVTK::BASE);
+//        mostrarDetector(n_angios);
+//        renderizar(mis_renderers[n_angios]);
 
         if( strcmp(rutaground_input, "NULL") ){
             imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
@@ -524,12 +531,11 @@ DEB_MSG("Ruta ground: " << rutaground_input);
     Funcion: Aplica el filtro a todas las imagenes.
 */
 void RECONS3D::segmentarImagenBase(){
-
     for( int i = 0; i < n_angios; i++){
         segmentarImagenBase( i );
-        //mostrarImagen(i, IMGVTK::SEGMENT);
+//        mostrarImagen(i, IMGVTK::SEGMENT);
     }
-    //renderizar(renderer_global);
+//    renderizar(renderer_global);
 }
 
 
@@ -542,6 +548,7 @@ void RECONS3D::segmentarImagenBase(){
 void RECONS3D::segmentarImagenBase( const int angio_ID ){
     FILTROS filtro;
     filtro.setFiltro(FILTROS::SS_GABOR);
+//    filtro.setFiltro(FILTROS::GMF);
     filtro.setFitness(FILTROS::ROC);
     filtro.setEvoMet(FILTROS::EDA_BUMDA, 50, 30);
 
@@ -550,19 +557,38 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
         filtro.setInputGround(imgs_delin[angio_ID]);
     }
 
-    // Parametros fijos:
+    // Parametros fijos (SS Gabor):
     filtro.setPar(FILTROS::PAR_L, 2.65);
     filtro.setPar(FILTROS::PAR_T, 15);
     filtro.setPar(FILTROS::PAR_K, 180);
     filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
+
+    // Parametros fijos (GMF):
+//    filtro.setPar(FILTROS::PAR_L, 13);
+//    filtro.setPar(FILTROS::PAR_T, 15);
+//    filtro.setPar(FILTROS::PAR_K, 12);
+//    filtro.setPar(FILTROS::PAR_SIGMA, 2.82);
+//    filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
     filtro.filtrar();
 
+    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
+    renderizar(mis_renderers[angio_ID]);
+
+
     imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT);
+
+//    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
+
+
+    //imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT, 0.031);
+
+
     /// Falta el linking broken vessels ..................
-    imgs_base[angio_ID].lengthFilter(imgs_base[angio_ID].cols * 5);
-    imgs_base[angio_ID].regionFill();
-
-
+    imgs_base[angio_ID].lengthFilter(IMGVTK::THRESHOLD, imgs_base[angio_ID].cols * 5);
+    imgs_base[angio_ID].regionFill(IMGVTK::THRESHOLD);
+//    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
 }
 
 
@@ -573,10 +599,9 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     Funcion: Obtiene el esqueleto de todas las imagenes:
 */
 void RECONS3D::skeletonize(){
-
     for( int i = 0; i < n_angios; i++){
         skeletonize( i );
-        mostrarImagen(i, IMGVTK::SKELETON);
+        mostrarImagen(i, IMGVTK::BASE);
     }
     renderizar(renderer_global);
 }
@@ -588,37 +613,59 @@ void RECONS3D::skeletonize(){
     Funcion: Obtiene el esqueleto de la imagen y muestra los puntos de interes.
 */
 void RECONS3D::skeletonize(const int angio_ID){
-    imgs_base[angio_ID].skeletonization(IMGVTK::SEGMENT);
-
+    imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
     int n_caracts = imgs_base[angio_ID].n_caracts;
 
-    for( int c = 0; c < n_caracts; c++ ){
-        double color[3];
-        switch( imgs_base[angio_ID].pix_caract[c].pix_tipo){
-            case IMGVTK::PIX_END:
-                color[0] = 1.0;
-                color[1] = 0.0;
-                color[2] = 0.0;
-                break;
-            case IMGVTK::PIX_BRANCH:
-                color[0] = 0.0;
-                color[1] = 1.0;
-                color[2] = 0.0;
-                break;
-            case IMGVTK::PIX_CROSS:
-                color[0] = 0.0;
-                color[1] = 0.0;
-                color[2] = 1.0;
-                break;
-        }
+    vtkSmartPointer<vtkCellArray> verticesSkeleton = vtkSmartPointer<vtkCellArray>::New();
 
-        agregarEsfera( imgs_base[angio_ID].pix_caract[c].x, imgs_base[angio_ID].pix_caract[c].y, 0.0, 1.5, color,  mis_renderers[angio_ID] );
+    const double mis_cols = imgs_base[angio_ID].cols;
+    const double mis_rens = imgs_base[angio_ID].rens;
+
+    const double mi_pixX = imgs_base[angio_ID].pixX;
+    const double mi_pixY = imgs_base[angio_ID].pixY;
+
+    const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * PI);
+    const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * PI);
+    const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * PI);
+    const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
+
+    const double mi_DDP = imgs_base[angio_ID].DDP;
+
+    vtkIdType pid[1];
+    vtkSmartPointer<vtkPoints> puntosSkeleton = vtkSmartPointer<vtkPoints>::New();
+
+    for( int c = 0; c < n_caracts; c++ ){
+        const double xx = imgs_base[angio_ID].pix_caract[c].x*mi_pixX + mi_pixX/2 - mis_cols/2 * mi_pixX;
+        const double yy = imgs_base[angio_ID].pix_caract[c].y*mi_pixY + mi_pixY/2 - mis_rens/2 * mi_pixY;
+        double xx_3D, yy_3D, zz_3D;
+
+        // Mover los puntos segun indica el SID y SOD, LAORAO y CRACAU:
+        //// Rotacion usando el eje 'x' como base:
+        yy_3D = crl*yy - srl*mi_DDP;
+        zz_3D = srl*yy + crl*mi_DDP;
+
+        //// Rotacion usando el eje 'y' como base:
+        xx_3D = ccc*xx - scc*zz_3D;
+        zz_3D = scc*xx + ccc*zz_3D;
+
+        pid[0] = puntosSkeleton->InsertNextPoint(xx_3D, yy_3D, zz_3D);
+        verticesSkeleton->InsertNextCell(1, pid);
     }
 
+    vtkSmartPointer<vtkPolyData> polyDataSkeleton = vtkSmartPointer<vtkPolyData>::New();
+    polyDataSkeleton->SetPoints( puntosSkeleton );
+    polyDataSkeleton->SetVerts( verticesSkeleton );
 
-    /// Obtener el esqueleto de la imagen segmentada y graficar esferas en cada punto caracteristico
-    //mostrarImagen( imgs_segment[angio_ID].skeleton, mis_renderers[angio_ID] );
-    //renderizar( mis_renderers[angio_ID] );
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputData(polyDataSkeleton);
+
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+    actor->GetProperty()->SetPointSize(1);
+    double color[] = {1.0, 0.0, 0.0};
+    actor->GetProperty()->SetColor(color);
+
+    renderer_global->AddActor( actor );
 }
 
 

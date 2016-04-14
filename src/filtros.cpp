@@ -305,16 +305,10 @@ void FILTROS::filtrar(){
     Funcion: Obtiene la respuesta del filtro Gaussiano Multiescala, con desviacion estandar: sigma, largo del template: L, ancho del template: T, y numero de rotaciones que se hacen al filtro entre 0 y 180°: K.
 */
 void FILTROS::respGMF(INDIV *test, double *resp){
-
-    TIMERS;
-
-    GETTIME_INI;
     const int L = (int)test->vars[0];
     const int T = (int)test->vars[1];
     const int K = (int)test->vars[2];
     const double sigma = test->vars[3];
-
-    DEB_MSG("L: " << L << ", T: " << T << ", K: " << K << ", Sigma: " << sigma);
 
     // Se calculan los templates para las rotaciones:
     double **templates = new double*[K];
@@ -322,8 +316,6 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     //// Se calcula el template Gaussiano en rotacion 0°.
     const int ancho_tmp = T + 3; // El ancho del template es el ancho de la gaussiana + 2 pixeles a cada lado para dejar espacio a la rotacion.
     const int alto_tmp = L + 6; // El alto del template es el largo de la gaussiana dado por L + 3 pixeles abajo y otros 3 arriba para dar espacio a la rotacion.
-
-    DEB_MSG("alto: " << alto_tmp << ", ancho: " << ancho_tmp);
 
     const int ex_alto = alto_tmp%2;
     const int ex_ancho = ancho_tmp%2;
@@ -345,7 +337,6 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     //// Se resta la media a todo el template, y se divide entre la suma:
     for( int x = -(int)(T/2); x <= (int)(T/2); x++){
         *(gaussiana_org + x) = (*(gaussiana_org + x) - media) / (sum*L);
-        DEB_MSG("[" << x << "] = " << (*(gaussiana_org + x)));
     }
 
     //// Se termina de construir el template a 0°:
@@ -380,14 +371,6 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         memset( Img_aux[y+alto_tmp], 0, (cols + 2*ancho_tmp)*sizeof(unsigned char));
         memcpy( Img_aux[y+alto_tmp] + ancho_tmp, org + y*cols, cols*sizeof(unsigned char));
     }
-
-    DEB_MSG("Imagen auxiliar generada");
-
-#ifndef NDEBUG
-    double min_global = 1e12;
-    double max_global =-1e12;
-#endif
-
     //    #pragma omp parallel for shared(resp, Img_amp, templates) firstprivate(rens, cols, ancho_tmp, alto_tmp, K) reduction(min: min_img) reduction(max: max_img)
     for( int yI = 0; yI < rens; yI++){
         for( int xI = 0; xI < cols; xI++){
@@ -401,16 +384,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
                 // Recorrer todo el template:
                 for( int y = -alto_tmp/2; y < alto_tmp/2 - (1 - ex_alto); y++){
                     for( int x = -ancho_tmp/2; x < ancho_tmp/2 - (1 - ex_ancho); x++){
-
                         resp_k += *(templates[k] + (y+alto_tmp/2)*ancho_tmp + (x+ancho_tmp/2)) * Img_aux[yI + y + alto_tmp][xI + x + ancho_tmp];
-#ifndef NDEBUG
-                        if( resp_k > 1000000  || resp_k < -1000000){
-                            DEB_MSG("Woa woa algo anda mal aqui [" << x << "," <<  y << "] {" << xI << ", " << yI << "}: " << resp_k);
-                            DEB_MSG("con el template[" << k << "]: " << (*(templates[k] + (y+alto_tmp/2)*ancho_tmp + (x+ancho_tmp/2))) << " en: " << (y-alto_tmp/2)*ancho_tmp + (x+ancho_tmp/2) << " de: " << alto_tmp*ancho_tmp);
-                            DEB_MSG("O con la imagen " << Img_aux[yI + y + alto_tmp][xI + x + ancho_tmp]);
-                            exit(0);
-                        }
-#endif
                     }
                 }
                 if( resp_k > max_resp ){
@@ -419,14 +393,6 @@ void FILTROS::respGMF(INDIV *test, double *resp){
             }
 
             *(resp + yI*cols + xI) = max_resp;
-#ifndef NDEBUG
-            if(max_global < max_resp){
-                max_global = max_resp;
-            }
-            if(min_global > max_resp){
-                min_global = max_resp;
-            }
-#endif
         }
     }
 
@@ -442,11 +408,6 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         delete [] Img_aux[y];
     }
     delete [] Img_aux;
-    GETTIME_FIN;
-
-#ifndef NDEBUG
-    DEB_MSG("filtrado,  max: " << max_global << ", min: " << min_global << " en " << DIFTIME << " segundos.");
-#endif
 }
 
 
