@@ -130,6 +130,7 @@ class RECONS3D{
         // Miembros para cargar las imagenes:
         std::vector< IMGVTK > imgs_base;
         std::vector< IMGVTK > imgs_delin;
+        std::vector< bool > existe_ground;
 
         int n_angios;
 
@@ -159,9 +160,11 @@ class RECONS3D{
 
     // M E T O D O S        P U B L I C O S
         void agregarInput(char **rutasbase_input, char **rutasground_input, const int n_imgs);
-        void agregarInput(const char *rutabase_input, const char *rutaground_input, const int nivel);
+        void agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input);
 
+        void segmentarImagenBase();
         void segmentarImagenBase( const int angio_ID );
+        void skeletonize();
         void skeletonize(const int angio_ID);
 
     // O P E R A D O R E S  S O B R E C A R G A D O S

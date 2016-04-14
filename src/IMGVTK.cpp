@@ -654,8 +654,25 @@ DEB_MSG("n etiquetas: " << mis_n_etiquetados[0] );
 /*  Metodo: lengthFiltering (Publica)
     Funcion: Filtra los conjuntos con numero de pixeles menor a 'min_length'
 */
-void IMGVTK::lengthFilter(const int min_length){
-    lengthFilter(base_ptr, min_length, cols, rens);
+void IMGVTK::lengthFilter(IMG_IDX img_idx, const int min_length){
+
+    double *img_ptr = NULL;
+    switch( img_idx ){
+        case BASE:
+            img_ptr = base_ptr;
+            break;
+        case MASK:
+            img_ptr = mask_ptr;
+            break;
+        case SEGMENT:
+            img_ptr = segment_ptr;
+            break;
+        case THRESHOLD:
+            img_ptr = threshold_ptr;
+            break;
+    }
+
+    lengthFilter(img_ptr, min_length, cols, rens);
 }
 
 
@@ -703,8 +720,25 @@ void IMGVTK::regionFill( double *ptr, const int mis_cols, const int mis_rens  ){
 /*  Metodo: regionFill (Publica)
     Funcion: Rellena vacios dentro del cuerpo de la arteria segmentada.
 */
-void IMGVTK::regionFill(){
-    regionFill(base_ptr, cols, rens);
+void IMGVTK::regionFill(IMG_IDX img_idx){
+
+    double *img_ptr = NULL;
+    switch( img_idx ){
+        case BASE:
+            img_ptr = base_ptr;
+            break;
+        case MASK:
+            img_ptr = mask_ptr;
+            break;
+        case SEGMENT:
+            img_ptr = segment_ptr;
+            break;
+        case THRESHOLD:
+            img_ptr = threshold_ptr;
+            break;
+    }
+
+    regionFill(img_ptr, cols, rens);
 }
 
 
@@ -915,31 +949,29 @@ void IMGVTK:: extraerCaract(){
     // Buscar "End points", "Branch points" y "Cross points"
     for( int y = 1; y <= rens; y++){
         for( int x = 1; x <= cols; x++){
-            if( skl_ptr[x+y*(cols+2)] > 0 ){
+            if( skl_ptr[x+y*(cols+2)] > 0.0 ){
                 const unsigned char resp = tabla[ sklMask( skl_ptr, x, y, cols+2, rens) ];
+                temp.x = x;
+                temp.y = y;
                 switch( resp ){
                     case 1:{ /* END point*/
-                        temp.x = x;
-                        temp.y = y;
                         temp.pix_tipo = PIX_END;
-                        pares_caract.push_back( temp );
                         break;
                     }
                     case 2:{ /* BRANCH point */
-                        temp.x = x;
-                        temp.y = y;
                         temp.pix_tipo = PIX_BRANCH;
-                        pares_caract.push_back( temp );
                         break;
                     }
                     case 3:{ /* CROSS point */
-                        temp.x = x;
-                        temp.y = y;
                         temp.pix_tipo = PIX_CROSS;
-                        pares_caract.push_back( temp );
+                        break;
+                    }
+                    default:{
+                        temp.pix_tipo = PIX_SKL;
                         break;
                     }
                 }
+                pares_caract.push_back( temp );
             }
         }
     }
@@ -985,6 +1017,9 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
             break;
         case SEGMENT:
             img_ptr = segment_ptr;
+            break;
+        case THRESHOLD:
+            img_ptr = threshold_ptr;
             break;
     }
 
@@ -1061,7 +1096,6 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
 
 
 
-
 /*  Metodo: definirMask
     Funcion: Define una mascara para normalizar los pixeles de la imagen.
 */
@@ -1091,6 +1125,53 @@ void IMGVTK::definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer
 
 
 
+/*  Metodo: umbralizar
+    Funcion: Umbralizar la imagen usando un nivel definido de umbral.
+*/
+void IMGVTK::umbralizar(IMG_IDX img_idx, const double umbral){
+
+    if( !threshold_ptr ){
+        threshold = vtkSmartPointer<vtkImageData>::New();
+    }
+
+    threshold->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+    threshold->AllocateScalars( VTK_DOUBLE, 1);
+    threshold->SetOrigin(0.0, 0.0, 0.0);
+    threshold->SetSpacing(1.0, 1.0, 1.0);
+
+    threshold_ptr = static_cast<double*>(threshold->GetScalarPointer(0,0,0));
+
+    double *img_ptr = NULL;
+    switch( img_idx ){
+        case BASE:
+            img_ptr = base_ptr;
+            break;
+        case MASK:
+            img_ptr = mask_ptr;
+            break;
+        case SEGMENT:
+            img_ptr = segment_ptr;
+            break;
+    }
+
+    double max =-1e100;
+    double min = 1e100;
+
+    for( int xy = 0; xy < rens_cols; xy++){
+        if(img_ptr[xy] < min){
+            min = img_ptr[xy];
+        }
+        if(img_ptr[xy] > max){
+            max = img_ptr[xy];
+        }
+    }
+
+    // Se umbraliza la imagen con el valor optimo encontrado:
+    for( int xy = 0; xy < rens_cols; xy++){
+        threshold_ptr[xy] = ((img_ptr[xy] - min) / (max - min) >= umbral) ? 1.0 : 0.0;
+    }
+}
+
 
 
 
@@ -1100,33 +1181,34 @@ void IMGVTK::definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer
 */
 void IMGVTK::umbralizar(IMG_IDX img_idx){
 
-    double mis_rens_cols;
+    if( !threshold_ptr ){
+        threshold = vtkSmartPointer<vtkImageData>::New();
+    }
+
+    threshold->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+    threshold->AllocateScalars( VTK_DOUBLE, 1);
+    threshold->SetOrigin(0.0, 0.0, 0.0);
+    threshold->SetSpacing(1.0, 1.0, 1.0);
+
+    threshold_ptr = static_cast<double*>(threshold->GetScalarPointer(0,0,0));
 
     double *img_ptr = NULL;
     switch( img_idx ){
         case BASE:
             img_ptr = base_ptr;
-            mis_rens_cols = rens_cols;
             break;
         case MASK:
             img_ptr = mask_ptr;
-            mis_rens_cols = rens_cols;
-            break;
-        case SKELETON:
-            img_ptr = skl_ptr;
-            mis_rens_cols = (rens+2)*(cols+2);
             break;
         case SEGMENT:
             img_ptr = segment_ptr;
-            mis_rens_cols = rens_cols;
             break;
     }
-
 
     double max =-1e100;
     double min = 1e100;
 
-    for( int xy = 0; xy < mis_rens_cols; xy++){
+    for( int xy = 0; xy < rens_cols; xy++){
         if(img_ptr[xy] < min){
             min = img_ptr[xy];
         }
@@ -1134,21 +1216,32 @@ void IMGVTK::umbralizar(IMG_IDX img_idx){
             max = img_ptr[xy];
         }
     }
+DEB_MSG("min resp: " << min << ", max resp: " << max);
 
     // Obtener el numero de clases con la regla de Sturges:
-    const int clases = (int)(1.0 + 3.322*log10(mis_rens_cols));
-
+    const int clases = (int)(1.0 + 3.322*log10(rens_cols));
+DEB_MSG("clases: " << clases);
     double *histograma_frecuencias = new double [clases];
     memset(histograma_frecuencias, 0, clases*sizeof(double));
 
     // Obtener el histograma de frecuencias a cada nivel de grises de la imagen y las frecuencias acumuladas:
     double suma = 0.0;
-    for( int xy = 0; xy < mis_rens_cols; xy ++){
+    const double fraccion = 1.0 / (double)rens_cols;
+DEB_MSG("fraccion: " << fraccion);
+int max_cls = -1;
+int min_cls = 100000000;
+    for( int xy = 0; xy < rens_cols; xy ++){
         const int clase_i = (int)(clases*(img_ptr[xy]-min)/(max+1e-12));
-        histograma_frecuencias[ clase_i ] += 1.0 / mis_rens_cols;
-        suma += (double)(clase_i+1) / (double)mis_rens_cols;
+        histograma_frecuencias[ clase_i ] += fraccion;
+if(min_cls > clase_i){
+    min_cls = clase_i;
+}
+if(max_cls > clase_i){
+    max_cls = clase_i;
+}
+        suma += (double)(clase_i+1) / (double)rens_cols;
     }
-
+DEB_MSG("min: " << min_cls << ", max: " << max_cls);
     double suma_back = 0;
     double peso_back = 0.0;
     double varianza_entre, max_varianza_entre = -1.0;
@@ -1170,17 +1263,17 @@ void IMGVTK::umbralizar(IMG_IDX img_idx){
         if( varianza_entre > max_varianza_entre ){
             max_varianza_entre = varianza_entre;
             umbral = ((double)k / (double)clases) * (max - min);
-DEB_MSG("Umbral: " << umbral);
         }
     }
 
+    delete [] histograma_frecuencias;
+DEB_MSG("Umbral: " << umbral);
 
     // Se umbraliza la imagen con el valor optimo encontrado:
-    for( int xy = 0; xy < mis_rens_cols; xy++){
-        img_ptr[xy] = (img_ptr[xy] >= umbral) ? 1.0 : 0;
+    for( int xy = 0; xy < rens_cols; xy++){
+        threshold_ptr[xy] = (img_ptr[xy] >= umbral) ? 1.0 : 0.0;
     }
 
-    delete [] histograma_frecuencias;
 }
 
 
@@ -1225,8 +1318,10 @@ DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
                 SOD = atof( strm.c_str() );
             }
         }
-////---------- Extraer DDP (Distancia del detector al paciente): ---------------------------------------------------------------------
+////---------- Calcular el DDP (Distancia del detector al paciente): ---------------------------------------------------------------------
         DDP = SID - SOD;
+////---------- Calcular el Magnification Factor: -----------------------------------------
+        const double Magnification = SID / SOD;
 ////---------- Extraer pixY\pixX (Distancia entre el centro de los pixeles en el eje Y\X): -----------------------------------------
         {
             const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1164) );
@@ -1236,13 +1331,11 @@ DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
                 char *pixXYstr = new char [bv->GetLength()];
                 memcpy(pixXYstr, strm.c_str(), bv->GetLength() * sizeof(char ));
                 char *tmp = strchr(pixXYstr,'\\');
-DEB_MSG("original: " << pixXYstr);
                 pixXYstr[ tmp - pixXYstr ] = '\0';
-DEB_MSG("trimmed: Y = " << pixXYstr << ", X = " << (tmp+1));
-
-                pixY = atof(pixXYstr);
-                pixX = atof(tmp+1);
+                pixY = atof(pixXYstr) / Magnification;
+                pixX = atof(tmp+1) / Magnification;
 DEB_MSG("pixY: " << pixY << ", pixX: " << pixX);
+                delete [] pixXYstr;
             }
         }
 ////---------- Extraer LAO/RAO (Angulo del detector en direccion izquierda(-) a derecha(+)): -----------------------------------------
@@ -1285,7 +1378,16 @@ DEB_MSG("Window Center: " << WCenter);
 DEB_MSG("Window Width: " << WWidth);
             }
         }
-
+////---------- Intentnar extraer el ECG: -----------------------------------------
+//        {
+//            const gdcm::PrivateTag ptag(1518, 16);
+//            const gdcm::DataElement &de = ds.GetDataElement( ptag );
+//            const gdcm::ByteValue *bv = de.GetByteValue();
+//            if( bv ){
+//                std::string strm(bv->GetPointer(), bv->GetLength());
+//                DEB_MSG("Waveform Sequence: " << strm);
+//            }
+//        }
         DICOMreader.Read();
         const gdcm::Image &gimage = DICOMreader.GetImage();
 DEB_MSG("Buffer length: " << gimage.GetBufferLength());
@@ -1331,11 +1433,11 @@ DEB_MSG("Imagen DICOM en RGB...");
                             if( pix <= -((WWidth-1) / 2)){
                                 pix = 0.0;
                             }else if(pix > ((WWidth-1) / 2)){
-                                pix = 1.0;
+                                pix = 0.0;
                             }else{
                                 pix = pix / (WWidth -1) + 0.5;
                             }
-                            *(img_tmp + xy/3) = pix;
+                            *(img_tmp + xy/3) = pix; // 255.0;
                         }
                     }else{
                         using namespace std;
@@ -1354,11 +1456,11 @@ DEB_MSG("Tipo UINT8");
                             if( pix <= -((WWidth-1) / 2)){
                                 pix = 0.0;
                             }else if(pix > ((WWidth-1) / 2)){
-                                pix = 1.0;
+                                pix = 0.0;
                             }else{
                                 pix = pix / (WWidth -1) + 0.5;
                             }
-                            *(img_tmp + xy) = pix;
+                            *(img_tmp + xy) = pix; // 255.0;
                         }
 
                     }else if( pix_format == gdcm::PixelFormat::UINT16 ){
@@ -1375,11 +1477,11 @@ DEB_MSG("Tipo UINT16");
                             if( pix <= -((WWidth-1) / 2)){
                                 pix = 0.0;
                             }else if(pix > ((WWidth-1) / 2)){
-                                pix = 1.0;
+                                pix = 0.0;
                             }else{
                                 pix = pix / (WWidth -1) + 0.5;
                             }
-                            *(img_tmp + xy/3) =  pix;
+                            *(img_tmp + xy/3) =  pix; // 255.0;
                         }
 
                     }else{
@@ -1649,7 +1751,24 @@ void IMGVTK::Cargar(char **rutas , const int n_imgs, const bool enmascarar){
 /*  Metodo: Guardar
     Funcion: Guarda la imagen en la ruta especificada con la extension especificada.
 */
-void IMGVTK::Guardar( const char *ruta, const TIPO_IMG tipo_salida ){
+void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida ){
+    vtkSmartPointer<vtkImageData> img_ptr = NULL;
+    switch( img_idx ){
+        case BASE:
+            img_ptr = base;
+            break;
+        case MASK:
+            img_ptr = mask;
+            break;
+        case SKELETON:
+            img_ptr = skeleton;
+            break;
+        case SEGMENT:
+            img_ptr = segment;
+            break;
+    }
+
+
     switch(tipo_salida){
         case PGM:{
             break;
@@ -1658,7 +1777,7 @@ void IMGVTK::Guardar( const char *ruta, const TIPO_IMG tipo_salida ){
         case PNG:{
             vtkSmartPointer<vtkPNGWriter> png_output = vtkSmartPointer<vtkPNGWriter>::New();
             png_output->SetFileName( ruta );
-            png_output->SetInputData( base );
+            png_output->SetInputData( img_ptr );
             png_output->Write();
             break;
         }
@@ -1678,6 +1797,7 @@ IMGVTK::IMGVTK(){
     pix_caract = NULL;
     mask_ptr = NULL;
     segment_ptr = NULL;
+    threshold_ptr = NULL;
 
     // Defaults:
     SID = 1100.0;
@@ -1698,6 +1818,7 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
     pix_caract = NULL;
     mask_ptr = NULL;
     segment_ptr = NULL;
+    threshold_ptr = NULL;
 
     // Defaults:
     SID = origen.SID;
@@ -1768,6 +1889,7 @@ IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
     pix_caract = NULL;
     mask_ptr = NULL;
     segment_ptr = NULL;
+    threshold_ptr = NULL;
 
     // Defaults:
     SID = 1100.0;
@@ -1789,6 +1911,7 @@ IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel)
     pix_caract = NULL;
     mask_ptr = NULL;
     segment_ptr = NULL;
+    threshold_ptr = NULL;
 
     // Defaults:
     SID = 1100.0;
@@ -1823,6 +1946,7 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
     pix_caract = NULL;
     mask_ptr = NULL;
     segment_ptr = NULL;
+    threshold_ptr = NULL;
 
 
     // Defaults:
