@@ -576,8 +576,8 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
     /// Falta el linking broken vessels ..................
     ///
-    //imgs_base[angio_ID].lengthFilter(IMGVTK::THRESHOLD, 1000);
-    imgs_base[angio_ID].lengthFilter(IMGVTK::THRESHOLD, imgs_base[angio_ID].cols * 5);
+    imgs_base[angio_ID].lengthFilter(IMGVTK::THRESHOLD, 1000);
+    //imgs_base[angio_ID].lengthFilter(IMGVTK::THRESHOLD, imgs_base[angio_ID].cols * 5);
     imgs_base[angio_ID].regionFill(IMGVTK::THRESHOLD);
     mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
     renderizar(mis_renderers[angio_ID]);
@@ -607,6 +607,10 @@ void RECONS3D::skeletonize(const int angio_ID){
     imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
 
     int n_caracts = imgs_base[angio_ID].n_caracts;
+
+    if( !n_caracts ){
+        return;
+    }
 
     vtkSmartPointer<vtkCellArray> verticesSkeleton = vtkSmartPointer<vtkCellArray>::New();
 
