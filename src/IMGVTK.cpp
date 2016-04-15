@@ -1425,6 +1425,8 @@ DEB_MSG("Imagen DICOM en RGB...");
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
                         for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
+                            double pix = (double)(unsigned char)*(buffer + xy + nivel*mis_rens_cols) / 255.0;
+                            /*
                             double pix = (double)(unsigned char)*(buffer + xy + nivel*mis_rens_cols) - WCenter + 0.5;
                             if( pix <= -((WWidth-1) / 2)){
                                 pix = 0.0;
@@ -1433,7 +1435,8 @@ DEB_MSG("Imagen DICOM en RGB...");
                             }else{
                                 pix = pix / (WWidth -1) + 0.5;
                             }
-                            *(img_tmp + xy/3) = pix; // 255.0;
+                            */
+                            *(img_tmp + xy/3) = pix;
                         }
                     }else{
                         using namespace std;
@@ -1448,6 +1451,8 @@ DEB_MSG("Tipo UINT8");
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
                         for( int xy = 0; xy < mis_rens_cols; xy++){
+                            double pix = (double)(unsigned char)*(buffer + nivel*mis_rens_cols + xy) / 255.0;//  - WCenter + 0.5;
+                            /*
                             double pix = (double)(unsigned char)*(buffer + nivel*mis_rens_cols + xy)  - WCenter + 0.5;
                             if( pix <= -((WWidth-1) / 2)){
                                 pix = 0.0;
@@ -1456,7 +1461,8 @@ DEB_MSG("Tipo UINT8");
                             }else{
                                 pix = pix / (WWidth -1) + 0.5;
                             }
-                            *(img_tmp + xy) = pix; // 255.0;
+                            */
+                            *(img_tmp + xy) = pix;
                         }
 
                     }else if( pix_format == gdcm::PixelFormat::UINT16 ){
@@ -1465,7 +1471,10 @@ DEB_MSG("Tipo UINT16");
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
                         for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
+                            double pix = (double)((unsigned char)*(buffer16 + xy + nivel*mis_rens_cols*3) / 16) / 255.0;//  - WCenter + 0.5;
+                            /*
                             double pix = (double)((unsigned char)*(buffer16 + xy + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
+
                             if( pix <= -((WWidth-1) / 2)){
                                 pix = 0.0;
                             }else if(pix > ((WWidth-1) / 2)){
@@ -1473,7 +1482,8 @@ DEB_MSG("Tipo UINT16");
                             }else{
                                 pix = pix / (WWidth -1) + 0.5;
                             }
-                            *(img_tmp + xy/3) =  pix; // 255.0;
+                            */
+                            *(img_tmp + xy/3) =  pix;
                         }
 
                     }else{

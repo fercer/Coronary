@@ -482,16 +482,22 @@ void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, co
 */
 void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input){
 
+    char *nombre = new char [512];
 DEB_MSG("Ruta ground: " << rutaground_input);
     if( nivel_u > nivel_l ){ // Si hay varios niveles:
 
         for( int i = nivel_l; i <= nivel_u; i++){
+
             imgs_base.push_back(IMGVTK(rutabase_input, true, i));
+            sprintf(nombre, "%s_%i_%f_%f_%f_%f.png", rutabase_input, i, imgs_base[n_angios].SID, imgs_base[n_angios].SOD, imgs_base[n_angios].LAORAO, imgs_base[n_angios].CRACAU);
+            imgs_base[n_angios].Guardar(IMGVTK::BASE, nombre, IMGVTK::PNG);
+
+
             mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
             puntos.push_back(vtkSmartPointer<vtkPoints>::New());
 
             // Mover el detector a su posicion definida por el archivo DICOM:
-            mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
+            //mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
             mallarPuntos(n_angios);
 
             existe_ground.push_back( false );
