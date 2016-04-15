@@ -46,28 +46,23 @@ void RECONS3D::renderizar( vtkSmartPointer<vtkRenderer> mi_renderer ){
     Funcion: Genera una malla de puntos para representar la imagen en un renderizador global.
 */
 void RECONS3D::mallarPuntos( const int angio_ID ){
-
-
     // Rotar los puntos segun LAO/RAO y CAU/CRA:
     const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * PI);
     const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * PI);
     const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * PI);
     const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
 
-    const int mis_cols = imgs_base[angio_ID].cols+1;
-    const int mis_rens = imgs_base[angio_ID].rens+1;
-
-   // puntos[angio_ID]->SetNumberOfPoints((mis_cols+1)*(mis_rens+1));
-
+    const int mis_cols = imgs_base[angio_ID].cols;
+    const int mis_rens = imgs_base[angio_ID].rens;
     const double mi_pixX = imgs_base[angio_ID].pixX;
     const double mi_pixY = imgs_base[angio_ID].pixY;
 
     const double mi_DDP = imgs_base[angio_ID].DDP;
 
-    double yy = - mis_rens/2 * mi_pixY;
+    double yy = - mis_rens/2 * mi_pixY + mi_pixY/2.0;
 
     for( int y = 0; y < mis_rens; y++){
-        double xx = - mis_cols/2 * mi_pixX;
+        double xx = - mis_cols/2 * mi_pixX + mi_pixX/2.0;
         for(int x = 0; x < mis_cols; x++){
 
             double xx_3D, yy_3D, zz_3D;
@@ -82,7 +77,14 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
             //// Rotacion usando el eje 'y' como base:
             xx_3D = ccc*xx - scc*zz_3D;
             zz_3D = scc*xx + ccc*zz_3D;
+
             puntos[angio_ID]->InsertNextPoint(xx_3D, yy_3D, zz_3D);
+
+            vtkSmartPointer< vtkVertex > pix = vtkSmartPointer< vtkVertex >::New();
+            pix->GetPointIds()->SetId(0, xx + yy*mis_cols);
+
+            pixeles[angio_ID]->InsertNextCell(pix);
+
             xx += mi_pixX;
         }
         yy += mi_pixY;
@@ -174,6 +176,8 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
 
     const int mis_cols = imgs_base[angio_ID].cols;
     const int mis_rens = imgs_base[angio_ID].rens;
+    const int mi_pixX = imgs_base[angio_ID].pixX;
+
     int offset_y = 0, offset_x = 0;
     double *img_ptr = NULL;
 
@@ -197,31 +201,21 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
             break;
     }
 
-    vtkSmartPointer<vtkCellArray> quads = vtkSmartPointer<vtkCellArray>::New();
     vtkSmartPointer<vtkDoubleArray> intensidades = vtkSmartPointer<vtkDoubleArray>::New();
 
     intensidades->SetNumberOfComponents(1);
-    intensidades->SetName("Intensidad");
+    intensidades->SetName("Intensidadsdasdsads");
 
     for( int i = 0; i < mis_rens; i++){
         for(int j = 0; j < mis_cols; j++){
-            vtkSmartPointer<vtkQuad> quad = vtkSmartPointer<vtkQuad>::New();
-            quad->GetPointIds()->SetId(0,( j )+( i )*(mis_cols+1));
-            quad->GetPointIds()->SetId(1,(j+1)+( i )*(mis_cols+1));
-            quad->GetPointIds()->SetId(2,(j+1)+(i+1)*(mis_cols+1));
-            quad->GetPointIds()->SetId(3,( j )+(i+1)*(mis_cols+1));
-
-            quads->InsertNextCell(quad);
-            intensidades->InsertNextValue(img_ptr[i*mis_cols + j]);
+            intensidades->InsertNextValue(img_ptr[(i+offset_y)*(mis_cols+offset_x*2) + (j+offset_x)]);
         }
     }
 
     vtkSmartPointer<vtkPolyData> rejilla = vtkSmartPointer<vtkPolyData>::New();
     rejilla->SetPoints( puntos[angio_ID] );
-    rejilla->SetPolys(quads);
-
+    rejilla->SetVerts( pixeles[angio_ID] );
     rejilla->GetCellData()->SetScalars(intensidades);
-
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputData(rejilla);
@@ -490,10 +484,12 @@ DEB_MSG("Ruta ground: " << rutaground_input);
             imgs_base.push_back(IMGVTK(rutabase_input, true, i));
             mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
             puntos.push_back(vtkSmartPointer<vtkPoints>::New());
+            pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
 
             // Mover el detector a su posicion definida por el archivo DICOM:
-            mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
             mallarPuntos(n_angios);
+            mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
+            renderizar(mis_renderers[n_angios]);
 
             existe_ground.push_back( false );
             n_angios++;
@@ -504,15 +500,12 @@ DEB_MSG("Ruta ground: " << rutaground_input);
         imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
         mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
         puntos.push_back(vtkSmartPointer<vtkPoints>::New());
+        pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
 
         // Mover el detector a su posicion definida por el archivo DICOM:
         mallarPuntos(n_angios);
-//        mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
-//        renderizar(mis_renderers[n_angios]);
-//        mostrarImagen(imgs_base[n_angios], IMGVTK::MASK, mis_renderers[n_angios]);
-//        mostrarImagen(n_angios, IMGVTK::BASE);
-//        mostrarDetector(n_angios);
-//        renderizar(mis_renderers[n_angios]);
+        mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
+        renderizar(mis_renderers[n_angios]);
 
         if( strcmp(rutaground_input, "NULL") ){
             imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
@@ -578,18 +571,16 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
     imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT);
 
-//    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
-//    renderizar(mis_renderers[angio_ID]);
-
-
-    //imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT, 0.031);
-
+    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
+    renderizar(mis_renderers[angio_ID]);
 
     /// Falta el linking broken vessels ..................
+    ///
+    //imgs_base[angio_ID].lengthFilter(IMGVTK::THRESHOLD, 1000);
     imgs_base[angio_ID].lengthFilter(IMGVTK::THRESHOLD, imgs_base[angio_ID].cols * 5);
     imgs_base[angio_ID].regionFill(IMGVTK::THRESHOLD);
-//    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
-//    renderizar(mis_renderers[angio_ID]);
+    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
+    renderizar(mis_renderers[angio_ID]);
 }
 
 
@@ -602,7 +593,6 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 void RECONS3D::skeletonize(){
     for( int i = 0; i < n_angios; i++){
         skeletonize( i );
-        mostrarImagen(i, IMGVTK::BASE);
     }
     renderizar(renderer_global);
 }
@@ -615,6 +605,7 @@ void RECONS3D::skeletonize(){
 */
 void RECONS3D::skeletonize(const int angio_ID){
     imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
+
     int n_caracts = imgs_base[angio_ID].n_caracts;
 
     vtkSmartPointer<vtkCellArray> verticesSkeleton = vtkSmartPointer<vtkCellArray>::New();
@@ -622,39 +613,18 @@ void RECONS3D::skeletonize(const int angio_ID){
     const double mis_cols = imgs_base[angio_ID].cols;
     const double mis_rens = imgs_base[angio_ID].rens;
 
-    const double mi_pixX = imgs_base[angio_ID].pixX;
-    const double mi_pixY = imgs_base[angio_ID].pixY;
-
-    const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * PI);
-    const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * PI);
-    const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * PI);
-    const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
-
-    const double mi_DDP = imgs_base[angio_ID].DDP;
-
-    vtkIdType pid[1];
-    vtkSmartPointer<vtkPoints> puntosSkeleton = vtkSmartPointer<vtkPoints>::New();
-
     for( int c = 0; c < n_caracts; c++ ){
-        const double xx = imgs_base[angio_ID].pix_caract[c].x*mi_pixX + mi_pixX/2 - mis_cols/2 * mi_pixX;
-        const double yy = imgs_base[angio_ID].pix_caract[c].y*mi_pixY + mi_pixY/2 - mis_rens/2 * mi_pixY;
-        double xx_3D, yy_3D, zz_3D;
+        const int xx = imgs_base[angio_ID].pix_caract[c].x - 1;
+        const int yy = imgs_base[angio_ID].pix_caract[c].y - 1;
 
-        // Mover los puntos segun indica el SID y SOD, LAORAO y CRACAU:
-        //// Rotacion usando el eje 'x' como base:
-        yy_3D = crl*yy - srl*mi_DDP;
-        zz_3D = srl*yy + crl*mi_DDP;
+        vtkSmartPointer<vtkVertex> pix = vtkSmartPointer<vtkVertex>::New();
+        pix->GetPointIds()->SetId(0,  (xx + yy*mis_cols) );
 
-        //// Rotacion usando el eje 'y' como base:
-        xx_3D = ccc*xx - scc*zz_3D;
-        zz_3D = scc*xx + ccc*zz_3D;
-
-        pid[0] = puntosSkeleton->InsertNextPoint(xx_3D, yy_3D, zz_3D);
-        verticesSkeleton->InsertNextCell(1, pid);
+        verticesSkeleton->InsertNextCell( pix );
     }
 
     vtkSmartPointer<vtkPolyData> polyDataSkeleton = vtkSmartPointer<vtkPolyData>::New();
-    polyDataSkeleton->SetPoints( puntosSkeleton );
+    polyDataSkeleton->SetPoints( puntos[angio_ID] );
     polyDataSkeleton->SetVerts( verticesSkeleton );
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
@@ -662,7 +632,7 @@ void RECONS3D::skeletonize(const int angio_ID){
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
-    actor->GetProperty()->SetPointSize(1);
+
     double color[] = {1.0, 0.0, 0.0};
     actor->GetProperty()->SetColor(color);
 

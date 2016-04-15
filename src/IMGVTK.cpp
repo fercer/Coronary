@@ -1236,7 +1236,7 @@ int min_cls = 100000000;
 if(min_cls > clase_i){
     min_cls = clase_i;
 }
-if(max_cls > clase_i){
+if(max_cls < clase_i){
     max_cls = clase_i;
 }
         suma += (double)(clase_i+1) / (double)rens_cols;
@@ -1332,8 +1332,8 @@ DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
                 memcpy(pixXYstr, strm.c_str(), bv->GetLength() * sizeof(char ));
                 char *tmp = strchr(pixXYstr,'\\');
                 pixXYstr[ tmp - pixXYstr ] = '\0';
-                pixY = atof(pixXYstr) / Magnification;
-                pixX = atof(tmp+1) / Magnification;
+                pixY = atof(pixXYstr);// / Magnification;
+                pixX = atof(tmp+1);// / Magnification;
 DEB_MSG("pixY: " << pixY << ", pixX: " << pixX);
                 delete [] pixXYstr;
             }

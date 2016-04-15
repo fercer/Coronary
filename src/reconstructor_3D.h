@@ -58,7 +58,7 @@
 #include <vtkProperty.h>
 
 // Librerias para formas geometricas:
-#include <vtkQuad.h>
+#include <vtkVertex.h>
 #include <vtkLine.h>
 #include <vtkTriangle.h>
 #include <vtkSphereSource.h>
@@ -138,6 +138,7 @@ class RECONS3D{
         std::vector< vtkSmartPointer<vtkRenderer> > mis_renderers;
         vtkSmartPointer<vtkRenderer> renderer_global;
         std::vector< vtkSmartPointer<vtkPoints> > puntos;
+        std::vector< vtkSmartPointer<vtkCellArray> > pixeles;
 
     // M E T O D O S       P R I V A D O S
         void renderizar(vtkSmartPointer<vtkRenderer> mi_renderer);
