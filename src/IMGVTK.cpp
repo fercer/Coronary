@@ -1424,19 +1424,21 @@ DEB_MSG("Imagen DICOM en RGB...");
                     if( pix_format == gdcm::PixelFormat::UINT8 ){
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
-                        for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
-                            double pix = (double)(unsigned char)*(buffer + xy + nivel*mis_rens_cols) / 255.0;
-                            /*
-                            double pix = (double)(unsigned char)*(buffer + xy + nivel*mis_rens_cols) - WCenter + 0.5;
-                            if( pix <= -((WWidth-1) / 2)){
-                                pix = 0.0;
-                            }else if(pix > ((WWidth-1) / 2)){
-                                pix = 0.0;
-                            }else{
-                                pix = pix / (WWidth -1) + 0.5;
+                        for( int y = 0; y < mis_rens; y++){
+                            for( int x = 0; x < mis_cols; x++){
+                                double pix = (double)(unsigned char)*(buffer + 3*x + y * 3 *mis_cols + nivel*mis_rens_cols*3) / 255.0;
+                                /*
+                                double pix = (double)(unsigned char)*(buffer + xy + nivel*mis_rens_cols) - WCenter + 0.5;
+                                if( pix <= -((WWidth-1) / 2)){
+                                    pix = 0.0;
+                                }else if(pix > ((WWidth-1) / 2)){
+                                    pix = 0.0;
+                                }else{
+                                    pix = pix / (WWidth -1) + 0.5;
+                                }
+                                */
+                                *(img_tmp + x + (mis_rens - y - 1)*mis_cols) = pix;
                             }
-                            */
-                            *(img_tmp + xy/3) = pix;
                         }
                     }else{
                         using namespace std;
@@ -1450,19 +1452,21 @@ DEB_MSG("Imagen DICOM en escala de grises...");
 DEB_MSG("Tipo UINT8");
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
-                        for( int xy = 0; xy < mis_rens_cols; xy++){
-                            double pix = (double)(unsigned char)*(buffer + nivel*mis_rens_cols + xy) / 255.0;//  - WCenter + 0.5;
-                            /*
-                            double pix = (double)(unsigned char)*(buffer + nivel*mis_rens_cols + xy)  - WCenter + 0.5;
-                            if( pix <= -((WWidth-1) / 2)){
-                                pix = 0.0;
-                            }else if(pix > ((WWidth-1) / 2)){
-                                pix = 0.0;
-                            }else{
-                                pix = pix / (WWidth -1) + 0.5;
+                        for( int y = 0; y < mis_rens; y++){
+                            for( int x = 0; x < mis_cols; x++){
+                                double pix = (double)(unsigned char)*(buffer + nivel*mis_rens_cols + x + y*mis_cols) / 255.0;//  - WCenter + 0.5;
+                                /*
+                                double pix = (double)(unsigned char)*(buffer + nivel*mis_rens_cols + xy)  - WCenter + 0.5;
+                                if( pix <= -((WWidth-1) / 2)){
+                                    pix = 0.0;
+                                }else if(pix > ((WWidth-1) / 2)){
+                                    pix = 0.0;
+                                }else{
+                                    pix = pix / (WWidth -1) + 0.5;
+                                }
+                                */
+                                *(img_tmp + x + (mis_rens - y - 1)*mis_cols) = pix;
                             }
-                            */
-                            *(img_tmp + xy) = pix;
                         }
 
                     }else if( pix_format == gdcm::PixelFormat::UINT16 ){
@@ -1470,20 +1474,22 @@ DEB_MSG("Tipo UINT16");
                         unsigned short *buffer16 = (unsigned short*)buffer;
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
-                        for( int xy = 0; xy < mis_rens_cols*3; xy+=3){
-                            double pix = (double)((unsigned char)*(buffer16 + xy + nivel*mis_rens_cols*3) / 16) / 255.0;//  - WCenter + 0.5;
-                            /*
-                            double pix = (double)((unsigned char)*(buffer16 + xy + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
+                        for( int y = 0; y < mis_rens; y++){
+                            for( int x = 0; x < mis_cols; x++){
+                                double pix = (double)((unsigned char)*(buffer16 + 3*x + y * 3 * mis_cols + nivel*mis_rens_cols*3) / 16) / 255.0;//  - WCenter + 0.5;
+                                /*
+                                double pix = (double)((unsigned char)*(buffer16 + xy + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
 
-                            if( pix <= -((WWidth-1) / 2)){
-                                pix = 0.0;
-                            }else if(pix > ((WWidth-1) / 2)){
-                                pix = 0.0;
-                            }else{
-                                pix = pix / (WWidth -1) + 0.5;
+                                if( pix <= -((WWidth-1) / 2)){
+                                    pix = 0.0;
+                                }else if(pix > ((WWidth-1) / 2)){
+                                    pix = 0.0;
+                                }else{
+                                    pix = pix / (WWidth -1) + 0.5;
+                                }
+                                */
+                                *(img_tmp + x + (mis_rens - y - 1)*mis_cols) =  pix;
                             }
-                            */
-                            *(img_tmp + xy/3) =  pix;
                         }
 
                     }else{
@@ -1754,22 +1760,53 @@ void IMGVTK::Cargar(char **rutas , const int n_imgs, const bool enmascarar){
     Funcion: Guarda la imagen en la ruta especificada con la extension especificada.
 */
 void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida ){
-    vtkSmartPointer<vtkImageData> img_ptr = NULL;
+    double *img_ptr = NULL;
+    int offset_x = 0;
+    int offset_y = 0;
     switch( img_idx ){
         case BASE:
-            img_ptr = base;
+            img_ptr = base_ptr;
             break;
         case MASK:
-            img_ptr = mask;
+            img_ptr = mask_ptr;
             break;
         case SKELETON:
-            img_ptr = skeleton;
+            img_ptr = skl_ptr;
+            offset_x = 1;
+            offset_y = 1;
             break;
         case SEGMENT:
-            img_ptr = segment;
+            img_ptr = segment_ptr;
             break;
     }
 
+    vtkSmartPointer<vtkImageData> img_temp = vtkSmartPointer<vtkImageData>::New();
+    img_temp->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+    img_temp->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+    img_temp->SetOrigin(0.0, 0.0, 0.0);
+    img_temp->SetSpacing(1.0, 1.0, 1.0);
+
+    unsigned char *img_tmp = static_cast<unsigned char*>(img_temp->GetScalarPointer(0,0,0));
+
+    double min = 1e100;
+    double max =-1e100;
+
+    for( int y = offset_y; y < (rens + offset_y); y++){
+        for( int x = offset_x; x < (cols + offset_x); x++){
+            if( *(img_ptr + (x+offset_x) + (y+offset_y)*(cols + 2*offset_x)) > max){
+                max = *(img_ptr + (x+offset_x) + (y+offset_y)*(cols + 2*offset_x));
+            }
+            if( *(img_ptr + (x+offset_x) + (y+offset_y)*(cols + 2*offset_x)) < min){
+                min = *(img_ptr + (x+offset_x) + (y+offset_y)*(cols + 2*offset_x));
+            }
+        }
+    }
+DEB_MSG("min: " << min << ", max: " << max);
+    for( int y = offset_y; y < (rens + offset_y); y++){
+        for( int x = offset_x; x < (cols + offset_x); x++){
+            *(img_tmp + x + y*cols) = (unsigned char) 255.0*(*(img_ptr + (x+offset_x) + (y+offset_y)*(cols + 2*offset_x)) - min) / (max - min);
+        }
+    }
 
     switch(tipo_salida){
         case PGM:{
@@ -1779,7 +1816,7 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
         case PNG:{
             vtkSmartPointer<vtkPNGWriter> png_output = vtkSmartPointer<vtkPNGWriter>::New();
             png_output->SetFileName( ruta );
-            png_output->SetInputData( img_ptr );
+            png_output->SetInputData( img_temp );
             png_output->Write();
             break;
         }
