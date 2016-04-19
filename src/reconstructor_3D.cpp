@@ -488,9 +488,9 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
         for( int i = nivel_l; i <= nivel_u; i++){
 
-            imgs_base.push_back(IMGVTK(rutabase_input, true, i));
+            imgs_base.push_back(IMGVTK(rutabase_input, false, i));
             sprintf(nombre, "/home/fercer/test_data/IMGS/%s_%i_%f_%f_%f_%f.png", rutabase_input, i, imgs_base[n_angios].SID, imgs_base[n_angios].SOD, imgs_base[n_angios].LAORAO, imgs_base[n_angios].CRACAU);
-            imgs_base[n_angios].Guardar(IMGVTK::BASE, nombre, IMGVTK::PNG);
+            //imgs_base[n_angios].Guardar(IMGVTK::BASE, nombre, IMGVTK::PNG);
 
 
             mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
@@ -506,9 +506,9 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
     }else{
 
-        imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
+        imgs_base.push_back(IMGVTK(rutabase_input, false, nivel_l));
         sprintf(nombre, "/home/fercer/test_data/IMGS/%s_%i_%f_%f_%f_%f.png", rutabase_input, nivel_l, imgs_base[n_angios].SID, imgs_base[n_angios].SOD, imgs_base[n_angios].LAORAO, imgs_base[n_angios].CRACAU);
-        imgs_base[n_angios].Guardar(IMGVTK::BASE, nombre, IMGVTK::PNG);
+        //imgs_base[n_angios].Guardar(IMGVTK::BASE, nombre, IMGVTK::PNG);
 
         mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
         puntos.push_back(vtkSmartPointer<vtkPoints>::New());
@@ -612,9 +612,10 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 void RECONS3D::skeletonize(){
     for( int i = 0; i < n_angios; i++){
         skeletonize( i );
-        mostrarImagen(i, IMGVTK::BASE);
+        imgs_base[i].GuardarSkeleton("./skl_");
+        imgs_base[i].Guardar(IMGVTK::SKELETON, "./skl", IMGVTK::PNG);
     }
-    renderizar(renderer_global);
+    //renderizar(renderer_global);
 }
 
 
@@ -624,7 +625,8 @@ void RECONS3D::skeletonize(){
     Funcion: Obtiene el esqueleto de la imagen y muestra los puntos de interes.
 */
 void RECONS3D::skeletonize(const int angio_ID){
-    imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
+
+    imgs_base[angio_ID].skeletonization(IMGVTK::BASE);
     int n_caracts = imgs_base[angio_ID].n_caracts;
 
     vtkSmartPointer<vtkCellArray> verticesSkeleton = vtkSmartPointer<vtkCellArray>::New();

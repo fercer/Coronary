@@ -116,6 +116,27 @@
     #define DEB_MSG(MENSAJE)
 #endif
 
+
+
+
+#ifndef NDEBUG
+    #define SAVE_LOG(ARREGLO, LONGITUD, RUTA) char *nombre_log = new char [512];\
+                                    sprintf(nombre_log, "%s.log", RUTA);\
+                                    FILE *fp_log = fopen(nombre_log, "w");\
+                                    if( fp_log ){\
+                                        for( int ii = 0; ii < LONGITUD; ii++){\
+                                            fprintf(fp_log, "%f\n", ARREGLO[ii]);\
+                                        }\
+                                        fclose( fp_log );\
+                                    }\
+                                    delete [] nombre_log
+#else
+    #define SAVE_LOG(ARREGLO, LONGITUD, RUTA)
+#endif
+
+
+
+
 // C L A S E: RECONS3D  ------------------------------------------------------------------------ v
 class RECONS3D{
 

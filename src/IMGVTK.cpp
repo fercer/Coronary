@@ -1095,6 +1095,60 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
 }
 
 
+/*  Metodo: GuardarSkeleton
+    Funcion: Almacena las caracteristicas del esqueleto dentro de un archivo de texto plano.
+*/
+void IMGVTK::GuardarSkeleton( const char *ruta){
+    FILE *fp_skl = fopen(ruta, "w");
+
+    std::vector< int > end;
+    std::vector< int > branch;
+    std::vector< int > cross;
+    std::vector< int > skl;
+
+    // Identificar y seperar las caracteristicas para almacenarlas en orden:
+    for( int i = 0; i < n_caracts; i++ ){
+        switch( pix_caract[i].pix_tipo ){
+            case PIX_END:
+                end.push_back( i );
+                break;
+            case PIX_BRANCH:
+                branch.push_back( i );
+                break;
+            case PIX_CROSS:
+                cross.push_back( i );
+                break;
+            case PIX_SKL:
+                skl.push_back( i );
+                break;
+        }
+    }
+
+
+    if( fp_skl ){
+        fprintf(fp_skl, "end\n");
+        for( std::vector<int>::iterator it = end.begin(); it != end.end(); it++ ){
+            fprintf(fp_skl, "%i %i\n", pix_caract[*it].x-1, pix_caract[*it].y-1 );
+        }
+        fprintf(fp_skl, "bifurcations\n");
+        for( std::vector<int>::iterator it = branch.begin(); it != branch.end(); it++ ){
+            fprintf(fp_skl, "%i %i\n", pix_caract[*it].x-1, pix_caract[*it].y-1 );
+        }
+        fprintf(fp_skl, "cross\n");
+        for( std::vector<int>::iterator it = cross.begin(); it != cross.end(); it++ ){
+            fprintf(fp_skl, "%i %i\n", pix_caract[*it].x-1, pix_caract[*it].y-1 );
+        }
+        fprintf(fp_skl, "skeleton\n");
+        for( std::vector<int>::iterator it = skl.begin(); it != skl.end(); it++ ){
+            fprintf(fp_skl, "%i %i\n", pix_caract[*it].x-1, pix_caract[*it].y-1 );
+        }
+        fclose( fp_skl );
+    }
+}
+
+
+
+
 
 /*  Metodo: definirMask
     Funcion: Define una mascara para normalizar los pixeles de la imagen.
@@ -1290,7 +1344,7 @@ DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
     esDICOM *= strcmp(ruta_origen + ruta_l - 3, "jpg");
     esDICOM *= strcmp(ruta_origen + ruta_l - 4, "jpeg");
     esDICOM *= strcmp(ruta_origen + ruta_l - 3, "bmp");
-
+DEB_MSG("es dicom: " << esDICOM);
     if( esDICOM ){
         gdcm::ImageReader DICOMreader;
         DICOMreader.SetFileName( ruta_origen );
@@ -1504,8 +1558,6 @@ DEB_MSG("Tipo UINT16");
 
     }else{ ///------------------------------------------------------------------------------------------------
 
-
-
         // Leer la imagen en RBG o Escala de Grises:
         vtkSmartPointer<vtkImageReader2Factory> readerFactory = vtkSmartPointer<vtkImageReader2Factory>::New();
         vtkSmartPointer<vtkImageReader2> imgReader = readerFactory->CreateImageReader2( ruta_origen );
@@ -1518,7 +1570,7 @@ DEB_MSG("Tipo UINT16");
         imgReader->GetOutput()->GetDimensions( dims );
 
         int scl_comps = imgReader->GetOutput()->GetNumberOfScalarComponents();
-
+DEB_MSG("escalas de componentes: "<< scl_comps);
         const int mis_cols = dims[0];
         const int mis_rens = dims[1];
         const int mis_rens_cols = mis_rens*mis_cols;
@@ -1534,7 +1586,8 @@ DEB_MSG("Tipo UINT16");
 
         switch(scl_comps){
             // La imagen esta en escala de grises:
-            case 1:{
+            case 1:
+            case 2:{
 DEB_MSG("La imagen esta en escala de grises")
                 vtkSmartPointer<vtkImageExtractComponents> extractGreyFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
                 extractGreyFilter->SetInputConnection(imgReader->GetOutputPort());
@@ -1544,7 +1597,7 @@ DEB_MSG("La imagen esta en escala de grises")
                 unsigned char *gris = static_cast<unsigned char*>(extractGreyFilter->GetOutput()->GetScalarPointer(0,0,0));
 
                 for( int xy = 0; xy < mis_rens_cols; xy++){
-                    *(img_tmp + xy) = (double)*(gris+xy) / 255.0;
+                    *(img_tmp + xy) = (double)*(gris+xy);// / 255.0;
                 }
                 break;
             }
@@ -1578,7 +1631,7 @@ DEB_MSG("La imagen esta en RGB")
                                  (0.589)*ptG->GetScalarComponentAsDouble(j,i,0,0) +
                                  (0.114)*ptB->GetScalarComponentAsDouble(j,i,0,0));
 
-                        *(img_tmp + j + i*mis_cols) = color / 255.0;
+                        *(img_tmp + j + i*mis_cols) = color;// / 255.0;
                     }
                 }
                 break;
@@ -1618,7 +1671,7 @@ DEB_MSG("La Imagen esta en RGB{A}")
                                  (0.589)*ptG->GetScalarComponentAsDouble(j,i,0,0) +
                                  (0.114)*ptB->GetScalarComponentAsDouble(j,i,0,0));
 
-                        *(img_tmp + j + i*mis_cols) = color / 255.0;
+                        *(img_tmp + j + i*mis_cols) = color;// / 255.0;
                     }
                 }
                 break;
@@ -1802,8 +1855,8 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
         }
     }
 DEB_MSG("min: " << min << ", max: " << max);
-    for( int y = offset_y; y < (rens + offset_y); y++){
-        for( int x = offset_x; x < (cols + offset_x); x++){
+    for( int y = 0; y < rens; y++){
+        for( int x = 0; x < cols; x++){
             *(img_tmp + x + y*cols) = (unsigned char) 255.0*(*(img_ptr + (x+offset_x) + (y+offset_y)*(cols + 2*offset_x)) - min) / (max - min);
         }
     }
