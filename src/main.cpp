@@ -319,8 +319,7 @@ int main(int argc, char** argv ){
 //        delete [] rutas_grd[i];
 //    }
 
-
-    reconstructor.segmentarImagenBase();
+//    reconstructor.segmentarImagenBase();
     reconstructor.skeletonize();
 
     delete [] parametros;

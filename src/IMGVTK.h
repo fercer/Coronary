@@ -88,6 +88,7 @@ class IMGVTK{
         // M E T O D O S      P U B L I C O S
         void definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src );
         void skeletonization(IMG_IDX img_idx);
+        void GuardarSkeleton( const char *ruta );
         void umbralizar(IMG_IDX img_idx, const double umbral);
         void umbralizar(IMG_IDX img_idx);
         void lengthFilter(IMG_IDX img_idx, const int min_length);

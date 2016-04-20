@@ -1095,6 +1095,60 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
 }
 
 
+/*  Metodo: GuardarSkeleton
+    Funcion: Almacena las caracteristicas del esqueleto dentro de un archivo de texto plano.
+*/
+void IMGVTK::GuardarSkeleton( const char *ruta){
+    FILE *fp_skl = fopen(ruta, "w");
+
+    std::vector< int > end;
+    std::vector< int > branch;
+    std::vector< int > cross;
+    std::vector< int > skl;
+
+    // Identificar y seperar las caracteristicas para almacenarlas en orden:
+    for( int i = 0; i < n_caracts; i++ ){
+        switch( pix_caract[i].pix_tipo ){
+            case PIX_END:
+                end.push_back( i );
+                break;
+            case PIX_BRANCH:
+                branch.push_back( i );
+                break;
+            case PIX_CROSS:
+                cross.push_back( i );
+                break;
+            case PIX_SKL:
+                skl.push_back( i );
+                break;
+        }
+    }
+
+
+    if( fp_skl ){
+        fprintf(fp_skl, "end\n");
+        for( std::vector<int>::iterator it = end.begin(); it != end.end(); it++ ){
+            fprintf(fp_skl, "%i %i\n", pix_caract[*it].x-1, pix_caract[*it].y-1 );
+        }
+        fprintf(fp_skl, "bifurcations\n");
+        for( std::vector<int>::iterator it = branch.begin(); it != branch.end(); it++ ){
+            fprintf(fp_skl, "%i %i\n", pix_caract[*it].x-1, pix_caract[*it].y-1 );
+        }
+        fprintf(fp_skl, "cross\n");
+        for( std::vector<int>::iterator it = cross.begin(); it != cross.end(); it++ ){
+            fprintf(fp_skl, "%i %i\n", pix_caract[*it].x-1, pix_caract[*it].y-1 );
+        }
+        fprintf(fp_skl, "skeleton\n");
+        for( std::vector<int>::iterator it = skl.begin(); it != skl.end(); it++ ){
+            fprintf(fp_skl, "%i %i\n", pix_caract[*it].x-1, pix_caract[*it].y-1 );
+        }
+        fclose( fp_skl );
+    }
+}
+
+
+
+
 
 /*  Metodo: definirMask
     Funcion: Define una mascara para normalizar los pixeles de la imagen.
@@ -1290,7 +1344,7 @@ DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
     esDICOM *= strcmp(ruta_origen + ruta_l - 3, "jpg");
     esDICOM *= strcmp(ruta_origen + ruta_l - 4, "jpeg");
     esDICOM *= strcmp(ruta_origen + ruta_l - 3, "bmp");
-
+DEB_MSG("es dicom: " << esDICOM);
     if( esDICOM ){
         gdcm::ImageReader DICOMreader;
         DICOMreader.SetFileName( ruta_origen );
@@ -1414,7 +1468,6 @@ DEB_MSG("Cols: " << mis_cols << ", rens: " << mis_rens  << ", niveles: " << mis_
         mask_src->AllocateScalars( VTK_DOUBLE, 1);
         mask_src->SetOrigin(0.0, 0.0, 0.0);
         mask_src->SetSpacing(1.0, 1.0, 1.0);
-
         gdcm::PhotometricInterpretation scl_comps = gimage.GetPhotometricInterpretation();
         gdcm::PixelFormat pix_format = gimage.GetPixelFormat();
 
@@ -1424,16 +1477,14 @@ DEB_MSG("Imagen DICOM en RGB...");
                     if( pix_format == gdcm::PixelFormat::UINT8 ){
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
-                        int xy = 0;
                         for( int y = 0; y < mis_rens; y++){
                             for( int x = 0; x < mis_cols; x++){
-                                xy+=3;
-
-                                const double pixR = (double)(unsigned char)*(buffer + xy + nivel*mis_rens_cols*3) - WCenter + 0.5;
-                                const double pixG = (double)(unsigned char)*(buffer + xy+1 + nivel*mis_rens_cols*3) - WCenter + 0.5;
-                                const double pixB = (double)(unsigned char)*(buffer + xy+2 + nivel*mis_rens_cols*3) - WCenter + 0.5;
+                                const double pixR = (double)(unsigned char)*(buffer + 3*x + y*mis_cols*3    + nivel*mis_rens_cols*3)  - WCenter + 0.5;
+                                const double pixG = (double)(unsigned char)*(buffer + 3*x + y*mis_cols*3 +1 + nivel*mis_rens_cols*3)  - WCenter + 0.5;
+                                const double pixB = (double)(unsigned char)*(buffer + 3*x + y*mis_cols*3 +2 + nivel*mis_rens_cols*3)  - WCenter + 0.5;
                                 double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
-
+                                /*
+                                double pix = (double)(unsigned char)*(buffer + xy + nivel*mis_rens_cols) - WCenter + 0.5;
                                 if( pix <= -((WWidth-1) / 2)){
                                     pix = 0.0;
                                 }else if(pix > ((WWidth-1) / 2)){
@@ -1441,7 +1492,8 @@ DEB_MSG("Imagen DICOM en RGB...");
                                 }else{
                                     pix = pix / (WWidth -1) + 0.5;
                                 }
-                                *(img_tmp + (mis_rens-y-1)*mis_rens + x ) = pix; // 255.0;
+                                */
+                                *(img_tmp + x + (mis_rens - y - 1)*mis_cols) = pix;
                             }
                         }
                     }else{
@@ -1456,10 +1508,10 @@ DEB_MSG("Imagen DICOM en escala de grises...");
 DEB_MSG("Tipo UINT8");
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
-                        int xy = 0;
                         for( int y = 0; y < mis_rens; y++){
                             for( int x = 0; x < mis_cols; x++){
-                                xy++;
+                                double pix = (double)(unsigned char)*(buffer + nivel*mis_rens_cols + x + y*mis_cols) / 255.0;//  - WCenter + 0.5;
+                                /*
                                 double pix = (double)(unsigned char)*(buffer + nivel*mis_rens_cols + xy)  - WCenter + 0.5;
                                 if( pix <= -((WWidth-1) / 2)){
                                     pix = 0.0;
@@ -1468,7 +1520,8 @@ DEB_MSG("Tipo UINT8");
                                 }else{
                                     pix = pix / (WWidth -1) + 0.5;
                                 }
-                                *(img_tmp + (mis_rens-y-1)*mis_rens + x) = pix; // 255.0;
+                                */
+                                *(img_tmp + x + (mis_rens - y - 1)*mis_cols) = pix;
                             }
                         }
 
@@ -1477,16 +1530,13 @@ DEB_MSG("Tipo UINT16");
                         unsigned short *buffer16 = (unsigned short*)buffer;
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
-                        int xy = 0;
                         for( int y = 0; y < mis_rens; y++){
                             for( int x = 0; x < mis_cols; x++){
-                                xy += 3;
-
-                                const double pixR = (double)((unsigned char)*(buffer16 + xy + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
-                                const double pixG = (double)((unsigned char)*(buffer16 + xy+1 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
-                                const double pixB = (double)((unsigned char)*(buffer16 + xy+2 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
+                                const double pixR = (double)((unsigned char)*(buffer16 + 3*x + y*mis_cols*3    + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
+                                const double pixG = (double)((unsigned char)*(buffer16 + 3*x + y*mis_cols*3 +1 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
+                                const double pixB = (double)((unsigned char)*(buffer16 + 3*x + y*mis_cols*3 +2 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
                                 double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
-
+                                /*
                                 if( pix <= -((WWidth-1) / 2)){
                                     pix = 0.0;
                                 }else if(pix > ((WWidth-1) / 2)){
@@ -1494,8 +1544,8 @@ DEB_MSG("Tipo UINT16");
                                 }else{
                                     pix = pix / (WWidth -1) + 0.5;
                                 }
-
-                                *(img_tmp + (mis_rens-y-1)*mis_rens + x) =  pix; // 255.0;
+                                */
+                                *(img_tmp + x + (mis_rens - y - 1)*mis_cols) =  pix;
                             }
                         }
 
@@ -1511,8 +1561,6 @@ DEB_MSG("Tipo UINT16");
 
     }else{ ///------------------------------------------------------------------------------------------------
 
-
-
         // Leer la imagen en RBG o Escala de Grises:
         vtkSmartPointer<vtkImageReader2Factory> readerFactory = vtkSmartPointer<vtkImageReader2Factory>::New();
         vtkSmartPointer<vtkImageReader2> imgReader = readerFactory->CreateImageReader2( ruta_origen );
@@ -1525,7 +1573,7 @@ DEB_MSG("Tipo UINT16");
         imgReader->GetOutput()->GetDimensions( dims );
 
         int scl_comps = imgReader->GetOutput()->GetNumberOfScalarComponents();
-
+DEB_MSG("escalas de componentes: "<< scl_comps);
         const int mis_cols = dims[0];
         const int mis_rens = dims[1];
         const int mis_rens_cols = mis_rens*mis_cols;
@@ -1541,7 +1589,8 @@ DEB_MSG("Tipo UINT16");
 
         switch(scl_comps){
             // La imagen esta en escala de grises:
-            case 1:{
+            case 1:
+            case 2:{
 DEB_MSG("La imagen esta en escala de grises")
                 vtkSmartPointer<vtkImageExtractComponents> extractGreyFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
                 extractGreyFilter->SetInputConnection(imgReader->GetOutputPort());
@@ -1551,7 +1600,7 @@ DEB_MSG("La imagen esta en escala de grises")
                 unsigned char *gris = static_cast<unsigned char*>(extractGreyFilter->GetOutput()->GetScalarPointer(0,0,0));
 
                 for( int xy = 0; xy < mis_rens_cols; xy++){
-                    *(img_tmp + xy) = (double)*(gris+xy) / 255.0;
+                    *(img_tmp + xy) = (double)*(gris+xy);// / 255.0;
                 }
                 break;
             }
@@ -1585,7 +1634,7 @@ DEB_MSG("La imagen esta en RGB")
                                  (0.589)*ptG->GetScalarComponentAsDouble(j,i,0,0) +
                                  (0.114)*ptB->GetScalarComponentAsDouble(j,i,0,0));
 
-                        *(img_tmp + j + i*mis_cols) = color / 255.0;
+                        *(img_tmp + j + i*mis_cols) = color;// / 255.0;
                     }
                 }
                 break;
@@ -1625,7 +1674,7 @@ DEB_MSG("La Imagen esta en RGB{A}")
                                  (0.589)*ptG->GetScalarComponentAsDouble(j,i,0,0) +
                                  (0.114)*ptB->GetScalarComponentAsDouble(j,i,0,0));
 
-                        *(img_tmp + j + i*mis_cols) = color / 255.0;
+                        *(img_tmp + j + i*mis_cols) = color;// / 255.0;
                     }
                 }
                 break;
@@ -1767,22 +1816,53 @@ void IMGVTK::Cargar(char **rutas , const int n_imgs, const bool enmascarar){
     Funcion: Guarda la imagen en la ruta especificada con la extension especificada.
 */
 void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida ){
-    vtkSmartPointer<vtkImageData> img_ptr = NULL;
+    double *img_ptr = NULL;
+    int offset_x = 0;
+    int offset_y = 0;
     switch( img_idx ){
         case BASE:
-            img_ptr = base;
+            img_ptr = base_ptr;
             break;
         case MASK:
-            img_ptr = mask;
+            img_ptr = mask_ptr;
             break;
         case SKELETON:
-            img_ptr = skeleton;
+            img_ptr = skl_ptr;
+            offset_x = 1;
+            offset_y = 1;
             break;
         case SEGMENT:
-            img_ptr = segment;
+            img_ptr = segment_ptr;
             break;
     }
 
+    vtkSmartPointer<vtkImageData> img_temp = vtkSmartPointer<vtkImageData>::New();
+    img_temp->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+    img_temp->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+    img_temp->SetOrigin(0.0, 0.0, 0.0);
+    img_temp->SetSpacing(1.0, 1.0, 1.0);
+
+    unsigned char *img_tmp = static_cast<unsigned char*>(img_temp->GetScalarPointer(0,0,0));
+
+    double min = 1e100;
+    double max =-1e100;
+
+    for( int y = offset_y; y < (rens + offset_y); y++){
+        for( int x = offset_x; x < (cols + offset_x); x++){
+            if( *(img_ptr + (x+offset_x) + (y+offset_y)*(cols + 2*offset_x)) > max){
+                max = *(img_ptr + (x+offset_x) + (y+offset_y)*(cols + 2*offset_x));
+            }
+            if( *(img_ptr + (x+offset_x) + (y+offset_y)*(cols + 2*offset_x)) < min){
+                min = *(img_ptr + (x+offset_x) + (y+offset_y)*(cols + 2*offset_x));
+            }
+        }
+    }
+DEB_MSG("min: " << min << ", max: " << max);
+    for( int y = 0; y < rens; y++){
+        for( int x = 0; x < cols; x++){
+            *(img_tmp + x + y*cols) = (unsigned char) 255.0*(*(img_ptr + (x+offset_x) + (y+offset_y)*(cols + 2*offset_x)) - min) / (max - min);
+        }
+    }
 
     switch(tipo_salida){
         case PGM:{
@@ -1792,7 +1872,7 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
         case PNG:{
             vtkSmartPointer<vtkPNGWriter> png_output = vtkSmartPointer<vtkPNGWriter>::New();
             png_output->SetFileName( ruta );
-            png_output->SetInputData( img_ptr );
+            png_output->SetInputData( img_temp );
             png_output->Write();
             break;
         }
