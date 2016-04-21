@@ -68,6 +68,9 @@ void RECONS3D::isoCentro( const int angio_ID ){
 
     const double mi_DDP = imgs_base[angio_ID].DDP;
 
+    const double mi_pixX = imgs_base[angio_ID].pixX;
+    const double mi_pixY = imgs_base[angio_ID].pixY;
+
     // Primer punto (0,0, DDP) ------------------------------------------------------------------------------
     double xx = 0.0, yy = 0.0;
     double Px, Py, Pz;
@@ -81,7 +84,7 @@ void RECONS3D::isoCentro( const int angio_ID ){
 
 
     // Segundo punto (mis_cols,0, DDP) ------------------------------------------------------------------------------
-    xx = mis_cols;
+    xx = mis_cols*mi_pixX/2;
     double Qx, Qy, Qz;
 
     //// Rotacion usando el eje 'x' como base:
@@ -95,7 +98,7 @@ void RECONS3D::isoCentro( const int angio_ID ){
 
     // Tercer punto (0, mis_rens, DDP) ------------------------------------------------------------------------------
     xx = 0.0;
-    yy = mis_rens;
+    yy = mis_rens*mi_pixY/2;
     double Rx, Ry, Rz;
 
     //// Rotacion usando el eje 'x' como base:
@@ -113,23 +116,9 @@ void RECONS3D::isoCentro( const int angio_ID ){
     mi_normal->Nz = (Qx - Px)*(Ry - Py) - (Qy - Py)*(Rx - Px);
 
     /// Definir el centro de la imagen:
-    const double mi_pixX = imgs_base[angio_ID].pixX;
-    const double mi_pixY = imgs_base[angio_ID].pixY;
-    xx = (mis_cols+1)*mi_pixX / 2;
-    yy = (mis_rens+1)*mi_pixY / 2;
-
-    double Cx, Cy, Cz;
-
-    //// Rotacion usando el eje 'x' como base:
-    Cy = crl*yy - srl*mi_DDP;
-    Cz = srl*yy + crl*mi_DDP;
-    //// Rotacion usando el eje 'y' como base:
-    Cx = ccc*xx - scc*Cz;
-    Cz = scc*xx + ccc*Cz;
-
-    mi_normal->Cx = Cx;
-    mi_normal->Cy = Cy;
-    mi_normal->Cz = Cz;
+    mi_normal->Cx = Px;
+    mi_normal->Cy = Py;
+    mi_normal->Cz = Pz;
 }
 
 
@@ -174,7 +163,7 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
             puntos[angio_ID]->InsertNextPoint(xx_3D, yy_3D, zz_3D);
 
             vtkSmartPointer< vtkVertex > pix = vtkSmartPointer< vtkVertex >::New();
-            pix->GetPointIds()->SetId(0, xx + yy*mis_cols);
+            pix->GetPointIds()->SetId(0, x + y*mis_cols);
 
             pixeles[angio_ID]->InsertNextCell(pix);
             xx += mi_pixX;
@@ -265,8 +254,6 @@ DEB_MSG("("<< img_idx <<"/" << IMGVTK::BASE << ") img_ptr: " << img_ptr);
     Funcion: Muestra la imagen en una ventana VTK usando el renderizador global.
 */
 void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
-    TIMERS;
-    GETTIME_INI;
     const int mis_cols = imgs_base[angio_ID].cols;
     const int mis_rens = imgs_base[angio_ID].rens;
     const int mi_pixX = imgs_base[angio_ID].pixX;
@@ -320,13 +307,25 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
     // Mostrar el isocentro:
 
     /// Posicionar una esfera en el lugar del isocentro:
-    const double ICx = normal_centros[angio_ID].Cx + imgs_base[angio_ID].DISO * normal_centros[angio_ID].Nx;
-    const double ICy = normal_centros[angio_ID].Cy + imgs_base[angio_ID].DISO * normal_centros[angio_ID].Ny;
-    const double ICz = normal_centros[angio_ID].Cz + imgs_base[angio_ID].DISO * normal_centros[angio_ID].Nz;
-    GETTIME_FIN;
+    double t_iso = imgs_base[angio_ID].DISO;
+    DEB_MSG("t_iso = " << t_iso);
 
-DEB_MSG("Tiempo en segundos para extraer un dato desde el vector de IMGVTK's: " << DIFTIME);
-    // Setup render window, renderer, and interactor
+    t_iso *= t_iso;
+    DEB_MSG("t_iso = " << t_iso);
+
+    t_iso = (normal_centros[angio_ID].Nx*normal_centros[angio_ID].Nx + normal_centros[angio_ID].Ny*normal_centros[angio_ID].Ny + normal_centros[angio_ID].Nz*normal_centros[angio_ID].Nz) / t_iso;
+    DEB_MSG("t_iso = " << t_iso);
+
+    const double ICx = normal_centros[angio_ID].Cx + t_iso * normal_centros[angio_ID].Nx;
+    const double ICy = normal_centros[angio_ID].Cy + t_iso * normal_centros[angio_ID].Ny;
+    const double ICz = normal_centros[angio_ID].Cz + t_iso * normal_centros[angio_ID].Nz;
+DEB_MSG("Isocentro: " << ICx << ", " << ICy << ", " << ICz);
+
+    double color[] = {0.0, 0.0, 1.0};
+    agregarEsfera(normal_centros[angio_ID].Cx, normal_centros[angio_ID].Cy, normal_centros[angio_ID].Cz, 17.0, color, renderer_global);
+
+    color[1] = 1.0;
+    agregarEsfera(ICx, ICy, ICz, 17.0, color, renderer_global);
 }
 
 
@@ -766,7 +765,7 @@ RECONS3D::RECONS3D(){
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
 
     double color[] = {1.0, 1.0, 1.0};
-    agregarEsfera(0.0, 0.0, 0.0, 5.0, color, renderer_global);
+    agregarEsfera(0.0, 0.0, 0.0, 10.0, color, renderer_global);
     agregarEjes(renderer_global);
 
     n_angios = 0;
