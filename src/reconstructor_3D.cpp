@@ -285,11 +285,13 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
 
     intensidades->SetNumberOfComponents(3);
     intensidades->SetName("Intensidadsdasdsads");
+    double intensidad_xy[3];
     for( int i = 0; i < mis_rens; i++){
         for(int j = 0; j < mis_cols; j++){
-            intensidades->InsertNextTupleValue(img_ptr[(i+offset_y)*(mis_cols+offset_x*2) + (j+offset_x)]);
-            intensidades->InsertNextTupleValue(img_ptr[(i+offset_y)*(mis_cols+offset_x*2) + (j+offset_x)]);
-            intensidades->InsertNextTupleValue(img_ptr[(i+offset_y)*(mis_cols+offset_x*2) + (j+offset_x)]);
+            intensidad_xy[0] = img_ptr[(i+offset_y)*(mis_cols+offset_x*2) + (j+offset_x)];
+            intensidad_xy[1] = img_ptr[(i+offset_y)*(mis_cols+offset_x*2) + (j+offset_x)];
+            intensidad_xy[2] = img_ptr[(i+offset_y)*(mis_cols+offset_x*2) + (j+offset_x)];
+            intensidades->InsertNextTupleValue( intensidad_xy );
         }
     }
 
@@ -314,7 +316,10 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
     t_iso *= t_iso;
     DEB_MSG("t_iso = " << t_iso);
 
-    t_iso /= (normal_centros[angio_ID].Nx*normal_centros[angio_ID].Nx + normal_centros[angio_ID].Ny*normal_centros[angio_ID].Ny + normal_centros[angio_ID].Nz*normal_centros[angio_ID].Nz);
+    t_iso /= (normal_centros[angio_ID].direccion[0]*normal_centros[angio_ID].direccion[0] +
+              normal_centros[angio_ID].direccion[1]*normal_centros[angio_ID].direccion[1] +
+              normal_centros[angio_ID].direccion[2]*normal_centros[angio_ID].direccion[2]);
+
     DEB_MSG("t_iso = " << t_iso);
 
     const double ICx = normal_centros[angio_ID].origen[0] + t_iso * normal_centros[angio_ID].direccion[0];
@@ -323,7 +328,7 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
 DEB_MSG("Isocentro: " << ICx << ", " << ICy << ", " << ICz);
 
     double color[] = {0.0, 0.0, 1.0};
-    agregarEsfera(normal_centros[angio_ID].Cx, normal_centros[angio_ID].Cy, normal_centros[angio_ID].Cz, 17.0, color, renderer_global);
+    agregarEsfera(normal_centros[angio_ID].origen[0], normal_centros[angio_ID].origen[1], normal_centros[angio_ID].origen[2], 17.0, color, renderer_global);
 
     color[1] = 1.0;
     agregarEsfera(ICx, ICy, ICz, 17.0, color, renderer_global);
@@ -340,20 +345,24 @@ void RECONS3D::agregarVector(NORCEN origen_direccion, const double t, double col
     vtkSmartPointer<vtkMatrix4x4> matrix_base = vtkSmartPointer<vtkMatrix4x4>::New();
     matrix_base->Identity();
 
-    matrix_base->SetElement(0, 0, origen_direccion.direccion[0]); matrix_base->SetElement(0, 1, origen_direccion.direccion[1]); matrix_base->SetElement(0, 2, origen_direccion.direccion[2]);
-    matrix_base->SetElement(1, 0, origen_direccion.direccion[0]); matrix_base->SetElement(1, 1, origen_direccion.direccion[1]); matrix_base->SetElement(1, 2, origen_direccion.direccion[2]);
-    matrix_base->SetElement(2, 0, origen_direccion.direccion[0]); matrix_base->SetElement(2, 1, origen_direccion.direccion[1]); matrix_base->SetElement(2, 2, origen_direccion.direccion[2]);
+    matrix_base->SetElement(0, 0, 1.0); matrix_base->SetElement(0, 1, 0.0); matrix_base->SetElement(0, 2, 0.0);
+    matrix_base->SetElement(1, 0, 0.0); matrix_base->SetElement(1, 1, 1.0); matrix_base->SetElement(1, 2, 0.0);
+    matrix_base->SetElement(2, 0, 0.0); matrix_base->SetElement(2, 1, 0.0); matrix_base->SetElement(2, 2, 1.0);
 
     // Definir la transformacion:
     vtkSmartPointer<vtkTransform> transformacion = vtkSmartPointer<vtkTransform>::New();
     transformacion->Translate( origen_direccion.origen ); // Mover la flecha al origen
     transformacion->Concatenate( matrix_base ); // rotar la flecha en la direccion dada
-    transformacion->Scale(t, t, t); // dimensionar la flecha segun 't'
+    transformacion->Scale(t, 2.0*t, 3.0*t); // dimensionar la flecha segun 't'
 
-    // Definir la transforamcion del polydata de la flecha:
+    // Definir la transformacion del polydata de la flecha:
     vtkSmartPointer<vtkArrowSource> vec_flecha = vtkSmartPointer<vtkArrowSource>::New();
-    vec_flecha->SetShaftRadius( radio );
-    vec_flecha->SetTipLength( radio );
+    vec_flecha->SetShaftRadius(radio );
+    vec_flecha->SetShaftResolution( 3 );
+
+    vec_flecha->SetTipLength( 5.0*radio );
+    vec_flecha->SetTipRadius( 2.0*radio );
+    vec_flecha->SetTipResolution( 3 );
 
     vtkSmartPointer<vtkTransformPolyDataFilter> transformar_flecha = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
     transformar_flecha->SetTransform(transformacion);
@@ -368,7 +377,7 @@ void RECONS3D::agregarVector(NORCEN origen_direccion, const double t, double col
     vec_actor->GetProperty()->SetColor( color );
 
     // Agregar el actor al renderer:
-    mi_renderer->AddActor( vec_mapper );
+    mi_renderer->AddActor( vec_actor );
 }
 
 
@@ -389,17 +398,17 @@ void RECONS3D::agregarEjes(vtkSmartPointer<vtkRenderer> &mi_renderer){
     // Eje X:
     color[0] = 1.0; color[1] = 0.0; color[2] = 0.0;
     eje_dir.direccion[0] = 1.0; eje_dir.direccion[1] = 0.0; eje_dir.direccion[2] = 0.0;
-    agregarVector( eje_dir, 250.0, color, 1.0, mi_renderer);
+    agregarVector( eje_dir, 250.0, color, 0.015, mi_renderer);
 
     // Eje Y:
     color[0] = 0.0; color[1] = 1.0; color[2] = 0.0;
     eje_dir.direccion[0] = 0.0; eje_dir.direccion[1] = 1.0; eje_dir.direccion[2] = 0.0;
-    agregarVector( eje_dir, 250.0, color, 1.0, mi_renderer);
+    agregarVector( eje_dir, 500.0, color, 0.010, mi_renderer);
 
     // Eje Z:
     color[0] = 0.0; color[1] = 0.0; color[2] = 1.0;
     eje_dir.direccion[0] = 0.0; eje_dir.direccion[1] = 0.0; eje_dir.direccion[2] = 1.0;
-    agregarVector( eje_dir, 250.0, color, 1.0, mi_renderer);
+    agregarVector( eje_dir, 750.0, color, 0.005, mi_renderer);
 }
 
 
