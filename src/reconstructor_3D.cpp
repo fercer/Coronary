@@ -153,12 +153,11 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
 
     const double mi_DDP = imgs_base[angio_ID].DDP;
 
-    double yy = - mis_rens/2 * mi_pixY + mi_pixY/2.0;
+    double yy = (1 - mis_rens)*mi_pixY/2.0;
 
     for( int y = 0; y < mis_rens; y++){
-        double xx = - mis_cols/2 * mi_pixX + mi_pixX/2.0;
+        double xx = (1 - mis_cols)*mi_pixX/2.0;
         for(int x = 0; x < mis_cols; x++){
-
             double xx_3D, yy_3D, zz_3D;
 
             // Mover los puntos segun indica el SID y SOD:
@@ -178,7 +177,6 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
             pix->GetPointIds()->SetId(0, xx + yy*mis_cols);
 
             pixeles[angio_ID]->InsertNextCell(pix);
-
             xx += mi_pixX;
         }
         yy += mi_pixY;
@@ -317,21 +315,18 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
+    renderer_global->AddActor(actor);
 
     // Mostrar el isocentro:
-    std::vector< NORCEN >::iterator mi_norma = normal_centros.begin() + angio_ID;
 
     /// Posicionar una esfera en el lugar del isocentro:
-
-    std::vector<IMGVTK>::iterator mi_imgvtk = imgs_base.begin() + angio_ID;
-    const double ICx = mi_norma->Cx + mi_imgvtk->DISO * mi_norma->Nx;
-    const double ICy = mi_norma->Cy + mi_imgvtk->DISO * mi_norma->Ny;
-    const double ICz = mi_norma->Cz + mi_imgvtk->DISO * mi_norma->Nz;
+    const double ICx = normal_centros[angio_ID].Cx + imgs_base[angio_ID].DISO * normal_centros[angio_ID].Nx;
+    const double ICy = normal_centros[angio_ID].Cy + imgs_base[angio_ID].DISO * normal_centros[angio_ID].Ny;
+    const double ICz = normal_centros[angio_ID].Cz + imgs_base[angio_ID].DISO * normal_centros[angio_ID].Nz;
     GETTIME_FIN;
 
 DEB_MSG("Tiempo en segundos para extraer un dato desde el vector de IMGVTK's: " << DIFTIME);
     // Setup render window, renderer, and interactor
-    renderer_global->AddActor(actor);
 }
 
 
@@ -771,7 +766,7 @@ RECONS3D::RECONS3D(){
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
 
     double color[] = {1.0, 1.0, 1.0};
-    agregarEsfera(0.0, 0.0, 0.0, 50.0, color, renderer_global);
+    agregarEsfera(0.0, 0.0, 0.0, 5.0, color, renderer_global);
     agregarEjes(renderer_global);
 
     n_angios = 0;
