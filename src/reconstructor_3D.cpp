@@ -81,7 +81,7 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
             puntos[angio_ID]->InsertNextPoint(xx_3D, yy_3D, zz_3D);
 
             vtkSmartPointer< vtkVertex > pix = vtkSmartPointer< vtkVertex >::New();
-            pix->GetPointIds()->SetId(0, xx + yy*mis_cols);
+            pix->GetPointIds()->SetId(0, x + y*mis_cols);
 
             pixeles[angio_ID]->InsertNextCell(pix);
 
@@ -504,9 +504,10 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
         // Mover el detector a su posicion definida por el archivo DICOM:
         mallarPuntos(n_angios);
-        mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
-        renderizar(mis_renderers[n_angios]);
-
+//        mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
+//        renderizar(mis_renderers[n_angios]);
+        mostrarImagen(n_angios, IMGVTK::BASE);
+        renderizar(renderer_global);
         if( strcmp(rutaground_input, "NULL") ){
             imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
             existe_ground.push_back( true );
