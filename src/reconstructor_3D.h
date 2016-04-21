@@ -121,10 +121,16 @@ class RECONS3D{
 
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
     // T I P O S        D E     D A T O S       Y       E S T R U C T U R A S       P R I V A D A S
-        // POS
+        // POS define la estructura para almacenar la posicion del artefacto que emula el detector.
         typedef struct{
             double puntos[5][3];
         } POS;
+
+        // NORISO define la estructura para almacenar la normal y el isocentro de una proyeccion.
+        typedef struct{
+            double Nx, Ny, Nz;  // Las componentes de la normal
+            double Cx, Cy, Cz; // El cenntro de la imagen.
+        } NORCEN;
 
     // M I E M B R O S      P R I V A D O S
         // Miembros para cargar las imagenes:
@@ -139,6 +145,7 @@ class RECONS3D{
         vtkSmartPointer<vtkRenderer> renderer_global;
         std::vector< vtkSmartPointer<vtkPoints> > puntos;
         std::vector< vtkSmartPointer<vtkCellArray> > pixeles;
+        std::vector< NORCEN > normal_centros;
 
     // M E T O D O S       P R I V A D O S
         void renderizar(vtkSmartPointer<vtkRenderer> mi_renderer);
@@ -147,6 +154,8 @@ class RECONS3D{
         void agregarEjes(vtkSmartPointer<vtkRenderer> mi_renderer);
         void agregarEsfera(const double x, const double y, const double z, const double radio, double color[3], vtkSmartPointer<vtkRenderer> mi_renderer );
 
+        void isoCentro( int *angios_ID );
+        void isoCentro( const int angio_ID );
         void mallarPuntos(const int angio_ID);
         POS posicionDefecto(const double ancho, const double alto, const double punta);
         void mostrarDetector(const int angio_ID);

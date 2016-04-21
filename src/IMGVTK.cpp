@@ -1358,6 +1358,18 @@ DEB_MSG("LAO: " << LAORAO);
 DEB_MSG("CRA: " << CRACAU);
             }
         }
+////---------- Extraer Source to Isocenter (Distancia de la fuente al isocentro): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x21, 0x1017) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                bv->PrintASCII(std::cout, bv->GetLength());
+                double SISO = *(double*)bv->GetPointer();
+                // Restar de la distancia de la fuente al detector (SID) la distancia del detector al isocentro para obtener la distancia del detector al isocentro (DISO).
+                DISO = SID - SISO;
+DEB_MSG("\33[31m" << "DISO: " << "\33[0m" << DISO << " / " << bv->GetPointer());
+            }
+        }
 ////---------- Extraer Window Center (Centro de los vlaores de interes): -----------------------------------------
         {
             const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x28, 0x1050) );

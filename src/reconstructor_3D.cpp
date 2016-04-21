@@ -41,6 +41,89 @@ void RECONS3D::renderizar( vtkSmartPointer<vtkRenderer> mi_renderer ){
 
 
 
+/*  Metodo: isoCentro
+
+    Funcion: Calcula un isocentro como la media de los isocentros.
+*/
+void RECONS3D::isoCentro( int *angios_ID ){
+
+}
+
+
+
+
+/*  Metodo: isoCentro
+
+    Funcion: Calcula el isocentro de la imagen 'angio_ID' como la linea que va desde el centro de la imagen al centro de la fuente.
+*/
+void RECONS3D::isoCentro( const int angio_ID ){
+    // Calcular la ecuacion del plano:
+    const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * PI);
+    const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * PI);
+    const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * PI);
+    const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
+
+    const int mis_cols = imgs_base[angio_ID].cols;
+    const int mis_rens = imgs_base[angio_ID].rens;
+
+    const double mi_DDP = imgs_base[angio_ID].DDP;
+
+    const double mi_pixX = imgs_base[angio_ID].pixX;
+    const double mi_pixY = imgs_base[angio_ID].pixY;
+
+    // Primer punto (0,0, DDP) ------------------------------------------------------------------------------
+    double xx = 0.0, yy = 0.0;
+    double Px, Py, Pz;
+
+    //// Rotacion usando el eje 'x' como base:
+    Py = crl*yy - srl*mi_DDP;
+    Pz = srl*yy + crl*mi_DDP;
+    //// Rotacion usando el eje 'y' como base:
+    Px = ccc*xx - scc*Pz;
+    Pz = scc*xx + ccc*Pz;
+
+
+    // Segundo punto (mis_cols,0, DDP) ------------------------------------------------------------------------------
+    xx = mis_cols*mi_pixX/2;
+    double Qx, Qy, Qz;
+
+    //// Rotacion usando el eje 'x' como base:
+    Qy = crl*yy - srl*mi_DDP;
+    Qz = srl*yy + crl*mi_DDP;
+    //// Rotacion usando el eje 'y' como base:
+    Qx = ccc*xx - scc*Qz;
+    Qz = scc*xx + ccc*Qz;
+
+
+
+    // Tercer punto (0, mis_rens, DDP) ------------------------------------------------------------------------------
+    xx = 0.0;
+    yy = mis_rens*mi_pixY/2;
+    double Rx, Ry, Rz;
+
+    //// Rotacion usando el eje 'x' como base:
+    Ry = crl*yy - srl*mi_DDP;
+    Rz = srl*yy + crl*mi_DDP;
+    //// Rotacion usando el eje 'y' como base:
+    Rx = ccc*xx - scc*Rz;
+    Rz = scc*xx + ccc*Rz;
+
+
+    //// Calcular la normal al plano:
+    std::vector< NORCEN >::iterator mi_normal = normal_centros.begin() + angio_ID;
+    mi_normal->Nx = (Qy - Py)*(Rz - Pz) - (Qz - Pz)*(Ry - Py);
+    mi_normal->Ny = (Qx - Px)*(Rz - Pz) - (Qz - Pz)*(Rx - Px);
+    mi_normal->Nz = (Qx - Px)*(Ry - Py) - (Qy - Py)*(Rx - Px);
+
+    /// Definir el centro de la imagen:
+    mi_normal->Cx = Px;
+    mi_normal->Cy = Py;
+    mi_normal->Cz = Pz;
+}
+
+
+
+
 /*  Metodo: mallaPuntos
 
     Funcion: Genera una malla de puntos para representar la imagen en un renderizador global.
@@ -59,12 +142,11 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
 
     const double mi_DDP = imgs_base[angio_ID].DDP;
 
-    double yy = - mis_rens/2 * mi_pixY + mi_pixY/2.0;
+    double yy = (1 - mis_rens)*mi_pixY/2.0;
 
     for( int y = 0; y < mis_rens; y++){
-        double xx = - mis_cols/2 * mi_pixX + mi_pixX/2.0;
+        double xx = (1 - mis_cols)*mi_pixX/2.0;
         for(int x = 0; x < mis_cols; x++){
-
             double xx_3D, yy_3D, zz_3D;
 
             // Mover los puntos segun indica el SID y SOD:
@@ -84,7 +166,6 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
             pix->GetPointIds()->SetId(0, x + y*mis_cols);
 
             pixeles[angio_ID]->InsertNextCell(pix);
-
             xx += mi_pixX;
         }
         yy += mi_pixY;
@@ -173,7 +254,6 @@ DEB_MSG("("<< img_idx <<"/" << IMGVTK::BASE << ") img_ptr: " << img_ptr);
     Funcion: Muestra la imagen en una ventana VTK usando el renderizador global.
 */
 void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
-
     const int mis_cols = imgs_base[angio_ID].cols;
     const int mis_rens = imgs_base[angio_ID].rens;
     const int mi_pixX = imgs_base[angio_ID].pixX;
@@ -222,9 +302,30 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
-
-    // Setup render window, renderer, and interactor
     renderer_global->AddActor(actor);
+
+    // Mostrar el isocentro:
+
+    /// Posicionar una esfera en el lugar del isocentro:
+    double t_iso = imgs_base[angio_ID].DISO;
+    DEB_MSG("t_iso = " << t_iso);
+
+    t_iso *= t_iso;
+    DEB_MSG("t_iso = " << t_iso);
+
+    t_iso = (normal_centros[angio_ID].Nx*normal_centros[angio_ID].Nx + normal_centros[angio_ID].Ny*normal_centros[angio_ID].Ny + normal_centros[angio_ID].Nz*normal_centros[angio_ID].Nz) / t_iso;
+    DEB_MSG("t_iso = " << t_iso);
+
+    const double ICx = normal_centros[angio_ID].Cx + t_iso * normal_centros[angio_ID].Nx;
+    const double ICy = normal_centros[angio_ID].Cy + t_iso * normal_centros[angio_ID].Ny;
+    const double ICz = normal_centros[angio_ID].Cz + t_iso * normal_centros[angio_ID].Nz;
+DEB_MSG("Isocentro: " << ICx << ", " << ICy << ", " << ICz);
+
+    double color[] = {0.0, 0.0, 1.0};
+    agregarEsfera(normal_centros[angio_ID].Cx, normal_centros[angio_ID].Cy, normal_centros[angio_ID].Cz, 17.0, color, renderer_global);
+
+    color[1] = 1.0;
+    agregarEsfera(ICx, ICy, ICz, 17.0, color, renderer_global);
 }
 
 
@@ -478,6 +579,8 @@ void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, co
 void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input){
 
 DEB_MSG("Ruta ground: " << rutaground_input);
+    NORCEN norcen_temp;
+
     if( nivel_u > nivel_l ){ // Si hay varios niveles:
 
         for( int i = nivel_l; i <= nivel_u; i++){
@@ -485,9 +588,12 @@ DEB_MSG("Ruta ground: " << rutaground_input);
             mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
             puntos.push_back(vtkSmartPointer<vtkPoints>::New());
             pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
+            normal_centros.push_back( norcen_temp );
 
             // Mover el detector a su posicion definida por el archivo DICOM:
             mallarPuntos(n_angios);
+            isoCentro(n_angios);
+
             mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
             renderizar(mis_renderers[n_angios]);
 
@@ -501,13 +607,17 @@ DEB_MSG("Ruta ground: " << rutaground_input);
         mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
         puntos.push_back(vtkSmartPointer<vtkPoints>::New());
         pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
+        normal_centros.push_back( norcen_temp );
+
 
         // Mover el detector a su posicion definida por el archivo DICOM:
         mallarPuntos(n_angios);
+        isoCentro(n_angios);
+
+        mostrarImagen( n_angios, IMGVTK::BASE);
+        renderizar(renderer_global);
 //        mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
 //        renderizar(mis_renderers[n_angios]);
-        mostrarImagen(n_angios, IMGVTK::BASE);
-        renderizar(renderer_global);
         if( strcmp(rutaground_input, "NULL") ){
             imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
             existe_ground.push_back( true );
@@ -654,7 +764,7 @@ RECONS3D::RECONS3D(){
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
 
     double color[] = {1.0, 1.0, 1.0};
-    agregarEsfera(0.0, 0.0, 0.0, 50.0, color, renderer_global);
+    agregarEsfera(0.0, 0.0, 0.0, 10.0, color, renderer_global);
     agregarEjes(renderer_global);
 
     n_angios = 0;
