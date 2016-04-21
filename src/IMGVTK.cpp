@@ -1363,11 +1363,11 @@ DEB_MSG("CRA: " << CRACAU);
             const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x21, 0x1017) );
             const gdcm::ByteValue *bv = de.GetByteValue();
             if( bv ){
-                bv->PrintASCII(std::cout, bv->GetLength());
-                double SISO = *(double*)bv->GetPointer();
+                gdcm::Element<gdcm::VR::SL, gdcm::VM::VM1_n> el;
+                el.Set( de.GetValue() );
+                const double SISO = el.GetValue();
                 // Restar de la distancia de la fuente al detector (SID) la distancia del detector al isocentro para obtener la distancia del detector al isocentro (DISO).
                 DISO = SID - SISO;
-DEB_MSG("\33[31m" << "DISO: " << "\33[0m" << DISO << " / " << bv->GetPointer());
             }
         }
 ////---------- Extraer Window Center (Centro de los vlaores de interes): -----------------------------------------
@@ -1830,6 +1830,7 @@ IMGVTK::IMGVTK(){
     SID = 1100.0;
     SOD = 400.0;
     DDP = SID - SOD;
+    DISO = SID / 2;
     LAORAO = 20.0;
     CRACAU = 20.0;
     pixX = 0.308;
@@ -1851,6 +1852,7 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
     SID = origen.SID;
     SOD = origen.SOD;
     DDP = SID - SOD;
+    DISO = origen.DISO;
     LAORAO = origen.LAORAO;
     CRACAU = origen.CRACAU;
     pixX = origen.pixX;
@@ -1922,6 +1924,7 @@ IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
     SID = 1100.0;
     SOD = 400.0;
     DDP = SID - SOD;
+    DISO = SID / 2;
     LAORAO = 20.0;
     CRACAU = 20.0;
     pixX = 0.308;
@@ -1944,6 +1947,7 @@ IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel)
     SID = 1100.0;
     SOD = 400.0;
     DDP = SID - SOD;
+    DISO = SID / 2;
     LAORAO = 20.0;
     CRACAU = 20.0;
     pixX = 0.308;
@@ -1980,6 +1984,7 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
     SID = origen.SID;
     SOD = origen.SOD;
     DDP = SID - SOD;
+    DISO = origen.DISO;
     LAORAO = origen.LAORAO;
     CRACAU = origen.CRACAU;
     pixX = origen.pixX;

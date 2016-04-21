@@ -20,6 +20,10 @@
 // Arreglos de VTK:
 #include <vtkUnsignedCharArray.h>
 #include <vtkDoubleArray.h>
+#include <vtkMath.h>
+#include <vtkTransform.h>
+#include <vtkMatrix4x4.h>
+#include <vtkTransformPolyDataFilter.h>
 
 // Actores:
 #include <vtkActor.h>
@@ -64,6 +68,7 @@
 #include <vtkSphereSource.h>
 #include <vtkPyramid.h>
 #include <vtkGlyph3D.h>
+#include <vtkArrowSource.h>
 
 
 #include <gdcmImageReader.h>
@@ -128,8 +133,8 @@ class RECONS3D{
 
         // NORISO define la estructura para almacenar la normal y el isocentro de una proyeccion.
         typedef struct{
-            double Nx, Ny, Nz;  // Las componentes de la normal
-            double Cx, Cy, Cz; // El cenntro de la imagen.
+            double direccion[3]; //Las componentes de la normal
+            double origen[3]; // El cenntro de la imagen.
         } NORCEN;
 
     // M I E M B R O S      P R I V A D O S
@@ -151,7 +156,10 @@ class RECONS3D{
         void renderizar(vtkSmartPointer<vtkRenderer> mi_renderer);
         void mostrarImagen(IMGVTK &imagen, IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer );
         void mostrarImagen(const int angio_ID, IMGVTK::IMG_IDX img_idx);
-        void agregarEjes(vtkSmartPointer<vtkRenderer> mi_renderer);
+
+
+        void agregarVector(NORCEN origen_direccion, const double t, double color[], double radio, vtkSmartPointer<vtkRenderer> &mi_renderer);
+        void agregarEjes(vtkSmartPointer<vtkRenderer> &mi_renderer);
         void agregarEsfera(const double x, const double y, const double z, const double radio, double color[3], vtkSmartPointer<vtkRenderer> mi_renderer );
 
         void isoCentro( int *angios_ID );

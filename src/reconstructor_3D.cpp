@@ -111,14 +111,14 @@ void RECONS3D::isoCentro( const int angio_ID ){
 
     //// Calcular la normal al plano:
     std::vector< NORCEN >::iterator mi_normal = normal_centros.begin() + angio_ID;
-    mi_normal->Nx = (Qy - Py)*(Rz - Pz) - (Qz - Pz)*(Ry - Py);
-    mi_normal->Ny = (Qx - Px)*(Rz - Pz) - (Qz - Pz)*(Rx - Px);
-    mi_normal->Nz = (Qx - Px)*(Ry - Py) - (Qy - Py)*(Rx - Px);
+    mi_normal->direccion[0] = (Qy - Py)*(Rz - Pz) - (Qz - Pz)*(Ry - Py);
+    mi_normal->direccion[1] = (Qx - Px)*(Rz - Pz) - (Qz - Pz)*(Rx - Px);
+    mi_normal->direccion[2] = (Qx - Px)*(Ry - Py) - (Qy - Py)*(Rx - Px);
 
     /// Definir el centro de la imagen:
-    mi_normal->Cx = Px;
-    mi_normal->Cy = Py;
-    mi_normal->Cz = Pz;
+    mi_normal->origen[0] = Px;
+    mi_normal->origen[1] = Py;
+    mi_normal->origen[2] = Pz;
 }
 
 
@@ -283,12 +283,13 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
 
     vtkSmartPointer<vtkDoubleArray> intensidades = vtkSmartPointer<vtkDoubleArray>::New();
 
-    intensidades->SetNumberOfComponents(1);
+    intensidades->SetNumberOfComponents(3);
     intensidades->SetName("Intensidadsdasdsads");
-
     for( int i = 0; i < mis_rens; i++){
         for(int j = 0; j < mis_cols; j++){
-            intensidades->InsertNextValue(img_ptr[(i+offset_y)*(mis_cols+offset_x*2) + (j+offset_x)]);
+            intensidades->InsertNextTupleValue(img_ptr[(i+offset_y)*(mis_cols+offset_x*2) + (j+offset_x)]);
+            intensidades->InsertNextTupleValue(img_ptr[(i+offset_y)*(mis_cols+offset_x*2) + (j+offset_x)]);
+            intensidades->InsertNextTupleValue(img_ptr[(i+offset_y)*(mis_cols+offset_x*2) + (j+offset_x)]);
         }
     }
 
@@ -313,12 +314,12 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
     t_iso *= t_iso;
     DEB_MSG("t_iso = " << t_iso);
 
-    t_iso = (normal_centros[angio_ID].Nx*normal_centros[angio_ID].Nx + normal_centros[angio_ID].Ny*normal_centros[angio_ID].Ny + normal_centros[angio_ID].Nz*normal_centros[angio_ID].Nz) / t_iso;
+    t_iso /= (normal_centros[angio_ID].Nx*normal_centros[angio_ID].Nx + normal_centros[angio_ID].Ny*normal_centros[angio_ID].Ny + normal_centros[angio_ID].Nz*normal_centros[angio_ID].Nz);
     DEB_MSG("t_iso = " << t_iso);
 
-    const double ICx = normal_centros[angio_ID].Cx + t_iso * normal_centros[angio_ID].Nx;
-    const double ICy = normal_centros[angio_ID].Cy + t_iso * normal_centros[angio_ID].Ny;
-    const double ICz = normal_centros[angio_ID].Cz + t_iso * normal_centros[angio_ID].Nz;
+    const double ICx = normal_centros[angio_ID].origen[0] + t_iso * normal_centros[angio_ID].direccion[0];
+    const double ICy = normal_centros[angio_ID].origen[1] + t_iso * normal_centros[angio_ID].direccion[1];
+    const double ICz = normal_centros[angio_ID].origen[2] + t_iso * normal_centros[angio_ID].direccion[2];
 DEB_MSG("Isocentro: " << ICx << ", " << ICy << ", " << ICz);
 
     double color[] = {0.0, 0.0, 1.0};
@@ -330,69 +331,75 @@ DEB_MSG("Isocentro: " << ICx << ", " << ICy << ", " << ICz);
 
 
 
+/*  Metodo: agregarVector
+
+    Funcion: Agrega un vector al renderizador definido.
+*/
+void RECONS3D::agregarVector(NORCEN origen_direccion, const double t, double color[3], double radio, vtkSmartPointer<vtkRenderer> &mi_renderer){
+    // Generar la matriz base donde se genera el vector:
+    vtkSmartPointer<vtkMatrix4x4> matrix_base = vtkSmartPointer<vtkMatrix4x4>::New();
+    matrix_base->Identity();
+
+    matrix_base->SetElement(0, 0, origen_direccion.direccion[0]); matrix_base->SetElement(0, 1, origen_direccion.direccion[1]); matrix_base->SetElement(0, 2, origen_direccion.direccion[2]);
+    matrix_base->SetElement(1, 0, origen_direccion.direccion[0]); matrix_base->SetElement(1, 1, origen_direccion.direccion[1]); matrix_base->SetElement(1, 2, origen_direccion.direccion[2]);
+    matrix_base->SetElement(2, 0, origen_direccion.direccion[0]); matrix_base->SetElement(2, 1, origen_direccion.direccion[1]); matrix_base->SetElement(2, 2, origen_direccion.direccion[2]);
+
+    // Definir la transformacion:
+    vtkSmartPointer<vtkTransform> transformacion = vtkSmartPointer<vtkTransform>::New();
+    transformacion->Translate( origen_direccion.origen ); // Mover la flecha al origen
+    transformacion->Concatenate( matrix_base ); // rotar la flecha en la direccion dada
+    transformacion->Scale(t, t, t); // dimensionar la flecha segun 't'
+
+    // Definir la transforamcion del polydata de la flecha:
+    vtkSmartPointer<vtkArrowSource> vec_flecha = vtkSmartPointer<vtkArrowSource>::New();
+    vec_flecha->SetShaftRadius( radio );
+    vec_flecha->SetTipLength( radio );
+
+    vtkSmartPointer<vtkTransformPolyDataFilter> transformar_flecha = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+    transformar_flecha->SetTransform(transformacion);
+    transformar_flecha->SetInputConnection(vec_flecha->GetOutputPort());
+
+    // Generar el mapper y el actor:
+    vtkSmartPointer<vtkPolyDataMapper> vec_mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    vec_mapper->SetInputConnection(transformar_flecha->GetOutputPort());
+
+    vtkSmartPointer<vtkActor> vec_actor = vtkSmartPointer<vtkActor>::New();
+    vec_actor->SetMapper(vec_mapper);
+    vec_actor->GetProperty()->SetColor( color );
+
+    // Agregar el actor al renderer:
+    mi_renderer->AddActor( vec_mapper );
+}
+
+
+
+
 
 /*  Metodo: agregarEjes
 
     Funcion: Muestra los ejes en que se encuentra la escena global respecto al paciente.
 */
-void RECONS3D::agregarEjes(vtkSmartPointer<vtkRenderer> mi_renderer){
+void RECONS3D::agregarEjes(vtkSmartPointer<vtkRenderer> &mi_renderer){
+    double color[3];
+    NORCEN eje_dir;
+    eje_dir.origen[0] = 0.0;
+    eje_dir.origen[1] = 0.0;
+    eje_dir.origen[2] = 0.0;
 
-    vtkSmartPointer<vtkPolyData> ejesPolyData = vtkSmartPointer<vtkPolyData>::New();
+    // Eje X:
+    color[0] = 1.0; color[1] = 0.0; color[2] = 0.0;
+    eje_dir.direccion[0] = 1.0; eje_dir.direccion[1] = 0.0; eje_dir.direccion[2] = 0.0;
+    agregarVector( eje_dir, 250.0, color, 1.0, mi_renderer);
 
-    // Posicion de los puntos en el espacio:
-    double origen[3] = { 0.0, 0.0, 0.0 };
-    double X[3] = { 512.0, 0.0, 0.0 };
-    double Y[3] = { 0.0, 512.0, 0.0 };
-    double Z[3] = { 0.0, 0.0, 512.0 };
+    // Eje Y:
+    color[0] = 0.0; color[1] = 1.0; color[2] = 0.0;
+    eje_dir.direccion[0] = 0.0; eje_dir.direccion[1] = 1.0; eje_dir.direccion[2] = 0.0;
+    agregarVector( eje_dir, 250.0, color, 1.0, mi_renderer);
 
-    // Create a vtkPoints container and store the points in it
-    vtkSmartPointer<vtkPoints> ejesPts = vtkSmartPointer<vtkPoints>::New();
-    ejesPts->InsertNextPoint(origen);
-    ejesPts->InsertNextPoint(X);
-    ejesPts->InsertNextPoint(Y);
-    ejesPts->InsertNextPoint(Z);
-
-    ejesPolyData->SetPoints(ejesPts);
-
-    // Crear las lineas de los ejes:
-    vtkSmartPointer<vtkLine> ejeX = vtkSmartPointer<vtkLine>::New();
-    ejeX->GetPointIds()->SetId(0, 0);
-    ejeX->GetPointIds()->SetId(1, 1);
-
-    vtkSmartPointer<vtkLine> ejeY = vtkSmartPointer<vtkLine>::New();
-    ejeY->GetPointIds()->SetId(0, 0);
-    ejeY->GetPointIds()->SetId(1, 2);
-
-    vtkSmartPointer<vtkLine> ejeZ = vtkSmartPointer<vtkLine>::New();
-    ejeZ->GetPointIds()->SetId(0, 0);
-    ejeZ->GetPointIds()->SetId(1, 3);
-
-    vtkSmartPointer<vtkCellArray> ejes = vtkSmartPointer<vtkCellArray>::New();
-    ejes->InsertNextCell(ejeX);
-    ejes->InsertNextCell(ejeY);
-    ejes->InsertNextCell(ejeZ);
-
-    ejesPolyData->SetLines(ejes);
-
-    unsigned char colX[3] = { 255, 0, 0 };
-    unsigned char colY[3] = { 0, 255, 0 };
-    unsigned char colZ[3] = { 0, 0, 255 };
-
-    vtkSmartPointer<vtkUnsignedCharArray> colores = vtkSmartPointer<vtkUnsignedCharArray>::New();
-    colores->SetNumberOfComponents(3);
-    colores->InsertNextTupleValue(colX);
-    colores->InsertNextTupleValue(colY);
-    colores->InsertNextTupleValue(colZ);
-    ejesPolyData->GetCellData()->SetScalars(colores);
-
-    // Setup the visualization pipeline
-    vtkSmartPointer<vtkPolyDataMapper> ejesMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    ejesMapper->SetInputData(ejesPolyData);
-
-    vtkSmartPointer<vtkActor> ejesActor = vtkSmartPointer<vtkActor>::New();
-    ejesActor->SetMapper(ejesMapper);
-
-    mi_renderer->AddActor( ejesActor );
+    // Eje Z:
+    color[0] = 0.0; color[1] = 0.0; color[2] = 1.0;
+    eje_dir.direccion[0] = 0.0; eje_dir.direccion[1] = 0.0; eje_dir.direccion[2] = 1.0;
+    agregarVector( eje_dir, 250.0, color, 1.0, mi_renderer);
 }
 
 
