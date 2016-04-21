@@ -158,7 +158,7 @@ class RECONS3D{
         void mostrarImagen(const int angio_ID, IMGVTK::IMG_IDX img_idx);
 
 
-        void agregarVector(NORCEN origen_direccion, const double t, double color[], double radio, vtkSmartPointer<vtkRenderer> &mi_renderer);
+        void agregarVector(NORCEN org_dir, const double t, double color[], vtkSmartPointer<vtkRenderer> &mi_renderer);
         void agregarEjes(vtkSmartPointer<vtkRenderer> &mi_renderer);
         void agregarEsfera(const double x, const double y, const double z, const double radio, double color[3], vtkSmartPointer<vtkRenderer> mi_renderer );
 
