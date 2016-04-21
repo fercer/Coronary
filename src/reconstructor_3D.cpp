@@ -41,6 +41,100 @@ void RECONS3D::renderizar( vtkSmartPointer<vtkRenderer> mi_renderer ){
 
 
 
+/*  Metodo: isoCentro
+
+    Funcion: Calcula un isocentro como la media de los isocentros.
+*/
+void RECONS3D::isoCentro( int *angios_ID ){
+
+}
+
+
+
+
+/*  Metodo: isoCentro
+
+    Funcion: Calcula el isocentro de la imagen 'angio_ID' como la linea que va desde el centro de la imagen al centro de la fuente.
+*/
+void RECONS3D::isoCentro( const int angio_ID ){
+    // Calcular la ecuacion del plano:
+    const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * PI);
+    const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * PI);
+    const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * PI);
+    const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
+
+    const int mis_cols = imgs_base[angio_ID].cols;
+    const int mis_rens = imgs_base[angio_ID].rens;
+
+    const double mi_DDP = imgs_base[angio_ID].DDP;
+
+    // Primer punto (0,0, DDP) ------------------------------------------------------------------------------
+    double xx = 0.0, yy = 0.0;
+    double Px, Py, Pz;
+
+    //// Rotacion usando el eje 'x' como base:
+    Py = crl*yy - srl*mi_DDP;
+    Pz = srl*yy + crl*mi_DDP;
+    //// Rotacion usando el eje 'y' como base:
+    Px = ccc*xx - scc*Pz;
+    Pz = scc*xx + ccc*Pz;
+
+
+    // Segundo punto (mis_cols,0, DDP) ------------------------------------------------------------------------------
+    xx = mis_cols;
+    double Qx, Qy, Qz;
+
+    //// Rotacion usando el eje 'x' como base:
+    Qy = crl*yy - srl*mi_DDP;
+    Qz = srl*yy + crl*mi_DDP;
+    //// Rotacion usando el eje 'y' como base:
+    Qx = ccc*xx - scc*Qz;
+    Qz = scc*xx + ccc*Qz;
+
+
+
+    // Tercer punto (0, mis_rens, DDP) ------------------------------------------------------------------------------
+    xx = 0.0;
+    yy = mis_rens;
+    double Rx, Ry, Rz;
+
+    //// Rotacion usando el eje 'x' como base:
+    Ry = crl*yy - srl*mi_DDP;
+    Rz = srl*yy + crl*mi_DDP;
+    //// Rotacion usando el eje 'y' como base:
+    Rx = ccc*xx - scc*Rz;
+    Rz = scc*xx + ccc*Rz;
+
+
+    //// Calcular la normal al plano:
+    std::vector< NORCEN >::iterator mi_normal = normal_centros.begin() + angio_ID;
+    mi_normal->Nx = (Qy - Py)*(Rz - Pz) - (Qz - Pz)*(Ry - Py);
+    mi_normal->Ny = (Qx - Px)*(Rz - Pz) - (Qz - Pz)*(Rx - Px);
+    mi_normal->Nz = (Qx - Px)*(Ry - Py) - (Qy - Py)*(Rx - Px);
+
+    /// Definir el centro de la imagen:
+    const double mi_pixX = imgs_base[angio_ID].pixX;
+    const double mi_pixY = imgs_base[angio_ID].pixY;
+    xx = (mis_cols+1)*mi_pixX / 2;
+    yy = (mis_rens+1)*mi_pixY / 2;
+
+    double Cx, Cy, Cz;
+
+    //// Rotacion usando el eje 'x' como base:
+    Cy = crl*yy - srl*mi_DDP;
+    Cz = srl*yy + crl*mi_DDP;
+    //// Rotacion usando el eje 'y' como base:
+    Cx = ccc*xx - scc*Cz;
+    Cz = scc*xx + ccc*Cz;
+
+    mi_normal->Cx = Cx;
+    mi_normal->Cy = Cy;
+    mi_normal->Cz = Cz;
+}
+
+
+
+
 /*  Metodo: mallaPuntos
 
     Funcion: Genera una malla de puntos para representar la imagen en un renderizador global.
@@ -173,7 +267,8 @@ DEB_MSG("("<< img_idx <<"/" << IMGVTK::BASE << ") img_ptr: " << img_ptr);
     Funcion: Muestra la imagen en una ventana VTK usando el renderizador global.
 */
 void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
-
+    TIMERS;
+    GETTIME_INI;
     const int mis_cols = imgs_base[angio_ID].cols;
     const int mis_rens = imgs_base[angio_ID].rens;
     const int mi_pixX = imgs_base[angio_ID].pixX;
@@ -223,6 +318,18 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
+    // Mostrar el isocentro:
+    std::vector< NORCEN >::iterator mi_norma = normal_centros.begin() + angio_ID;
+
+    /// Posicionar una esfera en el lugar del isocentro:
+
+    std::vector<IMGVTK>::iterator mi_imgvtk = imgs_base.begin() + angio_ID;
+    const double ICx = mi_norma->Cx + mi_imgvtk->DISO * mi_norma->Nx;
+    const double ICy = mi_norma->Cy + mi_imgvtk->DISO * mi_norma->Ny;
+    const double ICz = mi_norma->Cz + mi_imgvtk->DISO * mi_norma->Nz;
+    GETTIME_FIN;
+
+DEB_MSG("Tiempo en segundos para extraer un dato desde el vector de IMGVTK's: " << DIFTIME);
     // Setup render window, renderer, and interactor
     renderer_global->AddActor(actor);
 }
@@ -478,6 +585,8 @@ void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, co
 void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input){
 
 DEB_MSG("Ruta ground: " << rutaground_input);
+    NORCEN norcen_temp;
+
     if( nivel_u > nivel_l ){ // Si hay varios niveles:
 
         for( int i = nivel_l; i <= nivel_u; i++){
@@ -485,9 +594,12 @@ DEB_MSG("Ruta ground: " << rutaground_input);
             mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
             puntos.push_back(vtkSmartPointer<vtkPoints>::New());
             pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
+            normal_centros.push_back( norcen_temp );
 
             // Mover el detector a su posicion definida por el archivo DICOM:
             mallarPuntos(n_angios);
+            isoCentro(n_angios);
+
             mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
             renderizar(mis_renderers[n_angios]);
 
@@ -501,11 +613,17 @@ DEB_MSG("Ruta ground: " << rutaground_input);
         mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
         puntos.push_back(vtkSmartPointer<vtkPoints>::New());
         pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
+        normal_centros.push_back( norcen_temp );
+
 
         // Mover el detector a su posicion definida por el archivo DICOM:
         mallarPuntos(n_angios);
-        mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
-        renderizar(mis_renderers[n_angios]);
+        isoCentro(n_angios);
+
+        mostrarImagen( n_angios, IMGVTK::BASE);
+        renderizar(renderer_global);
+//        mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
+//        renderizar(mis_renderers[n_angios]);
 
         if( strcmp(rutaground_input, "NULL") ){
             imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));

@@ -124,7 +124,7 @@ class IMGVTK{
         double *threshold_ptr;
 
         //// Datos extraidos del archivo DICOM:
-        double SID, SOD, DDP;
+        double SID, SOD, DDP, DISO;
         double LAORAO, CRACAU;
         double WCenter, WWidth;
         double pixX, pixY, cenX, cenY;
