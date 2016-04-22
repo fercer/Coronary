@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "pars_fercer.c"
+#include "IMGVTK.h"
 #include "reconstructor_3D.h"
 
 #include <iostream>
@@ -18,13 +19,10 @@
 
 #include <iostream>
 
-
-
 /*  Funcion: definirParametros
     Descripcion: Define los parametros de entrada del programa (Hard-coded).
 */
 void definirParametros(PARS_ENTRADA *parametros){
-
     // Parametro input base:
     parametros[0].mi_tipo = CHAR;
     sprintf(parametros[0].short_tag, "-b1");
@@ -96,9 +94,6 @@ void definirParametros(PARS_ENTRADA *parametros){
 
 
 
-
-
-
     // Parametro input ground:
     parametros[9].mi_tipo = CHAR;
     sprintf(parametros[9].short_tag, "-g1");
@@ -122,209 +117,301 @@ void definirParametros(PARS_ENTRADA *parametros){
     sprintf(parametros[11].mi_default.par_s, "NULL");
     sprintf(parametros[11].pregunta, "Imagen usada como ground truth (.PNG, .BMP, .JPEG/.JPG) para la imagen base 3");
     parametros[11].opcional = 1;
+
+    ////---------------------------------------------------------------------- PARA GENERAR IMAGENES PHANTOM EN ARCHIVO DICOM
+    // Parametro output phantom
+    parametros[12].mi_tipo = CHAR;
+    sprintf(parametros[12].short_tag, "-op");
+    sprintf(parametros[12].long_tag, "--output-phantom");
+    sprintf(parametros[12].mi_default.par_s, "NULL");
+    sprintf(parametros[12].pregunta, "[GENERAR ARHCIVO DICOM PARA UN PHANTOM] Ruta de salida del archivo DICOM generado en base al phantom");
+    parametros[12].opcional = 1;
+
+    // Parametro SID nuevo
+    parametros[13].mi_tipo = DOUBLE;
+    sprintf(parametros[13].short_tag, "-SI");
+    sprintf(parametros[13].long_tag, "--SID");
+    parametros[13].mi_default.par_d = 1000.0;
+    sprintf(parametros[13].pregunta, "[GENERAR ARHCIVO DICOM PARA UN PHANTOM] Distancia de la fuente al detector para la imagen phantom generada");
+    parametros[13].opcional = 1;
+
+    // Parametro SOD nuevo
+    parametros[14].mi_tipo = DOUBLE;
+    sprintf(parametros[14].short_tag, "-SO");
+    sprintf(parametros[14].long_tag, "--SOD");
+    parametros[14].mi_default.par_d = 400.0;
+    sprintf(parametros[14].pregunta, "[GENERAR ARHCIVO DICOM PARA UN PHANTOM] Distancia de la fuente al paciente para la imagen phantom generada");
+    parametros[14].opcional = 1;
+
+    // Parametro SISO nuevo
+    parametros[15].mi_tipo = DOUBLE;
+    sprintf(parametros[15].short_tag, "-ISO");
+    sprintf(parametros[15].long_tag, "--S-ISO");
+    parametros[15].mi_default.par_d = 400.0;
+    sprintf(parametros[15].pregunta, "[GENERAR ARHCIVO DICOM PARA UN PHANTOM] Distancia de la fuente al iso-centro para la imagen phantom generada");
+    parametros[15].opcional = 1;
+
+    // Parametro LAO/RAO nuevo
+    parametros[16].mi_tipo = DOUBLE;
+    sprintf(parametros[16].short_tag, "-LR");
+    sprintf(parametros[16].long_tag, "--LAO-RAO");
+    parametros[16].mi_default.par_d = 0.0;
+    sprintf(parametros[16].pregunta, "[GENERAR ARHCIVO DICOM PARA UN PHANTOM] Angulo LAO(-)/RAO(+)");
+    parametros[16].opcional = 1;
+
+    // Parametro CRA/CAU nuevo
+    parametros[17].mi_tipo = DOUBLE;
+    sprintf(parametros[17].short_tag, "-CC");
+    sprintf(parametros[17].long_tag, "--CRA-CUA");
+    parametros[17].mi_default.par_d = 0.0;
+    sprintf(parametros[17].pregunta, "[GENERAR ARHCIVO DICOM PARA UN PHANTOM] Angulo CRA(-)/CAU(+)");
+    parametros[17].opcional = 1;
+
+    // Parametro pixX nuevo
+    parametros[18].mi_tipo = DOUBLE;
+    sprintf(parametros[18].short_tag, "-px");
+    sprintf(parametros[18].long_tag, "--pix-X");
+    parametros[18].mi_default.par_d = 0.2;
+    sprintf(parametros[18].pregunta, "[GENERAR ARHCIVO DICOM PARA UN PHANTOM] Espaciado en mm entre el centro de un pixel a otro en el centro de la imagen");
+    parametros[18].opcional = 1;
+
+    // Parametro pixY nuevo
+    parametros[19].mi_tipo = DOUBLE;
+    sprintf(parametros[19].short_tag, "-py");
+    sprintf(parametros[19].long_tag, "--pix-Y");
+    parametros[19].mi_default.par_d = 0.2;
+    sprintf(parametros[19].pregunta, "[GENERAR ARHCIVO DICOM PARA UN PHANTOM] Espaciado en mm entre el centro de un pixel a otro en el centro de la imagen");
+    parametros[19].opcional = 1;
 }
 
 
+void genDICOM(const char *ruta_origen, const char *ruta_salida ){
 
+    // Abrir la imagen:
+    IMGVTK img_phantom( ruta_origen, false, 0);
+    const int mis_cols = img_phantom.cols;
+    const int mis_rens = img_phantom.rens;
+    const int mis_rens_cols = img_phantom.rens_cols;
 
+    // Alojar memoria para la imagen dentro del archivo DICOM:
+    gdcm::SmartPointer<gdcm::Image> im = new gdcm::Image;
 
-int main(int argc, char** argv ){
-/*
-    // Step 1: Fake Image
-      gdcm::SmartPointer<gdcm::Image> im = new gdcm::Image;
+    char * buffer = new char[mis_rens_cols];
 
-      char * buffer = new char[ 256 * 256 * 3];
-      char * p = buffer;
-      int b = 128;
-      //int ybr[3];
-      int rgb[3];
-      //int rgb[3];
+    im->SetNumberOfDimensions( 2 );
+    im->SetDimension(0, mis_cols );
+    im->SetDimension(1, mis_rens);
 
-      for(int y = 0; y < 256; ++y){
-        for(int x = 0; x < 256; ++x){
-          *p++ = (char)x;
-          *p++ = (char)y;
-          *p++ = (char)128;
+    // Almacenar la imagen phantom al archivo DICOM:
+    for( int y = 0; y < mis_rens; y++ ){
+        for( int x = 0; x < mis_cols; x++ ){
+            *(buffer + x + y*mis_cols) = (char) (255.0 * *(img_phantom.base_ptr + x + (mis_rens - y - 1)*mis_cols));
         }
-      }
+    }
 
-      im->SetNumberOfDimensions( 2 );
-      im->SetDimension(0, 256 );
-      im->SetDimension(1, 256 );
+    im->GetPixelFormat().SetSamplesPerPixel(1);
+    im->SetPhotometricInterpretation( gdcm::PhotometricInterpretation::MONOCHROME1 );
 
-      im->GetPixelFormat().SetSamplesPerPixel(3);
-      im->SetPhotometricInterpretation( gdcm::PhotometricInterpretation::RGB );
+    unsigned long l = im->GetBufferLength();
 
-      unsigned long l = im->GetBufferLength();
-      if( l != 256 * 256 * 3 )
-        {
-        return 1;
-        }
+    if( l != mis_rens_cols ){
+        std::cout << "\33[44m" << "<<Error al generar la imagen para el archivo DICOM>>" << "\33[0m" << std::endl;
+        delete[] buffer;
+        return;
+    }
 
-      gdcm::DataElement pixeldata( gdcm::Tag(0x7fe0,0x0010) );
-      pixeldata.SetByteValue( buffer, (uint32_t)l );
-      delete[] buffer;
-      im->SetDataElement( pixeldata );
+    gdcm::DataElement pixeldata( gdcm::Tag(0x7fe0,0x0010) );
+    pixeldata.SetByteValue( buffer, (uint32_t)l );
+    im->SetDataElement( pixeldata );
 
-      gdcm::UIDGenerator uid; // helper for uid generation
+    // Agregar la informacion:
+    gdcm::UIDGenerator uid; // helper for uid generation
 
-      gdcm::SmartPointer<gdcm::File> file = new gdcm::File; // empty file
+    gdcm::SmartPointer<gdcm::File> file = new gdcm::File; // empty file
 
-      // Step 2: DERIVED object
-      gdcm::FileDerivation fd;
-      // For the pupose of this execise we will pretend that this image is referencing
-      // two source image (we need to generate fake UID for that).
-      const char ReferencedSOPClassUID[] = "1.2.840.10008.5.1.4.1.1.7"; // Secondary Capture
-      fd.AddReference( ReferencedSOPClassUID, uid.Generate() );
-      fd.AddReference( ReferencedSOPClassUID, uid.Generate() );
+    // Step 2: DERIVED object
+    gdcm::FileDerivation fd;
 
-      // Again for the purpose of the exercise we will pretend that the image is a
-      // multiplanar reformat (MPR):
-      // CID 7202 Source Image Purposes of Reference
-      // {"DCM",121322,"Source image for image processing operation"},
-      fd.SetPurposeOfReferenceCodeSequenceCodeValue( 121322 );
-      // CID 7203 Image Derivation
-      // { "DCM",113072,"Multiplanar reformatting" },
-      fd.SetDerivationCodeSequenceCodeValue( 113072 );
-      fd.SetFile( *file );
-      // If all Code Value are ok the filter will execute properly
-      if( !fd.Derive() )
-        {
-        std::cerr << "Sorry could not derive using input info" << std::endl;
-        return 1;
-        }
+    // For the pupose of this execise we will pretend that this image is referencing
+    // two source image (we need to generate fake UID for that).
+    const char ReferencedSOPClassUID[] = "1.2.840.10008.5.1.4.1.1.12.1"; // Secondary Capture
+    fd.AddReference( ReferencedSOPClassUID, uid.Generate() );
 
-      // We pass both :
-      // 1. the fake generated image
-      // 2. the 'DERIVED' dataset object
-      // to the writer.
-      gdcm::ImageWriter w;
-      w.SetImage( *im );
-      w.SetFile( fd.GetFile() );
+    // Again for the purpose of the exercise we will pretend that the image is a
+    // multiplanar reformat (MPR):
+    // CID 7202 Source Image Purposes of Reference
+    // {"DCM",121322,"Source image for image processing operation"},
+    fd.SetPurposeOfReferenceCodeSequenceCodeValue( 121322 );
 
-      // Set the filename:
-      w.SetFileName( "rgb_new.dcm" );
-      if( !w.Write() )
-        {
-        return 1;
-        }
+    // CID 7203 Image Derivation
+    // { "DCM",113072,"Multiplanar reformatting" },
+    fd.SetDerivationCodeSequenceCodeValue( 113072 );
+    fd.SetFile( *file );
 
-      return 0;
-*/
-      /*
 
-    if( argc < 3 )
-      {
-      std::cerr << argv[0] << " input.dcm output.dcm" << std::endl;
-      return 1;
-      }
-    const char *filename = argv[1];
-    const char *outfilename = argv[2];
 
-    // Instanciate the reader:
-    gdcm::Reader reader;
-    reader.SetFileName( filename );
-    if( !reader.Read() )
-      {
-      std::cerr << "Could not read: " << filename << std::endl;
-      return 1;
-      }
+    // If all Code Value are ok the filter will execute properly
+    if( !fd.Derive() ){
+      std::cerr << "Sorry could not derive using input info" << std::endl;
+      return;
+    }
+    gdcm::DataSet &ds = fd.GetFile().GetDataSet();
 
-    // If we reach here, we know for sure only 1 thing:
-    // It is a valid DICOM file (potentially an old ACR-NEMA 1.0/2.0 file)
-    // (Maybe, it's NOT a Dicom image -could be a DICOMDIR, a RTSTRUCT, etc-)
-
-    // The output of gdcm::Reader is a gdcm::File
-    gdcm::File &file = reader.GetFile();
-
-    // the dataset is the the set of element we are interested in:
-    gdcm::DataSet &ds = file.GetDataSet();
-
-    // Contruct a static(*) type for Image Comments :
+    // Decir que la imagen es PHANTOM:
     gdcm::Attribute<0x0020,0x4000> imagecomments;
-    imagecomments.SetValue( "Hello, World !" );
+    imagecomments.SetValue( "Phantom" );
 
-    gdcm::Attribute<0x0018,0x1110> nuevo_DSD;
-    nuevo_DSD.SetValue( 1118.0 );
+    gdcm::Attribute<0x0018,0x1110> nuevo_SID;
+    nuevo_SID.SetValue( 1118.0 );
 
-    gdcm::Attribute<0x0019,0x1000> nuevo_ReviewMode;
-    nuevo_ReviewMode.SetValue( NULL );
+    gdcm::Attribute<0x0018,0x1111> nuevo_SOD;
+    nuevo_SOD.SetValue( 800.0 );
 
     // Now replace the Image Comments from the dataset with our:
     ds.Replace( imagecomments.GetAsDataElement() );
-    ds.Replace( nuevo_DSD.GetAsDataElement() );
+    ds.Replace( nuevo_SID.GetAsDataElement() );
+    ds.Replace( nuevo_SOD.GetAsDataElement() );
+
+    // Incluir los datos al archivo DICOM
+    gdcm::ImageWriter w;
+    w.CheckFileMetaInformationOff();
+    w.SetImage( *im );
+    w.SetFile( fd.GetFile() );
+
+    // Set the filename:
+    w.SetFileName( ruta_salida );
+    if( !w.Write() ){
+        std::cout << "\33[14m" << "<<Error al guardar el archivo DICOM>>" << "\33[0m" << std::endl;
+        return;
+    }
+
+    return;
+
+/*
+         if( argc < 3 )
+          {
+          std::cerr << argv[0] << " input.dcm output.dcm" << std::endl;
+          return 1;
+          }
+        const char *filename = argv[1];
+        const char *outfilename = argv[2];
+
+        // Instanciate the reader:
+        gdcm::Reader reader;
+        reader.SetFileName( filename );
+        if( !reader.Read() )
+          {
+          std::cerr << "Could not read: " << filename << std::endl;
+          return 1;
+          }
+
+        // If we reach here, we know for sure only 1 thing:
+        // It is a valid DICOM file (potentially an old ACR-NEMA 1.0/2.0 file)
+        // (Maybe, it's NOT a Dicom image -could be a DICOMDIR, a RTSTRUCT, etc-)
+
+        // The output of gdcm::Reader is a gdcm::File
+        gdcm::File &file = reader.GetFile();
+
+        // the dataset is the the set of element we are interested in:
+        gdcm::DataSet &ds = file.GetDataSet();
+
+        // Contruct a static(*) type for Image Comments :
+        gdcm::Attribute<0x0020,0x4000> imagecomments;
+        imagecomments.SetValue( "Phantom" );
+
+        gdcm::Attribute<0x0018,0x1110> nuevo_SID;
+        nuevo_SID.SetValue( 1118.0 );
+
+        gdcm::Attribute<0x0018,0x1110> nuevo_SID;
+        nuevo_SID.SetValue( 1118.0 );
+
+        gdcm::Attribute<0x0019,0x1000> nuevo_ReviewMode;
+        nuevo_ReviewMode.SetValue( NULL );
+
+        // Now replace the Image Comments from the dataset with our:
+        ds.Replace( imagecomments.GetAsDataElement() );
+        ds.Replace( nuevo_DSD.GetAsDataElement() );
 
 
-    // Write the modified DataSet back to disk
-    gdcm::Writer writer;
-    writer.CheckFileMetaInformationOff(); // Do not attempt to reconstruct the file meta to preserve the file
-                                          // as close to the original as possible.
-    writer.SetFileName( outfilename );
-    writer.SetFile( file );
-    if( !writer.Write() )
-      {
-      std::cerr << "Could not write: " << outfilename << std::endl;
-      return 1;
-      }
+        // Write the modified DataSet back to disk
+        gdcm::Writer writer;
+        writer.CheckFileMetaInformationOff(); // Do not attempt to reconstruct the file meta to preserve the file
+                                              // as close to the original as possible.
+        writer.SetFileName( outfilename );
+        writer.SetFile( file );
+        if( !writer.Write() )
+          {
+          std::cerr << "Could not write: " << outfilename << std::endl;
+          return 1;
+          }
 
-    return 0;
+        return 0;
+*/
+}
 
-    */
 
+int main(int argc, char** argv ){
     // Definir los parametros de entrada:
-    PARS_ENTRADA *parametros = new PARS_ENTRADA [12];
+    PARS_ENTRADA *parametros = new PARS_ENTRADA [20];
     definirParametros( parametros );
 
     if( argc < 2 ){
-        mostrar_ayuda(parametros, 12, "Coronary");
+        mostrar_ayuda(parametros, 20, "Coronary");
         delete [] parametros;
         return EXIT_FAILURE;
     }
     // Revisar los parametros de entrada:
-    revisar_pars(parametros, 12, &argc, argv);
+    revisar_pars(parametros, 20, &argc, argv);
 
-    RECONS3D reconstructor;
 
-    DEB_MSG("Base: " << parametros[0].mi_valor.par_s <<  ", Ground truth: " << parametros[9].mi_valor.par_s);
-    reconstructor.agregarInput(parametros[0].mi_valor.par_s, parametros[1].mi_valor.par_i, parametros[2].mi_valor.par_i, parametros[9].mi_valor.par_s);
+    // Si se va a generar un archivo DICOM par aun phantom, no se genera el reconstructor 3D:
+    if( strcmp( parametros[12].mi_valor.par_s , "NULL" ) ){ /// Generar archivo DICOM
+        genDICOM( parametros[0].mi_valor.par_s, parametros[12].mi_valor.par_s);
 
-    if( strcmp(parametros[3].mi_valor.par_s, "NULL") ){
-        DEB_MSG("Base (" << strcmp(parametros[3].mi_valor.par_s, "NULL") << " " << (strcmp(parametros[3].mi_valor.par_s, "NULL") == 0) << "): " << parametros[3].mi_valor.par_s <<  ", Ground truth: " << parametros[10].mi_valor.par_s);
-        reconstructor.agregarInput(parametros[3].mi_valor.par_s, parametros[4].mi_valor.par_i, parametros[5].mi_valor.par_i, parametros[10].mi_valor.par_s);
+    }else{ /// Reconstruir arteria:
+        RECONS3D reconstructor;
+
+        DEB_MSG("Base: " << parametros[0].mi_valor.par_s <<  ", Ground truth: " << parametros[9].mi_valor.par_s);
+        reconstructor.agregarInput(parametros[0].mi_valor.par_s, parametros[1].mi_valor.par_i, parametros[2].mi_valor.par_i, parametros[9].mi_valor.par_s);
+
+        if( strcmp(parametros[3].mi_valor.par_s, "NULL") ){
+            DEB_MSG("Base (" << strcmp(parametros[3].mi_valor.par_s, "NULL") << " " << (strcmp(parametros[3].mi_valor.par_s, "NULL") == 0) << "): " << parametros[3].mi_valor.par_s <<  ", Ground truth: " << parametros[10].mi_valor.par_s);
+            reconstructor.agregarInput(parametros[3].mi_valor.par_s, parametros[4].mi_valor.par_i, parametros[5].mi_valor.par_i, parametros[10].mi_valor.par_s);
+        }
+        if( strcmp(parametros[6].mi_valor.par_s, "NULL")){
+            DEB_MSG("Base: " << parametros[6].mi_valor.par_s <<  ", Ground truth: " << parametros[11].mi_valor.par_s);
+            reconstructor.agregarInput(parametros[6].mi_valor.par_s, parametros[7].mi_valor.par_i, parametros[8].mi_valor.par_i, parametros[11].mi_valor.par_s);
+        }
+
+    ///*********************************************************************************************
+    ///             BUSQUEDA EXHAUSTIVA DE LOS PARAMETROS:
+    ///*********************************************************************************************
+
+    //    char *rutas_base[20];
+    //    char *rutas_grd[20];
+    //    char ruta_dir[] = "/home/fercer/test_data/40Gabor/ang_";
+
+    //    for(int i = 0; i < 20; i++){
+    //        rutas_base[i] = new char[256];
+    //        sprintf(rutas_base[i], "%s%i.png", ruta_dir, i+1);
+    //        rutas_grd[i] = new char[256];
+    //        sprintf(rutas_grd[i], "%s%i_gt.png", ruta_dir, i+1);;
+    //    }
+
+    //    RECONS3D reconstructor( rutas_base, rutas_grd, 20 );
+
+    //    for(int i = 0; i < 20; i++){
+    //        delete [] rutas_base[i];
+    //        delete [] rutas_grd[i];
+    //    }
+
+
+    //    reconstructor.segmentarImagenBase();
+    //    reconstructor.skeletonize();
+
+
+
     }
-    if( strcmp(parametros[6].mi_valor.par_s, "NULL")){
-        DEB_MSG("Base: " << parametros[6].mi_valor.par_s <<  ", Ground truth: " << parametros[11].mi_valor.par_s);
-        reconstructor.agregarInput(parametros[6].mi_valor.par_s, parametros[7].mi_valor.par_i, parametros[8].mi_valor.par_i, parametros[11].mi_valor.par_s);
-    }
-
-///*********************************************************************************************
-///             BUSQUEDA EXHAUSTIVA DE LOS PARAMETROS:
-///*********************************************************************************************
-
-//    char *rutas_base[20];
-//    char *rutas_grd[20];
-//    char ruta_dir[] = "/home/fercer/test_data/40Gabor/ang_";
-
-//    for(int i = 0; i < 20; i++){
-//        rutas_base[i] = new char[256];
-//        sprintf(rutas_base[i], "%s%i.png", ruta_dir, i+1);
-//        rutas_grd[i] = new char[256];
-//        sprintf(rutas_grd[i], "%s%i_gt.png", ruta_dir, i+1);;
-//    }
-
-//    RECONS3D reconstructor( rutas_base, rutas_grd, 20 );
-
-//    for(int i = 0; i < 20; i++){
-//        delete [] rutas_base[i];
-//        delete [] rutas_grd[i];
-//    }
-
-
-//    reconstructor.segmentarImagenBase();
-//    reconstructor.skeletonize();
-
     delete [] parametros;
-
     return EXIT_SUCCESS;
-
 }

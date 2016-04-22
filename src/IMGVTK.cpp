@@ -829,8 +829,9 @@ void IMGVTK::maskFOV( double * img_tmp, double *mask_tmp, const int mis_cols, co
     int *mis_conjuntos = new int [mis_rens_cols];
 
     // Se buscan los conjuntos que no esten en las esquinas para eliminarlos
-    unsigned int *mis_n_etiquetados = conjuntosConexos(mask_tmp, mis_conjuntos, mis_cols, mis_rens);
+    unsigned int *mis_n_etiquetados = conjuntosConexosDinamico(mask_tmp, mis_conjuntos, mis_cols, mis_rens);
     delete [] mis_n_etiquetados;
+
 
     //// etiqueta de los conjuntos donde existe una esquina
     const int NO = mis_conjuntos[0], NE = mis_conjuntos[mis_cols-1], SO = mis_conjuntos[(mis_rens-1)*mis_cols], SE = mis_conjuntos[mis_rens_cols-1];
@@ -846,7 +847,6 @@ void IMGVTK::maskFOV( double * img_tmp, double *mask_tmp, const int mis_cols, co
             mask_tmp[xy] = 1.0;
         }
     }
-
     delete [] mis_conjuntos;
 }
 
@@ -1322,6 +1322,7 @@ DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
         DDP = SID - SOD;
 ////---------- Calcular el Magnification Factor: -----------------------------------------
         const double Magnification = SID / SOD;
+
 ////---------- Extraer pixY\pixX (Distancia entre el centro de los pixeles en el eje Y\X): -----------------------------------------
         {
             const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1164) );
@@ -1436,16 +1437,12 @@ DEB_MSG("Imagen DICOM en RGB...");
                     if( pix_format == gdcm::PixelFormat::UINT8 ){
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
-                        int xy = 0;
                         for( int y = 0; y < mis_rens; y++){
                             for( int x = 0; x < mis_cols; x++){
-                                xy+=3;
-
-                                const double pixR = (double)(unsigned char)*(buffer + xy + nivel*mis_rens_cols*3) - WCenter + 0.5;
-                                const double pixG = (double)(unsigned char)*(buffer + xy+1 + nivel*mis_rens_cols*3) - WCenter + 0.5;
-                                const double pixB = (double)(unsigned char)*(buffer + xy+2 + nivel*mis_rens_cols*3) - WCenter + 0.5;
+                                const double pixR = (double)(unsigned char)*(buffer + 3*x   + y*mis_cols*3 + nivel*mis_rens_cols*3) - WCenter + 0.5;
+                                const double pixG = (double)(unsigned char)*(buffer + 3*x+1 + y*mis_cols*3 + nivel*mis_rens_cols*3) - WCenter + 0.5;
+                                const double pixB = (double)(unsigned char)*(buffer + 3*x+2 + y*mis_cols*3 + nivel*mis_rens_cols*3) - WCenter + 0.5;
                                 double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
-
                                 if( pix <= -((WWidth-1) / 2)){
                                     pix = 0.0;
                                 }else if(pix > ((WWidth-1) / 2)){
@@ -1462,21 +1459,21 @@ DEB_MSG("Imagen DICOM en RGB...");
                     }
                     break;
                 }
+            case gdcm::PhotometricInterpretation::MONOCHROME1:
             case gdcm::PhotometricInterpretation::MONOCHROME2:{
 DEB_MSG("Imagen DICOM en escala de grises...");
                     if( pix_format == gdcm::PixelFormat::UINT8 ){
 DEB_MSG("Tipo UINT8");
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
-                        int xy = 0;
                         for( int y = 0; y < mis_rens; y++){
                             for( int x = 0; x < mis_cols; x++){
-                                xy++;
-                                double pix = (double)(unsigned char)*(buffer + nivel*mis_rens_cols + xy)  - WCenter + 0.5;
+                                double pix = (double)(unsigned char)*(buffer + nivel*mis_rens_cols + x + y*mis_cols) - WCenter + 0.5;
+
                                 if( pix <= -((WWidth-1) / 2)){
                                     pix = 0.0;
                                 }else if(pix > ((WWidth-1) / 2)){
-                                    pix = 0.0;
+                                    pix = 1.0;
                                 }else{
                                     pix = pix / (WWidth -1) + 0.5;
                                 }
@@ -1489,16 +1486,12 @@ DEB_MSG("Tipo UINT16");
                         unsigned short *buffer16 = (unsigned short*)buffer;
 
                         img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
-                        int xy = 0;
                         for( int y = 0; y < mis_rens; y++){
                             for( int x = 0; x < mis_cols; x++){
-                                xy += 3;
-
-                                const double pixR = (double)((unsigned char)*(buffer16 + xy + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
-                                const double pixG = (double)((unsigned char)*(buffer16 + xy+1 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
-                                const double pixB = (double)((unsigned char)*(buffer16 + xy+2 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
+                                const double pixR = (double)((unsigned char)*(buffer16 + 3*x   + y*mis_cols*3 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
+                                const double pixG = (double)((unsigned char)*(buffer16 + 3*x+1 + y*mis_cols*3 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
+                                const double pixB = (double)((unsigned char)*(buffer16 + 3*x+2 + y*mis_cols*3 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
                                 double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
-
                                 if( pix <= -((WWidth-1) / 2)){
                                     pix = 0.0;
                                 }else if(pix > ((WWidth-1) / 2)){
@@ -1506,7 +1499,6 @@ DEB_MSG("Tipo UINT16");
                                 }else{
                                     pix = pix / (WWidth -1) + 0.5;
                                 }
-
                                 *(img_tmp + (mis_rens-y-1)*mis_rens + x) =  pix; // 255.0;
                             }
                         }
@@ -1553,7 +1545,8 @@ DEB_MSG("Tipo UINT16");
 
         switch(scl_comps){
             // La imagen esta en escala de grises:
-            case 1:{
+            case 1:
+            case 2:{
 DEB_MSG("La imagen esta en escala de grises")
                 vtkSmartPointer<vtkImageExtractComponents> extractGreyFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
                 extractGreyFilter->SetInputConnection(imgReader->GetOutputPort());
@@ -1835,6 +1828,8 @@ IMGVTK::IMGVTK(){
     CRACAU = 20.0;
     pixX = 0.308;
     pixY = 0.308;
+    WCenter = 127.5;
+    WWidth = 255.0;
 }
 
 
@@ -1857,6 +1852,8 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
     CRACAU = origen.CRACAU;
     pixX = origen.pixX;
     pixY = origen.pixY;
+    WCenter = origen.WCenter;
+    WWidth = origen.WWidth;
 
 
     cols = origen.cols;
@@ -1929,6 +1926,8 @@ IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
     CRACAU = 20.0;
     pixX = 0.308;
     pixY = 0.308;
+    WCenter = 127.5;
+    WWidth = 255.0;
 
     Cargar(rutas_origen, n_imgs, enmascarar );
 }
@@ -1952,6 +1951,8 @@ IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel)
     CRACAU = 20.0;
     pixX = 0.308;
     pixY = 0.308;
+    WCenter = 127.5;
+    WWidth = 255.0;
 
     Cargar(ruta_origen, enmascarar, nivel);
 }
@@ -1989,6 +1990,9 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
     CRACAU = origen.CRACAU;
     pixX = origen.pixX;
     pixY = origen.pixY;
+    WCenter = origen.WCenter;
+    WWidth = origen.WWidth;
+
 
     cols = origen.cols;
     rens = origen.rens;
