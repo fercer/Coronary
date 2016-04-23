@@ -1,4 +1,4 @@
-
+﻿
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -185,7 +185,11 @@ void definirParametros(PARS_ENTRADA *parametros){
 }
 
 
-void genDICOM(const char *ruta_origen, const char *ruta_salida ){
+
+/*  Funcion: genDICOM
+    Descripcion: Genera un archivo DICOM en base a una imagen Phantom.
+*/
+void genDICOM(const char *ruta_origen, const char *ruta_salida, const double SID, const double SOD, const double ISO, const double LAORAO, const double CRACAU, const double pixX, const double pixY ){
 
     // Abrir la imagen:
     IMGVTK img_phantom( ruta_origen, false, 0);
@@ -262,15 +266,41 @@ void genDICOM(const char *ruta_origen, const char *ruta_salida ){
     imagecomments.SetValue( "Phantom" );
 
     gdcm::Attribute<0x0018,0x1110> nuevo_SID;
-    nuevo_SID.SetValue( 1118.0 );
+    nuevo_SID.SetValue( SID );
 
     gdcm::Attribute<0x0018,0x1111> nuevo_SOD;
-    nuevo_SOD.SetValue( 800.0 );
+    nuevo_SOD.SetValue( SOD );
+
+    gdcm::Attribute<0x0018,0x1111> nuevo_ISO;
+    nuevo_ISO.SetValue( ISO );
+
+    gdcm::Attribute<0x0018,0x1111> nuevo_LAORAO;
+    nuevo_LAORAO.SetValue( LAORAO );
+
+    gdcm::Attribute<0x0018,0x1111> nuevo_CRACAU;
+    nuevo_CRACAU.SetValue( CRACAU );
+
+    gdcm::Attribute<0x0018,0x1111> nuevo_pix;
+    char pixXY[256];
+    sprintf(pixXY, "%f\\%f", pixX, pixY);
+    nuevo_pix.SetValue( pixXY );
+
+    gdcm::Attribute<0x0018,0x1111> nuevo_winCenter;
+    nuevo_winCenter.SetValue( 127.5 );
+
+    gdcm::Attribute<0x0018,0x1111> nuevo_winWidth;
+    nuevo_winWidth.SetValue( 255.0 );
 
     // Now replace the Image Comments from the dataset with our:
     ds.Replace( imagecomments.GetAsDataElement() );
     ds.Replace( nuevo_SID.GetAsDataElement() );
     ds.Replace( nuevo_SOD.GetAsDataElement() );
+    ds.Replace( nuevo_ISO.GetAsDataElement() );
+    ds.Replace( nuevo_LAORAO.GetAsDataElement() );
+    ds.Replace( nuevo_CRACAU.GetAsDataElement() );
+    ds.Replace( nuevo_pix.GetAsDataElement() );
+    ds.Replace( nuevo_winCenter.GetAsDataElement() );
+    ds.Replace( nuevo_winWidth.GetAsDataElement() );
 
     // Incluir los datos al archivo DICOM
     gdcm::ImageWriter w;
@@ -366,7 +396,7 @@ int main(int argc, char** argv ){
 
     // Si se va a generar un archivo DICOM par aun phantom, no se genera el reconstructor 3D:
     if( strcmp( parametros[12].mi_valor.par_s , "NULL" ) ){ /// Generar archivo DICOM
-        genDICOM( parametros[0].mi_valor.par_s, parametros[12].mi_valor.par_s);
+        genDICOM( parametros[0].mi_valor.par_s, parametros[12].mi_valor.par_s, parametros[13].mi_valor.par_d, parametros[14].mi_valor.par_d, parametros[15].mi_valor.par_d, parametros[16].mi_valor.par_d, parametros[17].mi_valor.par_d, parametros[18].mi_valor.par_d, parametros[19].mi_valor.par_d);
 
     }else{ /// Reconstruir arteria:
         RECONS3D reconstructor;
