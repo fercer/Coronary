@@ -1,4 +1,4 @@
-/******
+﻿/******
     CENTRO DE INVESTIGACION EN MATEMATICAS
     MAESTRIA EN COMPUTACION Y MATEMATICAS INDUSTRIALES
 
@@ -1329,6 +1329,7 @@ DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
             const gdcm::ByteValue *bv = de.GetByteValue();
             if( bv ){
                 std::string strm(bv->GetPointer(), bv->GetLength());
+DEB_MSG("pixXY: " << strm);
                 char *pixXYstr = new char [bv->GetLength()];
                 memcpy(pixXYstr, strm.c_str(), bv->GetLength() * sizeof(char ));
                 char *tmp = strchr(pixXYstr,'\\');
@@ -1359,6 +1360,17 @@ DEB_MSG("LAO: " << LAORAO);
 DEB_MSG("CRA: " << CRACAU);
             }
         }
+
+////---------- Extraer Window Width (Ancho de la ventana donde se encuentran los valores de interes): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x7030) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+DEB_MSG("Field of view origin: " << strm);
+            }
+        }
+
 ////---------- Extraer Source to Isocenter (Distancia de la fuente al isocentro): -----------------------------------------
         {
             const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x21, 0x1017) );

@@ -651,8 +651,8 @@ DEB_MSG("Ruta ground: " << rutaground_input);
         mallarPuntos(n_angios);
         isoCentro(n_angios);
 
-//        mostrarImagen( n_angios, IMGVTK::BASE);
-//        renderizar(renderer_global);
+        mostrarImagen( n_angios, IMGVTK::BASE);
+        renderizar(renderer_global);
 
         mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
         //renderizar(mis_renderers[n_angios]);

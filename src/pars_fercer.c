@@ -51,6 +51,7 @@ void revisar_pars(PARS_ENTRADA* pars, const int n_pars, int *argc, char **argv){
 			}
 			n++;
 		}while(!encontrado && n <= *argc);
+
 		// No se encontro el tag de la pregunta:
 		if(!encontrado){
 			// se verifica si la pregunta es opcional:
