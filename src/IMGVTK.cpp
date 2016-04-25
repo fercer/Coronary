@@ -1403,16 +1403,91 @@ DEB_MSG("Window Center: " << WCenter);
 DEB_MSG("Window Width: " << WWidth);
             }
         }
-////---------- Intentnar extraer el ECG: -----------------------------------------
-//        {
-//            const gdcm::PrivateTag ptag(1518, 16);
-//            const gdcm::DataElement &de = ds.GetDataElement( ptag );
-//            const gdcm::ByteValue *bv = de.GetByteValue();
-//            if( bv ){
-//                std::string strm(bv->GetPointer(), bv->GetLength());
-//                DEB_MSG("Waveform Sequence: " << strm);
-//            }
-//        }
+////---------- Extraer el ECG: -----------------------------------------
+        int ecg_dim = 0, ecg_np = 0;
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x5000, 0x0005) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                gdcm::Element<gdcm::VR::US, gdcm::VM::VM1_n> el;
+                el.Set( de.GetValue() );
+                ecg_dim = el.GetValue();
+DEB_MSG("[ECG] Dimensiones: " << ecg_dim );
+            }
+        }
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x5000, 0x0010) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                gdcm::Element<gdcm::VR::US, gdcm::VM::VM1_n> el;
+                el.Set( de.GetValue() );
+                ecg_np = el.GetValue();
+DEB_MSG("[ECG] Numero de puntos: " << ecg_np );
+            }
+        }
+        int n_niveles = 1;
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x8, 0x2143) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                n_niveles = atof( strm.c_str() );
+DEB_MSG("Numero de fotogramas: " << n_niveles);
+            }
+        }
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x5000, 0x3000) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                gdcm::Element<gdcm::VR::OW, gdcm::VM::VM1_n> el;
+                el.Set( de.GetValue() );
+                char *nombre_ecg = new char [18];
+                strcpy(nombre_ecg, ruta_origen + ruta_l - 7);
+                sprintf( nombre_ecg, "%s_%i.dat", nombre_ecg, n_niveles);
+                FILE *fp = fopen(nombre_ecg, "w");
+
+
+
+                for( int i = 0; i < ecg_np; i++){
+                    fprintf(fp, "%i %i\n", i, el.GetValue(i));
+                }
+                fclose( fp );
+                delete [] nombre_ecg;
+            }
+        }
+/*
+            std::string num_points_str = file.GetEntryString(0x5000,0x0010);
+            unsigned short num_points;
+            convert.clear();
+            convert.str(num_points_str);
+            convert >> num_points;
+DEB_MSG("Number of Points: " << num_points);
+
+            std::string data_type = file.GetEntryString(0x5000,0x0020);
+DEB_MSG("Type of Data: " << data_type);
+
+            std::string curve_desc = file.GetEntryString(0x5000,0x0022);
+DEB_MSG("Curve Description: " << curve_desc);
+
+            std::string data_rep_str = file.GetEntryString(0x5000,0x0103);
+            unsigned short data_rep;
+            convert.clear();
+            convert.str(data_rep_str);
+            convert >> data_rep;
+
+            gdcm::DocEntry *pCurveDataDoc = file.GetDocEntry(0x5000, 0x3000);
+            gdcm::DataEntry *pCurveData = dynamic_cast<gdcm::DataEntry *>(pCurveDataDoc);
+            uint8_t *curve_data = pCurveData->GetBinArea();
+
+            for(int i = 0; i < num_points; i++){
+DEB_MSG("Pt(" << i <<  ") = " << ((unsigned short*)curve_data)[i]);
+            }
+*/
+
+
+
+
+        ///----------------------------------------------------- Leer imagenes
         DICOMreader.Read();
         const gdcm::Image &gimage = DICOMreader.GetImage();
 DEB_MSG("Buffer length: " << gimage.GetBufferLength());
@@ -1784,22 +1859,51 @@ void IMGVTK::Cargar(char **rutas , const int n_imgs, const bool enmascarar){
     Funcion: Guarda la imagen en la ruta especificada con la extension especificada.
 */
 void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida ){
-    vtkSmartPointer<vtkImageData> img_ptr = NULL;
+    double *img_ptr = NULL;
+    int offset_x = 0, offset_y = 0;
     switch( img_idx ){
         case BASE:
-            img_ptr = base;
+            img_ptr = base_ptr;
             break;
         case MASK:
-            img_ptr = mask;
+            img_ptr = mask_ptr;
             break;
         case SKELETON:
-            img_ptr = skeleton;
+            img_ptr = skl_ptr;
+            offset_x = 1;
+            offset_y = 1;
             break;
         case SEGMENT:
-            img_ptr = segment;
+            img_ptr = segment_ptr;
             break;
     }
 
+    // Alojar memoria para la imagen:
+    vtkSmartPointer<vtkImageData> img_out = vtkSmartPointer<vtkImageData>::New();
+    img_out->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+    img_out->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
+    img_out->SetOrigin(0.0, 0.0, 0.0);
+    img_out->SetSpacing(1.0, 1.0, 1.0);
+    unsigned char *img_out_ptr = static_cast<unsigned char*>(img_out->GetScalarPointer(0,0,0));
+
+    double min = 1e100;
+    double max =-1e100;
+    for( int y = 0; y < rens; y++ ){
+        for( int x = 0; x < cols; x++ ){
+            if( min > *(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) ){
+                min = *(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2));
+            }
+            if( max < *(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) ){
+                max = *(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2));
+            }
+        }
+    }
+
+    for( int y = 0; y < rens; y++ ){
+        for( int x = 0; x < cols; x++ ){
+            *(img_out_ptr + x + y*cols) = (unsigned char)(255.0 * (*(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) - min) / (max - min));
+        }
+    }
 
     switch(tipo_salida){
         case PGM:{
@@ -1809,7 +1913,7 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
         case PNG:{
             vtkSmartPointer<vtkPNGWriter> png_output = vtkSmartPointer<vtkPNGWriter>::New();
             png_output->SetFileName( ruta );
-            png_output->SetInputData( img_ptr );
+            png_output->SetInputData( img_out );
             png_output->Write();
             break;
         }

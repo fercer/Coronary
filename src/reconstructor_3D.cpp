@@ -642,19 +642,25 @@ DEB_MSG("Ruta ground: " << rutaground_input);
     }else{
 
         imgs_base.push_back(IMGVTK(rutabase_input, false, nivel_l));
-        mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
-        puntos.push_back(vtkSmartPointer<vtkPoints>::New());
-        pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
-        normal_centros.push_back( norcen_temp );
+        char *nombre_ecg = new char [14];
+        const int ruta_l = strlen(rutabase_input);
+        strcpy(nombre_ecg, rutabase_input + ruta_l - 7);
+        sprintf( nombre_ecg, "%s.png", nombre_ecg);
+        imgs_base[n_angios].Guardar( IMGVTK::BASE, nombre_ecg, IMGVTK::PNG);
+
+//        mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
+//        puntos.push_back(vtkSmartPointer<vtkPoints>::New());
+//        pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
+//        normal_centros.push_back( norcen_temp );
 
         // Mover el detector a su posicion definida por el archivo DICOM:
-        mallarPuntos(n_angios);
-        isoCentro(n_angios);
+//        mallarPuntos(n_angios);
+//        isoCentro(n_angios);
 
-        mostrarImagen( n_angios, IMGVTK::BASE);
-        renderizar(renderer_global);
+        //mostrarImagen( n_angios, IMGVTK::BASE);
+        //renderizar(renderer_global);
 
-        mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
+        //mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
         //renderizar(mis_renderers[n_angios]);
         if( strcmp(rutaground_input, "NULL") ){
             imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
