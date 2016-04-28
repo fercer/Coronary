@@ -288,8 +288,8 @@ int main(int argc, char** argv ){
     //    }
 
 
-    //    reconstructor.segmentarImagenBase();
-    //    reconstructor.skeletonize();
+        reconstructor.segmentarImagenBase();
+        reconstructor.skeletonize();
 
 
 

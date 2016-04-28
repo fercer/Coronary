@@ -1109,9 +1109,6 @@ void IMGVTK::definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer
 
     const int mis_cols = dims[0];
     const int mis_rens = dims[1];
-
-    DEB_MSG("img cols: " << mis_cols << ", img rens" << mis_rens);
-
     mask_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, 0);
     mask_src->AllocateScalars( VTK_DOUBLE, 1);
     mask_src->SetOrigin(0.0, 0.0, 0.0);
@@ -1241,7 +1238,7 @@ if(max_cls < clase_i){
 }
         suma += (double)(clase_i+1) / (double)rens_cols;
     }
-DEB_MSG("min: " << min_cls << ", max: " << max_cls);
+DEB_MSG("Clases almacenadas min: " << min_cls << ", max: " << max_cls);
     double suma_back = 0;
     double peso_back = 0.0;
     double varianza_entre, max_varianza_entre = -1.0;

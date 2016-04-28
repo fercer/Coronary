@@ -632,36 +632,22 @@ DEB_MSG("Ruta ground: " << rutaground_input);
             mallarPuntos(n_angios);
             isoCentro(n_angios);
 
-            mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
-            //renderizar(mis_renderers[n_angios]);
-
             existe_ground.push_back( false );
             n_angios++;
         }
 
     }else{
 
-        imgs_base.push_back(IMGVTK(rutabase_input, false, nivel_l));
-        char *nombre_ecg = new char [14];
-        const int ruta_l = strlen(rutabase_input);
-        strcpy(nombre_ecg, rutabase_input + ruta_l - 7);
-        sprintf( nombre_ecg, "%s.png", nombre_ecg);
-        imgs_base[n_angios].Guardar( IMGVTK::BASE, nombre_ecg, IMGVTK::PNG);
+        imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
+        mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
+        puntos.push_back(vtkSmartPointer<vtkPoints>::New());
+        pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
+        normal_centros.push_back( norcen_temp );
 
-//        mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
-//        puntos.push_back(vtkSmartPointer<vtkPoints>::New());
-//        pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
-//        normal_centros.push_back( norcen_temp );
-
-        // Mover el detector a su posicion definida por el archivo DICOM:
+        /// Mover el detector a su posicion definida por el archivo DICOM:
 //        mallarPuntos(n_angios);
 //        isoCentro(n_angios);
 
-        //mostrarImagen( n_angios, IMGVTK::BASE);
-        //renderizar(renderer_global);
-
-        //mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
-        //renderizar(mis_renderers[n_angios]);
         if( strcmp(rutaground_input, "NULL") ){
             imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
             existe_ground.push_back( true );
@@ -682,9 +668,7 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 void RECONS3D::segmentarImagenBase(){
     for( int i = 0; i < n_angios; i++){
         segmentarImagenBase( i );
-//        mostrarImagen(i, IMGVTK::SEGMENT);
     }
-//    renderizar(renderer_global);
 }
 
 
@@ -696,8 +680,8 @@ void RECONS3D::segmentarImagenBase(){
 */
 void RECONS3D::segmentarImagenBase( const int angio_ID ){
     FILTROS filtro;
-    filtro.setFiltro(FILTROS::SS_GABOR);
-//    filtro.setFiltro(FILTROS::GMF);
+//    filtro.setFiltro(FILTROS::SS_GABOR);
+    filtro.setFiltro(FILTROS::GMF);
     filtro.setFitness(FILTROS::ROC);
     filtro.setEvoMet(FILTROS::EDA_BUMDA, 50, 30);
 
@@ -707,35 +691,40 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     }
 
     // Parametros fijos (SS Gabor):
-    filtro.setPar(FILTROS::PAR_L, 2.65);
-    filtro.setPar(FILTROS::PAR_T, 15);
-    filtro.setPar(FILTROS::PAR_K, 180);
-    filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
+//    filtro.setPar(FILTROS::PAR_L, 2.65);
+//    filtro.setPar(FILTROS::PAR_T, 15);
+//    filtro.setPar(FILTROS::PAR_K, 180);
+//    filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
 
     // Parametros fijos (GMF):
-//    filtro.setPar(FILTROS::PAR_L, 13);
-//    filtro.setPar(FILTROS::PAR_T, 15);
-//    filtro.setPar(FILTROS::PAR_K, 12);
-//    filtro.setPar(FILTROS::PAR_SIGMA, 2.82);
-//    filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
+    filtro.setPar(FILTROS::PAR_L, 13);
+    filtro.setPar(FILTROS::PAR_T, 15);
+    filtro.setPar(FILTROS::PAR_K, 12);
+    filtro.setPar(FILTROS::PAR_SIGMA, 2.82);
+    filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
+
+
+
     filtro.filtrar();
 
-    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
-    renderizar(mis_renderers[angio_ID]);
+//    mostrarImagen(imgs_base[angio_ID], IMGVTK::MASK, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
 
+//    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
 
     imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT);
 
-    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
-    renderizar(mis_renderers[angio_ID]);
+//    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
 
     /// Falta el linking broken vessels ..................
     ///
-    imgs_base[angio_ID].lengthFilter(IMGVTK::THRESHOLD, 1000);
-    //imgs_base[angio_ID].lengthFilter(IMGVTK::THRESHOLD, imgs_base[angio_ID].cols * 5);
-    imgs_base[angio_ID].regionFill(IMGVTK::THRESHOLD);
-    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
-    renderizar(mis_renderers[angio_ID]);
+//    imgs_base[angio_ID].lengthFilter(IMGVTK::THRESHOLD, 1000);
+//    //imgs_base[angio_ID].lengthFilter(IMGVTK::THRESHOLD, imgs_base[angio_ID].cols * 5);
+//    imgs_base[angio_ID].regionFill(IMGVTK::THRESHOLD);
+//    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
 }
 
 

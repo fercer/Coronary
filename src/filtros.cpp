@@ -58,22 +58,30 @@ inline double FILTROS::interpolacion(const double *pix, const int x, const int y
     Funcion: Rota una imagen almacenada como intensidad de 0 a 1 en un angulo theta.
 */
 void FILTROS::rotarImg( const double *org, double *rot, const double theta, const int mis_rens, const int mis_cols){
-    int x_i, y_i;
-    double stheta = sin( theta * PI/180.0 );
-    double ctheta = cos( theta * PI/180.0 );
-
+    const double ctheta = cos( theta * PI/180.0 );
+    const double stheta = sin( theta * PI/180.0 );
+DEB_MSG("cos(" <<  theta << ") = " << ctheta);
+DEB_MSG("sin(" <<  theta << ") = " << stheta);
+    const double mitad_x = 0;//(double)(mis_cols - 1) / 2.0;
+    const double mitad_y = 0;//(double)(mis_rens - 1) / 2.0;
+DEB_MSG("mitad x: " <<  mitad_x);
+DEB_MSG("mitad y: " <<  mitad_y);
     double delta_x, delta_y, x, y;
 
-    for(register int i = 0; i < (mis_rens-1); i++){
-        for(register int j = 0; j < (mis_cols-1); j++){
-            x = (double)(j - mis_cols/2)*ctheta - (double)(i - mis_rens/2)*stheta + mis_cols/2;
-            y = (double)(j - mis_cols/2)*stheta + (double)(i - mis_rens/2)*ctheta + mis_rens/2;
+    for(int i = 0; i < mis_rens; i++){
+        for(int j = 0; j < mis_cols; j++){
+            x = ((double)j-mitad_x)*ctheta - ((double)i-mitad_y)*stheta + mitad_x;
+            y = ((double)j-mitad_x)*stheta + ((double)i-mitad_y)*ctheta + mitad_y;
+if( i == 0 ){
+    DEB_MSG("[" << (double)j-mitad_x << ", " << (double)i-mitad_y << "] -> (" << x << ", " << y << ")");
+}
 
-            x_i = (int)x;
-            y_i = (int)y;
+
+            int x_i = (int)x;
+            int y_i = (int)y;
 
             // Si el pixel rotado sale de los limites del template, se descarta:
-            if( x_i >= mis_cols || x_i <= 0 || y_i >= mis_rens || y_i <= 0){
+            if( x_i > mis_cols || x_i <= 0 || y_i > mis_rens || y_i <= 0){
                 continue;
             }
 
@@ -83,6 +91,7 @@ void FILTROS::rotarImg( const double *org, double *rot, const double theta, cons
             *(rot + y_i*mis_cols + x_i) = interpolacion(org, j, i, delta_x, delta_y, mis_cols);
         }
     }
+
 }
 
 
@@ -298,8 +307,6 @@ void FILTROS::filtrar(){
  *
  * //        //      //      //      //      //      //        //      //      //      //      //      //        //      //      //      //      //      //        //      //      //      //      //      //
 */
-
-
 /*  Metodo: respGMF
 
     Funcion: Obtiene la respuesta del filtro Gaussiano Multiescala, con desviacion estandar: sigma, largo del template: L, ancho del template: T, y numero de rotaciones que se hacen al filtro entre 0 y 180°: K.
@@ -317,35 +324,41 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     const int ancho_tmp = T + 3; // El ancho del template es el ancho de la gaussiana + 2 pixeles a cada lado para dejar espacio a la rotacion.
     const int alto_tmp = L + 6; // El alto del template es el largo de la gaussiana dado por L + 3 pixeles abajo y otros 3 arriba para dar espacio a la rotacion.
 
-    const int ex_alto = alto_tmp%2;
-    const int ex_ancho = ancho_tmp%2;
-
     templates[0] = new double[alto_tmp*ancho_tmp];
     memset( templates[0], 0, alto_tmp*ancho_tmp*sizeof(double));
 
     const double sig_2 = 2.0 * sigma * sigma;
-    double *gaussiana_org = templates[0] + ancho_tmp*3 + ancho_tmp/2;
+    double *gaussiana_org = templates[0] + ancho_tmp*3 + 1;
 
     ////// Se calcula una linea de la gaussiana para el template, luego se copia hacia abajo:
     double sum = 0.0;
-    for( int x = -(int)(T/2); x <= (int)(T/2); x++){
-        *(gaussiana_org + x) = 1.0 - exp( -((double)(x*x) / sig_2) );
-        sum += *(gaussiana_org + x);
+    for( double x = -floor((double)T/2.0); x <= floor((double)T/2.0); x+=1.0){
+        *(gaussiana_org) = 1.0 - exp( -(x*x / sig_2) );
+        sum += *(gaussiana_org);
+        gaussiana_org++;
     }
 
+    gaussiana_org = templates[0] + ancho_tmp*3 + 1;
     const double media = sum / (double)T;
     //// Se resta la media a todo el template, y se divide entre la suma:
-    for( int x = -(int)(T/2); x <= (int)(T/2); x++){
-        *(gaussiana_org + x) = (*(gaussiana_org + x) - media) / (sum*L);
+    for( double x = -floor((double)T/2.0); x <= floor((double)T/2.0); x+=1.0){
+        *(gaussiana_org) = (*(gaussiana_org) - media) / (sum*L);
+         gaussiana_org++;
     }
 
     //// Se termina de construir el template a 0°:
-    gaussiana_org = templates[0] + 3*ancho_tmp;
-    double *gaussiana_cpy = templates[0] + 3*ancho_tmp;
+    gaussiana_org = templates[0] + ancho_tmp*3;
     for( int y = 1; y < L; y++ ){
-        memcpy( gaussiana_cpy + y*ancho_tmp, gaussiana_org, ancho_tmp*sizeof(double) );
+        memcpy( templates[0] + (y+3)*ancho_tmp, gaussiana_org, ancho_tmp*sizeof(double) );
     }
 
+
+
+    /*
+     * Guardar el template base a 0 grados
+     */
+    FILE *fp = NULL;
+    char nombre[] = "template_00.fcs";
     // Rotar el template segun el numero de rotaciones 'K':
     const double theta_inc = 180.0 / (double)K;
     double theta = 180.0;
@@ -354,39 +367,50 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         templates[k] = new double[alto_tmp*ancho_tmp];
         memset(templates[k], 0, alto_tmp*ancho_tmp*sizeof(double));
         rotarImg( templates[0], templates[k], theta, alto_tmp, ancho_tmp);
+
+        sprintf(nombre, "template_%i.fcs", k);
+        fp = fopen(nombre, "w");
+        for( int y = 0; y < alto_tmp; y++){
+            for( int x = 0; x < ancho_tmp; x++){
+                fprintf(fp, "%f ", *(templates[k] + x + y*ancho_tmp));
+            }
+            fprintf(fp, "\n");
+        }
+        fclose(fp);
     }
+
+
+
+
+
 
     ////--------------------------------------------------------- Aplicacion del filtro:
-    // Imagen auxiliar:
-
-    unsigned char **Img_aux = new unsigned char* [rens + 2*alto_tmp];
-    for( int y = 0; y < alto_tmp; y++){
-        Img_aux[y] = new unsigned char[cols + 2*ancho_tmp];
-        Img_aux[y+alto_tmp+rens] = new unsigned char[cols + 2*ancho_tmp];
-        memset( Img_aux[y], 0, (cols + 2*ancho_tmp)*sizeof(unsigned char));
-        memset( Img_aux[y+alto_tmp+rens], 0, (cols + 2*ancho_tmp)*sizeof(unsigned char));
-    }
-    for(int y = 0; y < rens; y++){
-        Img_aux[y+alto_tmp] = new unsigned char[cols + 2*ancho_tmp];
-        memset( Img_aux[y+alto_tmp], 0, (cols + 2*ancho_tmp)*sizeof(unsigned char));
-        memcpy( Img_aux[y+alto_tmp] + ancho_tmp, org + y*cols, cols*sizeof(unsigned char));
-    }
     //    #pragma omp parallel for shared(resp, Img_amp, templates) firstprivate(rens, cols, ancho_tmp, alto_tmp, K) reduction(min: min_img) reduction(max: max_img)
     for( int yI = 0; yI < rens; yI++){
+
+        // Definir hasta donde puede recorrerse el template:
+        const int max_y = ((yI + alto_tmp) >= rens) ? (rens - yI) : alto_tmp;
+if( yI == (rens-1) ){
+DEB_MSG("max_y = " << max_y);
+}
         for( int xI = 0; xI < cols; xI++){
+            const int max_x = ((xI + ancho_tmp) >= cols) ? (cols - xI) : ancho_tmp;
+
             // Para quedarme con la mayor respuesta de entre los filtros:
             double max_resp = -1e10;
 
             // Aplicar los templates a la imagen:
-            for( int k = 0; k < K; k++ ){
+            for( int k = 0; k < 1; k++){//K; k++ ){
                 double resp_k = 0.0;
 
                 // Recorrer todo el template:
-                for( int y = -alto_tmp/2; y < alto_tmp/2 - (1 - ex_alto); y++){
-                    for( int x = -ancho_tmp/2; x < ancho_tmp/2 - (1 - ex_ancho); x++){
-                        resp_k += *(templates[k] + (y+alto_tmp/2)*ancho_tmp + (x+ancho_tmp/2)) * Img_aux[yI + y + alto_tmp][xI + x + ancho_tmp];
+                for( int y = 0; y < max_y; y++){
+                    for( int x = 0; x < max_x; x++){
+                        resp_k += *(templates[k] + y*ancho_tmp + x) * *(org + (yI + y)*cols + (xI + x));
                     }
                 }
+
+                // Guardar la respuesta mas alta:
                 if( resp_k > max_resp ){
                     max_resp = resp_k;
                 }
@@ -402,12 +426,6 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         delete [] templates[k];
     }
     delete [] templates;
-
-    //Liberar la imagen auxiliar:
-    for(int y = 0; y < (rens+alto_tmp); y++){
-        delete [] Img_aux[y];
-    }
-    delete [] Img_aux;
 }
 
 
