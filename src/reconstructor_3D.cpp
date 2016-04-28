@@ -710,8 +710,8 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 //    mostrarImagen(imgs_base[angio_ID], IMGVTK::MASK, mis_renderers[angio_ID]);
 //    renderizar(mis_renderers[angio_ID]);
 
-//    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
-//    renderizar(mis_renderers[angio_ID]);
+    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
+    renderizar(mis_renderers[angio_ID]);
 
     imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT);
 
