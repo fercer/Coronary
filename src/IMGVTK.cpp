@@ -22,26 +22,56 @@
 /*  Metodo: mapaDistancias
     Funcion: Obtiene el mapa de distancias de los pixeles a los bordes.
 */
-void IMGVTK::mapaDistancias(){
+void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
+    double *img_ptr = NULL;
+
+    switch( img_idx ){
+        case BASE:
+            img_ptr = base_ptr;
+            break;
+        case MASK:
+            img_ptr = mask_ptr;
+            break;
+        case SKELETON:
+            img_ptr = skl_ptr;
+            break;
+        case SEGMENT:
+            img_ptr = segment_ptr;
+            break;
+        case THRESHOLD:
+            img_ptr = threshold_ptr;
+            break;
+    }
+
+
+    if( !map_ptr ){
+        mapa_dist = vtkSmartPointer<vtkImageData>::New();
+    }
+
+    mapa_dist->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+    mapa_dist->AllocateScalars( VTK_DOUBLE, 1);
+    mapa_dist->SetOrigin(0.0, 0.0, 0.0);
+    mapa_dist->SetSpacing(1.0, 1.0, 1.0);
+
+    map_ptr = static_cast<double*>(mapa_dist->GetScalarPointer(0,0,0));
+
     double INF = 1e9;
 
-    double *map_tmp = new double [rens_cols];
-
     for( int xy = 0 ; xy < rens_cols; xy++ ){
-        map_tmp[xy] = (base_ptr[xy] == 0) ? 0.0 : INF;
+        *(map_ptr + xy) = (*(img_ptr + xy) < 1.0) ? 0.0 : INF;
     }
 
     double *f = new double[ rens > cols ? rens : cols  ];
+    double *dh = new double[ rens ];
+    int *vh= new int[ rens ];
+    double *zh = new double[ rens+1 ];
 
     // transform along columns
     for (int x = 0; x < cols; x++){
         for (int y = 0; y < rens; y++){
-            f[y] = *(map_tmp + y*cols + x);
+            f[y] = *(map_ptr + y*cols + x);
         }
 
-        double *dh = new double[ rens ];
-        int *vh= new int[ rens ];
-        double *zh = new double[ rens+1 ];
         int k = 0;
         vh[0] = 0;
         zh[0] = -INF;
@@ -66,24 +96,26 @@ void IMGVTK::mapaDistancias(){
             while (zh[k+1] < y){
                 k++;
             }
-            *(map_tmp + y*cols + x) = ((y-vh[k])*(y-vh[k])) + f[vh[k]];
+            *(map_ptr + y*cols + x) = ((y-vh[k])*(y-vh[k])) + f[vh[k]];
         }
 
-        delete [] dh;delete [] vh;delete [] zh;
     }
+    delete [] dh;
+    delete [] vh;
+    delete [] zh;
 
     //normalizarlas a [0,255] y mostrar base
     double mini = INF, maxi = -INF;
 
+    double *dw = new double[cols];
+    int *vw = new int[cols];
+    double *zw = new double[cols+1];
+
     // transform along rows
     for (int y = 0; y < rens; y++){
         for (int x = 0; x < cols; x++){
-            f[x] = map_tmp[y*cols+ x];
+            f[x] = *(map_ptr + y*cols + x);
         }
-
-        double *dw = new double[cols];
-        int *vw = new int[cols];
-        double *zw = new double[cols+1];
         int k = 0;
         vw[0] = 0;
         zw[0] = -INF;
@@ -106,37 +138,21 @@ void IMGVTK::mapaDistancias(){
             while (zw[k+1] < x){
                 k++;
             }
-            map_tmp[y*cols + x] = sqrt( ((x-vw[k])*(x-vw[k])) + f[vw[k]] );
+            map_ptr[y*cols + x] = sqrt( ((x-vw[k])*(x-vw[k])) + f[vw[k]] );
 
-            if( map_tmp[y*cols + x] > maxi){
-                maxi = map_tmp[y*cols + x];
+            if( *(map_ptr + y*cols + x) > maxi){
+                maxi = *(map_ptr + y*cols + x);
             }
-            if( map_tmp[y*cols + x] < mini ){
-                mini = map_tmp[y*cols + x];
+            if( *(map_ptr + y*cols + x) < mini ){
+                mini = *(map_ptr + y*cols + x);
             }
         }
-
-        delete [] dw;
-        delete [] vw;
-        delete [] zw;
     }
 
+    delete [] dw;
+    delete [] vw;
+    delete [] zw;
     delete [] f;
-
-    if( !map_ptr ){
-        mapa_dist = vtkSmartPointer<vtkImageData>::New();
-    }
-
-    mapa_dist->SetExtent(0, cols-1, 0, rens-1, 0, 0);
-    mapa_dist->AllocateScalars( VTK_DOUBLE, 1);
-    mapa_dist->SetOrigin(0.0, 0.0, 0.0);
-    mapa_dist->SetSpacing(1.0, 1.0, 1.0);
-
-    map_ptr = static_cast<double*>(mapa_dist->GetScalarPointer(0,0,0));
-
-    memcpy(map_ptr, map_tmp, rens_cols*sizeof(double));
-
-    delete [] map_tmp;
 }
 
 
@@ -1873,6 +1889,9 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
         case SEGMENT:
             img_ptr = segment_ptr;
             break;
+        case MAPDIST:
+            img_ptr = map_ptr;
+            break;
     }
 
     // Alojar memoria para la imagen:
@@ -2016,6 +2035,17 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
 
             memcpy(skl_ptr, origen.skl_ptr, rens_cols*sizeof(double));
         }
+
+        if(origen.map_ptr){
+            mapa_dist = vtkSmartPointer<vtkImageData>::New();
+            mapa_dist->SetExtent(0, cols, 0, rens, 0, 0);
+            mapa_dist->AllocateScalars( VTK_DOUBLE, 1);
+            mapa_dist->SetOrigin(0.0, 0.0, 0.0);
+            mapa_dist->SetSpacing(1.0, 1.0, 1.0);
+            map_ptr = static_cast<double*>(mapa_dist->GetScalarPointer(0, 0, 0));
+
+            memcpy(map_ptr, origen.map_ptr, rens_cols*sizeof(double));
+        }
     }
 }
 
@@ -2153,6 +2183,17 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
             skl_ptr = static_cast<double*>(skeleton->GetScalarPointer(0, 0, 0));
 
             memcpy(skl_ptr, origen.skl_ptr, rens_cols*sizeof(double));
+        }
+
+        if(origen.map_ptr){
+            mapa_dist = vtkSmartPointer<vtkImageData>::New();
+            mapa_dist->SetExtent(0, cols, 0, rens, 0, 0);
+            mapa_dist->AllocateScalars( VTK_DOUBLE, 1);
+            mapa_dist->SetOrigin(0.0, 0.0, 0.0);
+            mapa_dist->SetSpacing(1.0, 1.0, 1.0);
+            map_ptr = static_cast<double*>(mapa_dist->GetScalarPointer(0, 0, 0));
+
+            memcpy(map_ptr, origen.map_ptr, rens_cols*sizeof(double));
         }
     }
 }

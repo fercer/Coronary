@@ -348,8 +348,11 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     // Rotar el template segun el numero de rotaciones 'K':
     const double theta_inc = 180.0 / (double)K;
     double theta = 180.0;
+
+    int max_dims_cols = 0, max_dims_rens = 0;
+
     for( int k = 1; k < K; k++){
-        theta -= theta_inc;
+        theta += theta_inc;
         const double ctheta = cos( theta * PI/180.0 );
         const double stheta = sin( theta * PI/180.0 );
 
@@ -358,48 +361,65 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         dims[k][0] = 1.5 * (( T > L ) ? T : L);
         dims[k][1] = 1.5 * (( T > L ) ? T : L);
 
+        if( max_dims_cols > dims[k][0] ){
+            max_dims_cols = dims[k][0];
+        }
+
+        if( max_dim_rens > dims[k][1] ){
+            max_dim_rens = dims[k][1];
+        }
+
         templates[k] = new double [dims[k][0]*dims[k][1]];
         memset(templates[k], 0, dims[k][0]*dims[k][1]*sizeof(double));
         rotarImg( templates[0], templates[k], ctheta, stheta, dims[k][1], dims[k][0], L, T);
     }
 
-
-
-
-
+    double *resp_tmp = new double [ (cols + max_dims_cols) * (rens + max_dims_rens) ];
+    for( int xy = 0; xy < (cols + max_dims_cols) * (rens + max_dims_rens); xy++ ){
+        *(resp_tmp + xy) = -1e100;
+    }
 
     ////--------------------------------------------------------- Aplicacion del filtro:
+    // Aplicar los templates a la imagen:
     //    #pragma omp parallel for shared(resp, Img_amp, templates) firstprivate(rens, cols, ancho_tmp, alto_tmp, K) reduction(min: min_img) reduction(max: max_img)
-    for( int yI = 0; yI < rens; yI++){
-        for( int xI = 0; xI < cols; xI++){
-            // Para quedarme con la mayor respuesta de entre los filtros:
-            double max_resp = -1e10;
+    for( int k = 0; k < K; k++ ){
 
-            // Aplicar los templates a la imagen:
-            for( int k = 0; k < K; k++ ){
-                // Definir hasta donde puede recorrerse el template:
-                const int max_x = ((xI + dims[k][0]) >= cols) ? (cols - xI) : dims[0][1];
-                const int max_y = ((yI + dims[k][1]) >= rens) ? (rens - yI) : dims[0][1];
+        const int temp_cols = dims[k][0];
+        const int temp_rens = dims[k][1];
 
-                double resp_k = 0.0;
+        const int offset_O = (int)(temp_cols / 2);
+        const int offset_E = temp_cols - offset_O - 1;
+        const int offset_N = (int)( emp_rens / 2);
+        const int offset_S = temp_rens - offset_N - 1;
+
+        const double *temp_cen = templates[k] + offset_N*temp_cols + offset_O;
+        double resp_k = 0.0;
+
+        for( int yR = 0; yR < (rens + temp_rens - 1); yR++){
+            for( int xR = 0; xR < (cols + temp_cols - 1); xR++){
+
+                // Definir los limites que pueden recorrerse del template:
+                const int min_x = ((xR - offset_O) < 0) ? 0 : -offset_O;
+                const int min_y = ((yR - offset_N) < 0) ? 0 : -offset_N;
+                const int max_x = ((xR + offset_E) >= cols) ? 1 : offset_E;
+                const int max_y = ((yR + offset_S) >= rens) ? 1 : offset_S;
 
                 // Recorrer todo el template:
-                for( int y = 0; y < max_y; y++){
-                    for( int x = 0; x < max_x; x++){
-                        resp_k += *(templates[k] + dims[k][0]*(dims[k][1] - 1 - y) + x) * *(org + (yI + y)*cols + (xI + x));
+                for( int y = min_y; y < max_y; y++){
+                    for( int x = min_x; x < max_x; x++){
+                        resp_k += *(temp_cen + y*temp_cols + x) * *(org + (yR + y)*cols + (xR + x));
                     }
                 }
-
-                // Guardar la respuesta mas alta:
-                if( resp_k > max_resp ){
-                    max_resp = resp_k;
-                }
             }
+        }
 
-            *(resp + yI*cols + xI) = max_resp;
+        // Guardar la respuesta mas alta:
+        if( resp_k > *(resp + yR*cols + xR) ){
+            *(resp_tmp + yR*cols + xR) = resp_k;
         }
     }
 
+    DEB_MSG("Filtros convolucionados");
 
     // Liberar la matriz de templates:
     for( int k = 0; k < K; k++){
@@ -409,24 +429,22 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     delete [] templates;
     delete [] dims;
 
-
     // Normalizar la imagen:
     double min_gmf = 1e100;
     double max_gmf =-1e100;
     for( int xy = 0; xy < rens*cols; xy++){
-        if( min_gmf > *(resp + xy) ){
-            min_gmf = *(resp + xy);
+        if( min_gmf > *(resp_tmp + xy) ){
+            min_gmf = *(resp_tmp + xy);
         }
-        if( max_gmf < *(resp + xy) ){
-            max_gmf = *(resp + xy);
+        if( max_gmf < *(resp_tmp + xy) ){
+            max_gmf = *(resp_tmp + xy);
         }
     }
     // Normalizar la imagen:
     for( int xy = 0; xy < rens*cols; xy++){
-        *(resp + xy) = 255.0 * (*(resp + xy) - min_gmf) / (max_gmf - min_gmf);
+        *(resp + xy) = (*(resp_tmp + xy) - min_gmf) / (max_gmf - min_gmf);
     }
-
-
+    delete [] resp_tmp;
 }
 
 

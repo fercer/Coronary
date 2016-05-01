@@ -206,6 +206,9 @@ void RECONS3D::mostrarImagen( IMGVTK &img_src, IMGVTK::IMG_IDX img_idx, vtkSmart
         case IMGVTK::THRESHOLD:
             img_ptr = img_src.threshold;
             break;
+        case IMGVTK::MAPDIST:
+            img_ptr = img_src.mapa_dist;
+            break;
     }
 
     const int mis_rens_cols = mis_rens*mis_cols;
@@ -277,6 +280,9 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
             break;
         case IMGVTK::THRESHOLD:
             img_ptr = imgs_base[angio_ID].threshold_ptr;
+            break;
+        case IMGVTK::MAPDIST:
+            img_ptr = imgs_base[angio_ID].map_ptr;
             break;
     }
 
@@ -628,7 +634,7 @@ DEB_MSG("Ruta ground: " << rutaground_input);
             pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
             normal_centros.push_back( norcen_temp );
 
-            // Mover el detector a su posicion definida por el archivo DICOM:
+            /// Mover el detector a su posicion definida por el archivo DICOM:
             mallarPuntos(n_angios);
             isoCentro(n_angios);
 
@@ -645,12 +651,17 @@ DEB_MSG("Ruta ground: " << rutaground_input);
         normal_centros.push_back( norcen_temp );
 
         /// Mover el detector a su posicion definida por el archivo DICOM:
-//        mallarPuntos(n_angios);
-//        isoCentro(n_angios);
+        mallarPuntos(n_angios);
+        isoCentro(n_angios);
 
         if( strcmp(rutaground_input, "NULL") ){
             imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
             existe_ground.push_back( true );
+            imgs_delin[ imgs_delin .size()-1 ].mapaDistancias( IMGVTK::BASE );
+
+            mostrarImagen( imgs_delin[ imgs_delin.size()-1 ], IMGVTK::MAPDIST, mis_renderers[n_angios] );
+            renderizar( mis_renderers[n_angios] );
+
         }else{
             existe_ground.push_back( false );
         }
