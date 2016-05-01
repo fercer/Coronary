@@ -47,13 +47,17 @@
 #else
 	#ifdef _WIN32
 		#include <time.h>
+		#define TIMERS time_t t_ini, t_fin
+		#define GETTIME_INI time (&t_ini)
+		#define GETTIME_FIN time (&t_fin)
+		#define DIFTIME difftime( t_fin, t_ini)
 	#else
 		#include <sys/time.h>
+		#define TIMERS struct timeval t_ini, t_fin
+		#define GETTIME_INI gettimeofday( &t_ini, NULL)
+		#define GETTIME_FIN gettimeofday( &t_fin, NULL)
+		#define DIFTIME ((t_fin.tv_sec*1e6 + t_fin.tv_usec) - (t_ini.tv_sec*1e6 + t_ini.tv_usec) )/ 1e6
 	#endif
-    #define TIMERS struct timeval t_ini, t_fin
-    #define GETTIME_INI gettimeofday( &t_ini, NULL)
-    #define GETTIME_FIN gettimeofday( &t_fin, NULL)
-    #define DIFTIME ((t_fin.tv_sec*1e6 + t_fin.tv_usec) - (t_ini.tv_sec*1e6 + t_ini.tv_usec) )/ 1e6
     #define omp_get_num_threads() 1
     #define omp_set_num_threads(cores)
     #define omp_get_thread_num() 0

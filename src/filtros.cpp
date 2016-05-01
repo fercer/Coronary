@@ -274,122 +274,106 @@ void FILTROS::filtrar(){
     Funcion: Obtiene la respuesta del filtro Gaussiano Multiescala, con desviacion estandar: sigma, largo del template: L, ancho del template: T, y numero de rotaciones que se hacen al filtro entre 0 y 180°: K.
 */
 void FILTROS::respGMF(INDIV *test, double *resp){
+	TIMERS;
+
+	GETTIME_INI;
+
+
+
     const int L = (int)test->vars[0];
     const int T = (int)test->vars[1];
     const int K = (int)test->vars[2];
     const double sigma = test->vars[3];
 
-    // Se calculan los templates para las rotaciones:
     double **templates = new double*[K];
     int **dims = new int* [K];
 
     //// Se calcula el template Gaussiano en rotacion 0°.
-    templates[0] = new double[L*T];
-    dims[0] = new int [2];
-    dims[0][0] = T;
-    dims[0][1] = L;
-    memset( templates[0], 0, dims[0][0]*dims[0][1]*sizeof(double));
+	double *gauss_0 = new double[L*T];
+	double *gauss_ptr = gauss_0;
 
     ////// Se calcula una linea de la gaussiana para el template, luego se copia hacia abajo:
     const double sig_2 = 2.0 * sigma * sigma;
-    double *gaussiana_org = templates[0]; // Centrar la gaussiana en el template:
     double sum = 0.0;
     for( double x = -floor((double)T/2.0); x <= floor((double)T/2.0); x+=1.0){
-        *(gaussiana_org) = 1.0 - exp( -(x*x / sig_2) );
-        sum += *(gaussiana_org);
-        gaussiana_org++;
+        *(gauss_ptr) = 1.0 - exp( -(x*x / sig_2) );
+        sum += *(gauss_ptr);
+        gauss_ptr++;
     }
 
     //// Se resta la media a todo el template, y se divide entre la suma:
-    gaussiana_org = templates[0];
+    gauss_ptr = gauss_0;
     const double media = sum / (double)T;
     for( double x = -floor((double)T/2.0); x <= floor((double)T/2.0); x+=1.0){
-        *(gaussiana_org) = (*(gaussiana_org) - media) / (sum*L);
-         gaussiana_org++;
+        *(gauss_ptr) = (*(gauss_ptr) - media) / (sum*L);
+         gauss_ptr++;
     }
 
     //// Se termina de construir el template a 0°:
-    gaussiana_org = templates[0];
     for( int y = 1; y < L; y++ ){
-        memcpy( templates[0] + y*T, gaussiana_org, T*sizeof(double) );
+        memcpy( gauss_0 + y*T, gauss_0, T*sizeof(double) );
     }
-
-
 
     // Rotar el template segun el numero de rotaciones 'K':
     const double theta_inc = 180.0 / (double)K;
     double theta = 180.0;
 
-    int max_dims_cols = 0, max_dims_rens = 0;
+    const int temp_dims = 1.5 * ((T > L) ? T : L);
 
-    for( int k = 1; k < K; k++){
+    for( int k = 0; k < K; k++){
         theta += theta_inc;
         const double ctheta = cos( theta * PI/180.0 );
         const double stheta = sin( theta * PI/180.0 );
 
-        // Determinar las dimensiones del template rotado:
-        dims[k] = new int [2];
-        dims[k][0] = 1.5 * (( T > L ) ? T : L);
-        dims[k][1] = 1.5 * (( T > L ) ? T : L);
-
-        if( max_dims_cols > dims[k][0] ){
-            max_dims_cols = dims[k][0];
-        }
-
-        if( max_dims_rens > dims[k][1] ){
-            max_dims_rens = dims[k][1];
-        }
-
-        templates[k] = new double [dims[k][0]*dims[k][1]];
-        memset(templates[k], 0, dims[k][0]*dims[k][1]*sizeof(double));
-        rotarImg( templates[0], templates[k], ctheta, stheta, dims[k][1], dims[k][0], L, T);
+        templates[k] = new double [temp_dims * temp_dims];
+        memset(templates[k], 0, temp_dims*temp_dims*sizeof(double));
+        rotarImg( gauss_0, templates[k], ctheta, stheta, temp_dims, temp_dims, L, T);
     }
 
-    double *resp_tmp = new double [ (cols + max_dims_cols) * (rens + max_dims_rens) ];
-    for( int xy = 0; xy < (cols + max_dims_cols) * (rens + max_dims_rens); xy++ ){
+	delete[] gauss_0;
+
+
+
+    ////--------------------------------------------------------- Aplicacion del filtro:
+
+    double *resp_tmp = new double [ (cols + temp_dims) * (rens + temp_dims) ];
+    for( int xy = 0; xy < (cols + temp_dims) * (rens + temp_dims); xy++ ){
         *(resp_tmp + xy) = -1e100;
     }
 
-    ////--------------------------------------------------------- Aplicacion del filtro:
-    // Aplicar los templates a la imagen:
-    //    #pragma omp parallel for shared(resp, Img_amp, templates) firstprivate(rens, cols, ancho_tmp, alto_tmp, K) reduction(min: min_img) reduction(max: max_img)
+	const int offset_O = (int)(temp_dims/ 2);
+	const int offset_E = temp_dims - offset_O - 1;
+	const int offset_N = (int)(temp_dims / 2);
+	const int offset_S = temp_dims - offset_N - 1;
+
+    //#pragma omp parallel for shared(resp, Img_amp, templates) firstprivate(rens, cols, ancho_tmp, alto_tmp, K) reduction(min: min_img) reduction(max: max_img)
     for( int k = 0; k < K; k++ ){
+		double resp_k = 0.0;
 
-        const int temp_cols = dims[k][0];
-        const int temp_rens = dims[k][1];
+        for( int yR = 0; yR < (rens + temp_dims- 1); yR++){
+			// Definir los limites en el eje y que pueden recorrerse del template:
+			const int min_y = (yR > (offset_N + 1)) ? yR - offset_N - 1 : 0;
+			const int max_y = ((yR + offset_S) < rens) ? (yR + offset_S - offset_N - 1) : rens;
 
-        const int offset_O = (int)(temp_cols / 2);
-        const int offset_E = temp_cols - offset_O - 1;
-        const int offset_N = (int)(temp_rens / 2);
-        const int offset_S = temp_rens - offset_N - 1;
+            for( int xR = 0; xR < (cols + temp_dims - 1); xR++){
 
-        const double *temp_cen = templates[k] + offset_N*temp_cols + offset_O;
-        double resp_k = 0.0;
-
-        for( int yR = 0; yR < (rens + temp_rens - 1); yR++){
-            for( int xR = 0; xR < (cols + temp_cols - 1); xR++){
-
-                // Definir los limites que pueden recorrerse del template:
-                const int min_x = ((xR - offset_O) < 0) ? 0 : -offset_O;
-                const int min_y = ((yR - offset_N) < 0) ? 0 : -offset_N;
-                const int max_x = ((xR + offset_E) >= cols) ? 1 : offset_E;
-                const int max_y = ((yR + offset_S) >= rens) ? 1 : offset_S;
+				// Definir los limites en el eje x que pueden recorrerse del template:
+                const int min_x = (xR > (offset_O + 1)) ? xR - offset_O - 1 : 0;
+                const int max_x = ((xR + offset_E) < cols) ? xR + temp_dims - offset_O - 1 : cols;
 
                 // Recorrer todo el template:
                 for( int y = min_y; y < max_y; y++){
                     for( int x = min_x; x < max_x; x++){
-                        resp_k += *(temp_cen + y*temp_cols + x) * *(org + (yR + y)*cols + (xR + x));
+                        resp_k += *(templates[k] + (max_y - y - 1)*temp_dims + (max_x - x - 1)) * *(org + y*cols + x);
                     }
                 }
+
+				if (resp_k > *(resp + yR*(cols + temp_dims) + xR)) {
+					*(resp_tmp + yR*(cols + temp_dims) + xR) = resp_k;
+				}
+
             }
         }
-
-		// Guardar la respuesta mas alta:
-		/*
-		if (resp_k > *(resp + yR*cols + xR)) {
-			*(resp_tmp + yR*cols + xR) = resp_k;
-		}
-		*/
     }
 
     DEB_MSG("Filtros convolucionados");
@@ -405,19 +389,28 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     // Normalizar la imagen:
     double min_gmf = 1e100;
     double max_gmf =-1e100;
-    for( int xy = 0; xy < rens*cols; xy++){
-        if( min_gmf > *(resp_tmp + xy) ){
-            min_gmf = *(resp_tmp + xy);
-        }
-        if( max_gmf < *(resp_tmp + xy) ){
-            max_gmf = *(resp_tmp + xy);
-        }
+	for (int y = 0; y < rens;  y++) {
+		for (int x = 0; x < cols; x++) {
+			if (min_gmf > *(resp_tmp + (x + offset_O) + (y + offset_N)*(cols + temp_dims - 1)) ){
+				min_gmf = *(resp_tmp + (x + offset_O) + (y + offset_N)*(cols + temp_dims - 1));
+			}
+			if (max_gmf < *(resp_tmp + (x + offset_O) + (y + offset_N)*(cols + temp_dims - 1)) ){
+				max_gmf = *(resp_tmp + (x + offset_O) + (y + offset_N)*(cols + temp_dims - 1));
+			}
+		}
     }
+
     // Normalizar la imagen:
-    for( int xy = 0; xy < rens*cols; xy++){
-        *(resp + xy) = (*(resp_tmp + xy) - min_gmf) / (max_gmf - min_gmf);
-    }
+	for (int y = 0; y < rens; y++) {
+		for (int x = 0; x < cols; x++) {
+			*(resp + x + y*cols) = *(resp_tmp + (x + offset_O) + (y + offset_N)*(cols + temp_dims - 1));
+		}
+	}
     delete [] resp_tmp;
+
+	GETTIME_FIN;
+
+	DEB_MSG("Filtrado en " << DIFTIME << " segundos.");
 }
 
 
