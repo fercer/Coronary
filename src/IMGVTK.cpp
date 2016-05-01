@@ -2196,6 +2196,8 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
             memcpy(map_ptr, origen.map_ptr, rens_cols*sizeof(double));
         }
     }
+
+	return *this;
 }
 
 

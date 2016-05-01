@@ -94,32 +94,8 @@
 #include "filtros.h"
 
 
-#ifdef _OPENMP
-    #define TIMERS double t_ini, t_fin
-    #define GETTIME_INI t_ini = omp_get_wtime()
-    #define GETTIME_FIN t_fin = omp_get_wtime()
-    #define DIFTIME (t_fin - t_ini)
-#else
-    #include <sys/time.h>
-    #define TIMERS struct timeval t_ini, t_fin
-    #define GETTIME_INI gettimeofday( &t_ini, NULL)
-    #define GETTIME_FIN gettimeofday( &t_fin, NULL)
-    #define DIFTIME ((t_fin.tv_sec*1e6 + t_fin.tv_usec) - (t_ini.tv_sec*1e6 + t_ini.tv_usec) )/ 1e6
-    #define omp_get_num_threads() 1
-    #define omp_set_num_threads(cores)
-    #define omp_get_thread_num() 0
-#endif
-
-
 #define PI 3.14159265
 
-
-#ifndef NDEBUG
-    #define DEB_MSG(MENSAJE) using namespace std;\
-                             cout << MENSAJE << endl;
-#else
-    #define DEB_MSG(MENSAJE)
-#endif
 
 // C L A S E: RECONS3D  ------------------------------------------------------------------------ v
 class RECONS3D{

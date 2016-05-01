@@ -45,7 +45,11 @@
     #define DIFTIME (t_fin - t_ini)
     #define OMP_ENABLED true
 #else
-    #include <sys/time.h>
+	#ifdef _WIN32
+		#include <time.h>
+	#else
+		#include <sys/time.h>
+	#endif
     #define TIMERS struct timeval t_ini, t_fin
     #define GETTIME_INI gettimeofday( &t_ini, NULL)
     #define GETTIME_FIN gettimeofday( &t_fin, NULL)

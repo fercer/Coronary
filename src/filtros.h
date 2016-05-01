@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <fftw3.h>
+#include "D:\Apps\FFTW\fftw3.h"
 
 #include <math.h>
 #include <omp.h>
@@ -28,6 +28,8 @@
 #include <vtkImageData.h>
 
 #include "IMGVTK.h"
+
+#define PI 3.14159265
 
 // C L A S E: FILTRO  ---------------------------------------------------------------------------------------------- v
 class FILTROS{

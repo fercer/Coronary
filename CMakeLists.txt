@@ -52,8 +52,8 @@ IF(GDCM_FOUND)
      gdcmMSFF
 #     gdcmopenjpeg
 #     gdcmzlib
-     socketxx
-     vtkgdcm)
+     socketxx)
+#     vtkgdcm)
 #     Rpcrt4)
   TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${GDCM_LIBRARIES})
 ELSE(GDCM_FOUND)
