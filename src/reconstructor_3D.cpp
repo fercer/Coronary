@@ -653,6 +653,8 @@ DEB_MSG("Ruta ground: " << rutaground_input);
         /// Mover el detector a su posicion definida por el archivo DICOM:
         mallarPuntos(n_angios);
         isoCentro(n_angios);
+		mostrarImagen(n_angios, IMGVTK::BASE);
+		renderizar(renderer_global);
 
         if( strcmp(rutaground_input, "NULL") ){
             imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
