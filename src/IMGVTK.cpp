@@ -1253,11 +1253,11 @@ void IMGVTK::umbralizar(IMG_IDX img_idx){
     double min = 1e100;
 
     for( int xy = 0; xy < rens_cols; xy++){
-        if(img_ptr[xy] < min){
-            min = img_ptr[xy];
+        if( *(img_ptr + xy) < min){
+            min = *(img_ptr + xy);
         }
-        if(img_ptr[xy] > max){
-            max = img_ptr[xy];
+        if( *(img_ptr + xy) > max){
+            max = *(img_ptr + xy);
         }
     }
 DEB_MSG("min resp: " << min << ", max resp: " << max);
@@ -1271,21 +1271,15 @@ DEB_MSG("clases: " << clases);
     // Obtener el histograma de frecuencias a cada nivel de grises de la imagen y las frecuencias acumuladas:
     double suma = 0.0;
     const double fraccion = 1.0 / (double)rens_cols;
-DEB_MSG("fraccion: " << fraccion);
-int max_cls = -1;
-int min_cls = 100000000;
+
     for( int xy = 0; xy < rens_cols; xy ++){
-        const int clase_i = (int)(clases*(img_ptr[xy]-min)/(max+1e-12));
+        const int clase_i = (int)(clases * (*(img_ptr + xy) - min)/(max - min + 1e-12));
         histograma_frecuencias[ clase_i ] += fraccion;
-if(min_cls > clase_i){
-    min_cls = clase_i;
-}
-if(max_cls < clase_i){
-    max_cls = clase_i;
-}
-        suma += (double)(clase_i+1) / (double)rens_cols;
+        suma += (double)(clase_i+1);
     }
-DEB_MSG("Clases almacenadas min: " << min_cls << ", max: " << max_cls);
+
+	suma *= fraccion;
+
     double suma_back = 0;
     double peso_back = 0.0;
     double varianza_entre, max_varianza_entre = -1.0;
@@ -1302,11 +1296,10 @@ DEB_MSG("Clases almacenadas min: " << min_cls << ", max: " << max_cls);
         varianza_entre = (suma*peso_back - suma_back);
         varianza_entre *= varianza_entre;
         varianza_entre /= (peso_back*(1.0 - peso_back));
-        //varianza_entre = peso_back*peso_fore*(media_back - media_fore)*(media_back - media_fore);
 
         if( varianza_entre > max_varianza_entre ){
             max_varianza_entre = varianza_entre;
-            umbral = ((double)k / (double)clases) * (max - min);
+            umbral = ((double)(k+1) / (double)clases);
         }
     }
 
@@ -1315,7 +1308,7 @@ DEB_MSG("Umbral: " << umbral);
 
     // Se umbraliza la imagen con el valor optimo encontrado:
     for( int xy = 0; xy < rens_cols; xy++){
-        threshold_ptr[xy] = (img_ptr[xy] >= umbral) ? 1.0 : 0.0;
+        *(threshold_ptr + xy) = ( ((*(img_ptr + xy) - min) / (max - min + 1e-12)) >= umbral) ? 1.0 : 0.0;
     }
 
 }

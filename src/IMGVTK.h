@@ -52,7 +52,7 @@
 #define COLOR_BLUE			"\33[34m"
 #define COLOR_MAGENTA		"\33[35m"
 #define COLOR_CYAN			"\33[36m"
-#define COLOR_BLANCO		"\33[37m"
+#define COLOR_WHITE			"\33[37m"
 #define COLOR_BACK_BLACK    "\33[40m"
 #define COLOR_BACK_RED      "\33[41m"
 #define COLOR_BACK_GREEN    "\33[42m"
@@ -104,19 +104,19 @@ class IMGVTK{
     public: //----------------------------------------------------------------------------- PUBLIC ------- v
         // T I P O S        D E     D A T O S       Y       E S T R U C T U R A S      P U B L I C A S        // IMG_IDX
         /** IMG_IDX:   **/
-        typedef enum IMG_IDX { BASE, MASK, SKELETON, SEGMENT, THRESHOLD, MAPDIST, BORDERS };
+        typedef enum IMG_IDX { BASE, MASK, SKELETON, SEGMENT, THRESHOLD, MAPDIST, BORDERS } IMG_IDX;
 
         /** TIPO_IMG:   **/
-        typedef enum TIPO_IMG { PNG, PGM };
+        typedef enum TIPO_IMG { PNG, PGM } TIPO_IMG;
 
         /** TIPO_CARACT:   **/
-        typedef enum TIPO_CARACT { PIX_END, PIX_BRANCH, PIX_CROSS, PIX_SKL };
+        typedef enum TIPO_CARACT { PIX_END, PIX_BRANCH, PIX_CROSS, PIX_SKL } TIPO_CARACT;
 
         /** PIX_PAR:   **/
         typedef struct PIX_PAR {
             unsigned int x, y;
             TIPO_CARACT pix_tipo;
-        };
+        } PIX_PAR;
 
 
         // M E T O D O S      P U B L I C O S

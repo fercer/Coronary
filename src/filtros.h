@@ -35,10 +35,10 @@
 class FILTROS{
     public: //----------------------------------------------------------------------------- PUBLIC ------- v
         // T I P O S        D E     D A T O S      P U B L I C O S
-        typedef enum SEG_FILTRO { GMF, SS_GABOR };
-        typedef enum EVO_MET { EXHAUSTIVA, EDA_BUMDA, EDA_UMDA, EA_GA };
-        typedef enum FITNESS { ROC, ENTROPIA };
-        typedef enum PARAMETRO { PAR_L, PAR_T, PAR_K, PAR_SIGMA, PAR_DELTA};
+        typedef enum SEG_FILTRO { GMF, SS_GABOR } SEG_FILTRO;
+        typedef enum EVO_MET { EXHAUSTIVA, EDA_BUMDA, EDA_UMDA, EA_GA } EVO_MET;
+        typedef enum FITNESS { ROC, ENTROPIA } FITNESS;
+        typedef enum PARAMETRO { PAR_L, PAR_T, PAR_K, PAR_SIGMA, PAR_DELTA} PARAMETRO;
 
         /** INDIV:	Define la estructura que contiene los atributos del individuo, y el valor de la funcion para este.  **/
         typedef struct IDIV {

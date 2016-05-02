@@ -282,9 +282,9 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     const int T = (int)test->vars[1];
     const int K = (int)test->vars[2];
     const double sigma = test->vars[3];
+	const int temp_dims = 1.5 * ((T > L) ? T : L);
 
     double **templates = new double*[K];
-    int **dims = new int* [K];
 
     //// Se calcula el template Gaussiano en rotacion 0°.
 	double *gauss_0 = new double[L*T];
@@ -315,25 +315,41 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     //// Se termina de construir el template a 0°:
     for( int y = 1; y < L; y++ ){
         memcpy( gauss_0 + y*T, gauss_0, T*sizeof(double) );
+
     }
 
     // Rotar el template segun el numero de rotaciones 'K':
     const double theta_inc = 180.0 / (double)K;
-    double theta = 180.0;
-
-    const int temp_dims = 1.5 * ((T > L) ? T : L);
-
+    double theta = 0.0;
 	DEB_MSG("Rotando el template...");
+
+	char nombre_tmp[] = "tmp_XX.fcs";
+	FILE *fp = NULL;
+
     for( int k = 0; k < K; k++){
-        theta += theta_inc;
         const double ctheta = cos( theta * PI/180.0 );
         const double stheta = sin( theta * PI/180.0 );
 
         templates[k] = new double [temp_dims * temp_dims];
         memset(templates[k], 0, temp_dims*temp_dims*sizeof(double));
         rotarImg( gauss_0, templates[k], ctheta, stheta, temp_dims, temp_dims, L, T);
+
+		sprintf(nombre_tmp, "tmp_%i.fcs", k);
+
+		fp = fopen(nombre_tmp, "w");
+
+		for (int y = 0; y < temp_dims; y++) {
+			for (int x = 0; x < temp_dims; x++) {
+				fprintf(fp, "%f ", templates[k][x + y*temp_dims]);
+			}
+			fprintf(fp, "\n");
+		}
+
+
+        theta += theta_inc;
     }
 
+	fclose(fp);
 	delete[] gauss_0;
 
 
@@ -341,44 +357,44 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
     ////--------------------------------------------------------- Aplicacion del filtro:
 
-    double *resp_tmp = new double [ (cols + temp_dims) * (rens + temp_dims) ];
-    for( int xy = 0; xy < (cols + temp_dims) * (rens + temp_dims); xy++ ){
+    double *resp_tmp = new double [ (cols + temp_dims - 1) * (rens + temp_dims - 1) ];
+    for( int xy = 0; xy < (cols + temp_dims - 1) * (rens + temp_dims - 1); xy++ ){
         *(resp_tmp + xy) = -1e100;
     }
 
-	const int offset_O = (int)(temp_dims/ 2);
-	const int offset_E = temp_dims - offset_O - 1;
-	const int offset_N = (int)(temp_dims / 2);
-	const int offset_S = temp_dims - offset_N - 1;
+	const int offset = (int)(temp_dims/2);
+
+	DEB_MSG("Dimensiones del filtro: " << temp_dims << ", offset: " << offset);
 
     //#pragma omp parallel for shared(resp, Img_amp, templates) firstprivate(rens, cols, ancho_tmp, alto_tmp, K) reduction(min: min_img) reduction(max: max_img)
     for( int k = 0; k < K; k++ ){
-		double resp_k = 0.0;
 
-        for( int yR = 0; yR < (rens + temp_dims- 1); yR++){
+        for( int yR = 0; yR < (rens + temp_dims - 1); yR++){
 			// Definir los limites en el eje y que pueden recorrerse del template:
-			const int min_y = (yR > (offset_N + 1)) ? yR - offset_N - 1 : 0;
-			const int max_y = ((yR + offset_S) < rens) ? (yR + offset_S - offset_N - 1) : rens;
-
+			const int min_y = (yR > (temp_dims - 1)) ? (yR - temp_dims + 1) : 0;
+			const int max_y = (yR < rens) ? (yR + 1) : rens;
             for( int xR = 0; xR < (cols + temp_dims - 1); xR++){
 
 				// Definir los limites en el eje x que pueden recorrerse del template:
-                const int min_x = (xR > (offset_O + 1)) ? xR - offset_O - 1 : 0;
-                const int max_x = ((xR + offset_E) < cols) ? xR + temp_dims - offset_O - 1 : cols;
+                const int min_x = (xR > (temp_dims - 1)) ? (xR - temp_dims + 1) : 0;
+                const int max_x = (xR < cols) ? (xR + 1) : cols;
 
-                // Recorrer todo el template:
+				double resp_k = 0.0;
+                // Convolucionar el template con la vecindad de pixeles de la imagen:
                 for( int y = min_y; y < max_y; y++){
                     for( int x = min_x; x < max_x; x++){
                         resp_k += *(templates[k] + (max_y - y - 1)*temp_dims + (max_x - x - 1)) * *(org + y*cols + x);
                     }
                 }
 
-				if (resp_k > *(resp + yR*(cols + temp_dims) + xR)) {
-					*(resp_tmp + yR*(cols + temp_dims) + xR) = resp_k;
+				if (resp_k > *(resp_tmp + yR*(cols + temp_dims - 1) + xR)) {
+					*(resp_tmp + yR*(cols + temp_dims - 1) + xR) = resp_k;
 				}
-
             }
         }
+
+		DEB_MSG(" Filtro " << COLOR_BACK_WHITE  COLOR_BLACK<< (k+1) << COLOR_NORMAL << "/" << K);
+
     }
 
     DEB_MSG("Filtros convolucionados");
@@ -386,21 +402,19 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     // Liberar la matriz de templates:
     for( int k = 0; k < K; k++){
         delete [] templates[k];
-        delete [] dims[k];
     }
     delete [] templates;
-    delete [] dims;
 
     // Normalizar la imagen:
     double min_gmf = 1e100;
     double max_gmf =-1e100;
 	for (int y = 0; y < rens;  y++) {
 		for (int x = 0; x < cols; x++) {
-			if (min_gmf > *(resp_tmp + (x + offset_O) + (y + offset_N)*(cols + temp_dims - 1)) ){
-				min_gmf = *(resp_tmp + (x + offset_O) + (y + offset_N)*(cols + temp_dims - 1));
+			if (min_gmf > *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1)) ){
+				min_gmf = *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1));
 			}
-			if (max_gmf < *(resp_tmp + (x + offset_O) + (y + offset_N)*(cols + temp_dims - 1)) ){
-				max_gmf = *(resp_tmp + (x + offset_O) + (y + offset_N)*(cols + temp_dims - 1));
+			if (max_gmf < *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1)) ){
+				max_gmf = *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1));
 			}
 		}
     }
@@ -408,7 +422,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     // Normalizar la imagen:
 	for (int y = 0; y < rens; y++) {
 		for (int x = 0; x < cols; x++) {
-			*(resp + x + y*cols) = *(resp_tmp + (x + offset_O) + (y + offset_N)*(cols + temp_dims - 1));
+			*(resp + x + y*cols) = *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1));
 		}
 	}
     delete [] resp_tmp;
