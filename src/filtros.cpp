@@ -278,8 +278,6 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
 	GETTIME_INI;
 
-
-
     const int L = (int)test->vars[0];
     const int T = (int)test->vars[1];
     const int K = (int)test->vars[2];
@@ -292,6 +290,8 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 	double *gauss_0 = new double[L*T];
 	double *gauss_ptr = gauss_0;
 
+	DEB_MSG("Calculando la base gaussiana...");
+
     ////// Se calcula una linea de la gaussiana para el template, luego se copia hacia abajo:
     const double sig_2 = 2.0 * sigma * sigma;
     double sum = 0.0;
@@ -301,6 +301,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         gauss_ptr++;
     }
 
+
     //// Se resta la media a todo el template, y se divide entre la suma:
     gauss_ptr = gauss_0;
     const double media = sum / (double)T;
@@ -308,6 +309,8 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         *(gauss_ptr) = (*(gauss_ptr) - media) / (sum*L);
          gauss_ptr++;
     }
+
+	DEB_MSG("Replicando la base gaussiana...");
 
     //// Se termina de construir el template a 0°:
     for( int y = 1; y < L; y++ ){
@@ -320,6 +323,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
     const int temp_dims = 1.5 * ((T > L) ? T : L);
 
+	DEB_MSG("Rotando el template...");
     for( int k = 0; k < K; k++){
         theta += theta_inc;
         const double ctheta = cos( theta * PI/180.0 );
@@ -333,6 +337,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 	delete[] gauss_0;
 
 
+	DEB_MSG("Listo para aplicar los filtros...");
 
     ////--------------------------------------------------------- Aplicacion del filtro:
 
@@ -879,7 +884,7 @@ void FILTROS::generarPobInicial(INDIV *poblacion){
                 poblacion[i].eval = fitnessROC( &poblacion[i] );
                 break;
         }
-        DEB_MSG("[" << omp_get_thread_num() << "/" << omp_get_num_threads() << ":" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4])
+		DEB_MSG("[" << omp_get_thread_num() << "/" << omp_get_num_threads() << ":" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4]);
 //        GETTIME_FIN;
  //       cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos." << endl;
     }
@@ -920,7 +925,7 @@ void FILTROS::generarPob(INDIV *poblacion, const int n_gen, double medias[5], do
                 break;
         }
 
-        DEB_MSG("[" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4])
+		DEB_MSG("[" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4]);
  //       GETTIME_FIN;
  //       cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos. f(x) = " << poblacion[i].eval << "[L = " << poblacion[i].vars[0] << ", T = " << poblacion[i].vars[1] << "]" << endl;
     }
@@ -1034,7 +1039,7 @@ void FILTROS::BUMDA(){
     int k = 0, truncamiento = n_pob-1, procesar = 1;
 
     //// Generar la primer poblacion:
-    DEB_MSG("Generando " << n_pob << " individuos como poblacion inicial ...")
+	DEB_MSG("Generando " << n_pob << " individuos como poblacion inicial ...");
     generarPobInicial(poblacion);
     DEB_MSG("Poblacion inicial generada, comenzando BUMDA ...");
 
@@ -1115,7 +1120,7 @@ void FILTROS::generarPob(INDIV *poblacion, const int n_gen, double *probs, doubl
                 break;
         }
 
-        DEB_MSG("[" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4])
+		DEB_MSG("[" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4]);
 //        GETTIME_FIN;
 //        cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos." << endl;
     }
@@ -1210,7 +1215,7 @@ void FILTROS::UMDA(){
     int k = 0, truncamiento = (int)( (double)n_pob * 0.6), procesar = 1;
 
     //// Generar la primer poblacion:
-    DEB_MSG("Generando " << n_pob << " individuos como poblacion inicial ...")
+	DEB_MSG("Generando " << n_pob << " individuos como poblacion inicial ...");
     generarPob( poblacion, 0, probs, tabla);
     DEB_MSG("Poblacion inicial generada, comenzando UMDA ...");
 
@@ -1412,7 +1417,7 @@ void FILTROS::generarPob(INDIV* poblacion, const double prob_mutacion, double **
                 break;
         }
 
-        DEB_MSG("[" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4])
+		DEB_MSG("[" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4]);
 //        GETTIME_FIN;
 //        cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos." << endl;
 
@@ -1520,7 +1525,7 @@ void FILTROS::GA(){
     int k = 0, procesar = 1;
 
     //// Generar la primer poblacion:
-    DEB_MSG("Generando " << n_pob << " individuos como poblacion inicial ...")
+	DEB_MSG("Generando " << n_pob << " individuos como poblacion inicial ...");
     generarPobInicial(poblacion, tabla);
     DEB_MSG("Poblacion inicial generada, comenzando GA ...");
 

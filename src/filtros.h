@@ -35,13 +35,13 @@
 class FILTROS{
     public: //----------------------------------------------------------------------------- PUBLIC ------- v
         // T I P O S        D E     D A T O S      P U B L I C O S
-        typedef enum{ GMF, SS_GABOR } SEG_FILTRO;
-        typedef enum{ EXHAUSTIVA, EDA_BUMDA, EDA_UMDA, EA_GA } EVO_MET;
-        typedef enum{ ROC, ENTROPIA } FITNESS;
-        typedef enum{ PAR_L, PAR_T, PAR_K, PAR_SIGMA, PAR_DELTA} PARAMETRO;
+        typedef enum SEG_FILTRO { GMF, SS_GABOR };
+        typedef enum EVO_MET { EXHAUSTIVA, EDA_BUMDA, EDA_UMDA, EA_GA };
+        typedef enum FITNESS { ROC, ENTROPIA };
+        typedef enum PARAMETRO { PAR_L, PAR_T, PAR_K, PAR_SIGMA, PAR_DELTA};
 
         /** INDIV:	Define la estructura que contiene los atributos del individuo, y el valor de la funcion para este.  **/
-        typedef struct{
+        typedef struct IDIV {
             double eval;
             double vars[5]; // 1: L, 2: T, 3: K, 4: sigma, 5: delta.
             bool cadena[64];
@@ -79,7 +79,7 @@ class FILTROS{
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
         // T I P O S        D E     D A T O S      P R I V A D O S
         /** STAUS:	Define una estructura que almacena las semillas requeridas por el generador de numeros pseudo-aleatorios Hybrid Taus    **/
-        typedef struct{
+        typedef struct STAUS{
             unsigned int z1, z2, z3;
         } STAUS;
 

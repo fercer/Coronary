@@ -38,6 +38,31 @@
 
 #include <omp.h>
 
+
+
+#define COLOR_NORMAL		"\33[0m"
+#define COLOR_BOLD			"\33[1m"
+#define COLOR_UNDER			"\33[4m"
+#define COLOR_BLINK			"\33[5m"
+#define COLOR_INVERSE		"\33[7m"
+#define COLOR_BLACK			"\33[30m"
+#define COLOR_RED			"\33[31m"
+#define COLOR_GREEN			"\33[32m"
+#define COLOR_YELLOW		"\33[33m"
+#define COLOR_BLUE			"\33[34m"
+#define COLOR_MAGENTA		"\33[35m"
+#define COLOR_CYAN			"\33[36m"
+#define COLOR_BLANCO		"\33[37m"
+#define COLOR_BACK_BLACK    "\33[40m"
+#define COLOR_BACK_RED      "\33[41m"
+#define COLOR_BACK_GREEN    "\33[42m"
+#define COLOR_BACK_YELLOW   "\33[43m"
+#define COLOR_BACK_BLUE     "\33[44m"
+#define COLOR_BACK_MAGENTA  "\33[45m"
+#define COLOR_BACK_CYAN     "\33[46m"
+#define COLOR_BACK_WHITE    "\33[47m"
+
+
 #ifdef _OPENMP
     #define TIMERS double t_ini, t_fin
     #define GETTIME_INI t_ini = omp_get_wtime()
@@ -67,9 +92,10 @@
 
 #ifndef NDEBUG
     #define DEB_MSG(MENSAJE) using namespace std;\
-                             cout << MENSAJE << endl;
+                             cout << MENSAJE << endl
 #else
-    #define DEB_MSG(MENSAJE)
+    #define DEB_MSG(MENSAJE) using namespace std;\
+                             cout << MENSAJE << endl
 #endif
 
 
@@ -78,19 +104,19 @@ class IMGVTK{
     public: //----------------------------------------------------------------------------- PUBLIC ------- v
         // T I P O S        D E     D A T O S       Y       E S T R U C T U R A S      P U B L I C A S        // IMG_IDX
         /** IMG_IDX:   **/
-        typedef enum{ BASE, MASK, SKELETON, SEGMENT, THRESHOLD, MAPDIST } IMG_IDX;
+        typedef enum IMG_IDX { BASE, MASK, SKELETON, SEGMENT, THRESHOLD, MAPDIST, BORDERS };
 
         /** TIPO_IMG:   **/
-        typedef enum{ PNG, PGM } TIPO_IMG;
+        typedef enum TIPO_IMG { PNG, PGM };
 
         /** TIPO_CARACT:   **/
-        typedef enum{ PIX_END, PIX_BRANCH, PIX_CROSS, PIX_SKL } TIPO_CARACT;
+        typedef enum TIPO_CARACT { PIX_END, PIX_BRANCH, PIX_CROSS, PIX_SKL };
 
         /** PIX_PAR:   **/
-        typedef struct{
+        typedef struct PIX_PAR {
             unsigned int x, y;
             TIPO_CARACT pix_tipo;
-        } PIX_PAR;
+        };
 
 
         // M E T O D O S      P U B L I C O S
@@ -101,6 +127,7 @@ class IMGVTK{
         void lengthFilter(IMG_IDX img_idx, const int min_length);
         void regionFill(IMG_IDX img_idx);
         void mapaDistancias(IMG_IDX img_idx);
+		void detectarBorde();
 
         void Cargar(const char *ruta_origen, const bool enmascarar, const int nivel);
         void Cargar(char **rutas , const int n_imgs, const bool enmascarar);
@@ -124,6 +151,7 @@ class IMGVTK{
         vtkSmartPointer<vtkImageData> segment;
         vtkSmartPointer<vtkImageData> threshold;
         vtkSmartPointer<vtkImageData> mapa_dist;
+		vtkSmartPointer<vtkImageData> borders;
 
         int rens, cols, rens_cols;
         int n_caracts;
@@ -133,6 +161,7 @@ class IMGVTK{
         double *segment_ptr;
         double *threshold_ptr;
         double *map_ptr;
+		double *borders_ptr;
 
         //// Datos extraidos del archivo DICOM:
         double SID, SOD, DDP, DISO;

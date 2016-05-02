@@ -209,6 +209,9 @@ void RECONS3D::mostrarImagen( IMGVTK &img_src, IMGVTK::IMG_IDX img_idx, vtkSmart
         case IMGVTK::MAPDIST:
             img_ptr = img_src.mapa_dist;
             break;
+		case IMGVTK::BORDERS:
+			img_ptr = img_src.borders;
+			break;
     }
 
     const int mis_rens_cols = mis_rens*mis_cols;
@@ -284,6 +287,9 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
         case IMGVTK::MAPDIST:
             img_ptr = imgs_base[angio_ID].map_ptr;
             break;
+		case IMGVTK::BORDERS:
+			img_ptr = imgs_base[angio_ID].borders_ptr;
+			break;
     }
 
     vtkSmartPointer<vtkUnsignedCharArray> intensidades = vtkSmartPointer<vtkUnsignedCharArray>::New();
@@ -653,17 +659,13 @@ DEB_MSG("Ruta ground: " << rutaground_input);
         /// Mover el detector a su posicion definida por el archivo DICOM:
         mallarPuntos(n_angios);
         isoCentro(n_angios);
-		mostrarImagen(n_angios, IMGVTK::BASE);
-		renderizar(renderer_global);
 
         if( strcmp(rutaground_input, "NULL") ){
+			DEB_MSG("Abriendo " << rutaground_input << " como ground truth");
             imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
             existe_ground.push_back( true );
-            imgs_delin[ imgs_delin .size()-1 ].mapaDistancias( IMGVTK::BASE );
-
-            mostrarImagen( imgs_delin[ imgs_delin.size()-1 ], IMGVTK::MAPDIST, mis_renderers[n_angios] );
-            renderizar( mis_renderers[n_angios] );
-
+            imgs_delin[imgs_delin.size() - 1].mapaDistancias( IMGVTK::BASE );
+			imgs_delin[imgs_delin.size() - 1].detectarBorde();
         }else{
             existe_ground.push_back( false );
         }
@@ -717,8 +719,11 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
 
 
+	DEB_MSG("Listo para aplicar el filtro ...");
 
     filtro.filtrar();
+
+	DEB_MSG("Filtro aplicado exitosamente ...");
 
 //    mostrarImagen(imgs_base[angio_ID], IMGVTK::MASK, mis_renderers[angio_ID]);
 //    renderizar(mis_renderers[angio_ID]);

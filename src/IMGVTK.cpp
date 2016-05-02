@@ -157,6 +157,37 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
 
 
 
+/*  Metodo: detectarBorde
+	Funcion: Detecta los bordes de la imagen en base a la transformada de la distancia.
+*/
+void IMGVTK::detectarBorde(){
+	if (!map_ptr) {
+		using namespace std;
+		cout << endl << COLOR_BACK_YELLOW << COLOR_RED << COLOR_BLINK << "<<Error:" << COLOR_NORMAL << COLOR_BACK_YELLOW << COLOR_BLACK << " No se ha calculado el mapa de distancias. >>" << COLOR_NORMAL << endl << endl;
+		return;
+	}
+
+	if (!borders) {
+		borders = vtkSmartPointer<vtkImageData>::New();
+	}
+
+	borders->SetExtent(0, cols - 1, 0, rens - 1, 0, 0);
+	borders->AllocateScalars(VTK_DOUBLE, 1);
+	borders->SetOrigin(0.0, 0.0, 0.0);
+	borders->SetSpacing(1.0, 1.0, 1.0);
+
+	borders_ptr = static_cast<double*>(borders->GetScalarPointer(0, 0, 0));
+	memset(borders_ptr, 0, rens_cols*sizeof(double));
+
+	for (int xy = 0; xy < rens_cols; xy++) {
+		if ( (*(base_ptr + xy) > 0.5) && (*(map_ptr + xy) < 2.0) ) {
+			*(borders_ptr + xy) = 1.0;
+		}
+	}
+}
+
+
+
 /*  Metodo: regionFilling9
     Funcion: Rellena espacios vacios dentro del conjunto de pixeles resaltado.
 */
@@ -1647,7 +1678,7 @@ DEB_MSG("Tipo UINT16");
             // La imagen esta en escala de grises:
             case 1:
             case 2:{
-DEB_MSG("La imagen esta en escala de grises")
+				DEB_MSG("La imagen esta en escala de grises");
                 vtkSmartPointer<vtkImageExtractComponents> extractGreyFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
                 extractGreyFilter->SetInputConnection(imgReader->GetOutputPort());
                 extractGreyFilter->SetComponents(0);
@@ -1662,7 +1693,7 @@ DEB_MSG("La imagen esta en escala de grises")
             }
             // La imagen esta en RGB:
             case 3:{
-DEB_MSG("La imagen esta en RGB")
+				DEB_MSG("La imagen esta en RGB");
                 vtkSmartPointer<vtkImageExtractComponents> extractRedFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
                 extractRedFilter->SetInputConnection(imgReader->GetOutputPort());
                 extractRedFilter->SetComponents(0);
@@ -1697,7 +1728,7 @@ DEB_MSG("La imagen esta en RGB")
             }
             // La imagen esta en RGBA:
             case 4:{
-DEB_MSG("La Imagen esta en RGB{A}")
+				DEB_MSG("La Imagen esta en RGB{A}");
                 vtkSmartPointer<vtkImageExtractComponents> extractRedFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
                 extractRedFilter->SetInputConnection(imgReader->GetOutputPort());
                 extractRedFilter->SetComponents(0);
@@ -1892,6 +1923,9 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
         case MAPDIST:
             img_ptr = map_ptr;
             break;
+		case BORDERS:
+			img_ptr = borders_ptr;
+			break;
     }
 
     // Alojar memoria para la imagen:
