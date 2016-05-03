@@ -323,8 +323,10 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     double theta = 0.0;
 	DEB_MSG("Rotando el template...");
 
+#ifndef NDEBUG
 	char nombre_tmp[] = "tmp_XX.fcs";
 	FILE *fp = NULL;
+#endif
 
     for( int k = 0; k < K; k++){
         const double ctheta = cos( theta * PI/180.0 );
@@ -334,6 +336,8 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         memset(templates[k], 0, temp_dims*temp_dims*sizeof(double));
         rotarImg( gauss_0, templates[k], ctheta, stheta, temp_dims, temp_dims, L, T);
 
+
+#ifndef NDEBUG
 		sprintf(nombre_tmp, "tmp_%i.fcs", k);
 
 		fp = fopen(nombre_tmp, "w");
@@ -344,12 +348,15 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 			}
 			fprintf(fp, "\n");
 		}
-
+#endif
 
         theta += theta_inc;
     }
 
+#ifndef NDEBUG
 	fclose(fp);
+#endif
+
 	delete[] gauss_0;
 
 
@@ -357,8 +364,8 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
     ////--------------------------------------------------------- Aplicacion del filtro:
 
-    double *resp_tmp = new double [ (cols + temp_dims - 1) * (rens + temp_dims - 1) ];
-    for( int xy = 0; xy < (cols + temp_dims - 1) * (rens + temp_dims - 1); xy++ ){
+    double *resp_tmp = new double [ K * (cols + temp_dims - 1) * (rens + temp_dims - 1) ];
+    for( int xy = 0; xy < K * (cols + temp_dims - 1) * (rens + temp_dims - 1); xy++ ){
         *(resp_tmp + xy) = -1e100;
     }
 
@@ -366,65 +373,61 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
 	DEB_MSG("Dimensiones del filtro: " << temp_dims << ", offset: " << offset);
 
-    //#pragma omp parallel for shared(resp, Img_amp, templates) firstprivate(rens, cols, ancho_tmp, alto_tmp, K) reduction(min: min_img) reduction(max: max_img)
+    const int mis_cols = cols;
+    const int mis_rens = rens;
+    const double *mi_org = org;
+
+
+
+    #pragma omp parallel for shared(resp_tmp, mi_org, templates) firstprivate(mis_rens, mis_cols, temp_dims, K)
     for( int k = 0; k < K; k++ ){
 
-        for( int yR = 0; yR < (rens + temp_dims - 1); yR++){
+        for( int yR = 0; yR < (mis_rens + temp_dims - 1); yR++){
 			// Definir los limites en el eje y que pueden recorrerse del template:
 			const int min_y = (yR > (temp_dims - 1)) ? (yR - temp_dims + 1) : 0;
-			const int max_y = (yR < rens) ? (yR + 1) : rens;
-            for( int xR = 0; xR < (cols + temp_dims - 1); xR++){
+            const int max_y = (yR < mis_rens) ? (yR + 1) : mis_rens;
+            for( int xR = 0; xR < (mis_cols + temp_dims - 1); xR++){
 
 				// Definir los limites en el eje x que pueden recorrerse del template:
                 const int min_x = (xR > (temp_dims - 1)) ? (xR - temp_dims + 1) : 0;
-                const int max_x = (xR < cols) ? (xR + 1) : cols;
+                const int max_x = (xR < mis_cols) ? (xR + 1) : mis_cols;
 
 				double resp_k = 0.0;
                 // Convolucionar el template con la vecindad de pixeles de la imagen:
                 for( int y = min_y; y < max_y; y++){
                     for( int x = min_x; x < max_x; x++){
-                        resp_k += *(templates[k] + (max_y - y - 1)*temp_dims + (max_x - x - 1)) * *(org + y*cols + x);
+                        resp_k += *(templates[k] + (max_y - y - 1)*temp_dims + (max_x - x - 1)) * *(mi_org + y*mis_cols + x);
                     }
                 }
 
-				if (resp_k > *(resp_tmp + yR*(cols + temp_dims - 1) + xR)) {
-					*(resp_tmp + yR*(cols + temp_dims - 1) + xR) = resp_k;
+                if (resp_k > *(resp_tmp + yR*(mis_cols + temp_dims - 1) + xR)) {
+                    *(resp_tmp + yR*(mis_cols + temp_dims - 1) + xR + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1)) = resp_k;
 				}
             }
         }
 
-		DEB_MSG(" Filtro " << COLOR_BACK_WHITE  COLOR_BLACK<< (k+1) << COLOR_NORMAL << "/" << K);
+        DEB_MSG("[" << omp_get_thread_num() << "] Filtro " << COLOR_BACK_WHITE  COLOR_BLACK<< (k+1) << COLOR_NORMAL << "/" << K);
 
     }
 
     DEB_MSG("Filtros convolucionados");
 
     // Liberar la matriz de templates:
+    for( int xy = 0; xy < rens_cols; xy++){
+        *(resp +xy) =-1e100;
+    }
     for( int k = 0; k < K; k++){
+        for (int y = 0; y < rens; y++) {
+            for (int x = 0; x < cols; x++) {
+                if( *(resp + x + y*cols) < *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1) + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1)) ){
+                    *(resp + x + y*cols) = *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1) + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1));
+                }
+            }
+        }
         delete [] templates[k];
     }
     delete [] templates;
 
-    // Normalizar la imagen:
-    double min_gmf = 1e100;
-    double max_gmf =-1e100;
-	for (int y = 0; y < rens;  y++) {
-		for (int x = 0; x < cols; x++) {
-			if (min_gmf > *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1)) ){
-				min_gmf = *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1));
-			}
-			if (max_gmf < *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1)) ){
-				max_gmf = *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1));
-			}
-		}
-    }
-
-    // Normalizar la imagen:
-	for (int y = 0; y < rens; y++) {
-		for (int x = 0; x < cols; x++) {
-			*(resp + x + y*cols) = *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1));
-		}
-	}
     delete [] resp_tmp;
 
 	GETTIME_FIN;

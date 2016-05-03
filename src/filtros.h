@@ -17,8 +17,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "D:\Apps\FFTW\fftw3.h"
-
+#if _WIN32
+    #include "D:\Apps\FFTW\fftw3.h"
+#else
+    #include <fftw3.h>
+#endif
 #include <math.h>
 #include <omp.h>
 

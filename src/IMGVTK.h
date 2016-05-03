@@ -115,6 +115,10 @@ class IMGVTK{
         /** PIX_PAR:   **/
         typedef struct PIX_PAR {
             unsigned int x, y;
+            double radio;
+            int nivel;
+            int n_hijos;
+            PIX_PAR **brchs;
             TIPO_CARACT pix_tipo;
         } PIX_PAR;
 
@@ -183,7 +187,9 @@ class IMGVTK{
         void maskFOV(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
         void fillMask(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
 
+        PIX_PAR *grafoSkeleton(const int x, const int y, bool *visitados, int *nivel, const unsigned char *lutabla );
         void extraerCaract();
+        void borrarSkeleton( PIX_PAR *raiz );
 
         // ---------------- Mascaras para region filling
         bool regionFilling9( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
@@ -207,7 +213,7 @@ class IMGVTK{
         char* setRuta( const char *ruta_input );
 
         // M I E M B R O S      P R I V A D O S
-
+        int max_dist;
 
 
 };

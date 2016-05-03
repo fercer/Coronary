@@ -650,7 +650,8 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
     }else{
 
-        imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
+        //imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
+        imgs_base.push_back(IMGVTK(rutabase_input, false, nivel_l));
         mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
         puntos.push_back(vtkSmartPointer<vtkPoints>::New());
         pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
@@ -660,12 +661,14 @@ DEB_MSG("Ruta ground: " << rutaground_input);
         mallarPuntos(n_angios);
         isoCentro(n_angios);
 
+        imgs_base[n_angios].mapaDistancias( IMGVTK::BASE );
+        imgs_base[n_angios].Guardar( IMGVTK::MAPDIST, "map.png", IMGVTK::PNG);
+        imgs_base[n_angios].detectarBorde();
+
         if( strcmp(rutaground_input, "NULL") ){
 			DEB_MSG("Abriendo " << rutaground_input << " como ground truth");
             imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
             existe_ground.push_back( true );
-            imgs_delin[imgs_delin.size() - 1].mapaDistancias( IMGVTK::BASE );
-			imgs_delin[imgs_delin.size() - 1].detectarBorde();
         }else{
             existe_ground.push_back( false );
         }
@@ -758,7 +761,7 @@ void RECONS3D::skeletonize(){
     for( int i = 0; i < n_angios; i++){
         skeletonize( i );
     }
-    renderizar(renderer_global);
+    //renderizar(renderer_global);
 }
 
 
@@ -768,11 +771,9 @@ void RECONS3D::skeletonize(){
     Funcion: Obtiene el esqueleto de la imagen y muestra los puntos de interes.
 */
 void RECONS3D::skeletonize(const int angio_ID){
-    imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
-
-    int n_caracts = imgs_base[angio_ID].n_caracts;
-
-    if( !n_caracts ){
+    //imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
+    imgs_base[angio_ID].skeletonization(IMGVTK::BASE);
+    if( imgs_base[angio_ID].par_caracts ){
         return;
     }
 
@@ -781,6 +782,8 @@ void RECONS3D::skeletonize(const int angio_ID){
     const double mis_cols = imgs_base[angio_ID].cols;
     const double mis_rens = imgs_base[angio_ID].rens;
 
+
+    // Recorrer el grafo y generar en 3D una burda reconstruccion.
     for( int c = 0; c < n_caracts; c++ ){
         const int xx = imgs_base[angio_ID].pix_caract[c].x - 1;
         const int yy = imgs_base[angio_ID].pix_caract[c].y - 1;
