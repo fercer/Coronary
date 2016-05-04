@@ -769,46 +769,31 @@ void RECONS3D::skeletonize(){
 */
 void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc){
 
-    double theta = 0.0;
     const double theta_inc = 2 * PI / (double)detalle;
     const double xx_ini = grafo->x;
     const double yy_ini = grafo->y;
 
 
     for( int h = 0; h < grafo->n_hijos; h++){
-
-        DEB_MSG("(" << grafo->ramas[h] << ")");
-        DEB_MSG("de " << grafo);
-        DEB_MSG(" hijo de: " << grafo->inicio);
+        double theta = 0.0;
 
         const double xx_fin = grafo->fines[h]->x;
         const double yy_fin = grafo->fines[h]->y;
 
         const double radio = (grafo->radio + grafo->fines[h]->radio) / 2.0;
-
-        double color[] = {1.0, 1.0, 1.0};
-        agregarEsfera( xx_ini, yy_ini, DDP, radio, color, renderer_global );
-        color[1] = 0.0;
-        agregarEsfera( xx_fin, yy_fin, DDP, radio, color, renderer_global );
-
-        const double alpha = atan2(yy_ini - yy_fin, xx_ini - xx_fin);
+        const double alpha = atan2(yy_fin - yy_ini, xx_fin - xx_ini) + PI / 2;
 
         const double cal = cos(alpha);
         const double sal = sin(alpha);
 
         double r_temp;
 
-        /*
         for( int i = 0; i < detalle; i++){
             const double cth = cos(theta);
             const double sth = sin(theta);
             double xx_3D_ini = xx_ini + cal*cth*radio;
             double yy_3D_ini = yy_ini + sal*cth*radio;
             double zz_3D_ini = DDP - sth*radio;
-
-            double xx_3D_fin = xx_fin + cal*cth*radio;
-            double yy_3D_fin = yy_fin + sal*cth*radio;
-            double zz_3D_fin = DDP - sth*radio;
 
             // rotar el punto para que se dirija hacia el punto con el que se midio el radio.
 
@@ -818,20 +803,10 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
             zz_3D_ini = srl*yy_3D_ini + crl*zz_3D_ini;
             yy_3D_ini = r_temp;
 
-            r_temp = crl*yy_3D_fin - srl*zz_3D_fin;
-            zz_3D_fin = srl*yy_3D_fin + crl*zz_3D_fin;
-            yy_3D_fin = r_temp;
-
             //// Rotacion usando el eje 'y' como base:
             r_temp = ccc*xx_3D_ini - scc*zz_3D_ini;
             zz_3D_ini = scc*xx_3D_ini + ccc*zz_3D_ini;
             xx_3D_ini = r_temp;
-
-            r_temp = ccc*xx_3D_fin - scc*zz_3D_fin;
-            zz_3D_fin = scc*xx_3D_ini + ccc*zz_3D_fin;
-            xx_3D_fin = r_temp;
-
-
 
             puntos->InsertNextPoint(xx_3D_ini, yy_3D_ini, zz_3D_ini);
             vtkSmartPointer< vtkVertex > pix = vtkSmartPointer< vtkVertex >::New();
@@ -840,20 +815,47 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
 
             vert_skl->InsertNextCell(pix);
 
+            theta += theta_inc;
+        }
+
+        theta = 0.0;
+        for( int i = 0; i < detalle; i++){
+            const double cth = cos(theta);
+            const double sth = sin(theta);
+            double xx_3D_fin = xx_fin + cal*cth*radio;
+            double yy_3D_fin = yy_fin + sal*cth*radio;
+            double zz_3D_fin = DDP - sth*radio;
+
+            // rotar el punto para que se dirija hacia el punto con el que se midio el radio.
+
+            // Mover los puntos segun indica el SID y SOD:
+            //// Rotacion usando el eje 'x' como base:
+            r_temp = crl*yy_3D_fin - srl*zz_3D_fin;
+            zz_3D_fin = srl*yy_3D_fin + crl*zz_3D_fin;
+            yy_3D_fin = r_temp;
+
+            //// Rotacion usando el eje 'y' como base:
+            r_temp = ccc*xx_3D_fin - scc*zz_3D_fin;
+            zz_3D_fin = scc*xx_3D_fin + ccc*zz_3D_fin;
+            xx_3D_fin = r_temp;
 
             puntos->InsertNextPoint(xx_3D_fin, yy_3D_fin, zz_3D_fin);
+            vtkSmartPointer< vtkVertex > pix = vtkSmartPointer< vtkVertex >::New();
             pix->GetPointIds()->SetId(0, *n_pix);
             *n_pix = *n_pix + 1;
 
             vert_skl->InsertNextCell(pix);
 
-
             theta += theta_inc;
         }
-        */
+    }
+
+    for( int h = 0; h < grafo->n_hijos; h++){
         mostrarRadios(puntos, vert_skl, n_pix, grafo->fines[h], DDP, crl, srl, ccc, scc);
     }
+
 }
+
 
 
 
@@ -992,7 +994,7 @@ void RECONS3D::skeletonize(const int angio_ID){
 RECONS3D::RECONS3D(){
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
 
-    detalle = 12;
+    detalle = 180;
 
     double color[] = {1.0, 1.0, 1.0};
     //agregarEsfera(0.0, 0.0, 0.0, 10.0, color, renderer_global);
