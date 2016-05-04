@@ -776,14 +776,15 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
 
 
     for( int h = 0; h < grafo->n_hijos; h++){
+
+        DEB_MSG("(" << grafo->ramas[h] << ")");
+        DEB_MSG("de " << grafo);
+        DEB_MSG(" hijo de: " << grafo->inicio);
+
         const double xx_fin = grafo->fines[h]->x;
         const double yy_fin = grafo->fines[h]->y;
 
         const double radio = (grafo->radio + grafo->fines[h]->radio) / 2.0;
-
-
-        DEB_MSG("(" << grafo << "): " << grafo->n_hijos << " :: " << grafo->fines[h]);
-
 
         double color[] = {1.0, 1.0, 1.0};
         agregarEsfera( xx_ini, yy_ini, DDP, radio, color, renderer_global );
@@ -850,7 +851,6 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
             theta += theta_inc;
         }
         */
-
         mostrarRadios(puntos, vert_skl, n_pix, grafo->fines[h], DDP, crl, srl, ccc, scc);
     }
 }
@@ -909,7 +909,6 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
         vert_skl->InsertNextCell(pix);
 
         grafo_nivel->InsertNextTupleValue( nivel );
-
         theta += theta_inc;
     }
 
@@ -929,6 +928,10 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
 void RECONS3D::skeletonize(const int angio_ID){
     //imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
     imgs_base[angio_ID].skeletonization(IMGVTK::BASE);
+
+//    mostrarImagen( imgs_base[angio_ID], IMGVTK::SKELETON, mis_renderers[angio_ID] );
+//    renderizar(mis_renderers[angio_ID]);
+
 
     if( !imgs_base[angio_ID].pix_caract ){
         DEB_MSG("No existe grafo...");
@@ -952,7 +955,7 @@ void RECONS3D::skeletonize(const int angio_ID){
     vtkSmartPointer<vtkUnsignedCharArray> grafo_nivel = vtkSmartPointer<vtkUnsignedCharArray>::New();
 
     grafo_nivel->SetNumberOfComponents(3);
-    grafo_nivel->SetName("Intensidadsdasdsads");
+    grafo_nivel->SetName("Intensidades");
     int n_pix = 0;
 
     DEB_MSG("Mostrando los radios de cada pixel del esqueleto...");
