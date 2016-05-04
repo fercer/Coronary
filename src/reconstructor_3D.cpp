@@ -765,6 +765,100 @@ void RECONS3D::skeletonize(){
 
 /*  Metodo: mostrarRadios
 
+    Funcion: Muestra el radio de cada seccion del esqueleto como un promedio entre el radio del inicio y del fin de cada seccion.
+*/
+void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc){
+
+    double theta = 0.0;
+    const double theta_inc = 2 * PI / (double)detalle;
+    const double xx_ini = grafo->x;
+    const double yy_ini = grafo->y;
+
+
+    for( int h = 0; h < grafo->n_hijos; h++){
+        const double xx_fin = grafo->fines[h]->x;
+        const double yy_fin = grafo->fines[h]->y;
+
+        const double radio = (grafo->radio + grafo->fines[h]->radio) / 2.0;
+
+
+        DEB_MSG("(" << grafo << "): " << grafo->n_hijos << " :: " << grafo->fines[h]);
+
+
+        double color[] = {1.0, 1.0, 1.0};
+        agregarEsfera( xx_ini, yy_ini, DDP, radio, color, renderer_global );
+        color[1] = 0.0;
+        agregarEsfera( xx_fin, yy_fin, DDP, radio, color, renderer_global );
+
+        const double alpha = atan2(yy_ini - yy_fin, xx_ini - xx_fin);
+
+        const double cal = cos(alpha);
+        const double sal = sin(alpha);
+
+        double r_temp;
+
+        /*
+        for( int i = 0; i < detalle; i++){
+            const double cth = cos(theta);
+            const double sth = sin(theta);
+            double xx_3D_ini = xx_ini + cal*cth*radio;
+            double yy_3D_ini = yy_ini + sal*cth*radio;
+            double zz_3D_ini = DDP - sth*radio;
+
+            double xx_3D_fin = xx_fin + cal*cth*radio;
+            double yy_3D_fin = yy_fin + sal*cth*radio;
+            double zz_3D_fin = DDP - sth*radio;
+
+            // rotar el punto para que se dirija hacia el punto con el que se midio el radio.
+
+            // Mover los puntos segun indica el SID y SOD:
+            //// Rotacion usando el eje 'x' como base:
+            r_temp = crl*yy_3D_ini - srl*zz_3D_ini;
+            zz_3D_ini = srl*yy_3D_ini + crl*zz_3D_ini;
+            yy_3D_ini = r_temp;
+
+            r_temp = crl*yy_3D_fin - srl*zz_3D_fin;
+            zz_3D_fin = srl*yy_3D_fin + crl*zz_3D_fin;
+            yy_3D_fin = r_temp;
+
+            //// Rotacion usando el eje 'y' como base:
+            r_temp = ccc*xx_3D_ini - scc*zz_3D_ini;
+            zz_3D_ini = scc*xx_3D_ini + ccc*zz_3D_ini;
+            xx_3D_ini = r_temp;
+
+            r_temp = ccc*xx_3D_fin - scc*zz_3D_fin;
+            zz_3D_fin = scc*xx_3D_ini + ccc*zz_3D_fin;
+            xx_3D_fin = r_temp;
+
+
+
+            puntos->InsertNextPoint(xx_3D_ini, yy_3D_ini, zz_3D_ini);
+            vtkSmartPointer< vtkVertex > pix = vtkSmartPointer< vtkVertex >::New();
+            pix->GetPointIds()->SetId(0, *n_pix);
+            *n_pix = *n_pix + 1;
+
+            vert_skl->InsertNextCell(pix);
+
+
+            puntos->InsertNextPoint(xx_3D_fin, yy_3D_fin, zz_3D_fin);
+            pix->GetPointIds()->SetId(0, *n_pix);
+            *n_pix = *n_pix + 1;
+
+            vert_skl->InsertNextCell(pix);
+
+
+            theta += theta_inc;
+        }
+        */
+
+        mostrarRadios(puntos, vert_skl, n_pix, grafo->fines[h], DDP, crl, srl, ccc, scc);
+    }
+}
+
+
+
+/*  Metodo: mostrarRadios
+
     Funcion: Muestra el radio de cada pixel del esqueleto.
 */
 void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, vtkSmartPointer<vtkUnsignedCharArray> grafo_nivel, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int n_niveles){
@@ -820,7 +914,7 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
     }
 
     for( int i = 0; i < grafo->n_hijos; i++){
-        mostrarRadios(puntos, vert_skl, grafo_nivel, n_pix, grafo->brchs[i], DDP, crl, srl, ccc, scc, n_niveles);
+        mostrarRadios(puntos, vert_skl, grafo_nivel, n_pix, grafo->ramas[i], DDP, crl, srl, ccc, scc, n_niveles);
     }
 
 }
@@ -862,12 +956,13 @@ void RECONS3D::skeletonize(const int angio_ID){
     int n_pix = 0;
 
     DEB_MSG("Mostrando los radios de cada pixel del esqueleto...");
-    mostrarRadios(puntos, vert_skl, grafo_nivel, &n_pix, imgs_base[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, n_niveles);
+    //mostrarRadios(puntos, vert_skl, grafo_nivel, &n_pix, imgs_base[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, n_niveles);
+    mostrarRadios(puntos, vert_skl, &n_pix, imgs_base[angio_ID].pix_caract, DDP, crl, srl, ccc, scc);
 
     vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
     polydata->SetPoints( puntos );
     polydata->SetVerts( vert_skl );
-    polydata->GetCellData()->SetScalars( grafo_nivel );
+    //polydata->GetCellData()->SetScalars( grafo_nivel );
     DEB_MSG("Agregando los puntos a un polydata");
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();

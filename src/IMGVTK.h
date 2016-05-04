@@ -110,7 +110,7 @@ class IMGVTK{
         typedef enum TIPO_IMG { PNG, PGM } TIPO_IMG;
 
         /** TIPO_CARACT:   **/
-        typedef enum TIPO_CARACT { PIX_END, PIX_BRANCH, PIX_CROSS, PIX_SKL } TIPO_CARACT;
+        typedef enum TIPO_CARACT { PIX_SKL, PIX_END, PIX_BRANCH, PIX_CROSS } TIPO_CARACT;
 
         /** PIX_PAR:   **/
         typedef struct PIX_PAR {
@@ -118,7 +118,9 @@ class IMGVTK{
             double radio, alpha;
             int nivel;
             int n_hijos;
-            PIX_PAR **brchs;
+            PIX_PAR *inicio;
+            PIX_PAR *fines[3];
+            PIX_PAR *ramas[3];
             TIPO_CARACT pix_tipo;
         } PIX_PAR;
 
@@ -187,7 +189,7 @@ class IMGVTK{
         void maskFOV(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
         void fillMask(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
 
-        PIX_PAR *grafoSkeleton(const int x, const int y, bool *visitados, int *nivel, const unsigned char *lutabla );
+        PIX_PAR *grafoSkeleton(const int x, const int y, bool *visitados, int *nivel, const unsigned char *lutabla , PIX_PAR *inicio_nivel);
         void extraerCaract(IMG_IDX img_idx);
         void borrarSkeleton( PIX_PAR *raiz );
 

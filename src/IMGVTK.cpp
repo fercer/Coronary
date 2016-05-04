@@ -976,15 +976,16 @@ void IMGVTK::fillMask( double *img_tmp, double *mask_tmp, const int mis_cols, co
 /*  Metodo: grafoSkeleton
     Funcion: Genera un grafo a partir del esqueleto.
 */
-IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( const int x, const int y, bool *visitados, int *nivel, const unsigned char *lutabla ){
+IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( const int x, const int y, bool *visitados, int *nivel, const unsigned char *lutabla, PIX_PAR *inicio_nivel ){
 
     PIX_PAR *temp = new PIX_PAR;
+
+    temp->inicio = inicio_nivel;
 
     unsigned char resp = sklMask( skl_ptr, x, y, cols+2, rens);
     temp->x = (x-1 - (double)cols/2)*pixX;
     temp->y = (y-1 - (double)rens/2)*pixY;
     temp->n_hijos = 0;
-    temp->brchs = NULL;
     temp->nivel = *nivel;
 
     /// Calcular el radio de la arteria en el pixel actual:
@@ -1011,6 +1012,9 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( const int x, const int y, bool *visitado
     temp->x_r = (x_r - (double)cols/2)*pixX;
     temp->alpha = atan2(temp->y_r - temp->y, temp->x_r - temp->x);
 
+    // Defino que este pixel es el inicio del grafo, a menos de que sea solamente parte del esqueleto:
+    PIX_PAR *mi_inicio = temp;
+
 
     switch( lutabla[ resp ] ){
         case 1:{ /* END point*/
@@ -1019,134 +1023,114 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( const int x, const int y, bool *visitado
         }
         case 2:{ /* BRANCH point */
             temp->pix_tipo = PIX_BRANCH;
-            *nivel = *nivel + 1;
             break;
         }
         case 3:{ /* CROSS point */
             temp->pix_tipo = PIX_CROSS;
-            *nivel = *nivel + 1;
             break;
         }
         default:{
             temp->pix_tipo = PIX_SKL;
+            mi_inicio = inicio_nivel;
             break;
         }
     }
 
-    PIX_PAR **descen_swap = NULL;
+    DEB_MSG("[" << temp << " / " << temp->pix_tipo << "] <- ini " << temp->inicio  );
 
     /// NO
     if( (resp & (unsigned char)1) && !visitados[(x-1) + (y-1)*(cols+2)]){
-        visitados[(x-1) + (y-1)*(cols+2)] = true;
-
-        descen_swap = temp->brchs;
-        temp->brchs = new PIX_PAR* [ temp->n_hijos + 1];
-        if( temp->n_hijos ){
-            memcpy( temp->brchs, descen_swap, temp->n_hijos*sizeof(PIX_PAR*) );
-            delete [] descen_swap;
+        if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
+            *nivel = *nivel + 1;
         }
-        temp->brchs[temp->n_hijos] = grafoSkeleton( x-1, y-1, visitados, nivel, lutabla );
+        visitados[(x-1) + (y-1)*(cols+2)] = true;
+        temp->ramas[temp->n_hijos] = grafoSkeleton( x-1, y-1, visitados, nivel, lutabla, mi_inicio );
         temp->n_hijos++;
     }
 
     /// N
     if( (resp & (unsigned char)2) && !visitados[x + (y-1)*(cols+2)]){
-        visitados[x + (y-1)*(cols+2)] = true;
-
-        descen_swap = temp->brchs;
-        temp->brchs = new PIX_PAR* [ temp->n_hijos + 1];
-        if( temp->n_hijos ){
-            memcpy( temp->brchs, descen_swap, temp->n_hijos*sizeof(PIX_PAR*) );
-            delete [] descen_swap;
+        if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
+            *nivel = *nivel + 1;
         }
-        temp->brchs[temp->n_hijos] = grafoSkeleton( x, y-1, visitados, nivel, lutabla );
+        visitados[x + (y-1)*(cols+2)] = true;
+        temp->ramas[temp->n_hijos] = grafoSkeleton( x, y-1, visitados, nivel, lutabla, mi_inicio );
         temp->n_hijos++;
     }
 
     /// NE
     if( (resp & (unsigned char)4) && !visitados[(x+1) + (y-1)*(cols+2)]){
-        visitados[(x+1) + (y-1)*(cols+2)] = true;
-
-        descen_swap = temp->brchs;
-        temp->brchs = new PIX_PAR* [ temp->n_hijos + 1];
-        if( temp->n_hijos ){
-            memcpy( temp->brchs, descen_swap, temp->n_hijos*sizeof(PIX_PAR*) );
-            delete [] descen_swap;
+        if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
+            *nivel = *nivel + 1;
         }
-        temp->brchs[temp->n_hijos] = grafoSkeleton( x+1, y-1, visitados, nivel, lutabla );
+        visitados[(x+1) + (y-1)*(cols+2)] = true;
+        temp->ramas[temp->n_hijos] = grafoSkeleton( x+1, y-1, visitados, nivel, lutabla, mi_inicio );
         temp->n_hijos++;
     }
 
     /// E
     if( (resp & (unsigned char)8) && !visitados[(x+1) + y*(cols+2)]){
-        visitados[(x+1) + y*(cols+2)] = true;
-
-        descen_swap = temp->brchs;
-        temp->brchs = new PIX_PAR* [ temp->n_hijos + 1];
-        if( temp->n_hijos ){
-            memcpy( temp->brchs, descen_swap, temp->n_hijos*sizeof(PIX_PAR*) );
-            delete [] descen_swap;
+        if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
+            *nivel = *nivel + 1;
         }
-        temp->brchs[temp->n_hijos] = grafoSkeleton( x+1, y, visitados, nivel, lutabla );
+        visitados[(x+1) + y*(cols+2)] = true;
+        temp->ramas[temp->n_hijos] = grafoSkeleton( x+1, y, visitados, nivel, lutabla, mi_inicio );
         temp->n_hijos++;
     }
 
     /// SE
     if( (resp & (unsigned char)16) && !visitados[(x+1) + (y+1)*(cols+2)]){
-        visitados[(x+1) + (y+1)*(cols+2)] = true;
-
-        descen_swap = temp->brchs;
-        temp->brchs = new PIX_PAR* [ temp->n_hijos + 1];
-        if( temp->n_hijos ){
-            memcpy( temp->brchs, descen_swap, temp->n_hijos*sizeof(PIX_PAR*) );
-            delete [] descen_swap;
+        if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
+            *nivel = *nivel + 1;
         }
-        temp->brchs[temp->n_hijos] = grafoSkeleton( x+1, y+1, visitados, nivel, lutabla );
+        visitados[(x+1) + (y+1)*(cols+2)] = true;
+        temp->ramas[temp->n_hijos] = grafoSkeleton( x+1, y+1, visitados, nivel, lutabla, mi_inicio );
         temp->n_hijos++;
     }
 
     /// S
     if( (resp & (unsigned char)32) && !visitados[x + (y+1)*(cols+2)]){
-        visitados[x + (y+1)*(cols+2)] = true;
-
-        descen_swap = temp->brchs;
-        temp->brchs = new PIX_PAR* [ temp->n_hijos + 1];
-        if( temp->n_hijos ){
-            memcpy( temp->brchs, descen_swap, temp->n_hijos*sizeof(PIX_PAR*) );
-            delete [] descen_swap;
+        if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
+            *nivel = *nivel + 1;
         }
-        temp->brchs[temp->n_hijos] = grafoSkeleton( x, y+1, visitados, nivel, lutabla );
+        visitados[x + (y+1)*(cols+2)] = true;
+        temp->ramas[temp->n_hijos] = grafoSkeleton( x, y+1, visitados, nivel, lutabla, mi_inicio );
         temp->n_hijos++;
     }
 
     /// SO
     if( (resp & (unsigned char)64) && !visitados[(x-1) + (y+1)*(cols+2)]){
-        visitados[(x-1) + (y+1)*(cols+2)] = true;
-
-        descen_swap = temp->brchs;
-        temp->brchs = new PIX_PAR* [ temp->n_hijos + 1];
-        if( temp->n_hijos ){
-            memcpy( temp->brchs, descen_swap, temp->n_hijos*sizeof(PIX_PAR*) );
-            delete [] descen_swap;
+        if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
+            *nivel = *nivel + 1;
         }
-        temp->brchs[temp->n_hijos] = grafoSkeleton( x-1, y+1, visitados, nivel, lutabla );
+        visitados[(x-1) + (y+1)*(cols+2)] = true;
+        temp->ramas[temp->n_hijos] = grafoSkeleton( x-1, y+1, visitados, nivel, lutabla, mi_inicio );
         temp->n_hijos++;
     }
 
     /// O
     if( (resp & (unsigned char)128) && !visitados[(x-1) + y*(cols+2)]){
-        visitados[(x-1) + y*(cols+2)] = true;
-
-        descen_swap = temp->brchs;
-        temp->brchs = new PIX_PAR* [ temp->n_hijos + 1];
-        if( temp->n_hijos ){
-            memcpy( temp->brchs, descen_swap, temp->n_hijos*sizeof(PIX_PAR*) );
-            delete [] descen_swap;
+        if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
+            *nivel = *nivel + 1;
         }
-        temp->brchs[temp->n_hijos] = grafoSkeleton( x-1, y, visitados, nivel, lutabla );
+        visitados[(x-1) + y*(cols+2)] = true;
+        temp->ramas[temp->n_hijos] = grafoSkeleton( x-1, y, visitados, nivel, lutabla, mi_inicio );
         temp->n_hijos++;
     }
 
+    for( int i = 0; i < temp->n_hijos; i++){
+        switch( temp->ramas[i]->pix_tipo ){
+            case PIX_END:
+            case PIX_BRANCH:
+            case PIX_CROSS:
+                temp->fines[i] = temp->ramas[i];
+                break;
+            case PIX_SKL:
+                temp->fines[i] = temp->ramas[i]->fines[0];
+                break;
+        }
+        DEB_MSG("[" << temp << " / " << temp->pix_tipo << "] <- fin " << temp->fines[i]  );
+    }
     return temp;
 }
 
@@ -1186,7 +1170,7 @@ void IMGVTK::extraerCaract( IMG_IDX img_idx ){
     visitados[xy] = true;
     int nivel = 0;
 
-    pix_caract = grafoSkeleton(x_ini, y_ini, visitados, &nivel, tabla);
+    pix_caract = grafoSkeleton(x_ini, y_ini, visitados, &nivel, tabla, NULL);
 
     n_niveles = nivel;
 
@@ -1202,13 +1186,10 @@ void IMGVTK::borrarSkeleton( PIX_PAR *raiz ){
 
     if( raiz->n_hijos ){
         for( int i = 0; i < raiz->n_hijos; i++ ){
-            borrarSkeleton( raiz->brchs[i] );
-            delete raiz->brchs[i];
+            borrarSkeleton( raiz->ramas[i] );
+            delete raiz->ramas[i];
         }
-
-        delete [] raiz->brchs;
     }
-
 }
 
 
@@ -2332,7 +2313,7 @@ IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel)
 /* DESTRUCTOR */
 IMGVTK::~IMGVTK(){
     if(pix_caract){
-        /// Liberar memoria dinamicamente:
+        /// Liberar memoria recursivamente:
         borrarSkeleton( pix_caract );
         delete pix_caract;
     }
