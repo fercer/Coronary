@@ -114,8 +114,8 @@ class IMGVTK{
 
         /** PIX_PAR:   **/
         typedef struct PIX_PAR {
-            unsigned int x, y;
-            double radio;
+            double x, y, x_r, y_r;
+            double radio, alpha;
             int nivel;
             int n_hijos;
             PIX_PAR **brchs;
@@ -131,7 +131,7 @@ class IMGVTK{
         void lengthFilter(IMG_IDX img_idx, const int min_length);
         void regionFill(IMG_IDX img_idx);
         void mapaDistancias(IMG_IDX img_idx);
-		void detectarBorde();
+        void detectarBorde(IMG_IDX img_idx);
 
         void Cargar(const char *ruta_origen, const bool enmascarar, const int nivel);
         void Cargar(char **rutas , const int n_imgs, const bool enmascarar);
@@ -158,7 +158,7 @@ class IMGVTK{
 		vtkSmartPointer<vtkImageData> borders;
 
         int rens, cols, rens_cols;
-        int n_caracts;
+        int n_niveles;
         double *base_ptr;
         double *skl_ptr;
         double *mask_ptr;
@@ -188,7 +188,7 @@ class IMGVTK{
         void fillMask(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
 
         PIX_PAR *grafoSkeleton(const int x, const int y, bool *visitados, int *nivel, const unsigned char *lutabla );
-        void extraerCaract();
+        void extraerCaract(IMG_IDX img_idx);
         void borrarSkeleton( PIX_PAR *raiz );
 
         // ---------------- Mascaras para region filling

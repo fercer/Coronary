@@ -157,11 +157,9 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
 /*  Metodo: detectarBorde
 	Funcion: Detecta los bordes de la imagen en base a la transformada de la distancia.
 */
-void IMGVTK::detectarBorde(){
-	if (!map_ptr) {
-		using namespace std;
-		cout << endl << COLOR_BACK_YELLOW << COLOR_RED << COLOR_BLINK << "<<Error:" << COLOR_NORMAL << COLOR_BACK_YELLOW << COLOR_BLACK << " No se ha calculado el mapa de distancias. >>" << COLOR_NORMAL << endl << endl;
-		return;
+void IMGVTK::detectarBorde( IMG_IDX img_idx ){
+    if (!map_ptr) {
+        mapaDistancias( img_idx );
 	}
 
 	if (!borders) {
@@ -979,37 +977,44 @@ void IMGVTK::fillMask( double *img_tmp, double *mask_tmp, const int mis_cols, co
     Funcion: Genera un grafo a partir del esqueleto.
 */
 IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( const int x, const int y, bool *visitados, int *nivel, const unsigned char *lutabla ){
+
     PIX_PAR *temp = new PIX_PAR;
 
-    const unsigned char resp = sklMask( skl_ptr, x, y, cols+2, rens);
-    temp->x = x;
-    temp->y = y;
+    unsigned char resp = sklMask( skl_ptr, x, y, cols+2, rens);
+    temp->x = (x-1 - (double)cols/2)*pixX;
+    temp->y = (y-1 - (double)rens/2)*pixY;
     temp->n_hijos = 0;
     temp->brchs = NULL;
     temp->nivel = *nivel;
 
     /// Calcular el radio de la arteria en el pixel actual:
-    const int min_x = ((x - max_dist) < 0) ? 0 : x - max_dist;
-    const int max_x = ((x + max_dist) >= cols) ? cols : x + max_dist;
-    const int min_y = ((y - max_dist) < 0) ? 0 : y - max_dist;
-    const int max_y = ((y + max_dist) >= rens) ? rens : y + max_dist;
+    const int min_x = ((x - max_dist - 1) < 0) ? 0 : (x - max_dist - 1);
+    const int max_x = ((x + max_dist - 1) >= cols) ? cols : (x + max_dist - 1);
+    const int min_y = ((y - max_dist - 1) < 0) ? 0 : (y - max_dist - 1);
+    const int max_y = ((y + max_dist - 1) >= rens) ? rens : (y + max_dist - 1);
 
-    double dist, radio = max_dist * max_dist;
+    double dist, radio = (max_dist + 0.5) * (max_dist + 0.5);
+    double x_r, y_r;
     for( int yy = min_y; yy < max_y; yy++){
         for( int xx = min_x; xx < max_x; xx++){
-            dist = (y - yy)*(y - yy) + (x - xx)*(x - xx);
+            dist = (yy - y + 1.5)*(yy - y + 1.5) + (xx - x + 1.5)*(xx - x + 1.5);
             if( (borders_ptr[xx + yy*cols] > 0.0) && (dist < radio) ){
                 radio = dist;
+                x_r = (double)xx;
+                y_r = (double)yy;
             }
         }
     }
 
-    temp->radio = sqrt(radio);
+    temp->radio = sqrt(radio) * pixX;
+    temp->y_r = (y_r - (double)rens/2)*pixY;
+    temp->x_r = (x_r - (double)cols/2)*pixX;
+    temp->alpha = atan2(temp->y_r - temp->y, temp->x_r - temp->x);
+
 
     switch( lutabla[ resp ] ){
         case 1:{ /* END point*/
             temp->pix_tipo = PIX_END;
-            return temp;
             break;
         }
         case 2:{ /* BRANCH point */
@@ -1031,112 +1036,112 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( const int x, const int y, bool *visitado
     PIX_PAR **descen_swap = NULL;
 
     /// NO
-    if( (resp & (unsigned char)1) && visitados[(x-1) + (y-1)*(cols+2)]){
-        visitados[(x-1) + (y-1)*(cols+2)] = false;
+    if( (resp & (unsigned char)1) && !visitados[(x-1) + (y-1)*(cols+2)]){
+        visitados[(x-1) + (y-1)*(cols+2)] = true;
 
         descen_swap = temp->brchs;
         temp->brchs = new PIX_PAR* [ temp->n_hijos + 1];
         if( temp->n_hijos ){
             memcpy( temp->brchs, descen_swap, temp->n_hijos*sizeof(PIX_PAR*) );
-            delete descen_swap;
+            delete [] descen_swap;
         }
         temp->brchs[temp->n_hijos] = grafoSkeleton( x-1, y-1, visitados, nivel, lutabla );
         temp->n_hijos++;
     }
 
     /// N
-    if( (resp & (unsigned char)2) && visitados[x + (y-1)*(cols+2)]){
-        visitados[x + (y-1)*(cols+2)] = false;
+    if( (resp & (unsigned char)2) && !visitados[x + (y-1)*(cols+2)]){
+        visitados[x + (y-1)*(cols+2)] = true;
 
         descen_swap = temp->brchs;
         temp->brchs = new PIX_PAR* [ temp->n_hijos + 1];
         if( temp->n_hijos ){
             memcpy( temp->brchs, descen_swap, temp->n_hijos*sizeof(PIX_PAR*) );
-            delete descen_swap;
+            delete [] descen_swap;
         }
         temp->brchs[temp->n_hijos] = grafoSkeleton( x, y-1, visitados, nivel, lutabla );
         temp->n_hijos++;
     }
 
     /// NE
-    if( (resp & (unsigned char)4) && visitados[(x+1) + (y-1)*(cols+2)]){
-        visitados[(x+1) + (y-1)*(cols+2)] = false;
+    if( (resp & (unsigned char)4) && !visitados[(x+1) + (y-1)*(cols+2)]){
+        visitados[(x+1) + (y-1)*(cols+2)] = true;
 
         descen_swap = temp->brchs;
         temp->brchs = new PIX_PAR* [ temp->n_hijos + 1];
         if( temp->n_hijos ){
             memcpy( temp->brchs, descen_swap, temp->n_hijos*sizeof(PIX_PAR*) );
-            delete descen_swap;
+            delete [] descen_swap;
         }
         temp->brchs[temp->n_hijos] = grafoSkeleton( x+1, y-1, visitados, nivel, lutabla );
         temp->n_hijos++;
     }
 
     /// E
-    if( (resp & (unsigned char)8) && visitados[(x+1) + y*(cols+2)]){
-        visitados[(x+1) + y*(cols+2)] = false;
+    if( (resp & (unsigned char)8) && !visitados[(x+1) + y*(cols+2)]){
+        visitados[(x+1) + y*(cols+2)] = true;
 
         descen_swap = temp->brchs;
         temp->brchs = new PIX_PAR* [ temp->n_hijos + 1];
         if( temp->n_hijos ){
             memcpy( temp->brchs, descen_swap, temp->n_hijos*sizeof(PIX_PAR*) );
-            delete descen_swap;
+            delete [] descen_swap;
         }
         temp->brchs[temp->n_hijos] = grafoSkeleton( x+1, y, visitados, nivel, lutabla );
         temp->n_hijos++;
     }
 
     /// SE
-    if( (resp & (unsigned char)16) && visitados[(x+1) + (y+1)*(cols+2)]){
-        visitados[(x+1) + (y+1)*(cols+2)] = false;
+    if( (resp & (unsigned char)16) && !visitados[(x+1) + (y+1)*(cols+2)]){
+        visitados[(x+1) + (y+1)*(cols+2)] = true;
 
         descen_swap = temp->brchs;
         temp->brchs = new PIX_PAR* [ temp->n_hijos + 1];
         if( temp->n_hijos ){
             memcpy( temp->brchs, descen_swap, temp->n_hijos*sizeof(PIX_PAR*) );
-            delete descen_swap;
+            delete [] descen_swap;
         }
         temp->brchs[temp->n_hijos] = grafoSkeleton( x+1, y+1, visitados, nivel, lutabla );
         temp->n_hijos++;
     }
 
     /// S
-    if( (resp & (unsigned char)32) && visitados[x + (y+1)*(cols+2)]){
-        visitados[x + (y+1)*(cols+2)] = false;
+    if( (resp & (unsigned char)32) && !visitados[x + (y+1)*(cols+2)]){
+        visitados[x + (y+1)*(cols+2)] = true;
 
         descen_swap = temp->brchs;
         temp->brchs = new PIX_PAR* [ temp->n_hijos + 1];
         if( temp->n_hijos ){
             memcpy( temp->brchs, descen_swap, temp->n_hijos*sizeof(PIX_PAR*) );
-            delete descen_swap;
+            delete [] descen_swap;
         }
         temp->brchs[temp->n_hijos] = grafoSkeleton( x, y+1, visitados, nivel, lutabla );
         temp->n_hijos++;
     }
 
     /// SO
-    if( (resp & (unsigned char)64) && visitados[(x-1) + (y+1)*(cols+2)]){
-        visitados[(x-1) + (y+1)*(cols+2)] = false;
+    if( (resp & (unsigned char)64) && !visitados[(x-1) + (y+1)*(cols+2)]){
+        visitados[(x-1) + (y+1)*(cols+2)] = true;
 
         descen_swap = temp->brchs;
         temp->brchs = new PIX_PAR* [ temp->n_hijos + 1];
         if( temp->n_hijos ){
             memcpy( temp->brchs, descen_swap, temp->n_hijos*sizeof(PIX_PAR*) );
-            delete descen_swap;
+            delete [] descen_swap;
         }
         temp->brchs[temp->n_hijos] = grafoSkeleton( x-1, y+1, visitados, nivel, lutabla );
         temp->n_hijos++;
     }
 
     /// O
-    if( (resp & (unsigned char)128) && visitados[(x-1) + y*(cols+2)]){
-        visitados[(x-1) + y*(cols+2)] = false;
+    if( (resp & (unsigned char)128) && !visitados[(x-1) + y*(cols+2)]){
+        visitados[(x-1) + y*(cols+2)] = true;
 
         descen_swap = temp->brchs;
         temp->brchs = new PIX_PAR* [ temp->n_hijos + 1];
         if( temp->n_hijos ){
             memcpy( temp->brchs, descen_swap, temp->n_hijos*sizeof(PIX_PAR*) );
-            delete descen_swap;
+            delete [] descen_swap;
         }
         temp->brchs[temp->n_hijos] = grafoSkeleton( x-1, y, visitados, nivel, lutabla );
         temp->n_hijos++;
@@ -1151,9 +1156,9 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( const int x, const int y, bool *visitado
 /*  Metodo: extraerCaract
     Funcion: Extrae los pixeles caracteristicos (end y branch points) a partir del esqueleot de la imagen.
 */
-void IMGVTK::extraerCaract(){
+void IMGVTK::extraerCaract( IMG_IDX img_idx ){
     if( !borders_ptr ){
-        detectarBorde();
+        detectarBorde( img_idx );
     }
 
     const unsigned char tabla[] = {
@@ -1167,6 +1172,7 @@ void IMGVTK::extraerCaract(){
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     bool *visitados = new bool [(rens+2)*(cols+2)];
+    memset( visitados, 0, (rens+2)*(cols+2));
 
     /// Buscar un punto 'end' del esqueleto y empezar a generar el grafo a aprtir de ahi.
 
@@ -1181,6 +1187,8 @@ void IMGVTK::extraerCaract(){
     int nivel = 0;
 
     pix_caract = grafoSkeleton(x_ini, y_ini, visitados, &nivel, tabla);
+
+    n_niveles = nivel;
 
     delete [] visitados;
 }
@@ -1307,7 +1315,7 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
 
     delete [] skl_mark;
 
-    extraerCaract();
+    extraerCaract( img_idx );
 }
 
 
@@ -2141,6 +2149,7 @@ IMGVTK::IMGVTK(){
     max_dist = 0;
 
     map_ptr = NULL;
+    borders_ptr = NULL;
     base_ptr = NULL;
     skl_ptr = NULL;
     pix_caract = NULL;
@@ -2167,6 +2176,7 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
     max_dist = origen.max_dist;
 
     map_ptr = NULL;
+    borders_ptr = NULL;
     base_ptr = NULL;
     skl_ptr = NULL;
     pix_caract = NULL;
@@ -2245,6 +2255,17 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
 
             memcpy(map_ptr, origen.map_ptr, rens_cols*sizeof(double));
         }
+
+        if(origen.borders_ptr){
+            borders = vtkSmartPointer<vtkImageData>::New();
+            borders->SetExtent(0, cols, 0, rens, 0, 0);
+            borders->AllocateScalars( VTK_DOUBLE, 1);
+            borders->SetOrigin(0.0, 0.0, 0.0);
+            borders->SetSpacing(1.0, 1.0, 1.0);
+            borders_ptr = static_cast<double*>(borders->GetScalarPointer(0, 0, 0));
+
+            memcpy(borders_ptr, origen.borders_ptr, rens_cols*sizeof(double));
+        }
     }
 }
 
@@ -2254,6 +2275,7 @@ IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
     max_dist = 0;
 
     map_ptr = NULL;
+    borders_ptr = NULL;
     base_ptr = NULL;
     skl_ptr = NULL;
     pix_caract = NULL;
@@ -2281,6 +2303,7 @@ IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel)
     max_dist = 0;
 
     map_ptr = NULL;
+    borders_ptr = NULL;
     base_ptr = NULL;
     skl_ptr = NULL;
     pix_caract = NULL;
@@ -2324,6 +2347,7 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
     max_dist = origen.max_dist;
 
     map_ptr = NULL;
+    borders_ptr = NULL;
     base_ptr = NULL;
     skl_ptr = NULL;
     pix_caract = NULL;
@@ -2402,6 +2426,17 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
             map_ptr = static_cast<double*>(mapa_dist->GetScalarPointer(0, 0, 0));
 
             memcpy(map_ptr, origen.map_ptr, rens_cols*sizeof(double));
+        }
+
+        if(origen.borders_ptr){
+            borders = vtkSmartPointer<vtkImageData>::New();
+            borders->SetExtent(0, cols, 0, rens, 0, 0);
+            borders->AllocateScalars( VTK_DOUBLE, 1);
+            borders->SetOrigin(0.0, 0.0, 0.0);
+            borders->SetSpacing(1.0, 1.0, 1.0);
+            borders_ptr = static_cast<double*>(borders->GetScalarPointer(0, 0, 0));
+
+            memcpy(borders_ptr, origen.borders_ptr, rens_cols*sizeof(double));
         }
     }
 

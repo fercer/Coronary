@@ -69,6 +69,9 @@
 #include <vtkPyramid.h>
 #include <vtkGlyph3D.h>
 #include <vtkArrowSource.h>
+#include <vtkSurfaceReconstructionFilter.h>
+#include <vtkContourFilter.h>
+#include <vtkReverseSense.h>
 
 
 #include <gdcmImageReader.h>
@@ -120,6 +123,7 @@ class RECONS3D{
         std::vector< bool > existe_ground;
 
         int n_angios;
+        int detalle;
 
         // Miembros para visualizar la segmentacion 3D:
         std::vector< vtkSmartPointer<vtkRenderer> > mis_renderers;
@@ -143,6 +147,8 @@ class RECONS3D{
         void mallarPuntos(const int angio_ID);
         POS posicionDefecto(const double ancho, const double alto, const double punta);
         void mostrarDetector(const int angio_ID);
+
+        void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, vtkSmartPointer<vtkUnsignedCharArray> grafo_nivel, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int n_niveles);
     //-------------------------------------------------------------------------------------- PRIVATE ----- ^
 
     public: //------------------------------------------------------------------------------- PUBLIC----- v
