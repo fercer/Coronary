@@ -732,8 +732,8 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
     imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT);
 
-    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
-    renderizar(mis_renderers[angio_ID]);
+//    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
 
 	imgs_base[angio_ID].Guardar(IMGVTK::SEGMENT, "segment.png", IMGVTK::PNG);
 
@@ -758,7 +758,7 @@ void RECONS3D::skeletonize(){
         skeletonize( i );
     }
     DEB_MSG("Renderizando el espacio 3D");
-    renderizar(renderer_global);
+    //renderizar(renderer_global);
 }
 
 

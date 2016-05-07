@@ -14,18 +14,27 @@
 /*  Metodo: interpolacion (Lineal)
     Funcion: Interpola el valor del pixel destino en base a los 4 pixeles origen.
 */
-inline double FILTROS::interpolacion(const double *pix, const int j, const int i, const double x, const double y, const int mis_cols, const int mis_rens){
+inline double FILTROS::interpolacion(const double *pix, const int j, const int i, const double x, const double y, const int mis_rens, const int mis_cols){
+    double intensidad = 0.0;
 
-    const double Q11 = *(pix + i*mis_cols + j);
-    const double Q12 = *(pix + i*mis_cols + j+1);
-    const double Q21 = *(pix + (i+1)*mis_cols + j);
-    const double Q22 = *(pix + (i+1)*mis_cols + j+1);
+    if( j >= 0 && j < mis_cols ){
+        if( i >= 0 && i < mis_rens ){
+            intensidad += *(pix +   i  *mis_cols +   j  ) * (1.0 - x) * (1.0 - y);
+        }
+        if( i >= -1  && i < (mis_rens-1) ){
+            intensidad += *(pix + (i+1)*mis_cols +   j  ) * (1.0 - x) * (   y   );
+        }
+    }
+    if( j >= -1 && j < (mis_cols-1)){
+        if( i >=  0 && i < mis_rens ){
+            intensidad += *(pix +   i  *mis_cols + (j+1)) * (   x   ) * (1.0 - y);
+        }
+        if( i >= -1 && i < (mis_rens-1) ){
+            intensidad += *(pix + (i+1)*mis_cols + (j+1)) * (   x   ) * (   y   );
+        }
+    }
 
-    return ( (1.0-x)*(1.0-y)*Q11 +
-             (  x  )*(1.0-y)*Q12 +
-             (1.0-x)*(  y  )*Q21 +
-             (  x  )*(  y  )*Q22
-           );
+    return intensidad;
 }
 
 
@@ -36,22 +45,23 @@ inline double FILTROS::interpolacion(const double *pix, const int j, const int i
 */
 void FILTROS::rotarImg( const double *org, double *rot, const double ctheta, const double stheta, const int mis_rens, const int mis_cols, const int org_rens, const int org_cols){
 
-    const double mitad_orgx = (double)(org_cols - 1) / 2.0;
-    const double mitad_orgy = (double)(org_rens - 1) / 2.0;
     const double mitad_x = (double)(mis_cols - 1) / 2.0;
     const double mitad_y = (double)(mis_rens - 1) / 2.0;
+    const double mitad_orgx = (double)(org_cols - 1) / 2.0;
+    const double mitad_orgy = (double)(org_rens - 1) / 2.0;
+
 
     double x, y;
-    for(int i = 0; i < (org_rens-1); i++){
-        for(int j = 0; j < (org_cols-1); j++){
-            x = ((double)j-mitad_orgx)*ctheta + ((double)i-mitad_orgy)*stheta + mitad_x;
-            y =-((double)j-mitad_orgx)*stheta + ((double)i-mitad_orgy)*ctheta + mitad_y;
+    for(int i = 0; i < (mis_rens-1); i++){
+        for(int j = 0; j < (mis_cols-1); j++){
+            x = ((double)j-mitad_x)*ctheta + ((double)i-mitad_y)*stheta + mitad_orgx;
+            y =-((double)j-mitad_x)*stheta + ((double)i-mitad_y)*ctheta + mitad_orgy;
             const int flx = (int)x;
             const int fly = (int)y;
             const double delta_x = x - (double)flx;
             const double delta_y = y - (double)fly;
 
-            *(rot + (fly  )*mis_cols + flx  ) = interpolacion(org, j, i, delta_x, delta_y, org_cols, org_rens);
+            *(rot + i*mis_cols + j) = interpolacion(org, flx, fly, delta_x, delta_y, org_rens, org_cols);
         }
     }
 }
@@ -282,12 +292,12 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     const int T = (int)test->vars[1];
     const int K = (int)test->vars[2];
     const double sigma = test->vars[3];
-	const int temp_dims = 1.5 * ((T > L) ? T : L);
+    const int temp_dims = 1.5 * ((T > L) ? T : L);
 
     double **templates = new double*[K];
 
     //// Se calcula el template Gaussiano en rotacion 0°.
-	double *gauss_0 = new double[L*T];
+    double *gauss_0 = new double[T];
 	double *gauss_ptr = gauss_0;
 
 	DEB_MSG("Calculando la base gaussiana...");
@@ -300,57 +310,84 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         sum += *(gauss_ptr);
         gauss_ptr++;
     }
-
+    sum *= L;
 
     //// Se resta la media a todo el template, y se divide entre la suma:
     gauss_ptr = gauss_0;
-    const double media = sum / (double)T;
+    const double media = sum / ((double)T * (double)L);
+
     for( double x = -floor((double)T/2.0); x <= floor((double)T/2.0); x+=1.0){
-        *(gauss_ptr) = (*(gauss_ptr) - media) / (sum*L);
+        *(gauss_ptr) = (*(gauss_ptr) - media) / sum;
          gauss_ptr++;
     }
 
 	DEB_MSG("Replicando la base gaussiana...");
 
     //// Se termina de construir el template a 0°:
-    for( int y = 1; y < L; y++ ){
-        memcpy( gauss_0 + y*T, gauss_0, T*sizeof(double) );
-
+    templates[0] = new double [temp_dims * temp_dims];
+    memset(templates[0], 0, temp_dims*temp_dims*sizeof(double));
+    for( int y = 0; y < L; y++ ){
+        memcpy( templates[0] + (temp_dims/2 - L/2 + y)*temp_dims + (temp_dims/2 - T/2), gauss_0, T*sizeof(double) );
+//        for( int x = 0; x < T; x++){
+//             templates[0][(temp_dims/2 - L/2 + y)*temp_dims + (temp_dims/2 - T/2+x)] = 1.0;
+//        }
     }
+
+#ifndef NDEBUG
+    char nombre_tmp[] = "tmp_XX.fcs";
+    FILE *fp = NULL;
+
+        sprintf(nombre_tmp, "tmp_%i.fcs", 0);
+
+        fp = fopen(nombre_tmp, "w");
+        double media_tmp = 0.0;
+        for (int y = 0; y < temp_dims; y++) {
+            for (int x = 0; x < temp_dims; x++) {
+                fprintf(fp, "%f ", templates[0][x + y*temp_dims]);
+                media_tmp += templates[0][x + y*temp_dims];
+            }
+            fprintf(fp, "\n");
+        }
+        media_tmp /= (double)(temp_dims*temp_dims);
+        DEB_MSG("media template " << 0 << " = " << COLOR_BACK_GREEN COLOR_BLACK << media_tmp << COLOR_NORMAL);
+            fclose(fp);
+#endif
+
 
     // Rotar el template segun el numero de rotaciones 'K':
     const double theta_inc = 180.0 / (double)K;
     double theta = 0.0;
 	DEB_MSG("Rotando el template...");
 
-#ifndef NDEBUG
-	char nombre_tmp[] = "tmp_XX.fcs";
-	FILE *fp = NULL;
-#endif
 
-    for( int k = 0; k < K; k++){
-        const double ctheta = cos( theta * PI/180.0 );
-        const double stheta = sin( theta * PI/180.0 );
+    for( int k = 1; k < K; k++){
+        theta += theta_inc;
+
+        DEB_MSG("theta: " << theta);
+        const double ctheta = cos( -theta * PI/180.0 );
+        const double stheta = sin( -theta * PI/180.0 );
 
         templates[k] = new double [temp_dims * temp_dims];
         memset(templates[k], 0, temp_dims*temp_dims*sizeof(double));
-        rotarImg( gauss_0, templates[k], ctheta, stheta, temp_dims, temp_dims, L, T);
-
+        rotarImg( templates[0], templates[k], ctheta, stheta, temp_dims, temp_dims, temp_dims, temp_dims);
 
 #ifndef NDEBUG
 		sprintf(nombre_tmp, "tmp_%i.fcs", k);
 
 		fp = fopen(nombre_tmp, "w");
-
+        double media_tmp = 0.0;
 		for (int y = 0; y < temp_dims; y++) {
 			for (int x = 0; x < temp_dims; x++) {
 				fprintf(fp, "%f ", templates[k][x + y*temp_dims]);
+                media_tmp += templates[k][x + y*temp_dims];
 			}
 			fprintf(fp, "\n");
 		}
+        media_tmp /= (double)(temp_dims*temp_dims);
+        DEB_MSG("media template " << k << " = " << COLOR_BACK_GREEN COLOR_BLACK << media_tmp << COLOR_NORMAL);
 #endif
 
-        theta += theta_inc;
+
     }
 
 #ifndef NDEBUG
@@ -377,10 +414,13 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     const int mis_rens = rens;
     const double *mi_org = org;
 
+    FILE *fp_resps = NULL;
+    char resp_nom[] = "resp_00.fcs";
 
-
-    #pragma omp parallel for shared(resp_tmp, mi_org, templates) firstprivate(mis_rens, mis_cols, temp_dims, K)
+    //#pragma omp parallel for shared(resp_tmp, mi_org, templates) firstprivate(mis_rens, mis_cols, temp_dims, K)
     for( int k = 0; k < K; k++ ){
+        sprintf(resp_nom, "resp_%i.fcs", k);
+        fp_resps = fopen(resp_nom, "w");
 
         for( int yR = 0; yR < (mis_rens + temp_dims - 1); yR++){
 			// Definir los limites en el eje y que pueden recorrerse del template:
@@ -402,13 +442,22 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
                 if (resp_k > *(resp_tmp + yR*(mis_cols + temp_dims - 1) + xR)) {
                     *(resp_tmp + yR*(mis_cols + temp_dims - 1) + xR + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1)) = resp_k;
-				}
+                }
+
+
+                if( (((yR-offset) > 56 && (yR-offset) < 118) && ((xR-offset) >= 287 && (xR-offset) < 349)) ){
+                    fprintf(fp_resps, "%f ", resp_k);
+                }
+            }
+            if( ((yR-offset) > 56 && (yR-offset) < 118) ){
+                fprintf(fp_resps, "\n");
             }
         }
-
         DEB_MSG("[" << omp_get_thread_num() << "] Filtro " << COLOR_BACK_WHITE  COLOR_BLACK<< (k+1) << COLOR_NORMAL << "/" << K);
-
+        fclose( fp_resps );
     }
+
+
 
     DEB_MSG("Filtros convolucionados");
 
@@ -416,14 +465,30 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     for( int xy = 0; xy < rens_cols; xy++){
         *(resp +xy) =-1e100;
     }
-    for( int k = 0; k < K; k++){
-        for (int y = 0; y < rens; y++) {
-            for (int x = 0; x < cols; x++) {
+
+    FILE *fp_over = fopen("resp.fcs", "w");
+    FILE *fp_org = fopen("org.fcs", "w");
+    for (int y = 0; y < rens; y++) {
+        for (int x = 0; x < cols; x++) {
+            for( int k = 0; k < K; k++){
                 if( *(resp + x + y*cols) < *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1) + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1)) ){
                     *(resp + x + y*cols) = *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1) + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1));
                 }
             }
+            if( ((y > 56 && y < 118) && (x >= 287 && x < 349)) ){
+                fprintf(fp_over, "%f ", *(resp + x + y*cols));
+                fprintf(fp_org, "%f ", *(org + x + y*cols));
+            }
         }
+        if( (y > 56 && y < 118) ){
+            fprintf(fp_over, "\n");
+            fprintf(fp_org, "\n");
+        }
+    }
+    fclose(fp_over);
+    fclose(fp_org);
+
+    for( int k = 0; k < K; k++){
         delete [] templates[k];
     }
     delete [] templates;
