@@ -23,19 +23,21 @@
 void RECONS3D::renderizar( vtkSmartPointer<vtkRenderer> mi_renderer ){
 
     mi_renderer->ResetCamera();
-
+DEB_MSG("Camara reset");
     // Crear una ventana temporal:
     vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
     renderWindow->AddRenderer(mi_renderer);
-
+DEB_MSG("Ventana generada");
     // Crear interactuador temporal:
     vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
 
     // Crear la ventana y mostrar la renderizacion:
     renderWindowInteractor->SetRenderWindow(renderWindow);
-    //renderWindowInteractor->Initialize();
+    renderWindowInteractor->Initialize();
+DEB_MSG("Iterador para la ventana lista");
 
     renderWindowInteractor->Start();
+DEB_MSG("Retornando...");
 }
 
 
@@ -206,6 +208,12 @@ void RECONS3D::mostrarImagen( IMGVTK &img_src, IMGVTK::IMG_IDX img_idx, vtkSmart
         case IMGVTK::THRESHOLD:
             img_ptr = img_src.threshold;
             break;
+        case IMGVTK::MAPDIST:
+            img_ptr = img_src.mapa_dist;
+            break;
+		case IMGVTK::BORDERS:
+			img_ptr = img_src.borders;
+			break;
     }
 
     const int mis_rens_cols = mis_rens*mis_cols;
@@ -255,7 +263,6 @@ DEB_MSG("min: " << min << ", max: " << max);
 void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
     const int mis_cols = imgs_base[angio_ID].cols;
     const int mis_rens = imgs_base[angio_ID].rens;
-    const int mi_pixX = imgs_base[angio_ID].pixX;
 
     int offset_y = 0, offset_x = 0;
     double *img_ptr = NULL;
@@ -278,6 +285,12 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
         case IMGVTK::THRESHOLD:
             img_ptr = imgs_base[angio_ID].threshold_ptr;
             break;
+        case IMGVTK::MAPDIST:
+            img_ptr = imgs_base[angio_ID].map_ptr;
+            break;
+		case IMGVTK::BORDERS:
+			img_ptr = imgs_base[angio_ID].borders_ptr;
+			break;
     }
 
     vtkSmartPointer<vtkUnsignedCharArray> intensidades = vtkSmartPointer<vtkUnsignedCharArray>::New();
@@ -603,7 +616,6 @@ void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, co
 
     // Mostrar la imagen en un renderizador
     mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
-    mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
 
     n_angios++;
 }
@@ -628,7 +640,7 @@ DEB_MSG("Ruta ground: " << rutaground_input);
             pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
             normal_centros.push_back( norcen_temp );
 
-            // Mover el detector a su posicion definida por el archivo DICOM:
+            /// Mover el detector a su posicion definida por el archivo DICOM:
             mallarPuntos(n_angios);
             isoCentro(n_angios);
 
@@ -638,17 +650,19 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
     }else{
 
-        imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
+        //imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
+        imgs_base.push_back(IMGVTK(rutabase_input, false, nivel_l));
         mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
         puntos.push_back(vtkSmartPointer<vtkPoints>::New());
         pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
         normal_centros.push_back( norcen_temp );
 
         /// Mover el detector a su posicion definida por el archivo DICOM:
-//        mallarPuntos(n_angios);
-//        isoCentro(n_angios);
+        mallarPuntos(n_angios);
+        isoCentro(n_angios);
 
         if( strcmp(rutaground_input, "NULL") ){
+			DEB_MSG("Abriendo " << rutaground_input << " como ground truth");
             imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
             existe_ground.push_back( true );
         }else{
@@ -704,19 +718,24 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
 
 
+	DEB_MSG("Listo para aplicar el filtro ...");
 
     filtro.filtrar();
+
+	DEB_MSG("Filtro aplicado exitosamente ...");
 
 //    mostrarImagen(imgs_base[angio_ID], IMGVTK::MASK, mis_renderers[angio_ID]);
 //    renderizar(mis_renderers[angio_ID]);
 
-//    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
-//    renderizar(mis_renderers[angio_ID]);
+    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
+    renderizar(mis_renderers[angio_ID]);
 
     imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT);
 
 //    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
 //    renderizar(mis_renderers[angio_ID]);
+
+	imgs_base[angio_ID].Guardar(IMGVTK::SEGMENT, "segment.png", IMGVTK::PNG);
 
     /// Falta el linking broken vessels ..................
     ///
@@ -738,8 +757,169 @@ void RECONS3D::skeletonize(){
     for( int i = 0; i < n_angios; i++){
         skeletonize( i );
     }
-    renderizar(renderer_global);
+    DEB_MSG("Renderizando el espacio 3D");
+    //renderizar(renderer_global);
 }
+
+
+
+/*  Metodo: mostrarRadios
+
+    Funcion: Muestra el radio de cada seccion del esqueleto como un promedio entre el radio del inicio y del fin de cada seccion.
+*/
+void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc){
+
+    const double theta_inc = 2 * PI / (double)detalle;
+    const double xx_ini = grafo->x;
+    const double yy_ini = grafo->y;
+
+
+    for( int h = 0; h < grafo->n_hijos; h++){
+        double theta = 0.0;
+
+        const double xx_fin = grafo->fines[h]->x;
+        const double yy_fin = grafo->fines[h]->y;
+
+        const double radio = (grafo->radio + grafo->fines[h]->radio) / 2.0;
+        const double alpha = atan2(yy_fin - yy_ini, xx_fin - xx_ini) + PI / 2;
+
+        const double cal = cos(alpha);
+        const double sal = sin(alpha);
+
+        double r_temp;
+
+        for( int i = 0; i < detalle; i++){
+            const double cth = cos(theta);
+            const double sth = sin(theta);
+            double xx_3D_ini = xx_ini + cal*cth*radio;
+            double yy_3D_ini = yy_ini + sal*cth*radio;
+            double zz_3D_ini = DDP - sth*radio;
+
+            // rotar el punto para que se dirija hacia el punto con el que se midio el radio.
+
+            // Mover los puntos segun indica el SID y SOD:
+            //// Rotacion usando el eje 'x' como base:
+            r_temp = crl*yy_3D_ini - srl*zz_3D_ini;
+            zz_3D_ini = srl*yy_3D_ini + crl*zz_3D_ini;
+            yy_3D_ini = r_temp;
+
+            //// Rotacion usando el eje 'y' como base:
+            r_temp = ccc*xx_3D_ini - scc*zz_3D_ini;
+            zz_3D_ini = scc*xx_3D_ini + ccc*zz_3D_ini;
+            xx_3D_ini = r_temp;
+
+            puntos->InsertNextPoint(xx_3D_ini, yy_3D_ini, zz_3D_ini);
+            vtkSmartPointer< vtkVertex > pix = vtkSmartPointer< vtkVertex >::New();
+            pix->GetPointIds()->SetId(0, *n_pix);
+            *n_pix = *n_pix + 1;
+
+            vert_skl->InsertNextCell(pix);
+
+            theta += theta_inc;
+        }
+
+        theta = 0.0;
+        for( int i = 0; i < detalle; i++){
+            const double cth = cos(theta);
+            const double sth = sin(theta);
+            double xx_3D_fin = xx_fin + cal*cth*radio;
+            double yy_3D_fin = yy_fin + sal*cth*radio;
+            double zz_3D_fin = DDP - sth*radio;
+
+            // rotar el punto para que se dirija hacia el punto con el que se midio el radio.
+
+            // Mover los puntos segun indica el SID y SOD:
+            //// Rotacion usando el eje 'x' como base:
+            r_temp = crl*yy_3D_fin - srl*zz_3D_fin;
+            zz_3D_fin = srl*yy_3D_fin + crl*zz_3D_fin;
+            yy_3D_fin = r_temp;
+
+            //// Rotacion usando el eje 'y' como base:
+            r_temp = ccc*xx_3D_fin - scc*zz_3D_fin;
+            zz_3D_fin = scc*xx_3D_fin + ccc*zz_3D_fin;
+            xx_3D_fin = r_temp;
+
+            puntos->InsertNextPoint(xx_3D_fin, yy_3D_fin, zz_3D_fin);
+            vtkSmartPointer< vtkVertex > pix = vtkSmartPointer< vtkVertex >::New();
+            pix->GetPointIds()->SetId(0, *n_pix);
+            *n_pix = *n_pix + 1;
+
+            vert_skl->InsertNextCell(pix);
+
+            theta += theta_inc;
+        }
+    }
+
+    for( int h = 0; h < grafo->n_hijos; h++){
+        mostrarRadios(puntos, vert_skl, n_pix, grafo->fines[h], DDP, crl, srl, ccc, scc);
+    }
+
+}
+
+
+
+
+/*  Metodo: mostrarRadios
+
+    Funcion: Muestra el radio de cada pixel del esqueleto.
+*/
+void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, vtkSmartPointer<vtkUnsignedCharArray> grafo_nivel, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int n_niveles){
+
+    unsigned char nivel[3];
+
+    nivel[0] = (unsigned char)(255.0 * (double)(grafo->nivel + 1) / (double)n_niveles);
+    nivel[1] = (unsigned char)(255.0 * (double)(grafo->nivel + 1) / (double)n_niveles);
+    nivel[2] = (unsigned char)(255.0 * (double)(grafo->nivel + 1) / (double)n_niveles);
+
+    double theta = 0.0;
+    const double theta_inc = 2 * PI / (double)detalle;
+    const double xx = grafo->x;
+    const double yy = grafo->y;
+    const double radio = grafo->radio;
+    const double alpha = grafo->alpha;
+
+    const double cal = cos(alpha);
+    const double sal = sin(alpha);
+    double r_temp;
+
+    for( int i = 0; i < detalle; i++){
+        const double cth = cos(theta);
+        const double sth = sin(theta);
+        double xx_3D = xx + cal*cth*radio;
+        double yy_3D = yy + sal*cth*radio;
+        double zz_3D = DDP - sth*radio;
+
+        // rotar el punto para que se dirija hacia el punto con el que se midio el radio.
+
+        // Mover los puntos segun indica el SID y SOD:
+        //// Rotacion usando el eje 'x' como base:
+        r_temp = crl*yy_3D - srl*zz_3D;
+        zz_3D = srl*yy_3D + crl*zz_3D;
+        yy_3D = r_temp;
+
+
+        //// Rotacion usando el eje 'y' como base:
+        r_temp = ccc*xx_3D - scc*zz_3D;
+        zz_3D = scc*xx_3D + ccc*zz_3D;
+        xx_3D = r_temp;
+
+        puntos->InsertNextPoint(xx_3D, yy_3D, zz_3D);
+        vtkSmartPointer< vtkVertex > pix = vtkSmartPointer< vtkVertex >::New();
+        pix->GetPointIds()->SetId(0, *n_pix);
+
+        *n_pix = *n_pix + 1;
+        vert_skl->InsertNextCell(pix);
+
+        grafo_nivel->InsertNextTupleValue( nivel );
+        theta += theta_inc;
+    }
+
+    for( int i = 0; i < grafo->n_hijos; i++){
+        mostrarRadios(puntos, vert_skl, grafo_nivel, n_pix, grafo->ramas[i], DDP, crl, srl, ccc, scc, n_niveles);
+    }
+
+}
+
 
 
 
@@ -748,42 +928,60 @@ void RECONS3D::skeletonize(){
     Funcion: Obtiene el esqueleto de la imagen y muestra los puntos de interes.
 */
 void RECONS3D::skeletonize(const int angio_ID){
-    imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
+    //imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
+    imgs_base[angio_ID].skeletonization(IMGVTK::BASE);
 
-    int n_caracts = imgs_base[angio_ID].n_caracts;
+//    mostrarImagen( imgs_base[angio_ID], IMGVTK::SKELETON, mis_renderers[angio_ID] );
+//    renderizar(mis_renderers[angio_ID]);
 
-    if( !n_caracts ){
+
+    if( !imgs_base[angio_ID].pix_caract ){
+        DEB_MSG("No existe grafo...");
         return;
     }
 
-    vtkSmartPointer<vtkCellArray> verticesSkeleton = vtkSmartPointer<vtkCellArray>::New();
+    // Rotar los puntos segun LAO/RAO y CAU/CRA:
+    const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * PI);
+    const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * PI);
+    const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * PI);
+    const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
 
-    const double mis_cols = imgs_base[angio_ID].cols;
-    const double mis_rens = imgs_base[angio_ID].rens;
+    const double DDP = imgs_base[angio_ID].DDP;
+    const int n_niveles = imgs_base[angio_ID].n_niveles;
 
-    for( int c = 0; c < n_caracts; c++ ){
-        const int xx = imgs_base[angio_ID].pix_caract[c].x - 1;
-        const int yy = imgs_base[angio_ID].pix_caract[c].y - 1;
+    DEB_MSG("numero de niveles: " << n_niveles);
 
-        vtkSmartPointer<vtkVertex> pix = vtkSmartPointer<vtkVertex>::New();
-        pix->GetPointIds()->SetId(0,  (xx + yy*mis_cols) );
+    // Recorrer el grafo y generar en 3D una burda reconstruccion.
+    vtkSmartPointer<vtkPoints> puntos = vtkSmartPointer<vtkPoints>::New();
+    vtkSmartPointer<vtkCellArray> vert_skl = vtkSmartPointer<vtkCellArray>::New();
+    vtkSmartPointer<vtkUnsignedCharArray> grafo_nivel = vtkSmartPointer<vtkUnsignedCharArray>::New();
 
-        verticesSkeleton->InsertNextCell( pix );
-    }
+    grafo_nivel->SetNumberOfComponents(3);
+    grafo_nivel->SetName("Intensidades");
+    int n_pix = 0;
 
-    vtkSmartPointer<vtkPolyData> polyDataSkeleton = vtkSmartPointer<vtkPolyData>::New();
-    polyDataSkeleton->SetPoints( puntos[angio_ID] );
-    polyDataSkeleton->SetVerts( verticesSkeleton );
+    DEB_MSG("Mostrando los radios de cada pixel del esqueleto...");
+    //mostrarRadios(puntos, vert_skl, grafo_nivel, &n_pix, imgs_base[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, n_niveles);
+    mostrarRadios(puntos, vert_skl, &n_pix, imgs_base[angio_ID].pix_caract, DDP, crl, srl, ccc, scc);
+
+    vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+    polydata->SetPoints( puntos );
+    polydata->SetVerts( vert_skl );
+    //polydata->GetCellData()->SetScalars( grafo_nivel );
+    DEB_MSG("Agregando los puntos a un polydata");
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputData(polyDataSkeleton);
+    mapper->SetInputData(polydata);
+    DEB_MSG("Generando Mapper");
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
+    DEB_MSG("Generando Actor");
 
-    double color[] = {1.0, 0.0, 0.0};
+    double color[] = {1.0, 1.0, 1.0};
     actor->GetProperty()->SetColor(color);
 
+    DEB_MSG("Agregando al renderizador");
     renderer_global->AddActor( actor );
 }
 
@@ -796,9 +994,11 @@ void RECONS3D::skeletonize(const int angio_ID){
 RECONS3D::RECONS3D(){
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
 
+    detalle = 180;
+
     double color[] = {1.0, 1.0, 1.0};
     //agregarEsfera(0.0, 0.0, 0.0, 10.0, color, renderer_global);
-    agregarEjes(renderer_global);
+    //agregarEjes(renderer_global);
 
     n_angios = 0;
 }

@@ -38,6 +38,31 @@
 
 #include <omp.h>
 
+
+
+#define COLOR_NORMAL		"\33[0m"
+#define COLOR_BOLD			"\33[1m"
+#define COLOR_UNDER			"\33[4m"
+#define COLOR_BLINK			"\33[5m"
+#define COLOR_INVERSE		"\33[7m"
+#define COLOR_BLACK			"\33[30m"
+#define COLOR_RED			"\33[31m"
+#define COLOR_GREEN			"\33[32m"
+#define COLOR_YELLOW		"\33[33m"
+#define COLOR_BLUE			"\33[34m"
+#define COLOR_MAGENTA		"\33[35m"
+#define COLOR_CYAN			"\33[36m"
+#define COLOR_WHITE			"\33[37m"
+#define COLOR_BACK_BLACK    "\33[40m"
+#define COLOR_BACK_RED      "\33[41m"
+#define COLOR_BACK_GREEN    "\33[42m"
+#define COLOR_BACK_YELLOW   "\33[43m"
+#define COLOR_BACK_BLUE     "\33[44m"
+#define COLOR_BACK_MAGENTA  "\33[45m"
+#define COLOR_BACK_CYAN     "\33[46m"
+#define COLOR_BACK_WHITE    "\33[47m"
+
+
 #ifdef _OPENMP
     #define TIMERS double t_ini, t_fin
     #define GETTIME_INI t_ini = omp_get_wtime()
@@ -45,11 +70,19 @@
     #define DIFTIME (t_fin - t_ini)
     #define OMP_ENABLED true
 #else
-    #include <sys/time.h>
-    #define TIMERS struct timeval t_ini, t_fin
-    #define GETTIME_INI gettimeofday( &t_ini, NULL)
-    #define GETTIME_FIN gettimeofday( &t_fin, NULL)
-    #define DIFTIME ((t_fin.tv_sec*1e6 + t_fin.tv_usec) - (t_ini.tv_sec*1e6 + t_ini.tv_usec) )/ 1e6
+	#ifdef _WIN32
+		#include <time.h>
+		#define TIMERS time_t t_ini, t_fin
+		#define GETTIME_INI time (&t_ini)
+		#define GETTIME_FIN time (&t_fin)
+		#define DIFTIME difftime( t_fin, t_ini)
+	#else
+		#include <sys/time.h>
+		#define TIMERS struct timeval t_ini, t_fin
+		#define GETTIME_INI gettimeofday( &t_ini, NULL)
+		#define GETTIME_FIN gettimeofday( &t_fin, NULL)
+		#define DIFTIME ((t_fin.tv_sec*1e6 + t_fin.tv_usec) - (t_ini.tv_sec*1e6 + t_ini.tv_usec) )/ 1e6
+	#endif
     #define omp_get_num_threads() 1
     #define omp_set_num_threads(cores)
     #define omp_get_thread_num() 0
@@ -59,9 +92,10 @@
 
 #ifndef NDEBUG
     #define DEB_MSG(MENSAJE) using namespace std;\
-                             cout << MENSAJE << endl;
+                             cout << MENSAJE << endl
 #else
-    #define DEB_MSG(MENSAJE)
+    #define DEB_MSG(MENSAJE) using namespace std;\
+                             cout << MENSAJE << endl
 #endif
 
 
@@ -70,17 +104,23 @@ class IMGVTK{
     public: //----------------------------------------------------------------------------- PUBLIC ------- v
         // T I P O S        D E     D A T O S       Y       E S T R U C T U R A S      P U B L I C A S        // IMG_IDX
         /** IMG_IDX:   **/
-        typedef enum{ BASE, MASK, SKELETON, SEGMENT, THRESHOLD } IMG_IDX;
+        typedef enum IMG_IDX { BASE, MASK, SKELETON, SEGMENT, THRESHOLD, MAPDIST, BORDERS } IMG_IDX;
 
         /** TIPO_IMG:   **/
-        typedef enum{ PNG, PGM } TIPO_IMG;
+        typedef enum TIPO_IMG { PNG, PGM } TIPO_IMG;
 
         /** TIPO_CARACT:   **/
-        typedef enum{ PIX_END, PIX_BRANCH, PIX_CROSS, PIX_SKL } TIPO_CARACT;
+        typedef enum TIPO_CARACT { PIX_SKL, PIX_END, PIX_BRANCH, PIX_CROSS } TIPO_CARACT;
 
         /** PIX_PAR:   **/
-        typedef struct{
-            unsigned int x, y;
+        typedef struct PIX_PAR {
+            double x, y, x_r, y_r;
+            double radio, alpha;
+            int nivel;
+            int n_hijos;
+            PIX_PAR *inicio;
+            PIX_PAR *fines[3];
+            PIX_PAR *ramas[3];
             TIPO_CARACT pix_tipo;
         } PIX_PAR;
 
@@ -92,6 +132,8 @@ class IMGVTK{
         void umbralizar(IMG_IDX img_idx);
         void lengthFilter(IMG_IDX img_idx, const int min_length);
         void regionFill(IMG_IDX img_idx);
+        void mapaDistancias(IMG_IDX img_idx);
+        void detectarBorde(IMG_IDX img_idx);
 
         void Cargar(const char *ruta_origen, const bool enmascarar, const int nivel);
         void Cargar(char **rutas , const int n_imgs, const bool enmascarar);
@@ -114,14 +156,18 @@ class IMGVTK{
         vtkSmartPointer<vtkImageData> skeleton;
         vtkSmartPointer<vtkImageData> segment;
         vtkSmartPointer<vtkImageData> threshold;
+        vtkSmartPointer<vtkImageData> mapa_dist;
+		vtkSmartPointer<vtkImageData> borders;
 
         int rens, cols, rens_cols;
-        int n_caracts;
+        int n_niveles;
         double *base_ptr;
         double *skl_ptr;
         double *mask_ptr;
         double *segment_ptr;
         double *threshold_ptr;
+        double *map_ptr;
+		double *borders_ptr;
 
         //// Datos extraidos del archivo DICOM:
         double SID, SOD, DDP, DISO;
@@ -140,12 +186,12 @@ class IMGVTK{
         void Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel, const bool enmascarar);
         void Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, char **rutas, const int n_imgs, const bool enmascarar);
 
-        void mapaDistancias();
-
         void maskFOV(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
         void fillMask(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
 
-        void extraerCaract();
+        PIX_PAR *grafoSkeleton(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla , PIX_PAR *inicio_nivel);
+        void extraerCaract(IMG_IDX img_idx);
+        void borrarSkeleton( PIX_PAR *raiz );
 
         // ---------------- Mascaras para region filling
         bool regionFilling9( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
@@ -169,8 +215,7 @@ class IMGVTK{
         char* setRuta( const char *ruta_input );
 
         // M I E M B R O S      P R I V A D O S
-        vtkSmartPointer<vtkImageData> mapa_dist;
-        double *map_ptr;
+        int max_dist;
 
 
 };

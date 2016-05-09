@@ -10,45 +10,31 @@
 #include "filtros.h"
 
 
-#ifdef _OPENMP
-    #define TIMERS double t_ini, t_fin
-    #define GETTIME_INI t_ini = omp_get_wtime()
-    #define GETTIME_FIN t_fin = omp_get_wtime()
-    #define DIFTIME (t_fin - t_ini)
-    #define OMP_ENABLED true
-#else
-    #include <sys/time.h>
-    #define TIMERS struct timeval t_ini, t_fin
-    #define GETTIME_INI gettimeofday( &t_ini, NULL)
-    #define GETTIME_FIN gettimeofday( &t_fin, NULL)
-    #define DIFTIME ((t_fin.tv_sec*1e6 + t_fin.tv_usec) - (t_ini.tv_sec*1e6 + t_ini.tv_usec) )/ 1e6
-    #define omp_get_num_threads() 1
-    #define omp_set_num_threads(cores)
-    #define omp_get_thread_num() 0
-    #define OMP_ENABLED false
-#endif
 
-
-#define PI 3.14159265
-
-
-#ifndef NDEBUG
-    #define DEB_MSG(MENSAJE) using namespace std;\
-                             cout << MENSAJE << endl;
-#else
-    #define DEB_MSG(MENSAJE)
-#endif
-
-#define PI 3.14159265
 /*  Metodo: interpolacion (Lineal)
     Funcion: Interpola el valor del pixel destino en base a los 4 pixeles origen.
 */
-inline double FILTROS::interpolacion(const double *pix, const int x, const int y, const double delta_x, const double delta_y, const int mis_cols){
-    return ( (1.0-delta_x)*(1.0-delta_y) * *(pix + y*mis_cols + x) +
-             (  delta_x  )*(1.0-delta_y) * *(pix + y*mis_cols + x+1) +
-             (1.0-delta_x)*(  delta_y  ) * *(pix + (y+1)*mis_cols + x) +
-             (  delta_x  )*(  delta_y  ) * *(pix + (y+1)*mis_cols + x+1)
-           );
+inline double FILTROS::interpolacion(const double *pix, const int j, const int i, const double x, const double y, const int mis_rens, const int mis_cols){
+    double intensidad = 0.0;
+
+    if( j >= 0 && j < mis_cols ){
+        if( i >= 0 && i < mis_rens ){
+            intensidad += *(pix +   i  *mis_cols +   j  ) * (1.0 - x) * (1.0 - y);
+        }
+        if( i >= -1  && i < (mis_rens-1) ){
+            intensidad += *(pix + (i+1)*mis_cols +   j  ) * (1.0 - x) * (   y   );
+        }
+    }
+    if( j >= -1 && j < (mis_cols-1)){
+        if( i >=  0 && i < mis_rens ){
+            intensidad += *(pix +   i  *mis_cols + (j+1)) * (   x   ) * (1.0 - y);
+        }
+        if( i >= -1 && i < (mis_rens-1) ){
+            intensidad += *(pix + (i+1)*mis_cols + (j+1)) * (   x   ) * (   y   );
+        }
+    }
+
+    return intensidad;
 }
 
 
@@ -57,41 +43,27 @@ inline double FILTROS::interpolacion(const double *pix, const int x, const int y
 /*  Metodo: rotarImg
     Funcion: Rota una imagen almacenada como intensidad de 0 a 1 en un angulo theta.
 */
-void FILTROS::rotarImg( const double *org, double *rot, const double theta, const int mis_rens, const int mis_cols){
-    const double ctheta = cos( theta * PI/180.0 );
-    const double stheta = sin( theta * PI/180.0 );
-DEB_MSG("cos(" <<  theta << ") = " << ctheta);
-DEB_MSG("sin(" <<  theta << ") = " << stheta);
-    const double mitad_x = 0;//(double)(mis_cols - 1) / 2.0;
-    const double mitad_y = 0;//(double)(mis_rens - 1) / 2.0;
-DEB_MSG("mitad x: " <<  mitad_x);
-DEB_MSG("mitad y: " <<  mitad_y);
-    double delta_x, delta_y, x, y;
+void FILTROS::rotarImg( const double *org, double *rot, const double ctheta, const double stheta, const int mis_rens, const int mis_cols, const int org_rens, const int org_cols){
 
-    for(int i = 0; i < mis_rens; i++){
-        for(int j = 0; j < mis_cols; j++){
-            x = ((double)j-mitad_x)*ctheta - ((double)i-mitad_y)*stheta + mitad_x;
-            y = ((double)j-mitad_x)*stheta + ((double)i-mitad_y)*ctheta + mitad_y;
-if( i == 0 ){
-    DEB_MSG("[" << (double)j-mitad_x << ", " << (double)i-mitad_y << "] -> (" << x << ", " << y << ")");
-}
+    const double mitad_x = (double)(mis_cols - 1) / 2.0;
+    const double mitad_y = (double)(mis_rens - 1) / 2.0;
+    const double mitad_orgx = (double)(org_cols - 1) / 2.0;
+    const double mitad_orgy = (double)(org_rens - 1) / 2.0;
 
 
-            int x_i = (int)x;
-            int y_i = (int)y;
+    double x, y;
+    for(int i = 0; i < (mis_rens-1); i++){
+        for(int j = 0; j < (mis_cols-1); j++){
+            x = ((double)j-mitad_x)*ctheta + ((double)i-mitad_y)*stheta + mitad_orgx;
+            y =-((double)j-mitad_x)*stheta + ((double)i-mitad_y)*ctheta + mitad_orgy;
+            const int flx = (int)x;
+            const int fly = (int)y;
+            const double delta_x = x - (double)flx;
+            const double delta_y = y - (double)fly;
 
-            // Si el pixel rotado sale de los limites del template, se descarta:
-            if( x_i > mis_cols || x_i <= 0 || y_i > mis_rens || y_i <= 0){
-                continue;
-            }
-
-            delta_x = x - (double)x_i;
-            delta_y = y - (double)y_i;
-
-            *(rot + y_i*mis_cols + x_i) = interpolacion(org, j, i, delta_x, delta_y, mis_cols);
+            *(rot + i*mis_cols + j) = interpolacion(org, flx, fly, delta_x, delta_y, org_rens, org_cols);
         }
     }
-
 }
 
 
@@ -225,15 +197,15 @@ void FILTROS::setPar(){
             UMDA();
             break;
         case EXHAUSTIVA:
-            TIMERS;
+            //TIMERS;
             for( double L = 1.3; L <= 18.1; L+= 0.4){
                 mi_elite->vars[0] = L;
                 for( double T = 1.0; T <= 16.00; T+=1.0 ){
                     mi_elite->vars[1] = T;
-                    GETTIME_INI;
+                    //GETTIME_INI;
                     mi_elite->eval = fitnessROC( mi_elite );
-                    GETTIME_FIN;
-                    cout << "Evaluado en " << DIFTIME << " segundos. eval: " << mi_elite->eval << " [L: " << L << ", T: " << T << "]." << endl;
+                    //GETTIME_FIN;
+                    //cout << "Evaluado en " << DIFTIME << " segundos. eval: " << mi_elite->eval << " [L: " << L << ", T: " << T << "]." << endl;
                 }
             }
             break;
@@ -312,120 +284,220 @@ void FILTROS::filtrar(){
     Funcion: Obtiene la respuesta del filtro Gaussiano Multiescala, con desviacion estandar: sigma, largo del template: L, ancho del template: T, y numero de rotaciones que se hacen al filtro entre 0 y 180°: K.
 */
 void FILTROS::respGMF(INDIV *test, double *resp){
+	TIMERS;
+
+	GETTIME_INI;
+
     const int L = (int)test->vars[0];
     const int T = (int)test->vars[1];
     const int K = (int)test->vars[2];
     const double sigma = test->vars[3];
+    const int temp_dims = 1.5 * ((T > L) ? T : L);
 
-    // Se calculan los templates para las rotaciones:
     double **templates = new double*[K];
 
     //// Se calcula el template Gaussiano en rotacion 0°.
-    const int ancho_tmp = T + 3; // El ancho del template es el ancho de la gaussiana + 2 pixeles a cada lado para dejar espacio a la rotacion.
-    const int alto_tmp = L + 6; // El alto del template es el largo de la gaussiana dado por L + 3 pixeles abajo y otros 3 arriba para dar espacio a la rotacion.
+    double *gauss_0 = new double[T];
+	double *gauss_ptr = gauss_0;
 
-    templates[0] = new double[alto_tmp*ancho_tmp];
-    memset( templates[0], 0, alto_tmp*ancho_tmp*sizeof(double));
-
-    const double sig_2 = 2.0 * sigma * sigma;
-    double *gaussiana_org = templates[0] + ancho_tmp*3 + 1;
+	DEB_MSG("Calculando la base gaussiana...");
 
     ////// Se calcula una linea de la gaussiana para el template, luego se copia hacia abajo:
+    const double sig_2 = 2.0 * sigma * sigma;
     double sum = 0.0;
     for( double x = -floor((double)T/2.0); x <= floor((double)T/2.0); x+=1.0){
-        *(gaussiana_org) = 1.0 - exp( -(x*x / sig_2) );
-        sum += *(gaussiana_org);
-        gaussiana_org++;
+        *(gauss_ptr) = 1.0 - exp( -(x*x / sig_2) );
+        sum += *(gauss_ptr);
+        gauss_ptr++;
+    }
+    sum *= L;
+
+    //// Se resta la media a todo el template, y se divide entre la suma:
+    gauss_ptr = gauss_0;
+    const double media = sum / ((double)T * (double)L);
+
+    for( double x = -floor((double)T/2.0); x <= floor((double)T/2.0); x+=1.0){
+        *(gauss_ptr) = (*(gauss_ptr) - media) / sum;
+         gauss_ptr++;
     }
 
-    gaussiana_org = templates[0] + ancho_tmp*3 + 1;
-    const double media = sum / (double)T;
-    //// Se resta la media a todo el template, y se divide entre la suma:
-    for( double x = -floor((double)T/2.0); x <= floor((double)T/2.0); x+=1.0){
-        *(gaussiana_org) = (*(gaussiana_org) - media) / (sum*L);
-         gaussiana_org++;
-    }
+	DEB_MSG("Replicando la base gaussiana...");
 
     //// Se termina de construir el template a 0°:
-    gaussiana_org = templates[0] + ancho_tmp*3;
-    for( int y = 1; y < L; y++ ){
-        memcpy( templates[0] + (y+3)*ancho_tmp, gaussiana_org, ancho_tmp*sizeof(double) );
+    templates[0] = new double [temp_dims * temp_dims];
+    memset(templates[0], 0, temp_dims*temp_dims*sizeof(double));
+    for( int y = 0; y < L; y++ ){
+        memcpy( templates[0] + (temp_dims/2 - L/2 + y)*temp_dims + (temp_dims/2 - T/2), gauss_0, T*sizeof(double) );
+//        for( int x = 0; x < T; x++){
+//             templates[0][(temp_dims/2 - L/2 + y)*temp_dims + (temp_dims/2 - T/2+x)] = 1.0;
+//        }
     }
 
-
-
-    /*
-     * Guardar el template base a 0 grados
-     */
+#ifndef NDEBUG
+    char nombre_tmp[] = "tmp_XX.fcs";
     FILE *fp = NULL;
-    char nombre[] = "template_00.fcs";
-    // Rotar el template segun el numero de rotaciones 'K':
-    const double theta_inc = 180.0 / (double)K;
-    double theta = 180.0;
-    for( int k = 1; k < K; k++){
-        theta -= theta_inc;
-        templates[k] = new double[alto_tmp*ancho_tmp];
-        memset(templates[k], 0, alto_tmp*ancho_tmp*sizeof(double));
-        rotarImg( templates[0], templates[k], theta, alto_tmp, ancho_tmp);
 
-        sprintf(nombre, "template_%i.fcs", k);
-        fp = fopen(nombre, "w");
-        for( int y = 0; y < alto_tmp; y++){
-            for( int x = 0; x < ancho_tmp; x++){
-                fprintf(fp, "%f ", *(templates[k] + x + y*ancho_tmp));
+        sprintf(nombre_tmp, "tmp_%i.fcs", 0);
+
+        fp = fopen(nombre_tmp, "w");
+        double media_tmp = 0.0;
+        for (int y = 0; y < temp_dims; y++) {
+            for (int x = 0; x < temp_dims; x++) {
+                fprintf(fp, "%f ", templates[0][x + y*temp_dims]);
+                media_tmp += templates[0][x + y*temp_dims];
             }
             fprintf(fp, "\n");
         }
-        fclose(fp);
+        media_tmp /= (double)(temp_dims*temp_dims);
+        DEB_MSG("media template " << 0 << " = " << COLOR_BACK_GREEN COLOR_BLACK << media_tmp << COLOR_NORMAL);
+            fclose(fp);
+#endif
+
+
+    // Rotar el template segun el numero de rotaciones 'K':
+    const double theta_inc = 180.0 / (double)K;
+    double theta = 0.0;
+	DEB_MSG("Rotando el template...");
+
+
+    for( int k = 1; k < K; k++){
+        theta += theta_inc;
+
+        DEB_MSG("theta: " << theta);
+        const double ctheta = cos( -theta * PI/180.0 );
+        const double stheta = sin( -theta * PI/180.0 );
+
+        templates[k] = new double [temp_dims * temp_dims];
+        memset(templates[k], 0, temp_dims*temp_dims*sizeof(double));
+        rotarImg( templates[0], templates[k], ctheta, stheta, temp_dims, temp_dims, temp_dims, temp_dims);
+
+#ifndef NDEBUG
+		sprintf(nombre_tmp, "tmp_%i.fcs", k);
+
+		fp = fopen(nombre_tmp, "w");
+        double media_tmp = 0.0;
+		for (int y = 0; y < temp_dims; y++) {
+			for (int x = 0; x < temp_dims; x++) {
+				fprintf(fp, "%f ", templates[k][x + y*temp_dims]);
+                media_tmp += templates[k][x + y*temp_dims];
+			}
+			fprintf(fp, "\n");
+		}
+        media_tmp /= (double)(temp_dims*temp_dims);
+        DEB_MSG("media template " << k << " = " << COLOR_BACK_GREEN COLOR_BLACK << media_tmp << COLOR_NORMAL);
+#endif
+
+
     }
 
+#ifndef NDEBUG
+	fclose(fp);
+#endif
+
+	delete[] gauss_0;
 
 
-
-
+	DEB_MSG("Listo para aplicar los filtros...");
 
     ////--------------------------------------------------------- Aplicacion del filtro:
-    //    #pragma omp parallel for shared(resp, Img_amp, templates) firstprivate(rens, cols, ancho_tmp, alto_tmp, K) reduction(min: min_img) reduction(max: max_img)
-    for( int yI = 0; yI < rens; yI++){
 
-        // Definir hasta donde puede recorrerse el template:
-        const int max_y = ((yI + alto_tmp) >= rens) ? (rens - yI) : alto_tmp;
-if( yI == (rens-1) ){
-DEB_MSG("max_y = " << max_y);
-}
-        for( int xI = 0; xI < cols; xI++){
-            const int max_x = ((xI + ancho_tmp) >= cols) ? (cols - xI) : ancho_tmp;
+    double *resp_tmp = new double [ K * (cols + temp_dims - 1) * (rens + temp_dims - 1) ];
+    for( int xy = 0; xy < K * (cols + temp_dims - 1) * (rens + temp_dims - 1); xy++ ){
+        *(resp_tmp + xy) = -1e100;
+    }
 
-            // Para quedarme con la mayor respuesta de entre los filtros:
-            double max_resp = -1e10;
+	const int offset = (int)(temp_dims/2);
 
-            // Aplicar los templates a la imagen:
-            for( int k = 0; k < 1; k++){//K; k++ ){
-                double resp_k = 0.0;
+	DEB_MSG("Dimensiones del filtro: " << temp_dims << ", offset: " << offset);
 
-                // Recorrer todo el template:
-                for( int y = 0; y < max_y; y++){
-                    for( int x = 0; x < max_x; x++){
-                        resp_k += *(templates[k] + y*ancho_tmp + x) * *(org + (yI + y)*cols + (xI + x));
+    const int mis_cols = cols;
+    const int mis_rens = rens;
+    const double *mi_org = org;
+
+    FILE *fp_resps = NULL;
+    char resp_nom[] = "resp_00.fcs";
+
+    //#pragma omp parallel for shared(resp_tmp, mi_org, templates) firstprivate(mis_rens, mis_cols, temp_dims, K)
+    for( int k = 0; k < K; k++ ){
+        sprintf(resp_nom, "resp_%i.fcs", k);
+        fp_resps = fopen(resp_nom, "w");
+
+        for( int yR = 0; yR < (mis_rens + temp_dims - 1); yR++){
+			// Definir los limites en el eje y que pueden recorrerse del template:
+			const int min_y = (yR > (temp_dims - 1)) ? (yR - temp_dims + 1) : 0;
+            const int max_y = (yR < mis_rens) ? (yR + 1) : mis_rens;
+            for( int xR = 0; xR < (mis_cols + temp_dims - 1); xR++){
+
+				// Definir los limites en el eje x que pueden recorrerse del template:
+                const int min_x = (xR > (temp_dims - 1)) ? (xR - temp_dims + 1) : 0;
+                const int max_x = (xR < mis_cols) ? (xR + 1) : mis_cols;
+
+				double resp_k = 0.0;
+                // Convolucionar el template con la vecindad de pixeles de la imagen:
+                for( int y = min_y; y < max_y; y++){
+                    for( int x = min_x; x < max_x; x++){
+                        resp_k += *(templates[k] + (max_y - y - 1)*temp_dims + (max_x - x - 1)) * *(mi_org + y*mis_cols + x);
                     }
                 }
 
-                // Guardar la respuesta mas alta:
-                if( resp_k > max_resp ){
-                    max_resp = resp_k;
+                if (resp_k > *(resp_tmp + yR*(mis_cols + temp_dims - 1) + xR)) {
+                    *(resp_tmp + yR*(mis_cols + temp_dims - 1) + xR + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1)) = resp_k;
+                }
+
+
+                if( (((yR-offset) > 56 && (yR-offset) < 118) && ((xR-offset) >= 287 && (xR-offset) < 349)) ){
+                    fprintf(fp_resps, "%f ", resp_k);
                 }
             }
-
-            *(resp + yI*cols + xI) = max_resp;
+            if( ((yR-offset) > 56 && (yR-offset) < 118) ){
+                fprintf(fp_resps, "\n");
+            }
         }
+        DEB_MSG("[" << omp_get_thread_num() << "] Filtro " << COLOR_BACK_WHITE  COLOR_BLACK<< (k+1) << COLOR_NORMAL << "/" << K);
+        fclose( fp_resps );
     }
 
 
+
+    DEB_MSG("Filtros convolucionados");
+
     // Liberar la matriz de templates:
+    for( int xy = 0; xy < rens_cols; xy++){
+        *(resp +xy) =-1e100;
+    }
+
+    FILE *fp_over = fopen("resp.fcs", "w");
+    FILE *fp_org = fopen("org.fcs", "w");
+    for (int y = 0; y < rens; y++) {
+        for (int x = 0; x < cols; x++) {
+            for( int k = 0; k < K; k++){
+                if( *(resp + x + y*cols) < *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1) + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1)) ){
+                    *(resp + x + y*cols) = *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1) + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1));
+                }
+            }
+            if( ((y > 56 && y < 118) && (x >= 287 && x < 349)) ){
+                fprintf(fp_over, "%f ", *(resp + x + y*cols));
+                fprintf(fp_org, "%f ", *(org + x + y*cols));
+            }
+        }
+        if( (y > 56 && y < 118) ){
+            fprintf(fp_over, "\n");
+            fprintf(fp_org, "\n");
+        }
+    }
+    fclose(fp_over);
+    fclose(fp_org);
+
     for( int k = 0; k < K; k++){
         delete [] templates[k];
     }
     delete [] templates;
+
+    delete [] resp_tmp;
+
+	GETTIME_FIN;
+
+	DEB_MSG("Filtrado en " << DIFTIME << " segundos.");
 }
 
 
@@ -456,9 +528,9 @@ void FILTROS::fftImgOrigen(){
 */
 void FILTROS::respGabor(INDIV *test, double *resp){
 
-    TIMERS;
+//    TIMERS;
 
-    GETTIME_INI;
+//    GETTIME_INI;
 
     const double L = test->vars[0];
     const int T = (int)test->vars[1];
@@ -602,10 +674,10 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     }
 
     delete [] max_resp;
-    GETTIME_FIN;
+//    GETTIME_FIN;
 
 #ifndef NDEBUG
-        DEB_MSG("Tiempo de filtrado: " << DIFTIME << "s. max: " << max_global << ", min: " << min_global );
+//        DEB_MSG("Tiempo de filtrado: " << DIFTIME << "s. max: " << max_global << ", min: " << min_global );
 #endif
 }
 
@@ -639,9 +711,9 @@ int comp_resp( const void *a, const void *b){
 */
 double FILTROS::calcROC(INDIV *test, double *resp){
 
-    TIMERS;
+//    TIMERS;
 
-    GETTIME_INI;
+//    GETTIME_INI;
 
     const double delta = test->vars[4];
     DEB_MSG("Calculando ROC");
@@ -740,9 +812,9 @@ double FILTROS::calcROC(INDIV *test, double *resp){
     delete [] arr_unos;
     delete [] arr_ceros;
 
-    GETTIME_FIN;
+//    GETTIME_FIN;
 
-    DEB_MSG("Tiempo para obtener la curva de ROC: " << DIFTIME << " s.  " << Az)
+//    DEB_MSG("Tiempo para obtener la curva de ROC: " << DIFTIME << " s.  " << Az)
 
     return Az;
 }
@@ -875,12 +947,12 @@ int FILTROS::compIndiv(const void* A, const void* B){
 
 */
 void FILTROS::generarPobInicial(INDIV *poblacion){
-    TIMERS;
+//    TIMERS;
     //Se generan n_pob - 1 individuos, y permanece el elite que se tiene.
     // VERIFICAR CUALES PARAMETROS SE BUSCAN:
     using namespace std;
     for(int i = 0; i < n_pob; i++){
-        GETTIME_INI;
+//        GETTIME_INI;
         memcpy( poblacion[i].vars, mi_elite->vars, 5*sizeof(double) );
 
         for( int j = 0; j < n_pars; j++){
@@ -894,9 +966,9 @@ void FILTROS::generarPobInicial(INDIV *poblacion){
                 poblacion[i].eval = fitnessROC( &poblacion[i] );
                 break;
         }
-        DEB_MSG("[" << omp_get_thread_num() << "/" << omp_get_num_threads() << ":" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4])
-        GETTIME_FIN;
-        cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos." << endl;
+		DEB_MSG("[" << omp_get_thread_num() << "/" << omp_get_num_threads() << ":" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4]);
+//        GETTIME_FIN;
+ //       cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos." << endl;
     }
 
     //Se reordena toda la poblacion, no solo la parte generada.
@@ -914,14 +986,14 @@ void FILTROS::generarPobInicial(INDIV *poblacion){
 
 */
 void FILTROS::generarPob(INDIV *poblacion, const int n_gen, double medias[5], double varianzas[5]){
-    TIMERS;
+//    TIMERS;
     double val_gen;
 
     //Se generan n_pob - 1 individuos, y permanece el elite que se tiene.
     // VERIFICAR CUALES PARAMETROS SE BUSCAN:
     using namespace std;
     for(register int i = n_gen; i < n_pob; i++){
-        GETTIME_INI;
+ //       GETTIME_INI;
         for( int j = 0; j < n_pars; j++){
             const int k = idx_pars[j];
             val_gen =  anorm( medias[k], varianzas[k]);
@@ -935,9 +1007,9 @@ void FILTROS::generarPob(INDIV *poblacion, const int n_gen, double medias[5], do
                 break;
         }
 
-        DEB_MSG("[" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4])
-        GETTIME_FIN;
-        cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos. f(x) = " << poblacion[i].eval << "[L = " << poblacion[i].vars[0] << ", T = " << poblacion[i].vars[1] << "]" << endl;
+		DEB_MSG("[" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4]);
+ //       GETTIME_FIN;
+ //       cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos. f(x) = " << poblacion[i].eval << "[L = " << poblacion[i].vars[0] << ", T = " << poblacion[i].vars[1] << "]" << endl;
     }
 
     //Se reordena toda la poblacion, no solo la parte generada.
@@ -1023,8 +1095,8 @@ int FILTROS::seleccionarPob(double *tetha_t, INDIV *poblacion){
 */
 void FILTROS::BUMDA(){
 
-    TIMERS;
-    GETTIME_INI;
+//    TIMERS;
+//    GETTIME_INI;
 
     INDIV *poblacion = new INDIV [n_pob];
 
@@ -1049,7 +1121,7 @@ void FILTROS::BUMDA(){
     int k = 0, truncamiento = n_pob-1, procesar = 1;
 
     //// Generar la primer poblacion:
-    DEB_MSG("Generando " << n_pob << " individuos como poblacion inicial ...")
+	DEB_MSG("Generando " << n_pob << " individuos como poblacion inicial ...");
     generarPobInicial(poblacion);
     DEB_MSG("Poblacion inicial generada, comenzando BUMDA ...");
 
@@ -1082,8 +1154,8 @@ void FILTROS::BUMDA(){
     memcpy(mi_elite->vars, poblacion[0].vars, 5*sizeof(double));
     mi_elite->eval = poblacion[0].eval;
     delete [] poblacion;
-    GETTIME_FIN;
-    cout << " Mejor candidato encontrada con " << k << " iteraciones y " << DIFTIME << "segundos.\n Con evaluacion de la funcion objetivo: " << mi_elite->eval << endl;
+//    GETTIME_FIN;
+//    cout << " Mejor candidato encontrada con " << k << " iteraciones y " << DIFTIME << "segundos.\n Con evaluacion de la funcion objetivo: " << mi_elite->eval << endl;
 }
 
 
@@ -1096,13 +1168,13 @@ void FILTROS::BUMDA(){
     Funcion:   Genera una nueva poblacion en bsae al muestreo de cada atributo.
 */
 void FILTROS::generarPob(INDIV *poblacion, const int n_gen, double *probs, double **tabla){
-    TIMERS;
+//    TIMERS;
     using namespace std;
 
     //Se generan n_pob - 1 individuos, y permanece el elite que se tiene.
     // VERIFICAR CUALES PARAMETROS SE BUSCAN:
     for(register int i = n_gen; i < n_pob; i++){
-        GETTIME_INI;
+//        GETTIME_INI;
         // Se muestrean los genes:
         for( int b = 0; b < n_bits; b++){
             poblacion[i].cadena[b] = (HybTaus(0.0, 1.0) <= probs[b]) ? true : false;
@@ -1130,9 +1202,9 @@ void FILTROS::generarPob(INDIV *poblacion, const int n_gen, double *probs, doubl
                 break;
         }
 
-        DEB_MSG("[" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4])
-        GETTIME_FIN;
-        cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos." << endl;
+		DEB_MSG("[" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4]);
+//        GETTIME_FIN;
+//        cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos." << endl;
     }
 
     DEB_MSG("Reordenando poblacion ...");
@@ -1173,8 +1245,8 @@ void FILTROS::calcularPars(INDIV *poblacion, const int truncamiento, double *pro
 */
 void FILTROS::UMDA(){
 
-    TIMERS;
-    GETTIME_INI;
+//    TIMERS;
+//    GETTIME_INI;
 
     INDIV *poblacion = new INDIV [n_pob];
     // Poner los valores del elite por defecto:
@@ -1225,7 +1297,7 @@ void FILTROS::UMDA(){
     int k = 0, truncamiento = (int)( (double)n_pob * 0.6), procesar = 1;
 
     //// Generar la primer poblacion:
-    DEB_MSG("Generando " << n_pob << " individuos como poblacion inicial ...")
+	DEB_MSG("Generando " << n_pob << " individuos como poblacion inicial ...");
     generarPob( poblacion, 0, probs, tabla);
     DEB_MSG("Poblacion inicial generada, comenzando UMDA ...");
 
@@ -1251,8 +1323,8 @@ void FILTROS::UMDA(){
     memcpy(mi_elite->vars, poblacion[0].vars, 5*sizeof(double));
     mi_elite->eval = poblacion[0].eval;
     delete [] poblacion;
-    GETTIME_FIN;
-    cout << " Mejor candidato encontrado con " << k << " iteraciones. y " << DIFTIME << "segundos. \n Con evaluacion de la funcion objetivo: " << mi_elite->eval << endl;
+//    GETTIME_FIN;
+//    cout << " Mejor candidato encontrado con " << k << " iteraciones. y " << DIFTIME << "segundos. \n Con evaluacion de la funcion objetivo: " << mi_elite->eval << endl;
 }
 
 
@@ -1296,14 +1368,14 @@ void FILTROS::generarPobInicial(INDIV *poblacion, double **tabla){
         case ROC:
             //#pragma omp parallel for shared(poblacion)
             for(int i = 0; i < n_pob; i++){
-                TIMERS;
-                GETTIME_INI;
+//                TIMERS;
+//                GETTIME_INI;
                 //// Evaluar los parametros en el filtro de Gabor con el area bajo de la curva de ROC:
                 poblacion[i].eval = fitnessROC( &poblacion[i] );
 
-                DEB_MSG("[PROCESS_" << omp_get_thread_num() << "][" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4])
-                GETTIME_FIN;
-                cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos." << endl;
+//                DEB_MSG("[PROCESS_" << omp_get_thread_num() << "][" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4])
+//                GETTIME_FIN;
+//                cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos." << endl;
             }
             break;
     }
@@ -1371,7 +1443,7 @@ void FILTROS::seleccionarPob(INDIV* poblacion, INDIV* probs, INDIV* pob_tmp, int
 */
 void FILTROS::generarPob(INDIV* poblacion, const double prob_mutacion, double **tabla){
 
-    TIMERS;
+//    TIMERS;
 
     // Generar dos nuevos individuos a partir de dos padres:
     for(int i = 0; i < n_pob; i+=2){
@@ -1393,13 +1465,13 @@ void FILTROS::generarPob(INDIV* poblacion, const double prob_mutacion, double **
             inicio = corte + 1;
         }
 
-        GETTIME_INI;
+//        GETTIME_INI;
         // Realizar mutacion sobre los hijos generados con cierta probabilidad:
         // Mutar el hijo 1:
         if( HybTaus(0.0, 1.0) <= prob_mutacion ){
             // Seleccionar un gen a mutar:
             const int gen = (int)(HybTaus(-1.0, (double)n_bits-1.0))+1;
-            hijo_1.cadena[gen] != hijo_1.cadena[gen];
+            hijo_1.cadena[gen] ^= hijo_1.cadena[gen];
         }
 
         // Evaluar las cadenas de los nuevos individuos:
@@ -1427,17 +1499,17 @@ void FILTROS::generarPob(INDIV* poblacion, const double prob_mutacion, double **
                 break;
         }
 
-        DEB_MSG("[" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4])
-        GETTIME_FIN;
-        cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos." << endl;
+		DEB_MSG("[" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4]);
+//        GETTIME_FIN;
+//        cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos." << endl;
 
 
-        GETTIME_INI;
+//        GETTIME_INI;
         // Mutar el hijo 2:
         if( HybTaus(0.0, 1.0) <= prob_mutacion ){
             // Seleccionar un gen a mutar:
             const int gen = (int)(HybTaus(-1.0, (double)n_bits-1.0))+1;
-            hijo_2.cadena[gen] != hijo_2.cadena[gen];
+            hijo_2.cadena[gen] ^= hijo_2.cadena[gen];
         }
 
         //----------------------------------------------------------------- Hijo 2
@@ -1464,9 +1536,9 @@ void FILTROS::generarPob(INDIV* poblacion, const double prob_mutacion, double **
                 break;
         }
 
-        DEB_MSG("[" << i+1 << "] " << poblacion[i+1].eval << ": " << poblacion[i+1].vars[0] << ", " << poblacion[i+1].vars[1] << ", " << poblacion[i+1].vars[2] << ", " << poblacion[i+1].vars[3] << ", " << poblacion[i+1].vars[4])
-        GETTIME_FIN;
-        cout << "Individuo " << i+1 << " generado y evaluado en " << DIFTIME << " segundos." << endl;
+ //       DEB_MSG("[" << i+1 << "] " << poblacion[i+1].eval << ": " << poblacion[i+1].vars[0] << ", " << poblacion[i+1].vars[1] << ", " << poblacion[i+1].vars[2] << ", " << poblacion[i+1].vars[3] << ", " << poblacion[i+1].vars[4])
+//        GETTIME_FIN;
+//        cout << "Individuo " << i+1 << " generado y evaluado en " << DIFTIME << " segundos." << endl;
     }
 
 
@@ -1483,8 +1555,8 @@ void FILTROS::generarPob(INDIV* poblacion, const double prob_mutacion, double **
 */
 void FILTROS::GA(){
 
-    TIMERS;
-    GETTIME_INI;
+//    TIMERS;
+//    GETTIME_INI;
 
     INDIV *poblacion = new INDIV [n_pob];
     INDIV *probs = new INDIV [n_pob];
@@ -1535,7 +1607,7 @@ void FILTROS::GA(){
     int k = 0, procesar = 1;
 
     //// Generar la primer poblacion:
-    DEB_MSG("Generando " << n_pob << " individuos como poblacion inicial ...")
+	DEB_MSG("Generando " << n_pob << " individuos como poblacion inicial ...");
     generarPobInicial(poblacion, tabla);
     DEB_MSG("Poblacion inicial generada, comenzando GA ...");
 
@@ -1572,6 +1644,6 @@ void FILTROS::GA(){
     delete [] probs;
     delete [] seleccion;
 
-    GETTIME_FIN;
-    cout << " Mejor candidato encontrado con " << k << " iteraciones. y " << DIFTIME << "segundos. \n Con evaluacion de la funcion objetivo: " << mi_elite->eval << endl;
+//    GETTIME_FIN;
+//    cout << " Mejor candidato encontrado con " << k << " iteraciones. y " << DIFTIME << "segundos. \n Con evaluacion de la funcion objetivo: " << mi_elite->eval << endl;
 }

@@ -21,9 +21,7 @@
 void revisar_pars(PARS_ENTRADA* pars, const int n_pars, int *argc, char **argv){
 	// Para quitar el nombre con el que se ejecuto el programa:
 	*argc = *argc - 1;
-
-	int retirados[*argc];
-	memset(retirados, 0, *argc * sizeof(int));
+	int *retirados = (int *) calloc(*argc, sizeof(int));
 	
 	for(int i = 0; i < n_pars; i++){
 
@@ -115,6 +113,7 @@ void revisar_pars(PARS_ENTRADA* pars, const int n_pars, int *argc, char **argv){
 			}
 		}
 	}
+	free(retirados);
 }
 
 
@@ -130,7 +129,7 @@ void revisar_pars(PARS_ENTRADA* pars, const int n_pars, int *argc, char **argv){
 */
 void mostrar_ayuda(PARS_ENTRADA* pars, const int n_pars, const char *nombre_programa){
     // Mostrar uno a uno los paraemtros que solicita el programa:
-    printf( "Usage: " ANSI_COLOR_GREEN "%s" ANSI_COLOR_RESET " [OPTION "ANSI_COLOR_MAGENTA "obligatory" ANSI_COLOR_RESET "/" ANSI_COLOR_YELLOW "optional" ANSI_COLOR_RESET "] Value\n", nombre_programa);
+    printf( "Usage: " ANSI_COLOR_GREEN "%s" ANSI_COLOR_RESET " [OPTION " ANSI_COLOR_MAGENTA "obligatory" ANSI_COLOR_RESET "/" ANSI_COLOR_YELLOW "optional" ANSI_COLOR_RESET "] Value\n", nombre_programa);
     for( int i = 0; i < n_pars; i++){
         if( pars[i].opcional ){
             printf( ANSI_COLOR_YELLOW "\t");

@@ -17,8 +17,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <fftw3.h>
-
+#if _WIN32
+    #include "D:\Apps\FFTW\fftw3.h"
+#else
+    #include <fftw3.h>
+#endif
 #include <math.h>
 #include <omp.h>
 
@@ -29,17 +32,19 @@
 
 #include "IMGVTK.h"
 
+#define PI 3.14159265
+
 // C L A S E: FILTRO  ---------------------------------------------------------------------------------------------- v
 class FILTROS{
     public: //----------------------------------------------------------------------------- PUBLIC ------- v
         // T I P O S        D E     D A T O S      P U B L I C O S
-        typedef enum{ GMF, SS_GABOR } SEG_FILTRO;
-        typedef enum{ EXHAUSTIVA, EDA_BUMDA, EDA_UMDA, EA_GA } EVO_MET;
-        typedef enum{ ROC, ENTROPIA } FITNESS;
-        typedef enum{ PAR_L, PAR_T, PAR_K, PAR_SIGMA, PAR_DELTA} PARAMETRO;
+        typedef enum SEG_FILTRO { GMF, SS_GABOR } SEG_FILTRO;
+        typedef enum EVO_MET { EXHAUSTIVA, EDA_BUMDA, EDA_UMDA, EA_GA } EVO_MET;
+        typedef enum FITNESS { ROC, ENTROPIA } FITNESS;
+        typedef enum PARAMETRO { PAR_L, PAR_T, PAR_K, PAR_SIGMA, PAR_DELTA} PARAMETRO;
 
         /** INDIV:	Define la estructura que contiene los atributos del individuo, y el valor de la funcion para este.  **/
-        typedef struct{
+        typedef struct IDIV {
             double eval;
             double vars[5]; // 1: L, 2: T, 3: K, 4: sigma, 5: delta.
             bool cadena[64];
@@ -77,7 +82,7 @@ class FILTROS{
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
         // T I P O S        D E     D A T O S      P R I V A D O S
         /** STAUS:	Define una estructura que almacena las semillas requeridas por el generador de numeros pseudo-aleatorios Hybrid Taus    **/
-        typedef struct{
+        typedef struct STAUS{
             unsigned int z1, z2, z3;
         } STAUS;
 
@@ -85,8 +90,8 @@ class FILTROS{
         typedef double (*GEN_PNT) (const double par1, const double par2);
 
         // M E T O D O S      P R I V A D O S
-        inline double interpolacion(const double *pix, const int x, const int y, const double delta_x, const double delta_y, const int mis_cols);
-        void rotarImg( const double *org, double *rot, const double theta, const int mis_rens, const int mis_cols);
+        inline double interpolacion(const double *pix, const int j, const int i, const double x, const double y, const int mis_rens, const int mis_cols);
+        void rotarImg(const double *org, double *rot, const double ctheta, const double stheta, const int mis_rens, const int mis_cols, const int org_rens, const int org_cols);
 
         static int compIndiv(const void* A, const void* B);
 

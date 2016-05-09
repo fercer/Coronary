@@ -14,28 +14,29 @@
 #define ANSI_COLOR_GREEN   "\x1b[32m"
 #define ANSI_COLOR_YELLOW  "\x1b[33m"
 #define ANSI_COLOR_BLUE    "\x1b[34m"
-#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_MAGENTA //"\x1b[35m"
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
 
 
 
-typedef enum{ CHAR, INT, DOUBLE } TIPO_ENTRADA;
-typedef union{
+typedef enum TIPO_ENTRADA { CHAR, INT, DOUBLE } TIPO_ENTRADA;
+
+typedef union ENTRADA {
 	char par_s[128];
 	int par_i;
 	double par_d;
 } ENTRADA;
 
-typedef struct{
+typedef struct PARS_ENTRADA{
 	char pregunta[128];
     char short_tag[7], long_tag[28];
 	TIPO_ENTRADA mi_tipo;
 	ENTRADA mi_default;
 	ENTRADA mi_valor;
     char opcional;
-}PARS_ENTRADA;
+} PARS_ENTRADA;
 
 void revisar_pars(PARS_ENTRADA* pars, const int n_pars, int *argc, char **argv);
 void mostrar_ayuda(PARS_ENTRADA* pars, const int n_pars, const char *nombre_programa);
