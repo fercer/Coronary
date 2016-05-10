@@ -537,116 +537,371 @@ unsigned int* IMGVTK::conjuntosConexosDinamico(const double *ptr, int *conjuntos
 */
 unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens){
 
-
+    static int vez = 0;
     const int mis_rens_cols = mis_cols*mis_rens;
 
+    int *val_etiquetas = new int [mis_rens_cols];
+    int **etq_ptr = new int* [mis_rens_cols];
+
+    for( int i = 0; i < mis_rens_cols; i++){
+        *(val_etiquetas + i) = i;
+        *(etq_ptr + i) = val_etiquetas + i;
+    }
+
+    int ***pix_etq = new int** [mis_rens_cols];
+    memset( pix_etq, 0, mis_rens_cols * sizeof(int**));
+
+    int n_conjunto = -1;
+    /// Verificar esquina NO:
+    if( (*(ptr) > 0.0) ){
+        *(pix_etq) = etq_ptr + (++n_conjunto);
+    }
+
+    /// Verificar esquina NE:
+    if( (*(ptr + mis_cols - 1) > 0.0) ){
+        *(pix_etq + mis_cols - 1) = etq_ptr + (++n_conjunto);
+    }
+
+    /// Verificar esquina SE:
+    if( (*(ptr + mis_rens_cols - 1) > 0.0) ){
+        *(pix_etq + mis_rens_cols - 1) = etq_ptr + (++n_conjunto);
+    }
+
+    /// Verificar esquina SO:
+    if( (*(ptr + mis_rens_cols - mis_cols) > 0.0) ){
+        *(pix_etq + mis_rens_cols - mis_cols) = etq_ptr + (++n_conjunto);
+    }
+
+
+
+    for( int x = 1; x < (mis_cols-1); x++){
+        /// Verificar fila N:
+        if( *(ptr + x) > 0.0 ){
+            /// E
+            int **base = *(pix_etq + x + 1);
+
+            /// SE
+            if( *(pix_etq + x + 1 + mis_cols) ){
+                if( base ){
+                    *(*(pix_etq + x + 1 + mis_cols)) = *(base);
+                }else{
+                    base = *(pix_etq + x + 1 + mis_cols);
+                }
+            }
+
+            /// S
+            if( *(pix_etq + x + mis_cols) ){
+                if( base ){
+                    *(*(pix_etq + x + mis_cols)) = *base;
+                }else{
+                    base = *(pix_etq + x + mis_cols);
+                }
+            }
+
+            /// SO
+            if( *(pix_etq + x + mis_cols - 1) ){
+                if( base ){
+                    *(*(pix_etq + x + mis_cols - 1)) = *base;
+                }else{
+                    base = *(pix_etq + x + mis_cols - 1);
+                }
+            }
+
+            /// O
+            if( *(pix_etq + x - 1) ){
+                if( base ){
+                    *(*(pix_etq + x - 1)) = *base;
+                }else{
+                    base = *(pix_etq + x - 1);
+                }
+            }
+
+            if( base ){
+                *(pix_etq + x) = base;
+            }else{
+                *(pix_etq + x) = etq_ptr + (++n_conjunto);
+            }
+        }
+
+        /// Verificar fila S:
+        if( *(ptr + x + mis_rens_cols - mis_cols) > 0.0 ){
+            /// NO
+            int **base = *(pix_etq + x + mis_rens_cols - 2*mis_cols - 1);
+
+            /// N
+            if( *(pix_etq + x + mis_rens_cols - 2*mis_cols) ){
+                if( base ){
+                    *(*(pix_etq + x + mis_rens_cols - 2*mis_cols)) = *base;
+                }else{
+                    base = *(pix_etq + x + mis_rens_cols - 2*mis_cols);
+                }
+            }
+
+            /// NE
+            if( *(pix_etq + x + mis_rens_cols - 2*mis_cols + 1) ){
+                if( base ){
+                    *(*(pix_etq + x + mis_rens_cols - 2*mis_cols + 1)) = *base;
+                }else{
+                    base = *(pix_etq + x + mis_rens_cols - 2*mis_cols + 1);
+                }
+            }
+
+            /// E
+            if( *(pix_etq + x + mis_rens_cols - mis_cols + 1) ){
+                if( base ){
+                    *(*(pix_etq + x + mis_rens_cols - mis_cols + 1)) = *base;
+                }else{
+                    base = *(pix_etq + x + mis_rens_cols - mis_cols + 1);
+                }
+            }
+
+            /// O
+            if( *(pix_etq + x + mis_rens_cols - mis_cols - 1) ){
+                if( base ){
+                    *(*(pix_etq + x + mis_rens_cols - mis_cols - 1)) = *base;
+                }else{
+                    base = *(pix_etq + x + mis_rens_cols - mis_cols - 1);
+                }
+            }
+
+            if( base ){
+                *(pix_etq + x + mis_rens_cols - mis_cols) = base;
+            }else{
+                *(pix_etq + x + mis_rens_cols - mis_cols) = etq_ptr + (++n_conjunto);
+            }
+        }
+    }
+
+
+
+    for( int y = 1; y < (mis_rens-1); y++){
+        /// Verificar columna O:
+        if( *(ptr + y*mis_cols) > 0.0 ){
+            /// N
+            int **base = *(pix_etq + (y-1)*mis_cols);
+
+            /// NE
+            if( *(pix_etq + (y-1)*mis_cols + 1) ){
+                if( base ){
+                    *(*(pix_etq + (y-1)*mis_cols + 1)) = *base;
+                }else{
+                    base = *(pix_etq + (y-1)*mis_cols + 1);
+                }
+            }
+
+            /// E
+            if( *(pix_etq + y*mis_cols + 1) ){
+                if( base ){
+                    *(*(pix_etq + y*mis_cols + 1)) = *base;
+                }else{
+                    base = *(pix_etq + y*mis_cols + 1);
+                }
+            }
+
+            /// SE
+            if( *(pix_etq + (y+1)*mis_cols + 1) ){
+                if( base ){
+                    *(*(pix_etq + (y+1)*mis_cols + 1)) = *base;
+                }else{
+                    base = *(pix_etq + (y+1)*mis_cols + 1);
+                }
+            }
+
+            /// S
+            if( *(pix_etq + (y+1)*mis_cols) ){
+                if( base ){
+                    *(*(pix_etq + (y+1)*mis_cols)) = *base;
+                }else{
+                    base = *(pix_etq + (y+1)*mis_cols);
+                }
+            }
+            if( base ){
+                *(pix_etq + y*mis_cols) = base;
+            }else{
+                *(pix_etq + y*mis_cols) = etq_ptr + (++n_conjunto);
+            }
+        }
+
+        /// Verificar columna E:
+        if( *(ptr + (y+1)*mis_cols - 1) > 0.0 ){
+            /// NO
+            int **base = *(pix_etq + y*mis_cols - 2);
+
+            /// N
+            if( *(pix_etq + y*mis_cols - 1) ){
+                if( base ){
+                    *(*(pix_etq + y*mis_cols - 1)) = *base;
+                }else{
+                    base = *(pix_etq + y*mis_cols - 1);
+                }
+            }
+
+            /// S
+            if( *(pix_etq + (y+2)*mis_cols - 1) ){
+                if( base ){
+                    *(*(pix_etq + (y+2)*mis_cols - 1)) = *base;
+                }else{
+                    base = *(pix_etq + (y+2)*mis_cols - 1);
+                }
+            }
+
+            /// SO
+            if( *(pix_etq + (y+2)*mis_cols - 2) ){
+                if( base ){
+                    *(*(pix_etq + (y+2)*mis_cols - 2)) = *base;
+                }else{
+                    base = *(pix_etq + (y+2)*mis_cols - 2);
+                }
+            }
+
+            /// O
+            if( *(pix_etq + (y+1)*mis_cols - 2) ){
+                if( base ){
+                    *(*(pix_etq + (y+1)*mis_cols - 2)) = *base;
+                }else{
+                    base = *(pix_etq + (y+1)*mis_cols - 2);
+                }
+            }
+
+            if( base ){
+                *(pix_etq + (y+1)*mis_cols - 1) = base;
+            }else{
+DEB_MSG("[" << y << ", " << (mis_cols-1) << "] " << n_conjunto);
+                *(pix_etq + (y+1)*mis_cols - 1) = etq_ptr + (++n_conjunto);
+            }
+        }
+    }
+
+/*
+    ///  Verificar el resto de la imagen:
+    for( int y = 1; y < (mis_rens-1); y++){
+        for( int x = 1; x < (mis_cols-1); x++){
+            if( *(ptr + y*mis_cols + x) > 0.0 ){
+                /// NO
+                int *base = *(pix_etq + (y-1)*mis_cols + x - 1);
+
+                /// N
+                if( *(pix_etq + (y-1)*mis_cols + x) ){
+                    if( base ){
+                        *(pix_etq + (y-1)*mis_cols + x) = base;
+                    }else{
+                        base = *(pix_etq + (y-1)*mis_cols + x);
+                    }
+                }
+
+                /// NE
+                if( *(pix_etq + (y-1)*mis_cols + x + 1) ){
+                    if( base ){
+                        *(pix_etq + (y-1)*mis_cols + x + 1) = base;
+                    }else{
+                        base = *(pix_etq + (y-1)*mis_cols + x + 1);
+                    }
+                }
+
+                /// E
+                if( *(pix_etq + y*mis_cols + x + 1) ){
+                    if( base ){
+                        *(pix_etq + y*mis_cols + x + 1) = base;
+                    }else{
+                        base = *(pix_etq + y*mis_cols + x + 1);
+                    }
+                }
+
+                /// SE
+                if( *(pix_etq + (y+1)*mis_cols + x + 1) ){
+                    if( base ){
+                        *(pix_etq + (y+1)*mis_cols + x + 1) = base;
+                    }else{
+                        base = *(pix_etq + (y+1)*mis_cols + x + 1);
+                    }
+                }
+
+                /// S
+                if( *(pix_etq + (y+1)*mis_cols + x) ){
+                    if( base ){
+                        *(pix_etq + (y+1)*mis_cols + x) = base;
+                    }else{
+                        base = *(pix_etq + (y+1)*mis_cols + x);
+                    }
+                }
+
+                /// SO
+                if( *(pix_etq + (y+1)*mis_cols + x - 1) ){
+                    if( base ){
+                        *(pix_etq + (y+1)*mis_cols + x - 1) = base;
+                    }else{
+                        base = *(pix_etq + (y+1)*mis_cols + x - 1);
+                    }
+                }
+
+                /// O
+                if( *(pix_etq + y*mis_cols + x - 1) ){
+                    if( base ){
+                        *(pix_etq + y*mis_cols + x - 1) = base;
+                    }else{
+                        base = *(pix_etq + y*mis_cols + x - 1);
+                    }
+                }
+
+                if( base ){
+                    *(pix_etq + y*mis_cols + x) = base;
+                }else{
+                    *(pix_etq + y*mis_cols + x) = etiquetas[++n_conjunto];
+                }
+
+if( x == 1 && y == 1 ){
+    DEB_MSG("{" << vez << "}  [" << x << ", " << y << "] = " << *(pix_etq + y*mis_cols + x) << " :: [" << (x-1) << ", " << (y-1) << "] = " << *(pix_etq + (y-1)*mis_cols + x - 1));
+}
+            }
+        }
+    }
+*/
     memset(conjuntos, -1, sizeof(int) * mis_rens_cols);
 
-    //// Primer escaneo para determinar las etiquetas:
-    // Verificar el primer pixel:
-    if( *(ptr) > 0.0 ){
-        conjuntos[0] = 0;
-    }
+    char nom_con[] = "conexos_00.fcs";
+    sprintf(nom_con, "conexos_%i.fcs", vez);
+    FILE *fp_conexos = fopen(nom_con, "w");
 
-    int eq, ep, ex;
-    std::vector<int> etiquetas;
-    etiquetas.push_back( 0 );
-    int num_etiquetas = 0;
+    n_conjunto = -1;
+    for( int y = 0; y < mis_rens; y++){
+        for( int x = 0; x < mis_cols; x++){
 
-    // Verificar primer fila:
-    for( int x = 1; x < mis_cols; x++){
-        if( *(ptr + x) > 0.0 ){
-            eq = conjuntos[x-1];
-            ex = eq;
-            if( eq == -1 ){
-                num_etiquetas++;
-                etiquetas.push_back(num_etiquetas);
-                ex = num_etiquetas;
-            }
-            conjuntos[x] = ex;
-        }
-    }
 
-    // Verificar primer columna:
-    for( int y = 1; y < mis_rens; y++){
-        if( *(ptr + y*mis_cols) > 0.0 ){
-            ep = conjuntos[(y-1)*mis_cols];
-            ex = ep;
-            if( ep == -1){
-                num_etiquetas++;
-                etiquetas.push_back( num_etiquetas );
-                ex = num_etiquetas;
-            }
-            conjuntos[y*mis_cols] = ex;
-        }
-    }
-
-    // Verificar el resto de la imagen:
-    for( int y = 1; y < mis_rens; y++){
-        for( int x = 1; x < mis_cols; x++){
-            if( *(ptr + x + y*mis_cols) > 0.0 ){
-                ep = conjuntos[x + (y-1)*mis_cols];
-                eq = conjuntos[(x-1) + y*mis_cols];
-                ex = ep;
-                if( (ep == -1) && (eq == -1) ){
-                    num_etiquetas++;
-                    etiquetas.push_back( num_etiquetas );
-                    ex = num_etiquetas;
-                }else if( (ep != -1) && (eq != -1) && (etiquetas[ep] != etiquetas[eq]) ){
-                    // Las etiquetas ep y eq son equivalentes, y por lo tanto se igualan:
-                    const int k_eq = etiquetas[eq];
-                    const int k_ep = etiquetas[ep];
-                    for( std::vector<int>::iterator k = etiquetas.begin(); k < etiquetas.end(); k++){
-                        if( *k == k_eq ){
-                            *k = k_ep;
-                        }
-                    }
-
-                    ex = ep;
-                }else if( eq != -1){
-                    ex = eq;
+            if( *(pix_etq + x + y*mis_cols) ){
+                fprintf(fp_conexos, "%i ", *(*(*(pix_etq + x + y*mis_cols))));
+                /*
+                if( *(*(pix_etq + x + y*mis_cols)) != n_conjunto ){
+                    n_conjunto++;
+                    *(*(pix_etq + x + y*mis_cols)) = n_conjunto;
+                    *(conjuntos + x + y*mis_cols) = n_conjunto;
                 }
-                conjuntos[x+y*mis_cols] = ex;
+                */
+            }else{
+                fprintf(fp_conexos, "%i ", -1);
             }
         }
+        fprintf(fp_conexos, "\n");
     }
-    DEB_MSG( "Numero de etiquetas puestas: " << etiquetas.size());
+    fclose( fp_conexos );
 
 
-    // Acomodar las etiquetas:
-    std::sort(etiquetas.begin(), etiquetas.end());
-    ex = -1;
-    num_etiquetas = 0;
+    /// Contar cuantos elementos hay en cada grupo:
+    unsigned int *n_etiquetados = new unsigned int [n_conjunto+2];
+    memset(n_etiquetados + 1, 0, (n_conjunto+1)*sizeof(unsigned int));
+    n_etiquetados[0] = n_conjunto+1;
 
-    std::vector<int> diferentes;
-    for( std::vector<int>::iterator k = etiquetas.begin(); k < etiquetas.end(); k++){
-        if( *k != ex ){
-            num_etiquetas++;
-            ex = *k;
-            diferentes.push_back(ex);
+    for( int xy = 0; xy < mis_rens_cols; xy++){
+        if( conjuntos[xy] >= 0 ){
+            n_etiquetados[ conjuntos[xy] + 1 ]++;
         }
     }
 
-DEB_MSG("Numero de etiquetas diferentes: " << (diferentes.size()));
-    unsigned int *n_etiquetados = new unsigned int [num_etiquetas+1];
-    memset( n_etiquetados, 0, (num_etiquetas+1)*sizeof(unsigned int) );
-    n_etiquetados[0] = num_etiquetas;
-    num_etiquetas = -1;
-    ex = -1;
-    for( std::vector<int>::iterator k = diferentes.begin(); k < diferentes.end(); k++){
-        if( *k != ex ){
-            ex = *k;
-            num_etiquetas++;
-        }
-        for( int xy = 0; xy < mis_rens_cols; xy++){
-            if( (conjuntos[xy]>=0) && ( etiquetas[conjuntos[xy]] == *k ) ){
-                conjuntos[xy] = num_etiquetas;
-                n_etiquetados[num_etiquetas+1]++;
-            }
-        }
-    }
+    delete [] val_etiquetas;
+    delete [] etq_ptr;
+    vez++;
 
     return n_etiquetados;
+
 }
 
 
@@ -678,7 +933,7 @@ void IMGVTK::lengthFilter(double *ptr, const int min_length, const int mis_cols,
 
     int *mis_conjuntos = new int [mis_rens_cols];
 
-    unsigned int *mis_n_etiquetados = conjuntosConexosDinamico(ptr, mis_conjuntos, mis_cols, mis_rens);
+    unsigned int *mis_n_etiquetados = conjuntosConexos(ptr, mis_conjuntos, mis_cols, mis_rens);
 DEB_MSG("n etiquetas: " << mis_n_etiquetados[0] );
 
     for( int xy = 0; xy < mis_rens_cols; xy++){
@@ -857,7 +1112,7 @@ void IMGVTK::maskFOV( double * img_tmp, double *mask_tmp, const int mis_cols, co
     }
 
     // Se eliminan los conjuntos pequeños
-    //lengthFilter(mask_tmp, 1000, mis_cols, mis_rens);
+    lengthFilter(mask_tmp, 1000, mis_cols, mis_rens);
 
     // Se erosiona la mascara:
     erosionar(mask_tmp, mis_cols, mis_rens);
@@ -871,7 +1126,7 @@ void IMGVTK::maskFOV( double * img_tmp, double *mask_tmp, const int mis_cols, co
     int *mis_conjuntos = new int [mis_rens_cols];
 
     // Se buscan los conjuntos que no esten en las esquinas para eliminarlos
-    unsigned int *mis_n_etiquetados = conjuntosConexosDinamico(mask_tmp, mis_conjuntos, mis_cols, mis_rens);
+    unsigned int *mis_n_etiquetados = conjuntosConexos(mask_tmp, mis_conjuntos, mis_cols, mis_rens);
     delete [] mis_n_etiquetados;
 
 
@@ -904,7 +1159,7 @@ void IMGVTK::fillMask( double *img_tmp, double *mask_tmp, const int mis_cols, co
 
     double *mask_dil = new double [(mis_rens+2)*(mis_cols+2)];
     for( int xy = 0; xy < (mis_rens+2)*(mis_cols+2); xy++){
-        mask_dil[xy] = 1.0  ;
+        mask_dil[xy] = 0.0  ;
     }
 
     for( int y = 0; y < mis_rens; y++){

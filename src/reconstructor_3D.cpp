@@ -650,12 +650,16 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
     }else{
 
-        //imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
-        imgs_base.push_back(IMGVTK(rutabase_input, false, nivel_l));
+        imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
+//        imgs_base.push_back(IMGVTK(rutabase_input, false, nivel_l));
         mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
         puntos.push_back(vtkSmartPointer<vtkPoints>::New());
         pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
         normal_centros.push_back( norcen_temp );
+
+
+        mostrarImagen(imgs_base[n_angios], IMGVTK::MASK, mis_renderers[n_angios]);
+        renderizar(mis_renderers[n_angios]);
 
         /// Mover el detector a su posicion definida por el archivo DICOM:
         mallarPuntos(n_angios);
@@ -720,12 +724,11 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
 	DEB_MSG("Listo para aplicar el filtro ...");
 
+
     filtro.filtrar();
 
 	DEB_MSG("Filtro aplicado exitosamente ...");
 
-//    mostrarImagen(imgs_base[angio_ID], IMGVTK::MASK, mis_renderers[angio_ID]);
-//    renderizar(mis_renderers[angio_ID]);
 
     mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
     renderizar(mis_renderers[angio_ID]);
