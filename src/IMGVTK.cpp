@@ -722,7 +722,6 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
         bool encontrado = false;
         const int base = *(*(val_etiquetas + i) + 2);
 
-DEB_MSG("base: " << base);
         for( int j = 0; j < n_conjunto; j++){
             if( base == *(diferentes + j) ){
                 encontrado = true;
@@ -740,13 +739,6 @@ DEB_MSG("base: " << base);
             *(*(val_etiquetas + equivalente) + 2) = base;
         }
     }
-
-
-    DEB_MSG("Existen: " << n_conjunto << " conjuntos conexos");
-    for( int i = 0; i < n_conjunto; i++){
-        DEB_MSG("[" << i << "]: " << diferentes[i]);
-    }
-
 
     for( int i = 0; i < etq_activas; i++){
         const int base = *(*(val_etiquetas + i) + 2);
@@ -766,14 +758,12 @@ DEB_MSG("base: " << base);
     // Indicar a que conjunto pertenece cada pixel:
     for( int y = 0; y < mis_rens; y++){
         for( int x = 0; x < mis_cols; x++){
-            const int etiqueta = *(pix_etq + y*(mis_cols+2) + x);
+            const int etiqueta = *(pix_etq + (y+1)*(mis_cols+2) + (x+1));
             if( etiqueta >= 0 ){
-
                 *(conjuntos + x + y*mis_cols) = *(*(val_etiquetas + etiqueta) + 2);
             }
         }
     }
-
 
     /// Contar cuantos elementos hay en cada grupo:
     unsigned int *n_etiquetados = new unsigned int [n_conjunto+1];
@@ -1015,7 +1005,7 @@ void IMGVTK::maskFOV( double * img_tmp, double *mask_tmp, const int mis_cols, co
     // Se eliminan los conjuntos grandes que no esten en las esquinas:
     // Se extraen las etiquetas de los conjuntos que se conectan a las esquinas:
     for( int xy = 0; xy < mis_rens_cols; xy++){
-        mask_tmp[xy] = 1.0*!mask_tmp[xy];
+        *(mask_tmp + xy) = 1.0 - *(mask_tmp + xy);
     }
 
     int *mis_conjuntos = new int [mis_rens_cols];
@@ -1126,9 +1116,9 @@ void IMGVTK::fillMask( double *img_tmp, double *mask_tmp, const int mis_cols, co
 /*  Metodo: grafoSkeleton
     Funcion: Genera un grafo a partir del esqueleto.
 */
-IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, PIX_PAR *inicio_nivel ){
+IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, bool *visitados){
 
-    if( *(skl_tmp + (x-1) + (y-1)*(cols+2)) > 1.0 ){
+    if( *(visitados + x + y*cols) ){
         return NULL;
     }
 
@@ -1145,12 +1135,7 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( double *skl_tmp, const int x, const int 
     temp->ramas[1] = NULL;
     temp->ramas[2] = NULL;
 
-    temp->fines[0] = NULL;
-    temp->fines[1] = NULL;
-    temp->fines[2] = NULL;
-
     temp->nivel = *nivel;
-    temp->inicio = inicio_nivel;
 
     /// Calcular el radio de la arteria en el pixel actual:
     const int min_x = ((x - max_dist - 1) < 0) ? 0 : (x - max_dist - 1);
@@ -1176,9 +1161,6 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( double *skl_tmp, const int x, const int 
     temp->x_r = (x_r - (double)cols/2)*pixX;
     temp->alpha = atan2(temp->y_r - temp->y, temp->x_r - temp->x);
 
-    // Defino que este pixel es el inicio del grafo, a menos de que sea solamente parte del esqueleto:
-    PIX_PAR *mi_inicio = temp;
-
     switch( lutabla[ resp ] ){
         case (unsigned char)1:{ /* END point*/
             temp->pix_tipo = PIX_END;
@@ -1194,18 +1176,19 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( double *skl_tmp, const int x, const int 
         }
         default:{
             temp->pix_tipo = PIX_SKL;
-            mi_inicio = inicio_nivel;
             break;
         }
     }
+
+    *(visitados + x + y*cols) = true;
 
     /// NO
     if( (resp & (unsigned char)1) && (*(skl_tmp + (x-1) + (y-1)*(cols+2)) < 2.0)){
         if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
             *nivel = *nivel + 1;
         }
-        *(skl_tmp + (x-1) + (y-1)*(cols+2)) = 2.0;
-        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y-1, nivel, lutabla, mi_inicio );
+
+        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y-1, nivel, lutabla, visitados);
         if( temp->ramas[temp->n_hijos] ){
             temp->n_hijos++;
         }
@@ -1216,8 +1199,7 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( double *skl_tmp, const int x, const int 
         if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
             *nivel = *nivel + 1;
         }
-        *(skl_tmp + x + (y-1)*(cols+2)) = 2.0;
-        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y-1, nivel, lutabla, mi_inicio );
+        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y-1, nivel, lutabla, visitados);
         if( temp->ramas[temp->n_hijos] ){
             temp->n_hijos++;
         }
@@ -1228,8 +1210,7 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( double *skl_tmp, const int x, const int 
         if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
             *nivel = *nivel + 1;
         }
-        *(skl_tmp + (x+1) + (y-1)*(cols+2)) = 2.0;
-        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y-1, nivel, lutabla, mi_inicio );
+        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y-1, nivel, lutabla, visitados);
         if( temp->ramas[temp->n_hijos] ){
             temp->n_hijos++;
         }
@@ -1240,8 +1221,7 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( double *skl_tmp, const int x, const int 
         if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
             *nivel = *nivel + 1;
         }
-        *(skl_tmp + (x+1) + y*(cols+2)) = 2.0;
-        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y, nivel, lutabla, mi_inicio );
+        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y, nivel, lutabla, visitados);
         if( temp->ramas[temp->n_hijos] ){
             temp->n_hijos++;
         }
@@ -1252,8 +1232,7 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( double *skl_tmp, const int x, const int 
         if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
             *nivel = *nivel + 1;
         }
-        *(skl_tmp + (x+1) + (y+1)*(cols+2)) = 2.0;
-        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y+1, nivel, lutabla, mi_inicio );
+        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y+1, nivel, lutabla, visitados);
         if( temp->ramas[temp->n_hijos] ){
             temp->n_hijos++;
         }
@@ -1264,8 +1243,7 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( double *skl_tmp, const int x, const int 
         if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
             *nivel = *nivel + 1;
         }
-        *(skl_tmp + x + (y+1)*(cols+2)) = 2.0;
-        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y+1, nivel, lutabla, mi_inicio );
+        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y+1, nivel, lutabla, visitados);
         if( temp->ramas[temp->n_hijos] ){
             temp->n_hijos++;
         }
@@ -1276,8 +1254,7 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( double *skl_tmp, const int x, const int 
         if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
             *nivel = *nivel + 1;
         }
-        *(skl_tmp + (x-1) + (y+1)*(cols+2)) = 2.0;
-        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y+1, nivel, lutabla, mi_inicio );
+        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y+1, nivel, lutabla, visitados);
         if( temp->ramas[temp->n_hijos] ){
             temp->n_hijos++;
         }
@@ -1288,23 +1265,9 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton( double *skl_tmp, const int x, const int 
         if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
             *nivel = *nivel + 1;
         }
-        *(skl_tmp + (x-1) + y*(cols+2)) = 2.0;
-        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y, nivel, lutabla, mi_inicio );
+        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y, nivel, lutabla, visitados);
         if( temp->ramas[temp->n_hijos] ){
             temp->n_hijos++;
-        }
-    }
-
-    for( int i = 0; i < temp->n_hijos; i++){
-        switch( temp->ramas[i]->pix_tipo ){
-            case PIX_END:
-            case PIX_BRANCH:
-            case PIX_CROSS:
-                temp->fines[i] = temp->ramas[i];
-                break;
-            case PIX_SKL:
-                temp->fines[i] = temp->ramas[i]->fines[0];
-                break;
         }
     }
 
@@ -1335,7 +1298,11 @@ void IMGVTK::extraerCaract( IMG_IDX img_idx ){
     double *skl_tmp = new double [(rens+2)*(cols+2)];
     memcpy( skl_tmp, skl_ptr, (rens+2)*(cols+2)*sizeof(double));
 
+
     /// Buscar un punto 'end' del esqueleto y empezar a generar el grafo a aprtir de ahi.
+
+    bool *visitados = new bool [rens_cols];
+    memset( visitados, 0, rens_cols * sizeof(bool));
 
     int x_ini, y_ini, xy = cols+2;
     unsigned char resp;
@@ -1349,10 +1316,11 @@ void IMGVTK::extraerCaract( IMG_IDX img_idx ){
     *(skl_tmp + xy ) = 2.0;
     int nivel = 0;
 
-    pix_caract = grafoSkeleton(skl_tmp, x_ini, y_ini, &nivel, tabla, NULL);
+    pix_caract = grafoSkeleton(skl_tmp, x_ini, y_ini, &nivel, tabla, visitados);
 
     n_niveles = nivel;
 
+    delete [] visitados;
     delete [] skl_tmp;
 }
 
