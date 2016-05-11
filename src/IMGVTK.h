@@ -99,6 +99,9 @@
 #endif
 
 
+#define PI 3.14159265
+
+
 // C L A S E: IMGVTK  ---------------------------------------------------------------------------------------------- v
 class IMGVTK{
     public: //----------------------------------------------------------------------------- PUBLIC ------- v
@@ -189,7 +192,7 @@ class IMGVTK{
         void maskFOV(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
         void fillMask(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
 
-        PIX_PAR *grafoSkeleton(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla , PIX_PAR *inicio_nivel);
+        PIX_PAR *grafoSkeleton(double *skl_tmp, const int x, const int y, const int x_up, const int y_up, int *nivel, const unsigned char *lutabla , bool *visitados);
         void extraerCaract(IMG_IDX img_idx);
         void borrarSkeleton( PIX_PAR *raiz );
 
