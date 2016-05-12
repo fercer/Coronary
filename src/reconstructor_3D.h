@@ -137,6 +137,7 @@ class RECONS3D{
         std::vector< vtkSmartPointer<vtkCellArray> > pixeles;
         std::vector< NORCEN > normal_centros;
 
+        FILTROS filtro;
 
     // M E T O D O S       P R I V A D O S
         void escribirLog( const char *mensaje );

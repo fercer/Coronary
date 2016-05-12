@@ -350,7 +350,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         }
         media_tmp /= (double)(temp_dims*temp_dims);
         DEB_MSG("media template " << 0 << " = " << COLOR_BACK_GREEN COLOR_BLACK << media_tmp << COLOR_NORMAL);
-            fclose(fp);
+        fclose(fp);
 #endif
 
 
@@ -414,14 +414,16 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     const int mis_rens = rens;
     const double *mi_org = org;
 
+#ifndef NDEBUG
     FILE *fp_resps = NULL;
     char resp_nom[] = "resp_00.fcs";
-
+#endif
     //#pragma omp parallel for shared(resp_tmp, mi_org, templates) firstprivate(mis_rens, mis_cols, temp_dims, K)
     for( int k = 0; k < K; k++ ){
+#ifndef NDEBUG
         sprintf(resp_nom, "resp_%i.fcs", k);
         fp_resps = fopen(resp_nom, "w");
-
+#endif
         for( int yR = 0; yR < (mis_rens + temp_dims - 1); yR++){
 			// Definir los limites en el eje y que pueden recorrerse del template:
 			const int min_y = (yR > (temp_dims - 1)) ? (yR - temp_dims + 1) : 0;
@@ -445,16 +447,22 @@ void FILTROS::respGMF(INDIV *test, double *resp){
                 }
 
 
+#ifndef NDEBUG
                 if( (((yR-offset) > 56 && (yR-offset) < 118) && ((xR-offset) >= 287 && (xR-offset) < 349)) ){
                     fprintf(fp_resps, "%f ", resp_k);
                 }
+#endif
             }
+#ifndef NDEBUG
             if( ((yR-offset) > 56 && (yR-offset) < 118) ){
                 fprintf(fp_resps, "\n");
             }
+#endif
         }
         DEB_MSG("[" << omp_get_thread_num() << "] Filtro " << COLOR_BACK_WHITE  COLOR_BLACK<< (k+1) << COLOR_NORMAL << "/" << K);
+#ifndef NDEBUG
         fclose( fp_resps );
+#endif
     }
 
 
@@ -466,8 +474,10 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         *(resp +xy) =-1e100;
     }
 
+#ifndef NDEBUG
     FILE *fp_over = fopen("resp.fcs", "w");
     FILE *fp_org = fopen("org.fcs", "w");
+#endif
     for (int y = 0; y < rens; y++) {
         for (int x = 0; x < cols; x++) {
             for( int k = 0; k < K; k++){
@@ -475,19 +485,24 @@ void FILTROS::respGMF(INDIV *test, double *resp){
                     *(resp + x + y*cols) = *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1) + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1));
                 }
             }
+#ifndef NDEBUG
             if( ((y > 56 && y < 118) && (x >= 287 && x < 349)) ){
                 fprintf(fp_over, "%f ", *(resp + x + y*cols));
                 fprintf(fp_org, "%f ", *(org + x + y*cols));
             }
+#endif
         }
+#ifndef NDEBUG
         if( (y > 56 && y < 118) ){
             fprintf(fp_over, "\n");
             fprintf(fp_org, "\n");
         }
+#endif
     }
+#ifndef NDEBUG
     fclose(fp_over);
     fclose(fp_org);
-
+#endif
     for( int k = 0; k < K; k++){
         delete [] templates[k];
     }

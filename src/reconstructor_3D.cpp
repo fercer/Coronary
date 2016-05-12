@@ -753,7 +753,7 @@ void RECONS3D::segmentarImagenBase(){
     Funcion: Aplica el filtro de Gabor con los parametros definidos como mejors( tras la optimizacion con un algoritmo de evolucion computacional)
 */
 void RECONS3D::segmentarImagenBase( const int angio_ID ){
-    FILTROS filtro;
+
 //    filtro.setFiltro(FILTROS::SS_GABOR);
     filtro.setFiltro(FILTROS::GMF);
     filtro.setFitness(FILTROS::ROC);
@@ -785,15 +785,15 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 	DEB_MSG("Filtro aplicado exitosamente ...");
 
 
-    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
-    renderizar(mis_renderers[angio_ID]);
+//    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
 
-    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT);
+//    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT);
 
 //    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
 //    renderizar(mis_renderers[angio_ID]);
 
-	imgs_base[angio_ID].Guardar(IMGVTK::SEGMENT, "segment.png", IMGVTK::PNG);
+//	imgs_base[angio_ID].Guardar(IMGVTK::SEGMENT, "segment.png", IMGVTK::PNG);
 
     /// Falta el linking broken vessels ..................
     ///
