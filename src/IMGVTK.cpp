@@ -1052,7 +1052,7 @@ void IMGVTK::fillMask( double *img_tmp, double *mask_tmp, const int mis_cols, co
     }
 
     int iter = 0;
-    while( iter < 50 ){
+    while( iter < mis_cols ){
         // Obtener el borde de la mascara realizando una dilatacion:
         std::vector< PIX_PAR > borde;
 
@@ -1101,7 +1101,7 @@ void IMGVTK::fillMask( double *img_tmp, double *mask_tmp, const int mis_cols, co
                 }
             }
 
-            img_tmp[x_act + y_act*mis_cols] = (unsigned char)( suma / n_vecinos );
+            img_tmp[x_act + y_act*mis_cols] = suma / n_vecinos;
             mask_dil[(x_act+1) + (y_act+1)*(mis_cols+2)] = 1.0;
         }
         iter++;
@@ -1568,8 +1568,7 @@ void IMGVTK::umbralizar(IMG_IDX img_idx){
 DEB_MSG("min resp: " << min << ", max resp: " << max);
 
     // Obtener el numero de clases con la regla de Sturges:
-    const int clases = (int)(1.0 + 3.322*log10(rens_cols));
-DEB_MSG("clases: " << clases);
+    const int clases = 256;//(int)(1.0 + 3.322*log10(rens_cols));
     double *histograma_frecuencias = new double [clases];
     memset(histograma_frecuencias, 0, clases*sizeof(double));
 
@@ -1578,7 +1577,7 @@ DEB_MSG("clases: " << clases);
     const double fraccion = 1.0 / (double)rens_cols;
 
     for( int xy = 0; xy < rens_cols; xy ++){
-        const int clase_i = (int)(clases * (*(img_ptr + xy) - min)/(max - min + 1e-12));
+        const int clase_i = (int)((clases-1) * (*(img_ptr + xy) - min)/(max - min));
         histograma_frecuencias[ clase_i ] += fraccion;
         suma += (double)(clase_i+1);
     }
@@ -1604,7 +1603,7 @@ DEB_MSG("clases: " << clases);
 
         if( varianza_entre > max_varianza_entre ){
             max_varianza_entre = varianza_entre;
-            umbral = ((double)(k+1) / (double)clases);
+            umbral = ((double)k / (double)(clases-1));
         }
     }
 
@@ -1613,7 +1612,7 @@ DEB_MSG("Umbral: " << umbral);
 
     // Se umbraliza la imagen con el valor optimo encontrado:
     for( int xy = 0; xy < rens_cols; xy++){
-        *(threshold_ptr + xy) = ( ((*(img_ptr + xy) - min) / (max - min + 1e-12)) >= umbral) ? 1.0 : 0.0;
+        *(threshold_ptr + xy) = ( ((*(img_ptr + xy) - min) / (max - min)) >= umbral) ? 1.0 : 0.0;
     }
 
 }

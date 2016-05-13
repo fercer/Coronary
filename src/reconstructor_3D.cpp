@@ -650,7 +650,7 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
     }else{
 
-        imgs_base.push_back(IMGVTK(rutabase_input, false , nivel_l));
+        imgs_base.push_back(IMGVTK(rutabase_input, true , nivel_l));
         mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
         puntos.push_back(vtkSmartPointer<vtkPoints>::New());
         pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
@@ -662,7 +662,7 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
 
         mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
-        renderizar(mis_renderers[n_angios]);
+        //renderizar(mis_renderers[n_angios]);
 
 
         if( strcmp(rutaground_input, "NULL") ){
@@ -726,6 +726,8 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
 
     filtro.filtrar();
+    imgs_base[angio_ID].Guardar(IMGVTK::SEGMENT, "segment.png", IMGVTK::PNG);
+
 
 	DEB_MSG("Filtro aplicado exitosamente ...");
 
