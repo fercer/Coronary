@@ -14,6 +14,13 @@
 //------------------------------------------------------------------------------------------------ PRIVATE ----- v
 // M E T O D O S       P R I V A D O S
 
+/*  Metodo: escribirLog
+
+    Funcion: Escribe un mensaje en el log.
+*/
+void RECONS3D::escribirLog( const char *mensaje ){
+    mi_log->appendPlainText( mensaje );
+}
 
 
 /*  Metodo: renderizar()
@@ -610,6 +617,8 @@ DEB_MSG("Mostrando detector para: " << angio_ID << ", LAORAO: " << imgs_base[ang
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
 void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, const int n_imgs){
+    n_angios++;
+
     imgs_base.push_back(IMGVTK(rutasbase_input, n_imgs, true));
     imgs_delin.push_back(IMGVTK(rutasground_input, n_imgs, false));
     imgs_base.push_back(IMGVTK());
@@ -617,7 +626,6 @@ void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, co
     // Mostrar la imagen en un renderizador
     mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
 
-    n_angios++;
 }
 
 
@@ -634,6 +642,8 @@ DEB_MSG("Ruta ground: " << rutaground_input);
     if( nivel_u > nivel_l ){ // Si hay varios niveles:
 
         for( int i = nivel_l; i <= nivel_u; i++){
+            n_angios++;
+
             imgs_base.push_back(IMGVTK(rutabase_input, true, i));
             mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
             puntos.push_back(vtkSmartPointer<vtkPoints>::New());
@@ -645,17 +655,20 @@ DEB_MSG("Ruta ground: " << rutaground_input);
             isoCentro(n_angios);
 
             existe_ground.push_back( false );
-            n_angios++;
         }
 
     }else{
+        n_angios++;
 
-        imgs_base.push_back(IMGVTK(rutabase_input, true , nivel_l));
+        imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
+
+        imgs_delin.push_back(IMGVTK());
+        existe_ground.push_back( false );
+
         mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
         puntos.push_back(vtkSmartPointer<vtkPoints>::New());
         pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
         normal_centros.push_back( norcen_temp );
-
         /// Mover el detector a su posicion definida por el archivo DICOM:
         mallarPuntos(n_angios);
         isoCentro(n_angios);
@@ -666,14 +679,56 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
 
         if( strcmp(rutaground_input, "NULL") ){
-			DEB_MSG("Abriendo " << rutaground_input << " como ground truth");
-            imgs_delin.push_back(IMGVTK(rutaground_input, false, 0));
-            existe_ground.push_back( true );
-        }else{
-            existe_ground.push_back( false );
+            DEB_MSG("Abriendo " << rutaground_input << " como ground truth");
+            imgs_delin[ n_angios ].Cargar(rutaground_input, false, 0);
+            existe_ground[ n_angios ] = true;
         }
-        n_angios++;
+
     }
+}
+
+
+
+/*  Metodo: agregarInput
+
+    Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
+*/
+void RECONS3D::agregarInput( const char *rutabase_input ){
+
+    n_angios++;
+
+    NORCEN norcen_temp;
+
+    imgs_base.push_back(IMGVTK(rutabase_input, true, 0));
+
+    imgs_delin.push_back(IMGVTK());
+    existe_ground.push_back( false );
+
+    mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
+    puntos.push_back(vtkSmartPointer<vtkPoints>::New());
+    pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
+    normal_centros.push_back( norcen_temp );
+
+
+//        mostrarImagen(imgs_base[n_angios], IMGVTK::MASK, mis_renderers[n_angios]);
+//        renderizar(mis_renderers[n_angios]);
+
+    /// Mover el detector a su posicion definida por el archivo DICOM:
+    mallarPuntos(n_angios);
+    isoCentro(n_angios);
+
+}
+
+
+
+
+/*  Metodo: agregarGroundtruth
+
+    Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
+*/
+void RECONS3D::agregarGroundtruth(const char *rutaground_input, const int angio_ID ){
+    imgs_delin[ angio_ID ].Cargar(rutaground_input, false, 0);
+    existe_ground[ angio_ID ] = true;
 }
 
 
@@ -697,7 +752,7 @@ void RECONS3D::segmentarImagenBase(){
     Funcion: Aplica el filtro de Gabor con los parametros definidos como mejors( tras la optimizacion con un algoritmo de evolucion computacional)
 */
 void RECONS3D::segmentarImagenBase( const int angio_ID ){
-    FILTROS filtro;
+
 //    filtro.setFiltro(FILTROS::SS_GABOR);
     filtro.setFiltro(FILTROS::GMF);
     filtro.setFitness(FILTROS::ROC);
@@ -724,7 +779,6 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
 	DEB_MSG("Listo para aplicar el filtro ...");
 
-
     filtro.filtrar();
     imgs_base[angio_ID].Guardar(IMGVTK::SEGMENT, "segment.png", IMGVTK::PNG);
 
@@ -732,15 +786,15 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 	DEB_MSG("Filtro aplicado exitosamente ...");
 
 
-    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
-    renderizar(mis_renderers[angio_ID]);
+//    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
+//    renderizar(mis_renderers[angio_ID]);
 
-    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT);
+//    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT);
 
 //    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
 //    renderizar(mis_renderers[angio_ID]);
 
-	imgs_base[angio_ID].Guardar(IMGVTK::SEGMENT, "segment.png", IMGVTK::PNG);
+//	imgs_base[angio_ID].Guardar(IMGVTK::SEGMENT, "segment.png", IMGVTK::PNG);
 
     /// Falta el linking broken vessels ..................
     ///
@@ -764,6 +818,63 @@ void RECONS3D::skeletonize(){
     }
     DEB_MSG("Renderizando el espacio 3D");
     renderizar(renderer_global);
+}
+
+
+
+/*  Metodo: mostrarRadios
+
+    Funcion: Muestra el radio de cada seccion del esqueleto como un promedio entre el radio del inicio y del fin de cada seccion.
+*/
+void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc){
+
+    const double theta_inc = 2 * PI / (double)detalle;
+    const double xx_ini = grafo->x;
+    const double yy_ini = grafo->y;
+
+
+    double theta = 0.0;
+
+    const double radio = grafo->radio;
+
+    const double cal = cos(grafo->alpha);
+    const double sal = sin(grafo->alpha);
+
+    double r_temp;
+
+    for( int i = 0; i < detalle; i++){
+        const double cth = cos(theta);
+        const double sth = sin(theta);
+        double xx_3D_ini = xx_ini + cal*cth*radio;
+        double yy_3D_ini = yy_ini + sal*cth*radio;
+        double zz_3D_ini = DDP - sth*radio;
+
+        // rotar el punto para que se dirija hacia el punto con el que se midio el radio.
+
+        // Mover los puntos segun indica el SID y SOD:
+        //// Rotacion usando el eje 'x' como base:
+        r_temp = crl*yy_3D_ini - srl*zz_3D_ini;
+        zz_3D_ini = srl*yy_3D_ini + crl*zz_3D_ini;
+        yy_3D_ini = r_temp;
+
+        //// Rotacion usando el eje 'y' como base:
+        r_temp = ccc*xx_3D_ini - scc*zz_3D_ini;
+        zz_3D_ini = scc*xx_3D_ini + ccc*zz_3D_ini;
+        xx_3D_ini = r_temp;
+
+        puntos->InsertNextPoint(xx_3D_ini, yy_3D_ini, zz_3D_ini);
+        vtkSmartPointer< vtkVertex > pix = vtkSmartPointer< vtkVertex >::New();
+        pix->GetPointIds()->SetId(0, *n_pix);
+        *n_pix = *n_pix + 1;
+
+        vert_skl->InsertNextCell(pix);
+
+        theta += theta_inc;
+    }
+
+    for( int h = 0; h < grafo->n_hijos; h++){
+        mostrarRadios(puntos, vert_skl, n_pix, grafo->ramas[h], DDP, crl, srl, ccc, scc);
+    }
 }
 
 
@@ -823,6 +934,29 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
         theta += theta_inc;
     }
 
+    double xx_3D = xx;
+    double yy_3D = yy;
+    double zz_3D = DDP;
+
+    // Mover los puntos segun indica el SID y SOD:
+    //// Rotacion usando el eje 'x' como base:
+    r_temp = crl*yy_3D - srl*zz_3D;
+    zz_3D = srl*yy_3D + crl*zz_3D;
+    yy_3D = r_temp;
+
+    //// Rotacion usando el eje 'y' como base:
+    r_temp = ccc*xx_3D - scc*zz_3D;
+    zz_3D = scc*xx_3D + ccc*zz_3D;
+    xx_3D = r_temp;
+
+    puntos->InsertNextPoint(xx_3D, yy_3D, zz_3D);
+    vtkSmartPointer< vtkVertex > pix = vtkSmartPointer< vtkVertex >::New();
+    pix->GetPointIds()->SetId(0, *n_pix);
+
+    *n_pix = *n_pix + 1;
+    vert_skl->InsertNextCell(pix);
+
+
     for( int i = 0; i < grafo->n_hijos; i++){
         mostrarRadios(puntos, vert_skl, grafo_nivel, n_pix, grafo->ramas[i], DDP, crl, srl, ccc, scc, n_niveles);
     }
@@ -875,7 +1009,7 @@ void RECONS3D::skeletonize(const int angio_ID){
     vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
     polydata->SetPoints( puntos );
     polydata->SetVerts( vert_skl );
-    //polydata->GetCellData()->SetScalars( grafo_nivel );
+    polydata->GetCellData()->SetScalars( grafo_nivel );
     DEB_MSG("Agregando los puntos a un polydata");
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
@@ -895,6 +1029,48 @@ void RECONS3D::skeletonize(const int angio_ID){
 
 
 
+/*  Metodo: getRenderer
+
+    Funcion: Retorna el renderizador global.
+*/
+vtkSmartPointer< vtkRenderer > RECONS3D::getRenderer(){
+    return renderer_global;
+}
+
+
+
+
+/*  Metodo: getRenderer
+
+    Funcion: Retorna el renderizador correspondiente al input 'angio_ID'.
+*/
+vtkSmartPointer< vtkRenderer > RECONS3D::getRenderer( const int angio_ID ){
+    if( angio_ID > n_angios ){
+        char mensaje[] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
+        sprintf(mensaje, "\n<<Error: El angiograma %i no ha sido agregado al reconstructor>>\n\n", angio_ID);
+        DEB_MSG(mensaje);
+        escribirLog( mensaje );
+        return NULL;
+    }else{
+        return mis_renderers[ angio_ID ];
+    }
+}
+
+
+
+/*  Metodo: setLog
+
+    Funcion: Define el editor donde se escribiran todos los logs del sistema
+*/
+void RECONS3D::setLog(QPlainTextEdit *log ){
+    mi_log = log;
+    escribirLog( "Reconstructor 3D" );
+    escribirLog( "by: Fernando Cervantes-Sanchez\n" );
+}
+
+
+
+
 // C O N S T R U C T O R E S    /   D E S T R U C T O R E S
 /*  Constructor ()
     Funcion: Constructor por default.
@@ -905,10 +1081,10 @@ RECONS3D::RECONS3D(){
     detalle = 180;
 
     double color[] = {1.0, 1.0, 1.0};
-    //agregarEsfera(0.0, 0.0, 0.0, 10.0, color, renderer_global);
-    //agregarEjes(renderer_global);
+    agregarEsfera(0.0, 0.0, 0.0, 10.0, color, renderer_global);
+    agregarEjes(renderer_global);
 
-    n_angios = 0;
+    n_angios = -1;
 }
 
 

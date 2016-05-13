@@ -10,7 +10,10 @@
 #define RECONSTRUCTOR_HPP_INCLUDED
 
 
-// Librerias de uso comun:
+// Librerias de uso comun con QT:
+#include <QPlainTextEdit>
+
+
 // Librerias de uso comun:
 #include <vtkVersion.h>
 #include <vtkSmartPointer.h>
@@ -117,6 +120,8 @@ class RECONS3D{
         } NORCEN;
 
     // M I E M B R O S      P R I V A D O S
+        QPlainTextEdit *mi_log;
+
         // Miembros para cargar las imagenes:
         std::vector< IMGVTK > imgs_base;
         std::vector< IMGVTK > imgs_delin;
@@ -132,7 +137,11 @@ class RECONS3D{
         std::vector< vtkSmartPointer<vtkCellArray> > pixeles;
         std::vector< NORCEN > normal_centros;
 
+        FILTROS filtro;
+
     // M E T O D O S       P R I V A D O S
+        void escribirLog( const char *mensaje );
+
         void renderizar(vtkSmartPointer<vtkRenderer> mi_renderer);
         void mostrarImagen(IMGVTK &imagen, IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer );
         void mostrarImagen(const int angio_ID, IMGVTK::IMG_IDX img_idx);
@@ -161,12 +170,20 @@ class RECONS3D{
     // M E T O D O S        P U B L I C O S
         void agregarInput(char **rutasbase_input, char **rutasground_input, const int n_imgs);
         void agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input);
+        void agregarInput(const char *rutabase_input);
+
+        void agregarGroundtruth(const char *rutaground_input, const int angio_ID);
 
         void segmentarImagenBase();
         void segmentarImagenBase( const int angio_ID );
         void skeletonize();
         void skeletonize(const int angio_ID);
 
+        vtkSmartPointer< vtkRenderer > getRenderer();
+        vtkSmartPointer< vtkRenderer > getRenderer( const int angio_ID );
+
+
+        void setLog( QPlainTextEdit *log );
     // O P E R A D O R E S  S O B R E C A R G A D O S
     //--------------------------------------------------------------------------------------- PUBLIC ----- ^
 };

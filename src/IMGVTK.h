@@ -94,9 +94,11 @@
     #define DEB_MSG(MENSAJE) using namespace std;\
                              cout << MENSAJE << endl
 #else
-    #define DEB_MSG(MENSAJE) using namespace std;\
-                             cout << MENSAJE << endl
+    #define DEB_MSG(MENSAJE)
 #endif
+
+
+#define PI 3.14159265
 
 
 // C L A S E: IMGVTK  ---------------------------------------------------------------------------------------------- v

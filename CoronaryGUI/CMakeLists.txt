@@ -5,9 +5,9 @@ if(POLICY CMP0020)
   cmake_policy(SET CMP0020 NEW)
 endif()
 
-SET(NOMBRE_PROYECTO coronary)
-SET(HEADERS src/reconstructor_3D.h src/filtros.h src/IMGVTK.h src/pars_fercer.h)
-SET(SOURCES src/main.cpp src/reconstructor_3D.cpp src/filtros.cpp src/IMGVTK.cpp src/pars_fercer.c)
+SET(NOMBRE_PROYECTO coronaryGUI)
+SET(HEADERS ../src/reconstructor_3D.h ../src/filtros.h ../src/IMGVTK.h)
+SET(SOURCES ../src/reconstructor_3D.cpp ../src/filtros.cpp ../src/IMGVTK.cpp)
 
 SET(CMAKE_C_FLAGS_DISTRIBUTION "-O3 -DNDEBUG -lm -fopenmp")
 SET(CMAKE_C_FLAGS_DEBUG "-g -lm -fopenmp")
@@ -15,9 +15,9 @@ SET(CMAKE_CXX_FLAGS_DISTRIBUTION "-O3 -DNDEBUG -fopenmp")
 SET(CMAKE_CXX_FLAGS_DEBUG "-g -fopenmp")
 
 
-#FILE(GLOB UI_FILES *.ui)
-#FILE(GLOB QT_WRAP *.h)
-#FILE(GLOB CXX_FILES *.cpp)
+FILE(GLOB UI_FILES *.ui)
+FILE(GLOB QT_WRAP *.h)
+FILE(GLOB CXX_FILES *.cpp)
 
 MESSAGE("CXX_FILES = ${CXX_FILES}")
 
