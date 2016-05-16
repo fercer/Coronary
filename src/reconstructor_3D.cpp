@@ -19,7 +19,11 @@
     Funcion: Escribe un mensaje en el log.
 */
 void RECONS3D::escribirLog( const char *mensaje ){
-    mi_log->appendPlainText( mensaje );
+    if( mi_log ){
+        mi_log->appendPlainText( mensaje );
+    }else{
+        std:cout << mensaje;
+    }
 }
 
 
@@ -836,6 +840,7 @@ void RECONS3D::skeletonize(){
         skeletonize( i );
     }
     escribirLog( "Extraccion de los esqueletos lista" );
+    renderizar( renderer_global );
 }
 
 
@@ -848,7 +853,7 @@ void RECONS3D::skeletonize(){
 
     Funcion: Muestra el radio de cada pixel del esqueleto.
 */
-void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> cilindros, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle){
+void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> cilindros, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros){
 
     const double theta_inc = 2 * PI / (double)detalle;
 
@@ -993,8 +998,42 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
             theta += theta_inc;
         }
 
+        if( fp_cilindros ){
+            double xx_3D_ini = xx;
+            double yy_3D_ini = yy;
+            double zz_3D_ini = DDP;
+
+            //// Rotacion usando el eje 'x' como base:
+            r_temp = crl*yy_3D_ini - srl*zz_3D_ini;
+            zz_3D_ini = srl*yy_3D_ini + crl*zz_3D_ini;
+            yy_3D_ini = r_temp;
+
+
+            //// Rotacion usando el eje 'y' como base:
+            r_temp = ccc*xx_3D_ini - scc*zz_3D_ini;
+            zz_3D_ini = scc*xx_3D_ini + ccc*zz_3D_ini;
+            xx_3D_ini = r_temp;
+
+            double xx_3D_fin = x_fin;
+            double yy_3D_fin = y_fin;
+            double zz_3D_fin = DDP;
+
+            //// Rotacion usando el eje 'x' como base:
+            r_temp = crl*yy_3D_fin - srl*zz_3D_fin;
+            zz_3D_fin = srl*yy_3D_fin + crl*zz_3D_fin;
+            yy_3D_fin = r_temp;
+
+
+            //// Rotacion usando el eje 'y' como base:
+            r_temp = ccc*xx_3D_fin - scc*zz_3D_fin;
+            zz_3D_fin = scc*xx_3D_fin + ccc*zz_3D_fin;
+            xx_3D_fin = r_temp;
+
+            fprintf(fp_cilindros, "%f %f %f %f %f %f %f\n",xx_3D_ini, yy_3D_ini, zz_3D_ini, radio, xx_3D_fin, yy_3D_fin, zz_3D_fin);
+        }
+
         *(n_pix) = *(n_pix) + (detalle+1)*2;
-        mostrarRadios(puntos, cilindros, n_pix, sig_hijo, DDP, crl, srl, ccc, scc, nivel_detalle);
+        mostrarRadios(puntos, cilindros, n_pix, sig_hijo, DDP, crl, srl, ccc, scc, nivel_detalle, fp_cilindros);
     }
 }
 
@@ -1126,8 +1165,14 @@ void RECONS3D::skeletonize(const int angio_ID){
         vtkSmartPointer< vtkPoints > puntos = vtkSmartPointer< vtkPoints >::New();
         vtkSmartPointer< vtkCellArray > cilindros = vtkSmartPointer< vtkCellArray >::New();
         int n_pix = 0;
-        mostrarRadios(puntos, cilindros, &n_pix, imgs_delin[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, 5);
 
+        char nom_cilindros[] = "cilindros_XXX.dat";
+        sprintf( nom_cilindros, "cilindros_%i.dat", angio_ID);
+        FILE *fp_cilindros = fopen(nom_cilindros, "w");
+        fprintf( fp_cilindros, "X1 Y1 Z1 RADIO X2 Y2 Z2\n");
+        mostrarRadios(puntos, cilindros, &n_pix, imgs_delin[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, 5, fp_cilindros);
+
+        fclose( fp_cilindros );
 
         /// Generar los cilindros:
         vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
