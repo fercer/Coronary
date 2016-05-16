@@ -99,6 +99,7 @@
 
 
 #define PI 3.14159265
+#define INF 1e100;
 
 
 // C L A S E: IMGVTK  ---------------------------------------------------------------------------------------------- v
@@ -120,7 +121,7 @@ class IMGVTK{
             double radio, alpha;
             int nivel;
             int n_hijos;
-            PIX_PAR *ramas[3];
+            PIX_PAR *hijos[3];
             TIPO_CARACT pix_tipo;
         } PIX_PAR;
 

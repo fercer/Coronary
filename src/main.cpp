@@ -287,9 +287,9 @@ int main(int argc, char** argv ){
     //        delete [] rutas_grd[i];
     //    }
 
-
-        reconstructor.segmentarImagenBase();
-//        reconstructor.skeletonize();
+        //reconstructor.segmentarImagenBase();
+        DEB_MSG("Listo para extraer esqueleto");
+        reconstructor.skeletonize();
 
 
 

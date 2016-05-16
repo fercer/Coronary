@@ -235,8 +235,8 @@ void RECONS3D::mostrarImagen( IMGVTK &img_src, IMGVTK::IMG_IDX img_idx, vtkSmart
     unsigned char *img_tmp_ptr = static_cast<unsigned char*>(img_tmp->GetScalarPointer(0,0,0));
     double *img_src_ptr = static_cast<double*>(img_ptr->GetScalarPointer(0,0,0));
 
-    double max =-1e100;
-    double min = 1e100;
+    double max =-INF;
+    double min = INF;
 
     for( int xy = 0; xy < mis_rens_cols; xy++){
         if(*(img_src_ptr + xy) < min){
@@ -654,6 +654,9 @@ DEB_MSG("Ruta ground: " << rutaground_input);
             mallarPuntos(n_angios);
             isoCentro(n_angios);
 
+
+            mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
+
             existe_ground.push_back( false );
         }
 
@@ -669,13 +672,15 @@ DEB_MSG("Ruta ground: " << rutaground_input);
         puntos.push_back(vtkSmartPointer<vtkPoints>::New());
         pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
         normal_centros.push_back( norcen_temp );
+
+
         /// Mover el detector a su posicion definida por el archivo DICOM:
         mallarPuntos(n_angios);
         isoCentro(n_angios);
 
 
         mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
-        //renderizar(mis_renderers[n_angios]);
+//        renderizar(mis_renderers[n_angios]);
 
 
         if( strcmp(rutaground_input, "NULL") ){
@@ -739,7 +744,7 @@ void RECONS3D::agregarGroundtruth(const char *rutaground_input, const int angio_
     Funcion: Aplica el filtro a todas las imagenes.
 */
 void RECONS3D::segmentarImagenBase(){
-    for( int i = 0; i < n_angios; i++){
+    for( int i = 0; i <= n_angios; i++){
         segmentarImagenBase( i );
     }
 }
@@ -753,8 +758,8 @@ void RECONS3D::segmentarImagenBase(){
 */
 void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
-//    filtro.setFiltro(FILTROS::SS_GABOR);
-    filtro.setFiltro(FILTROS::GMF);
+    filtro.setFiltro(FILTROS::SS_GABOR);
+//    filtro.setFiltro(FILTROS::GMF);
     filtro.setFitness(FILTROS::ROC);
     filtro.setEvoMet(FILTROS::EDA_BUMDA, 50, 30);
 
@@ -764,37 +769,50 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     }
 
     // Parametros fijos (SS Gabor):
-//    filtro.setPar(FILTROS::PAR_L, 2.65);
-//    filtro.setPar(FILTROS::PAR_T, 15);
-//    filtro.setPar(FILTROS::PAR_K, 180);
-//    filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
+    filtro.setPar(FILTROS::PAR_L, 2.65);
+    filtro.setPar(FILTROS::PAR_T, 15);
+    filtro.setPar(FILTROS::PAR_K, 180);
+    filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
 
-    // Parametros fijos (GMF):
+/*
+    //// Parametros fijos (GMF):
     filtro.setPar(FILTROS::PAR_L, 13);
     filtro.setPar(FILTROS::PAR_T, 15);
     filtro.setPar(FILTROS::PAR_K, 12);
     filtro.setPar(FILTROS::PAR_SIGMA, 2.82);
     filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
-
+*/
 
 	DEB_MSG("Listo para aplicar el filtro ...");
 
     filtro.filtrar();
     imgs_base[angio_ID].Guardar(IMGVTK::SEGMENT, "segment.png", IMGVTK::PNG);
 
-
 	DEB_MSG("Filtro aplicado exitosamente ...");
 
+    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT, 0.041663);
+    imgs_base[angio_ID].Guardar(IMGVTK::THRESHOLD, "umbral_1.png", IMGVTK::PNG);
 
-//    mostrarImagen(imgs_base[angio_ID], IMGVTK::SEGMENT, mis_renderers[angio_ID]);
-//    renderizar(mis_renderers[angio_ID]);
+    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT, 0.034763);
+    imgs_base[angio_ID].Guardar(IMGVTK::THRESHOLD, "umbral_70.png", IMGVTK::PNG);
 
-//    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT);
+    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT, 0.027763);
+    imgs_base[angio_ID].Guardar(IMGVTK::THRESHOLD, "umbral_140.png", IMGVTK::PNG);
 
-//    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
-//    renderizar(mis_renderers[angio_ID]);
+    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT, 0.020763);
+    imgs_base[angio_ID].Guardar(IMGVTK::THRESHOLD, "umbral_210.png", IMGVTK::PNG);
 
-//	imgs_base[angio_ID].Guardar(IMGVTK::SEGMENT, "segment.png", IMGVTK::PNG);
+    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT, 0.013863);
+    imgs_base[angio_ID].Guardar(IMGVTK::THRESHOLD, "umbral_279.png", IMGVTK::PNG);
+
+    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT, 0.006863);
+    imgs_base[angio_ID].Guardar(IMGVTK::THRESHOLD, "umbral_349.png", IMGVTK::PNG);
+
+    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT,-0.000137);
+    imgs_base[angio_ID].Guardar(IMGVTK::THRESHOLD, "umbral_419.png", IMGVTK::PNG);
+
+
+    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT);
 
     /// Falta el linking broken vessels ..................
     ///
@@ -813,69 +831,176 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     Funcion: Obtiene el esqueleto de todas las imagenes:
 */
 void RECONS3D::skeletonize(){
-    for( int i = 0; i < n_angios; i++){
+    for( int i = 0; i <= n_angios; i++){
         skeletonize( i );
     }
-    DEB_MSG("Renderizando el espacio 3D");
     renderizar(renderer_global);
 }
 
 
 
+
+
+
+
 /*  Metodo: mostrarRadios
 
-    Funcion: Muestra el radio de cada seccion del esqueleto como un promedio entre el radio del inicio y del fin de cada seccion.
+    Funcion: Muestra el radio de cada pixel del esqueleto.
 */
-void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc){
+void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> cilindros, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle){
 
     const double theta_inc = 2 * PI / (double)detalle;
-    const double xx_ini = grafo->x;
-    const double yy_ini = grafo->y;
 
-
-    double theta = 0.0;
-
-    const double radio = grafo->radio;
-
-    const double cal = cos(grafo->alpha);
-    const double sal = sin(grafo->alpha);
-
-    double r_temp;
-
-    for( int i = 0; i < detalle; i++){
-        const double cth = cos(theta);
-        const double sth = sin(theta);
-        double xx_3D_ini = xx_ini + cal*cth*radio;
-        double yy_3D_ini = yy_ini + sal*cth*radio;
-        double zz_3D_ini = DDP - sth*radio;
-
-        // rotar el punto para que se dirija hacia el punto con el que se midio el radio.
-
-        // Mover los puntos segun indica el SID y SOD:
-        //// Rotacion usando el eje 'x' como base:
-        r_temp = crl*yy_3D_ini - srl*zz_3D_ini;
-        zz_3D_ini = srl*yy_3D_ini + crl*zz_3D_ini;
-        yy_3D_ini = r_temp;
-
-        //// Rotacion usando el eje 'y' como base:
-        r_temp = ccc*xx_3D_ini - scc*zz_3D_ini;
-        zz_3D_ini = scc*xx_3D_ini + ccc*zz_3D_ini;
-        xx_3D_ini = r_temp;
-
-        puntos->InsertNextPoint(xx_3D_ini, yy_3D_ini, zz_3D_ini);
-        vtkSmartPointer< vtkVertex > pix = vtkSmartPointer< vtkVertex >::New();
-        pix->GetPointIds()->SetId(0, *n_pix);
-        *n_pix = *n_pix + 1;
-
-        vert_skl->InsertNextCell(pix);
-
-        theta += theta_inc;
-    }
+    const double xx = grafo->x;
+    const double yy = grafo->y;
 
     for( int h = 0; h < grafo->n_hijos; h++){
-        mostrarRadios(puntos, vert_skl, n_pix, grafo->ramas[h], DDP, crl, srl, ccc, scc);
+
+        double radio = grafo->radio;
+
+        IMGVTK::PIX_PAR *sig_hijo = grafo->hijos[h];
+        int n_prof = 0;
+        while( 1 ){
+            radio += sig_hijo->radio;
+            n_prof++;
+
+            if( sig_hijo->pix_tipo != IMGVTK::PIX_SKL || n_prof >= nivel_detalle){
+                break;
+            }
+
+            sig_hijo = sig_hijo->hijos[0];
+        }
+
+        /// Promedio de los radios de esta seccion:
+        radio /= (double)n_prof;
+
+        double x_fin = sig_hijo->x;
+        double y_fin = sig_hijo->y;
+
+        const double alpha = atan2(y_fin - yy, x_fin - xx) + PI / 2.0;
+
+        const double cal = cos(alpha);
+        const double sal = sin(alpha);
+
+        double r_temp;
+
+        double theta = 0.0;
+
+
+        /// Primera iteracion:
+        {
+            const double cth = cos(theta);
+            const double sth = sin(theta);
+
+            /// Puntos inicio:
+            double xx_3D_ini = xx + cal*cth*radio;
+            double yy_3D_ini = yy + sal*cth*radio;
+            double zz_3D_ini = DDP - sth*radio;
+
+            // Mover los puntos segun indica el LAO/RAO y CRA/CAU:
+            //// Rotacion usando el eje 'x' como base:
+            r_temp = crl*yy_3D_ini - srl*zz_3D_ini;
+            zz_3D_ini = srl*yy_3D_ini + crl*zz_3D_ini;
+            yy_3D_ini = r_temp;
+
+
+            //// Rotacion usando el eje 'y' como base:
+            r_temp = ccc*xx_3D_ini - scc*zz_3D_ini;
+            zz_3D_ini = scc*xx_3D_ini + ccc*zz_3D_ini;
+            xx_3D_ini = r_temp;
+
+            puntos->InsertNextPoint(xx_3D_ini, yy_3D_ini, zz_3D_ini);
+
+            /// Puntos final:
+            double xx_3D_fin = x_fin + cal*cth*radio;
+            double yy_3D_fin = y_fin + sal*cth*radio;
+            double zz_3D_fin = DDP - sth*radio;
+
+            // rotar el punto para que se dirija hacia el punto con el que se midio el radio.
+
+            // Mover los puntos segun indica el SID y SOD:
+            //// Rotacion usando el eje 'x' como base:
+            r_temp = crl*yy_3D_fin - srl*zz_3D_fin;
+            zz_3D_fin = srl*yy_3D_fin + crl*zz_3D_fin;
+            yy_3D_fin = r_temp;
+
+
+            //// Rotacion usando el eje 'y' como base:
+            r_temp = ccc*xx_3D_fin - scc*zz_3D_fin;
+            zz_3D_fin = scc*xx_3D_fin + ccc*zz_3D_fin;
+            xx_3D_fin = r_temp;
+
+            puntos->InsertNextPoint(xx_3D_fin, yy_3D_fin, zz_3D_fin);
+
+            theta += theta_inc;
+        }
+
+        for( int i = 1; i <= detalle; i++){
+            const double cth = cos(theta);
+            const double sth = sin(theta);
+
+            /// Puntos inicio:
+            double xx_3D_ini = xx + cal*cth*radio;
+            double yy_3D_ini = yy + sal*cth*radio;
+            double zz_3D_ini = DDP - sth*radio;
+
+            // Mover los puntos segun indica el LAO/RAO y CRA/CAU:
+            //// Rotacion usando el eje 'x' como base:
+            r_temp = crl*yy_3D_ini - srl*zz_3D_ini;
+            zz_3D_ini = srl*yy_3D_ini + crl*zz_3D_ini;
+            yy_3D_ini = r_temp;
+
+
+            //// Rotacion usando el eje 'y' como base:
+            r_temp = ccc*xx_3D_ini - scc*zz_3D_ini;
+            zz_3D_ini = scc*xx_3D_ini + ccc*zz_3D_ini;
+            xx_3D_ini = r_temp;
+
+            puntos->InsertNextPoint(xx_3D_ini, yy_3D_ini, zz_3D_ini);
+
+            /// Puntos final:
+            double xx_3D_fin = x_fin + cal*cth*radio;
+            double yy_3D_fin = y_fin + sal*cth*radio;
+            double zz_3D_fin = DDP - sth*radio;
+
+            // rotar el punto para que se dirija hacia el punto con el que se midio el radio.
+
+            // Mover los puntos segun indica el SID y SOD:
+            //// Rotacion usando el eje 'x' como base:
+            r_temp = crl*yy_3D_fin - srl*zz_3D_fin;
+            zz_3D_fin = srl*yy_3D_fin + crl*zz_3D_fin;
+            yy_3D_fin = r_temp;
+
+
+            //// Rotacion usando el eje 'y' como base:
+            r_temp = ccc*xx_3D_fin - scc*zz_3D_fin;
+            zz_3D_fin = scc*xx_3D_fin + ccc*zz_3D_fin;
+            xx_3D_fin = r_temp;
+
+            puntos->InsertNextPoint(xx_3D_fin, yy_3D_fin, zz_3D_fin);
+
+            /// Generar un nuevoQuad con estos dos puntos y los anteriores:
+            vtkSmartPointer<vtkQuad> nuevo_quad = vtkSmartPointer<vtkQuad>::New();
+
+            nuevo_quad->GetPointIds()->SetId(0, *(n_pix) + 2*(i-1));
+            nuevo_quad->GetPointIds()->SetId(1, *(n_pix) + 2*(i-1)+1);
+            nuevo_quad->GetPointIds()->SetId(2, *(n_pix) + 2*i+1);
+            nuevo_quad->GetPointIds()->SetId(3, *(n_pix) + 2*i);
+
+            cilindros->InsertNextCell(nuevo_quad);
+
+            theta += theta_inc;
+        }
+
+        *(n_pix) = *(n_pix) + (detalle+1)*2;
+        mostrarRadios(puntos, cilindros, n_pix, sig_hijo, DDP, crl, srl, ccc, scc, nivel_detalle);
     }
 }
+
+
+
+
+
 
 
 
@@ -956,9 +1081,8 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
     *n_pix = *n_pix + 1;
     vert_skl->InsertNextCell(pix);
 
-
     for( int i = 0; i < grafo->n_hijos; i++){
-        mostrarRadios(puntos, vert_skl, grafo_nivel, n_pix, grafo->ramas[i], DDP, crl, srl, ccc, scc, n_niveles);
+        mostrarRadios(puntos, vert_skl, grafo_nivel, n_pix, grafo->hijos[i], DDP, crl, srl, ccc, scc, n_niveles);
     }
 
 }
@@ -971,60 +1095,58 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
     Funcion: Obtiene el esqueleto de la imagen y muestra los puntos de interes.
 */
 void RECONS3D::skeletonize(const int angio_ID){
+
+    DEB_MSG("Extrayendo esquelto a " << angio_ID);
     //imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
-    imgs_base[angio_ID].skeletonization(IMGVTK::BASE);
-
-    mostrarImagen( imgs_base[angio_ID], IMGVTK::SKELETON, mis_renderers[angio_ID] );
-    renderizar(mis_renderers[angio_ID]);
+    imgs_delin[angio_ID].skeletonization(IMGVTK::BASE);
 
 
-    if( !imgs_base[angio_ID].pix_caract ){
+    //if( !imgs_base[angio_ID].pix_caract ){
+    if( !imgs_delin[angio_ID].pix_caract ){
         DEB_MSG("No existe grafo...");
         return;
     }
 
     // Rotar los puntos segun LAO/RAO y CAU/CRA:
-    const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * PI);
-    const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * PI);
-    const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * PI);
-    const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
+    const double crl = cos(imgs_delin[angio_ID].LAORAO/180.0 * PI);
+    const double srl = sin(imgs_delin[angio_ID].LAORAO/180.0 * PI);
+    const double ccc = cos(imgs_delin[angio_ID].CRACAU/180.0 * PI);
+    const double scc = sin(imgs_delin[angio_ID].CRACAU/180.0 * PI);
 
-    const double DDP = imgs_base[angio_ID].DDP;
-    const int n_niveles = imgs_base[angio_ID].n_niveles;
+    const double DDP = imgs_delin[angio_ID].DDP;
+    const int n_niveles = imgs_delin[angio_ID].n_niveles;
 
     DEB_MSG("numero de niveles: " << n_niveles);
 
-    // Recorrer el grafo y generar en 3D una burda reconstruccion.
-    vtkSmartPointer<vtkPoints> puntos = vtkSmartPointer<vtkPoints>::New();
-    vtkSmartPointer<vtkCellArray> vert_skl = vtkSmartPointer<vtkCellArray>::New();
-    vtkSmartPointer<vtkUnsignedCharArray> grafo_nivel = vtkSmartPointer<vtkUnsignedCharArray>::New();
+    {
+        // Recorrer el grafo y generar en 3D una burda reconstruccion.
 
-    grafo_nivel->SetNumberOfComponents(3);
-    grafo_nivel->SetName("Intensidades");
-    int n_pix = 0;
+        DEB_MSG("Mostrando los radios de cada 5 pixeles del esqueleto...");
+        vtkSmartPointer< vtkPoints > puntos = vtkSmartPointer< vtkPoints >::New();
+        vtkSmartPointer< vtkCellArray > cilindros = vtkSmartPointer< vtkCellArray >::New();
+        int n_pix = 0;
+        mostrarRadios(puntos, cilindros, &n_pix, imgs_delin[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, 1);
 
-    DEB_MSG("Mostrando los radios de cada pixel del esqueleto...");
-    mostrarRadios(puntos, vert_skl, grafo_nivel, &n_pix, imgs_base[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, n_niveles);
 
-    vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
-    polydata->SetPoints( puntos );
-    polydata->SetVerts( vert_skl );
-    polydata->GetCellData()->SetScalars( grafo_nivel );
-    DEB_MSG("Agregando los puntos a un polydata");
+        /// Generar los cilindros:
+        vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+        polydata->SetPoints(puntos);
+        polydata->SetPolys(cilindros);
 
-    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputData(polydata);
-    DEB_MSG("Generando Mapper");
+        vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+        mapper->SetInputData(polydata);
+        DEB_MSG("Generando Mapper");
 
-    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-    actor->SetMapper(mapper);
-    DEB_MSG("Generando Actor");
+        vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+        actor->SetMapper(mapper);
+        DEB_MSG("Generando Actor");
 
-    double color[] = {1.0, 1.0, 1.0};
-    actor->GetProperty()->SetColor(color);
+        double color[] = {0.0, 1.0, 0.0};
+        actor->GetProperty()->SetColor(color);
 
-    DEB_MSG("Agregando al renderizador");
-    renderer_global->AddActor( actor );
+        DEB_MSG("Agregando al renderizador");
+        renderer_global->AddActor( actor );
+    }
 }
 
 
@@ -1081,8 +1203,8 @@ RECONS3D::RECONS3D(){
     detalle = 180;
 
     double color[] = {1.0, 1.0, 1.0};
-    agregarEsfera(0.0, 0.0, 0.0, 10.0, color, renderer_global);
-    agregarEjes(renderer_global);
+//    agregarEsfera(0.0, 0.0, 0.0, 10.0, color, renderer_global);
+//    agregarEjes(renderer_global);
 
     n_angios = -1;
 }

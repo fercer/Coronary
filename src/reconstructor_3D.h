@@ -67,8 +67,10 @@
 // Librerias para formas geometricas:
 #include <vtkVertex.h>
 #include <vtkLine.h>
+#include <vtkQuad.h>
 #include <vtkTriangle.h>
 #include <vtkSphereSource.h>
+#include <vtkCylinderSource.h>
 #include <vtkPyramid.h>
 #include <vtkGlyph3D.h>
 #include <vtkArrowSource.h>
@@ -157,6 +159,7 @@ class RECONS3D{
         POS posicionDefecto(const double ancho, const double alto, const double punta);
         void mostrarDetector(const int angio_ID);
 
+        void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> cilindros, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle);
         void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, vtkSmartPointer<vtkUnsignedCharArray> grafo_nivel, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int n_niveles);
     //-------------------------------------------------------------------------------------- PRIVATE ----- ^
 

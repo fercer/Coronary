@@ -46,16 +46,13 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
 
     if( !map_ptr ){
         mapa_dist = vtkSmartPointer<vtkImageData>::New();
+        mapa_dist->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+        mapa_dist->AllocateScalars( VTK_DOUBLE, 1);
+        mapa_dist->SetOrigin(0.0, 0.0, 0.0);
+        mapa_dist->SetSpacing(1.0, 1.0, 1.0);
+
+        map_ptr = static_cast<double*>(mapa_dist->GetScalarPointer(0,0,0));
     }
-
-    mapa_dist->SetExtent(0, cols-1, 0, rens-1, 0, 0);
-    mapa_dist->AllocateScalars( VTK_DOUBLE, 1);
-    mapa_dist->SetOrigin(0.0, 0.0, 0.0);
-    mapa_dist->SetSpacing(1.0, 1.0, 1.0);
-
-    map_ptr = static_cast<double*>(mapa_dist->GetScalarPointer(0,0,0));
-
-    double INF = 1e9;
 
     for( int xy = 0 ; xy < rens_cols; xy++ ){
         *(map_ptr + xy) = (*(img_ptr + xy) < 1.0) ? 0.0 : INF;
@@ -164,14 +161,15 @@ void IMGVTK::detectarBorde( IMG_IDX img_idx ){
 
 	if (!borders) {
 		borders = vtkSmartPointer<vtkImageData>::New();
-	}
 
-	borders->SetExtent(0, cols - 1, 0, rens - 1, 0, 0);
-	borders->AllocateScalars(VTK_DOUBLE, 1);
-	borders->SetOrigin(0.0, 0.0, 0.0);
-	borders->SetSpacing(1.0, 1.0, 1.0);
+        borders->SetExtent(0, cols - 1, 0, rens - 1, 0, 0);
+        borders->AllocateScalars(VTK_DOUBLE, 1);
+        borders->SetOrigin(0.0, 0.0, 0.0);
+        borders->SetSpacing(1.0, 1.0, 1.0);
 
-	borders_ptr = static_cast<double*>(borders->GetScalarPointer(0, 0, 0));
+        borders_ptr = static_cast<double*>(borders->GetScalarPointer(0, 0, 0));
+    }
+
 	memset(borders_ptr, 0, rens_cols*sizeof(double));
 
 	for (int xy = 0; xy < rens_cols; xy++) {
@@ -1127,14 +1125,12 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
 
     temp->x = (x-1 - (double)cols/2)*pixX;
     temp->y = (y-1 - (double)rens/2)*pixY;
-//    temp->x_r = (x_up-1 - (double)cols/2)*pixX;
-//    temp->y_r = (y_up-1 - (double)rens/2)*pixY;
 
     temp->n_hijos = 0;
 
-    temp->ramas[0] = NULL;
-    temp->ramas[1] = NULL;
-    temp->ramas[2] = NULL;
+    temp->hijos[0] = NULL;
+    temp->hijos[1] = NULL;
+    temp->hijos[2] = NULL;
 
     temp->nivel = *nivel;
 
@@ -1188,9 +1184,9 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
         if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
             *nivel = *nivel + 1;
         }
-        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y-1, nivel, lutabla, visitados);
+        temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y-1, nivel, lutabla, visitados);
 
-        if( temp->ramas[temp->n_hijos] ){
+        if( temp->hijos[temp->n_hijos] ){
             temp->n_hijos++;
         }
     }
@@ -1200,8 +1196,8 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
         if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
             *nivel = *nivel + 1;
         }
-        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y-1, nivel, lutabla, visitados);
-        if( temp->ramas[temp->n_hijos] ){
+        temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y-1, nivel, lutabla, visitados);
+        if( temp->hijos[temp->n_hijos] ){
             temp->n_hijos++;
         }
     }
@@ -1211,9 +1207,9 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
         if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
             *nivel = *nivel + 1;
         }
-        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y-1, nivel, lutabla, visitados);
+        temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y-1, nivel, lutabla, visitados);
 
-        if( temp->ramas[temp->n_hijos] ){
+        if( temp->hijos[temp->n_hijos] ){
             temp->n_hijos++;
         }
     }
@@ -1223,9 +1219,9 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
         if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
             *nivel = *nivel + 1;
         }
-        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y, nivel, lutabla, visitados);
+        temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y, nivel, lutabla, visitados);
 
-        if( temp->ramas[temp->n_hijos] ){
+        if( temp->hijos[temp->n_hijos] ){
             temp->n_hijos++;
         }
     }
@@ -1235,9 +1231,9 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
         if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
             *nivel = *nivel + 1;
         }
-        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y+1, nivel, lutabla, visitados);
+        temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y+1, nivel, lutabla, visitados);
 
-        if( temp->ramas[temp->n_hijos] ){
+        if( temp->hijos[temp->n_hijos] ){
             temp->n_hijos++;
         }
     }
@@ -1247,9 +1243,9 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
         if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
             *nivel = *nivel + 1;
         }
-        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y+1, nivel, lutabla, visitados);
+        temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y+1, nivel, lutabla, visitados);
 
-        if( temp->ramas[temp->n_hijos] ){
+        if( temp->hijos[temp->n_hijos] ){
             temp->n_hijos++;
         }
     }
@@ -1259,9 +1255,9 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
         if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
             *nivel = *nivel + 1;
         }
-        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y+1, nivel, lutabla, visitados);
+        temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y+1, nivel, lutabla, visitados);
 
-        if( temp->ramas[temp->n_hijos] ){
+        if( temp->hijos[temp->n_hijos] ){
             temp->n_hijos++;
         }
     }
@@ -1271,11 +1267,23 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
         if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
             *nivel = *nivel + 1;
         }
-        temp->ramas[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y, nivel, lutabla, visitados);
+        temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y, nivel, lutabla, visitados);
 
-        if( temp->ramas[temp->n_hijos] ){
+        if( temp->hijos[temp->n_hijos] ){
             temp->n_hijos++;
         }
+    }
+
+    /// Revisar si en verdad sigue siendo del tipo que creia ser:
+    switch( temp->n_hijos ){
+        case 0: temp->pix_tipo = PIX_END;
+                break;
+        case 1: temp->pix_tipo = PIX_SKL;
+                break;
+        case 2: temp->pix_tipo = PIX_BRANCH;
+                break;
+        case 3: temp->pix_tipo = PIX_CROSS;
+                break;
     }
 
     return temp;
@@ -1310,9 +1318,6 @@ void IMGVTK::extraerCaract( IMG_IDX img_idx ){
     bool *visitados = new bool [rens_cols];
     memset(visitados, 0, rens_cols*sizeof(bool));
 
-    bool *visitados = new bool [rens_cols];
-    memset( visitados, 0, rens_cols * sizeof(bool));
-
     int x_ini, y_ini, xy = cols+2;
     unsigned char resp;
     do{
@@ -1326,6 +1331,8 @@ void IMGVTK::extraerCaract( IMG_IDX img_idx ){
     int nivel = 0;
 
     pix_caract = grafoSkeleton(skl_tmp, x_ini, y_ini, &nivel, tabla, visitados);
+
+    DEB_MSG("Encontrados " << nivel << " niveles");
 
     n_niveles = nivel;
 
@@ -1342,8 +1349,8 @@ void IMGVTK::borrarSkeleton( PIX_PAR *raiz ){
 
     if( raiz->n_hijos ){
         for( int i = 0; i < raiz->n_hijos; i++ ){
-            borrarSkeleton( raiz->ramas[i] );
-            delete raiz->ramas[i];
+            borrarSkeleton( raiz->hijos[i] );
+            delete raiz->hijos[i];
         }
     }
 }
@@ -1386,14 +1393,15 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
 
     if( !skl_ptr ){
         skeleton = vtkSmartPointer<vtkImageData>::New();
+
+        skeleton->SetExtent(0, cols+1, 0, rens+1, 0, 0);
+        skeleton->AllocateScalars( VTK_DOUBLE, 1);
+        skeleton->SetOrigin(0.0, 0.0, 0.0);
+        skeleton->SetSpacing(1.0, 1.0, 1.0);
+
+        skl_ptr = static_cast<double*>(skeleton->GetScalarPointer(0,0,0));
     }
 
-    skeleton->SetExtent(0, cols+1, 0, rens+1, 0, 0);
-    skeleton->AllocateScalars( VTK_DOUBLE, 1);
-    skeleton->SetOrigin(0.0, 0.0, 0.0);
-    skeleton->SetSpacing(1.0, 1.0, 1.0);
-
-    skl_ptr = static_cast<double*>(skeleton->GetScalarPointer(0,0,0));
     memset(skl_ptr, 0, (rens+2)*(cols+2)*sizeof(double));
 
     for( int y = 0; y < rens; y++ ){
@@ -1452,6 +1460,8 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
 
     delete [] skl_mark;
 
+
+
     extraerCaract( img_idx );
 }
 
@@ -1490,14 +1500,14 @@ void IMGVTK::umbralizar(IMG_IDX img_idx, const double umbral){
 
     if( !threshold_ptr ){
         threshold = vtkSmartPointer<vtkImageData>::New();
+
+        threshold->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+        threshold->AllocateScalars( VTK_DOUBLE, 1);
+        threshold->SetOrigin(0.0, 0.0, 0.0);
+        threshold->SetSpacing(1.0, 1.0, 1.0);
+
+        threshold_ptr = static_cast<double*>(threshold->GetScalarPointer(0,0,0));
     }
-
-    threshold->SetExtent(0, cols-1, 0, rens-1, 0, 0);
-    threshold->AllocateScalars( VTK_DOUBLE, 1);
-    threshold->SetOrigin(0.0, 0.0, 0.0);
-    threshold->SetSpacing(1.0, 1.0, 1.0);
-
-    threshold_ptr = static_cast<double*>(threshold->GetScalarPointer(0,0,0));
 
     double *img_ptr = NULL;
     switch( img_idx ){
@@ -1512,21 +1522,10 @@ void IMGVTK::umbralizar(IMG_IDX img_idx, const double umbral){
             break;
     }
 
-    double max =-1e100;
-    double min = 1e100;
-
+DEB_MSG("Umbral: " << umbral);
+    // Se umbraliza la imagen con el valor definido:
     for( int xy = 0; xy < rens_cols; xy++){
-        if(img_ptr[xy] < min){
-            min = img_ptr[xy];
-        }
-        if(img_ptr[xy] > max){
-            max = img_ptr[xy];
-        }
-    }
-
-    // Se umbraliza la imagen con el valor optimo encontrado:
-    for( int xy = 0; xy < rens_cols; xy++){
-        threshold_ptr[xy] = ((img_ptr[xy] - min) / (max - min) >= umbral) ? 1.0 : 0.0;
+        *(threshold_ptr + xy) = (*(img_ptr + xy) >= umbral) ? 1.0 : 0.0;
     }
 }
 
@@ -1541,14 +1540,14 @@ void IMGVTK::umbralizar(IMG_IDX img_idx){
 
     if( !threshold_ptr ){
         threshold = vtkSmartPointer<vtkImageData>::New();
+
+        threshold->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+        threshold->AllocateScalars( VTK_DOUBLE, 1);
+        threshold->SetOrigin(0.0, 0.0, 0.0);
+        threshold->SetSpacing(1.0, 1.0, 1.0);
+
+        threshold_ptr = static_cast<double*>(threshold->GetScalarPointer(0,0,0));
     }
-
-    threshold->SetExtent(0, cols-1, 0, rens-1, 0, 0);
-    threshold->AllocateScalars( VTK_DOUBLE, 1);
-    threshold->SetOrigin(0.0, 0.0, 0.0);
-    threshold->SetSpacing(1.0, 1.0, 1.0);
-
-    threshold_ptr = static_cast<double*>(threshold->GetScalarPointer(0,0,0));
 
     double *img_ptr = NULL;
     switch( img_idx ){
@@ -2211,6 +2210,7 @@ void IMGVTK::Cargar(char **rutas , const int n_imgs, const bool enmascarar){
 void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida ){
     double *img_ptr = NULL;
     int offset_x = 0, offset_y = 0;
+
     switch( img_idx ){
         case BASE:
             img_ptr = base_ptr;
@@ -2229,6 +2229,9 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
         case MAPDIST:
             img_ptr = map_ptr;
             break;
+        case THRESHOLD:
+            img_ptr = threshold_ptr;
+            break;
 		case BORDERS:
 			img_ptr = borders_ptr;
 			break;
@@ -2242,8 +2245,9 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
     img_out->SetSpacing(1.0, 1.0, 1.0);
     unsigned char *img_out_ptr = static_cast<unsigned char*>(img_out->GetScalarPointer(0,0,0));
 
-    double min = 1e100;
-    double max =-1e100;
+    double min = INF;
+    double max =-INF;
+
     for( int y = 0; y < rens; y++ ){
         for( int x = 0; x < cols; x++ ){
             if( min > *(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) ){
@@ -2254,6 +2258,13 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
             }
         }
     }
+
+    if( fabs(max - min) < 1e-12 ){
+        max = 1.0;
+        min = 0.0;
+    }
+
+    DEB_MSG(COLOR_BACK_GREEN COLOR_BACK_BLACK "GUARDAR" COLOR_NORMAL " min: " << min << ", " << max);
 
     for( int y = 0; y < rens; y++ ){
         for( int x = 0; x < cols; x++ ){

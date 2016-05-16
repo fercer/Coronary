@@ -62,19 +62,9 @@ class FILTROS{
 
         void setPar();
         void setPar( const PARAMETRO par, const double val);
+        INDIV getPars();
         void setLim( const PARAMETRO par, const double inf, const double sup, const double min_var);
         void setLim( const PARAMETRO par, const double inf, const double sup, const unsigned char bits);
-
-
-        /*  Metodo: getPars
-            Funcion: Retorna los parametros utilzados para el filtro.
-        */
-        INDIV getPars(){
-            INDIV out_pars;
-            memcpy(out_pars.vars, mi_elite->vars, 5*sizeof(double));
-            out_pars.eval = mi_elite->eval;
-            return out_pars;
-        }
 
         void filtrar();
 
@@ -96,42 +86,11 @@ class FILTROS{
 
         //================================================================================== GENERADORES DE NUMEROS ALEATORIOS:
 
-        /*	Metodo:        ini_semilla
-            Funcion:: Inicializa una semilla para el generador HybTaus. Si la semilla dada por el usuario es 0, se genera una semilla aleatoriamente y se utliza, de otro modo se usa la semilla dada por el usuario.
-        */
-        STAUS* ini_semilla(unsigned int semilla_i){
-            if(!semilla_i){
-                srand(clock());
-                semilla_i = rand();
-            }
-
-            STAUS *mi_semilla = new STAUS;
-            mi_semilla->z1 = lcg_r(&semilla_i);
-            mi_semilla->z2 = lcg_r(&semilla_i);
-            mi_semilla->z3 = lcg_r(&semilla_i);
-
-            return mi_semilla;
-        }
-
+        STAUS* ini_semilla(unsigned int semilla_i);
         unsigned int lcg_s();
         unsigned int lcg_r(unsigned int *mi_semilla);
         unsigned int tausStep(unsigned int *z, const int S1, const int S2, const int S3, const unsigned int M);
-
-        /*	Metodo:        HybTaus
-            Funcion:: Genera un numero pseudo-aleatorio por medio del metodo Hybrid Taus Step entre par1 y par2.
-        */
-        double HybTaus(const double par1, const double par2){
-        // Combined period is lcm(p1,p2,p3,p4)~ 2^121
-            double num = 2.3283064365387e-10 * (
-                // Periods
-                tausStep(&semilla->z1, 13, 19, 12, 4294967294UL) ^ // p1=2^31-1
-                tausStep(&semilla->z2, 2, 25, 4, 4294967288UL) ^ // p2=2^30-1
-                tausStep(&semilla->z3, 3, 11, 17, 4294967280UL) ^ // p3=2^28-1
-                lcg_s()	// p4=2^32
-            );
-
-            return (par2 - par1) * num + par1;
-        }
+        double HybTaus(const double par1, const double par2);
 
         double anorm_est();
 

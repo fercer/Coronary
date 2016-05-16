@@ -10,7 +10,6 @@
 #include "filtros.h"
 
 
-
 /*  Metodo: interpolacion (Lineal)
     Funcion: Interpola el valor del pixel destino en base a los 4 pixeles origen.
 */
@@ -143,10 +142,14 @@ FILTROS::~FILTROS(){
     if( semilla ){
         delete semilla;
     }
+    TIMERS;
+    GETTIME_INI;
     if(transformada){
         delete [] Img_org;
         fftw_free(Img_fft);
     }
+    GETTIME_FIN;
+    std::cout << COLOR_BACK_GREEN COLOR_BLACK "Tiempo para liberar memoria del FFT: " << DIFTIME << " s." COLOR_NORMAL << std::endl;
 }
 
 
@@ -223,6 +226,18 @@ void FILTROS::setPar( const PARAMETRO par, const double val ){
 }
 
 
+/*  Metodo: getPars
+    Funcion: Retorna los parametros utilzados para el filtro.
+*/
+FILTROS::INDIV FILTROS::getPars(){
+    INDIV out_pars;
+    memcpy(out_pars.vars, mi_elite->vars, 5*sizeof(double));
+    out_pars.eval = mi_elite->eval;
+    return out_pars;
+}
+
+
+
 /*  Metodo: setLim
     Funcion: Establece los limites de busqueda de los parametros, asi como la varianza minima que se espera obtener (para BUMDA)
 */
@@ -265,7 +280,7 @@ void FILTROS::filtrar(){
 
     memcpy(dest, resp, rens_cols*sizeof(double));
 
-//    calcROC(mi_elite, resp);
+    calcROC(mi_elite, resp);
 
     delete [] resp;
 }
@@ -403,7 +418,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
     double *resp_tmp = new double [ K * (cols + temp_dims - 1) * (rens + temp_dims - 1) ];
     for( int xy = 0; xy < K * (cols + temp_dims - 1) * (rens + temp_dims - 1); xy++ ){
-        *(resp_tmp + xy) = -1e100;
+        *(resp_tmp + xy) = -INF;
     }
 
 	const int offset = (int)(temp_dims/2);
@@ -471,7 +486,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
     // Liberar la matriz de templates:
     for( int xy = 0; xy < rens_cols; xy++){
-        *(resp +xy) =-1e100;
+        *(resp +xy) =-INF;
     }
 
 #ifndef NDEBUG
@@ -522,6 +537,8 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     Funcion: Obtiene la transformada de Fourier de la imagen original.
 */
 void FILTROS::fftImgOrigen(){
+    TIMERS;
+    GETTIME_INI;
     if(!transformada){
         transformada = true;
         Img_org = new double[rens_cols];
@@ -533,6 +550,8 @@ void FILTROS::fftImgOrigen(){
         fftw_execute(p_r2c);
         fftw_destroy_plan(p_r2c);
     }
+    GETTIME_FIN;
+    std::cout << COLOR_BACK_GREEN COLOR_BLACK << "Tiempo para obtener la FFT de la imagen de entrada: " << DIFTIME << " s." COLOR_NORMAL << std::endl;
 }
 
 
@@ -543,9 +562,9 @@ void FILTROS::fftImgOrigen(){
 */
 void FILTROS::respGabor(INDIV *test, double *resp){
 
-//    TIMERS;
+    TIMERS;
 
-//    GETTIME_INI;
+    GETTIME_INI;
 
     const double L = test->vars[0];
     const int T = (int)test->vars[1];
@@ -689,11 +708,9 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     }
 
     delete [] max_resp;
-//    GETTIME_FIN;
+    GETTIME_FIN;
 
-#ifndef NDEBUG
-//        DEB_MSG("Tiempo de filtrado: " << DIFTIME << "s. max: " << max_global << ", min: " << min_global );
-#endif
+    std::cout << COLOR_BACK_GREEN COLOR_BLACK "Tiempo de filtrado: " << DIFTIME << "s. " COLOR_NORMAL << std::endl;
 }
 
 
@@ -726,16 +743,16 @@ int comp_resp( const void *a, const void *b){
 */
 double FILTROS::calcROC(INDIV *test, double *resp){
 
-//    TIMERS;
+    TIMERS;
 
-//    GETTIME_INI;
+    GETTIME_INI;
 
     const double delta = test->vars[4];
     DEB_MSG("Calculando ROC");
     //// Contar la cantidad de pixeles blancos (unos) y negros (ceros)
     int n_unos = 0, n_ceros = 0;
     for( int xy = 0; xy < rens_cols; xy++){
-        if( ground_truth[xy] > 0.5 ){
+        if( *(ground_truth + xy) > 0.5 && *(mask + xy) > 0.5){
             n_unos++;
         }else{
             n_ceros++;
@@ -748,26 +765,29 @@ double FILTROS::calcROC(INDIV *test, double *resp){
     double *arr_ceros = new double[n_ceros];
     n_unos = 0;
     n_ceros = 0;
-    double max_resp = 0.0;
-    double min_resp = 1e100;
+    double max_resp =-INF;
+    double min_resp = INF;
 
     for( int xy = 0; xy < rens_cols; xy++){
-        if( ground_truth[xy] > 0.5 ){
-            arr_unos[n_unos] = resp[xy];
-            n_unos++;
-        }else{
-            arr_ceros[n_ceros] = resp[xy];
-            n_ceros++;
-        }
+        if( *(mask + xy) > 0.5 ){
+            if( *(ground_truth + xy) >= 0.5 ){
+                arr_unos[n_unos] = resp[xy];
+                n_unos++;
+            }else{
+                arr_ceros[n_ceros] = resp[xy];
+                n_ceros++;
+            }
 
-        if(max_resp < resp[xy]){
-            max_resp = resp[xy];
-        }
-        if(min_resp > resp[xy]){
-            min_resp = resp[xy];
+            if(max_resp < resp[xy]){
+                max_resp = resp[xy];
+            }
+            if(min_resp > resp[xy]){
+                min_resp = resp[xy];
+            }
         }
     }
 
+    DEB_MSG("min resp:" << COLOR_BLINK << min_resp << COLOR_NORMAL << ", max resp: " << COLOR_BLINK << max_resp << COLOR_NORMAL);
 
     //// Ordenar ambos arreglos de acuerdo a la respuesta (de la mas alta a la mas baja):
     qsort(arr_unos, n_unos, sizeof(double), comp_resp);
@@ -784,13 +804,17 @@ double FILTROS::calcROC(INDIV *test, double *resp){
     double curva_TPR_new, curva_FPR_new;
     double Az = 0.0;
 
+#ifndef NDEBUG
+    FILE *fp_ROC = fopen("ROC_curve.fcs", "w");
+#endif
+
     // Continuar con el thresholding acumulando el area bajo cada punto en Az:
     min_resp -= delta;
     while( threshold > min_resp ){
         //// Contar los verdaderos positivos:
         while( i_unos > 0 ){
             if(arr_unos[i_unos] >= threshold){
-                TP+=1.0;
+                TP += 1.0;
                 i_unos--;
             }else{
                 break;
@@ -799,7 +823,7 @@ double FILTROS::calcROC(INDIV *test, double *resp){
 
         while( i_ceros > 0){
             if( arr_ceros[i_ceros] > threshold){
-                TN-=1.0;
+                TN -= 1.0;
                 i_ceros--;
             }else{
                 break;
@@ -820,16 +844,20 @@ double FILTROS::calcROC(INDIV *test, double *resp){
         curva_TPR_old = curva_TPR_new;
         curva_FPR_old = curva_FPR_new;
 
-        //DEB_MSG("[" << i_threshold << "]: " << threshold << " => " << curva_TPR_old << ", " << curva_FPR_old)
-
+#ifndef NDEBUG
+        fprintf( fp_ROC , "%i %f %f %f %f\n", i_threshold, threshold, curva_TPR_old, curva_FPR_old, Az);
+#endif
     }
 
+#ifndef NDEBUG
+    fclose(fp_ROC);
+#endif
     delete [] arr_unos;
     delete [] arr_ceros;
 
-//    GETTIME_FIN;
+    GETTIME_FIN;
 
-//    DEB_MSG("Tiempo para obtener la curva de ROC: " << DIFTIME << " s.  " << Az)
+    std::cout << "Tiempo para obtener la curva de ROC: " << DIFTIME << " s.  Az = " << Az << std::endl;
 
     return Az;
 }
@@ -869,6 +897,28 @@ double FILTROS::fitnessROC( INDIV *test ){
 */
 
 
+
+
+/*	Metodo:        ini_semilla
+    Funcion:: Inicializa una semilla para el generador HybTaus. Si la semilla dada por el usuario es 0, se genera una semilla aleatoriamente y se utliza, de otro modo se usa la semilla dada por el usuario.
+*/
+FILTROS::STAUS* FILTROS::ini_semilla(unsigned int semilla_i){
+    if(!semilla_i){
+        srand(clock());
+        semilla_i = rand();
+    }
+
+    STAUS *mi_semilla = new STAUS;
+    mi_semilla->z1 = lcg_r(&semilla_i);
+    mi_semilla->z2 = lcg_r(&semilla_i);
+    mi_semilla->z3 = lcg_r(&semilla_i);
+
+    return mi_semilla;
+}
+
+
+
+
 /*	Metodo:         lcg_s
     Funcion: Genera un numero pseudo-aleatorio por medio del metodo Linear Congruential Generator. El generador utiliza una semilla static y los parametros que utiliza son los mismos que utiliza gcc.
 */
@@ -901,6 +951,25 @@ unsigned int FILTROS::lcg_r(unsigned int *mi_semilla){
 unsigned int FILTROS::tausStep(unsigned int *z, const int S1, const int S2, const int S3, const unsigned int M){
     const unsigned int b = (((*z << S1) ^ *z) >> S2);
     return *z = (((*z & M) << S3) ^ b);
+}
+
+
+
+
+/*	Metodo:        HybTaus
+    Funcion:: Genera un numero pseudo-aleatorio por medio del metodo Hybrid Taus Step entre par1 y par2.
+*/
+double FILTROS::HybTaus(const double par1, const double par2){
+// Combined period is lcm(p1,p2,p3,p4)~ 2^121
+    double num = 2.3283064365387e-10 * (
+        // Periods
+        tausStep(&semilla->z1, 13, 19, 12, 4294967294UL) ^ // p1=2^31-1
+        tausStep(&semilla->z2, 2, 25, 4, 4294967288UL) ^ // p2=2^30-1
+        tausStep(&semilla->z3, 3, 11, 17, 4294967280UL) ^ // p3=2^28-1
+        lcg_s()	// p4=2^32
+    );
+
+    return (par2 - par1) * num + par1;
 }
 
 
