@@ -9,6 +9,7 @@ coronaryGUI::coronaryGUI(QWidget *parent) :
 {
     ui->setupUi(this);
     mi_reconstructor.setLog( ui->ptxtLog );
+    ui->vtkVP4->GetRenderWindow()->AddRenderer( mi_reconstructor.getRenderer() );
 }
 
 coronaryGUI::~coronaryGUI()
@@ -17,7 +18,12 @@ coronaryGUI::~coronaryGUI()
 
 }
 
-void coronaryGUI::on_actionOpen_File_triggered()
+void coronaryGUI::on_actionQuit_triggered()
+{
+    close();
+}
+
+void coronaryGUI::on_actionBase_triggered()
 {
     QString filename = QFileDialog::getOpenFileName(
                     this,
@@ -27,9 +33,6 @@ void coronaryGUI::on_actionOpen_File_triggered()
                 );
     if( filename.length() > 0 ){
         QByteArray filename_c = filename.toLatin1();
-        QString filename_message = "Opening input: ";
-        filename_message.append( filename_c );
-        QMessageBox::information( this, "Open input image", filename_message );
         mi_reconstructor.agregarInput( filename_c.data() );
 
         vtkSmartPointer< vtkRenderer > nuevo_renderer = mi_reconstructor.getRenderer(0);
@@ -37,4 +40,28 @@ void coronaryGUI::on_actionOpen_File_triggered()
             ui->vtkVP1->GetRenderWindow()->AddRenderer( nuevo_renderer );
         }
     }
+}
+
+void coronaryGUI::on_actionGround_truth_triggered()
+{
+    QString filename = QFileDialog::getOpenFileName(
+                    this,
+                    tr("Open File as Ground-truth"),
+                    "/home/",
+                    "Portable Network Graphics (*.png);;Bitmap Image File (*.bmp);;Joint Photographic Experts Group (*.jpeg);;DICOM File (*.*)"
+                );
+    if( filename.length() > 0 ){
+        QByteArray filename_c = filename.toLatin1();
+        mi_reconstructor.agregarGroundtruth(filename_c.data(), 0);
+
+        vtkSmartPointer< vtkRenderer > nuevo_renderer = mi_reconstructor.getRenderer(0);
+        if( nuevo_renderer ){
+            ui->vtkVP1->GetRenderWindow()->AddRenderer( nuevo_renderer );
+        }
+    }
+}
+
+void coronaryGUI::on_action_Skeletonize_triggered()
+{
+    mi_reconstructor.skeletonize();
 }

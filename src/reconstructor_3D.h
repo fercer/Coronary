@@ -30,10 +30,12 @@
 
 // Actores:
 #include <vtkActor.h>
+#include <vtkActor2D.h>
 #include <vtkImageActor.h>
 #include <vtkAxesActor.h>
 
 // Mappers:
+#include <vtkImageMapper.h>
 #include <vtkImageMapper3D.h>
 #include <vtkDataSetMapper.h>
 #include <vtkImageSliceMapper.h>
@@ -153,7 +155,6 @@ class RECONS3D{
         void agregarEjes(vtkSmartPointer<vtkRenderer> &mi_renderer);
         void agregarEsfera(const double x, const double y, const double z, const double radio, double color[3], vtkSmartPointer<vtkRenderer> mi_renderer );
 
-        void isoCentro( int *angios_ID );
         void isoCentro( const int angio_ID );
         void mallarPuntos(const int angio_ID);
         POS posicionDefecto(const double ancho, const double alto, const double punta);

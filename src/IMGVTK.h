@@ -9,6 +9,9 @@
 #ifndef IMGVTK_H_INCLUDED
 #define IMGVTK_H_INCLUDED
 
+// Librerias de uso comun con QT:
+#include <QPlainTextEdit>
+
 // Librerias de uso comun:
 #include <vtkVersion.h>
 #include <vtkSmartPointer.h>
@@ -141,6 +144,10 @@ class IMGVTK{
 
         void Guardar( IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida );
 
+
+        void setLog( QPlainTextEdit *log );
+
+
         IMGVTK();
         IMGVTK(const IMGVTK &origen );
         IMGVTK(char **rutas_origen, const int n_imgs, const bool enmascarar);
@@ -183,6 +190,7 @@ class IMGVTK{
         // T I P O S        D E     D A T O S      P R I V A D O S
         /** ####:   **/
         // M E T O D O S      P R I V A D O S
+        void escribirLog( const char *mensaje );
 
         void Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel, const bool enmascarar);
         void Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, char **rutas, const int n_imgs, const bool enmascarar);
@@ -217,6 +225,7 @@ class IMGVTK{
         char* setRuta( const char *ruta_input );
 
         // M I E M B R O S      P R I V A D O S
+        QPlainTextEdit *mi_log;
         int max_dist;
 
 

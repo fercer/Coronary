@@ -24,17 +24,17 @@
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout">
-     <item row="1" column="1">
-      <widget class="QVTKWidget" name="vtkVP4"/>
+     <item row="5" column="1">
+      <widget class="QVTKWidget" name="vtkVP4" native="true"/>
      </item>
-     <item row="0" column="1">
-      <widget class="QVTKWidget" name="vtkVP2"/>
+     <item row="3" column="1">
+      <widget class="QVTKWidget" name="vtkVP2" native="true"/>
      </item>
-     <item row="1" column="0">
-      <widget class="QVTKWidget" name="vtkVP3"/>
+     <item row="5" column="0">
+      <widget class="QVTKWidget" name="vtkVP3" native="true"/>
      </item>
-     <item row="0" column="0">
-      <widget class="QVTKWidget" name="vtkVP1"/>
+     <item row="3" column="0">
+      <widget class="QVTKWidget" name="vtkVP1" native="true"/>
      </item>
     </layout>
    </widget>
@@ -68,9 +68,24 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionOpen_File"/>
+    <widget class="QMenu" name="menu_Open_File">
+     <property name="title">
+      <string>&amp;Open File</string>
+     </property>
+     <addaction name="actionBase"/>
+     <addaction name="actionGround_truth"/>
+    </widget>
+    <addaction name="menu_Open_File"/>
+    <addaction name="actionQuit"/>
+   </widget>
+   <widget class="QMenu" name="menu3D">
+    <property name="title">
+     <string>3D</string>
+    </property>
+    <addaction name="action_Skeletonize"/>
    </widget>
    <addaction name="menuFile"/>
+   <addaction name="menu3D"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
@@ -81,15 +96,30 @@
    </attribute>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
-  <action name="actionOpen_File">
+  <action name="actionQuit">
    <property name="text">
-    <string>Open File</string>
+    <string>&amp;Quit</string>
    </property>
    <property name="toolTip">
-    <string>Open angiographic image (png, bmp, jpeg, dcm)</string>
+    <string>Quit</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+O</string>
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionBase">
+   <property name="text">
+    <string>Base</string>
+   </property>
+  </action>
+  <action name="actionGround_truth">
+   <property name="text">
+    <string>Ground-truth</string>
+   </property>
+  </action>
+  <action name="action_Skeletonize">
+   <property name="text">
+    <string>&amp;Skeletonize</string>
    </property>
   </action>
  </widget>

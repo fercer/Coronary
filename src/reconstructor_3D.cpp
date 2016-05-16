@@ -23,6 +23,7 @@ void RECONS3D::escribirLog( const char *mensaje ){
 }
 
 
+
 /*  Metodo: renderizar()
 
     Funcion: Renderiza los 'actores' contenidos en 'renderer' en una ventana de VTK.
@@ -46,18 +47,6 @@ DEB_MSG("Iterador para la ventana lista");
     renderWindowInteractor->Start();
 DEB_MSG("Retornando...");
 }
-
-
-
-
-/*  Metodo: isoCentro
-
-    Funcion: Calcula un isocentro como la media de los isocentros.
-*/
-void RECONS3D::isoCentro( int *angios_ID ){
-
-}
-
 
 
 
@@ -189,8 +178,7 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
     Funcion: Muestra la imagen en una ventana VTK.
 */
 void RECONS3D::mostrarImagen( IMGVTK &img_src, IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer){
-    // Crear un actor temporal
-    vtkSmartPointer<vtkImageActor> actor = vtkSmartPointer<vtkImageActor>::New();
+
 
     int mis_cols = img_src.cols;
     int mis_rens = img_src.rens;
@@ -246,17 +234,25 @@ void RECONS3D::mostrarImagen( IMGVTK &img_src, IMGVTK::IMG_IDX img_idx, vtkSmart
             max = *(img_src_ptr + xy);
         }
     }
+
 DEB_MSG("min: " << min << ", max: " << max);
     const double rango = max - min;
     for( int xy = 0; xy < mis_rens_cols; xy++){
         *(img_tmp_ptr + xy) = (unsigned char)(255.0 * (*(img_src_ptr + xy) - min) / rango);
     }
 
-    actor->SetInputData(img_tmp);
+    // Crear un mapper y actor temporales
+    vtkSmartPointer<vtkImageMapper> mapper = vtkSmartPointer<vtkImageMapper>::New();
+    mapper->SetInputData(img_tmp);
+    mapper->SetColorWindow(255);
+    mapper->SetColorLevel(127.5);
+
+    vtkSmartPointer<vtkActor2D> actor = vtkSmartPointer<vtkActor2D>::New();
+    actor->SetMapper(mapper);
+    actor->SetPosition(25,0);
 
     // Agregar el actor de la imagen al renderizador.
-    mi_renderer->AddActor(actor);
-    mi_renderer->ResetCamera();
+    mi_renderer->AddActor2D(actor);
 }
 
 
@@ -620,7 +616,9 @@ void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, co
     n_angios++;
 
     imgs_base.push_back(IMGVTK(rutasbase_input, n_imgs, true));
+    imgs_base[n_angios].setLog( mi_log );
     imgs_delin.push_back(IMGVTK(rutasground_input, n_imgs, false));
+    imgs_delin[n_angios].setLog( mi_log );
     imgs_base.push_back(IMGVTK());
 
     // Mostrar la imagen en un renderizador
@@ -657,6 +655,7 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
             mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
 
+            imgs_delin.push_back(IMGVTK());
             existe_ground.push_back( false );
         }
 
@@ -664,8 +663,10 @@ DEB_MSG("Ruta ground: " << rutaground_input);
         n_angios++;
 
         imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
+        imgs_base[n_angios].setLog( mi_log );
 
         imgs_delin.push_back(IMGVTK());
+        imgs_delin[n_angios].setLog( mi_log );
         existe_ground.push_back( false );
 
         mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
@@ -680,9 +681,6 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
 
         mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
-//        renderizar(mis_renderers[n_angios]);
-
-
         if( strcmp(rutaground_input, "NULL") ){
             DEB_MSG("Abriendo " << rutaground_input << " como ground truth");
             imgs_delin[ n_angios ].Cargar(rutaground_input, false, 0);
@@ -705,8 +703,10 @@ void RECONS3D::agregarInput( const char *rutabase_input ){
     NORCEN norcen_temp;
 
     imgs_base.push_back(IMGVTK(rutabase_input, true, 0));
+    imgs_base[n_angios].setLog( mi_log );
 
     imgs_delin.push_back(IMGVTK());
+    imgs_delin[n_angios].setLog( mi_log );
     existe_ground.push_back( false );
 
     mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
@@ -714,8 +714,7 @@ void RECONS3D::agregarInput( const char *rutabase_input ){
     pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
     normal_centros.push_back( norcen_temp );
 
-
-//        mostrarImagen(imgs_base[n_angios], IMGVTK::MASK, mis_renderers[n_angios]);
+    mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
 //        renderizar(mis_renderers[n_angios]);
 
     /// Mover el detector a su posicion definida por el archivo DICOM:
@@ -734,6 +733,8 @@ void RECONS3D::agregarInput( const char *rutabase_input ){
 void RECONS3D::agregarGroundtruth(const char *rutaground_input, const int angio_ID ){
     imgs_delin[ angio_ID ].Cargar(rutaground_input, false, 0);
     existe_ground[ angio_ID ] = true;
+
+    mostrarImagen(imgs_delin[angio_ID], IMGVTK::BASE, mis_renderers[angio_ID]);
 }
 
 
@@ -834,7 +835,7 @@ void RECONS3D::skeletonize(){
     for( int i = 0; i <= n_angios; i++){
         skeletonize( i );
     }
-    renderizar(renderer_global);
+    escribirLog( "Extraccion de los esqueletos lista" );
 }
 
 
@@ -1125,7 +1126,7 @@ void RECONS3D::skeletonize(const int angio_ID){
         vtkSmartPointer< vtkPoints > puntos = vtkSmartPointer< vtkPoints >::New();
         vtkSmartPointer< vtkCellArray > cilindros = vtkSmartPointer< vtkCellArray >::New();
         int n_pix = 0;
-        mostrarRadios(puntos, cilindros, &n_pix, imgs_delin[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, 1);
+        mostrarRadios(puntos, cilindros, &n_pix, imgs_delin[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, 5);
 
 
         /// Generar los cilindros:
@@ -1186,6 +1187,14 @@ vtkSmartPointer< vtkRenderer > RECONS3D::getRenderer( const int angio_ID ){
 */
 void RECONS3D::setLog(QPlainTextEdit *log ){
     mi_log = log;
+
+    for( std::vector< IMGVTK >::iterator it = imgs_base.begin(); it != imgs_base.end(); it++){
+        it->setLog( mi_log );
+    }
+    for( std::vector< IMGVTK >::iterator it = imgs_delin.begin(); it != imgs_delin.end(); it++){
+        it->setLog( mi_log );
+    }
+
     escribirLog( "Reconstructor 3D" );
     escribirLog( "by: Fernando Cervantes-Sanchez\n" );
 }
@@ -1198,6 +1207,7 @@ void RECONS3D::setLog(QPlainTextEdit *log ){
     Funcion: Constructor por default.
 */
 RECONS3D::RECONS3D(){
+    mi_log = NULL;
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
 
     detalle = 180;

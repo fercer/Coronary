@@ -14,6 +14,19 @@
     // M E T O D O S      P R I V A D O S
 
 
+/*  Metodo: escribirLog
+
+    Funcion: Escribe un mensaje en el log.
+*/
+void IMGVTK::escribirLog( const char *mensaje ){
+    DEB_MSG( mi_log );
+    if( mi_log ){
+        mi_log->appendPlainText( mensaje );
+    }else{
+        std::cout << mensaje;
+    }
+}
+
 
 
 //****************************************************************************************************************************************
@@ -1488,6 +1501,9 @@ void IMGVTK::definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer
     double *mask_tmp = static_cast<double*>(mask_src->GetScalarPointer(0,0,0));
     maskFOV( img_tmp, mask_tmp, mis_cols, mis_rens );
     fillMask( img_tmp, mask_tmp, mis_cols, mis_rens );
+
+    char mensaje[] = "Mascara generada exitosamente.\n";
+    escribirLog( mensaje );
 }
 
 
@@ -1833,9 +1849,6 @@ DEB_MSG("Pt(" << i <<  ") = " << ((unsigned short*)curve_data)[i]);
             }
 */
 
-
-
-
         ///----------------------------------------------------- Leer imagenes
         DICOMreader.Read();
         const gdcm::Image &gimage = DICOMreader.GetImage();
@@ -1890,8 +1903,7 @@ DEB_MSG("Imagen DICOM en RGB...");
                             }
                         }
                     }else{
-                        using namespace std;
-                        cout << "============ ERROR AL CARGAR ARCHIVO DICOM ===========\nFormato de imagen RGB no soportado." << endl;
+                        escribirLog( COLOR_BACK_BLACK COLOR_RED "< ERROR AL LEER ARCHIVO DICOM: Formato de imagen RGB no soportado >\n" COLOR_NORMAL);
                     }
                     break;
                 }
@@ -1940,8 +1952,7 @@ DEB_MSG("Tipo UINT16");
                         }
 
                     }else{
-                        using namespace std;
-                        cout << "============ ERROR AL CARGAR ARCHIVO DICOM ===========\nFormato de imagen RGB no soportado." << endl;
+                        escribirLog( COLOR_BACK_BLACK COLOR_RED "< ERROR AL LEER ARCHIVO DICOM: Formato de imagen RGB no soportado >\n" COLOR_NORMAL);
                     }
                     break;
                 }
@@ -2076,11 +2087,12 @@ DEB_MSG("Tipo UINT16");
         imgReader->Delete();
     }
 
-DEB_MSG("Imagen cargada");
+    char mensaje[512];
+    sprintf( mensaje, "Imagen " COLOR_GREEN "'%s'" COLOR_NORMAL " cargada exitosamente.\n", ruta_origen );
+    escribirLog( mensaje );
 
     if(enmascarar){
         definirMask(img_src, mask_src);
-DEB_MSG("Mascara obtenida");
     }
 }
 
@@ -2146,8 +2158,12 @@ void IMGVTK::Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkIm
     Funcion: Cargar la imagen a formato VTK desde un archivo.
 */
 void IMGVTK::Cargar(const char *ruta_origen, const bool enmascarar, const int nivel){
-    base = vtkSmartPointer<vtkImageData>::New();
-    mask = vtkSmartPointer<vtkImageData>::New();
+    if( !base ){
+        base = vtkSmartPointer<vtkImageData>::New();
+    }
+    if( !mask ){
+        mask = vtkSmartPointer<vtkImageData>::New();
+    }
 
     Cargar(ruta_origen, base, mask, nivel, enmascarar);
 
@@ -2161,13 +2177,15 @@ void IMGVTK::Cargar(const char *ruta_origen, const bool enmascarar, const int ni
     rens = dims[1];
     rens_cols = rens*cols;
 
-    segment = vtkSmartPointer<vtkImageData>::New();
-    segment->SetExtent(0, cols-1, 0, rens-1, 0, 0);
-    segment->AllocateScalars( VTK_DOUBLE, 1);
-    segment->SetOrigin(0.0, 0.0, 0.0);
-    segment->SetSpacing(1.0, 1.0, 1.0);
+    if( !segment ){
+        segment = vtkSmartPointer<vtkImageData>::New();
+        segment->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+        segment->AllocateScalars( VTK_DOUBLE, 1);
+        segment->SetOrigin(0.0, 0.0, 0.0);
+        segment->SetSpacing(1.0, 1.0, 1.0);
 
-    segment_ptr = static_cast<double*>(segment->GetScalarPointer(0, 0, 0));
+        segment_ptr = static_cast<double*>(segment->GetScalarPointer(0, 0, 0));
+    }
 }
 
 
@@ -2289,8 +2307,21 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
 
 
 
+/*  Metodo: setLog
+
+    Funcion: Define el editor donde se escribiran todos los logs del sistema
+*/
+void IMGVTK::setLog( QPlainTextEdit *log ){
+    DEB_MSG( "Agregando log: " << log );
+    mi_log = log;
+}
+
+
+
 /* CONSTRUCTORES */
 IMGVTK::IMGVTK(){
+    mi_log = NULL;
+
     cols = 0;
     rens = 0;
     max_dist = 0;
@@ -2320,6 +2351,7 @@ IMGVTK::IMGVTK(){
 
 
 IMGVTK::IMGVTK( const IMGVTK &origen ){
+    mi_log = origen.mi_log;
     max_dist = origen.max_dist;
 
     map_ptr = NULL;
@@ -2419,6 +2451,7 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
 
 
 IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
+    mi_log = NULL;
     max_dist = 0;
 
     map_ptr = NULL;
@@ -2447,6 +2480,7 @@ IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
 
 
 IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel){
+    mi_log = NULL;
     max_dist = 0;
 
     map_ptr = NULL;
@@ -2491,6 +2525,7 @@ IMGVTK::~IMGVTK(){
 // O P E R A D O R E S  S O B R E C A R G A D O S
 // El operador de copia extrae unicamente el contenido de la imagen original
 IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
+    mi_log = origen.mi_log;
     max_dist = origen.max_dist;
 
     map_ptr = NULL;

@@ -18,7 +18,13 @@ public:
     ~coronaryGUI();
 
 private slots:
-    void on_actionOpen_File_triggered();
+    void on_actionQuit_triggered();
+
+    void on_actionBase_triggered();
+
+    void on_actionGround_truth_triggered();
+
+    void on_action_Skeletonize_triggered();
 
 private:
     Ui::coronaryGUI *ui;
