@@ -29,6 +29,7 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkImageData.h>
+#include <QPlainTextEdit>
 
 #include "IMGVTK.h"
 
@@ -43,7 +44,7 @@ class FILTROS{
         typedef enum PARAMETRO { PAR_L, PAR_T, PAR_K, PAR_SIGMA, PAR_DELTA} PARAMETRO;
 
         /** INDIV:	Define la estructura que contiene los atributos del individuo, y el valor de la funcion para este.  **/
-        typedef struct IDIV {
+        typedef struct INDIV {
             double eval;
             double vars[5]; // 1: L, 2: T, 3: K, 4: sigma, 5: delta.
             bool cadena[64];
@@ -68,6 +69,8 @@ class FILTROS{
 
         void filtrar();
 
+        void setLog( QPlainTextEdit *log );
+
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
         // T I P O S        D E     D A T O S      P R I V A D O S
         /** STAUS:	Define una estructura que almacena las semillas requeridas por el generador de numeros pseudo-aleatorios Hybrid Taus    **/
@@ -79,6 +82,9 @@ class FILTROS{
         typedef double (*GEN_PNT) (const double par1, const double par2);
 
         // M E T O D O S      P R I V A D O S
+
+        void escribirLog( const char *mensaje );
+
         inline double interpolacion(const double *pix, const int j, const int i, const double x, const double y, const int mis_rens, const int mis_cols);
         void rotarImg(const double *org, double *rot, const double ctheta, const double stheta, const int mis_rens, const int mis_cols, const int org_rens, const int org_cols);
 
@@ -144,11 +150,13 @@ class FILTROS{
         // Entradas comunes:
         double *org, *dest;
         double *ground_truth, *mask;
-        int rens, cols, rens_cols, n_pob, max_iters;
+        int rows, cols, rows_cols, n_pob, max_iters;
 
         double min_vars[5], lim_inf[5], lim_sup[5];
         unsigned char bits_var[5], max_bits[5];
         int n_bits;
+
+        QPlainTextEdit *mi_log;
 
         //================================================================================== FILTROS:
         void respGMF(INDIV *test, double *resp);

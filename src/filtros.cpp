@@ -9,6 +9,18 @@
 
 #include "filtros.h"
 
+/*  Metodo: escribirLog
+
+    Funcion: Escribe un mensaje en el log.
+*/
+void FILTROS::escribirLog( const char *mensaje ){
+    if( mi_log ){
+        mi_log->appendPlainText( mensaje );
+    }else{
+        std:cout << mensaje;
+    }
+}
+
 
 /*  Metodo: interpolacion (Lineal)
     Funcion: Interpola el valor del pixel destino en base a los 4 pixeles origen.
@@ -115,6 +127,7 @@ void FILTROS::setFitness( const FITNESS fit_fun){
     Funcion: Inicializa los parametros en valores por defecto.
 */
 FILTROS::FILTROS(){
+    mi_log = NULL;
     n_pars = 5;
     for( int p = 0; p < 5; p++){
         // Por defecto, se optimizan todos los parametros.
@@ -164,8 +177,8 @@ void FILTROS::setInput(IMGVTK &img_org){
 
     // Obtener las dimensiones de la imagen:
     cols = img_org.cols;
-    rens = img_org.rens;
-    rens_cols = img_org.rens_cols;
+    rows = img_org.rens;
+    rows_cols = img_org.rens_cols;
 
     switch( filtro_elegido ){
         case SS_GABOR:
@@ -249,6 +262,8 @@ void FILTROS::setLim( const PARAMETRO par, const double inf, const double sup, c
 }
 
 
+
+
 /*  Metodo: setLim
     Funcion: Establece los limites de busqueda de los parametros, asi como la varianza minima que se espera obtener (para BUMDA)
 */
@@ -266,7 +281,7 @@ void FILTROS::setLim( const PARAMETRO par, const double inf, double sup, const d
     Funcion: Aplica el filtro sobre la imagen de origen y la almacena sobre la imagen destino.
 */
 void FILTROS::filtrar(){
-    double *resp = new double [rens_cols];
+    double *resp = new double [rows_cols];
 
     // Ejecutar el filtro con los parametros optimos:
     switch( filtro_elegido ){
@@ -278,12 +293,22 @@ void FILTROS::filtrar(){
             break;
     }
 
-    memcpy(dest, resp, rens_cols*sizeof(double));
+    memcpy(dest, resp, rows_cols*sizeof(double));
 
     calcROC(mi_elite, resp);
 
     delete [] resp;
 }
+
+
+
+/*  Metodo: setLog
+    Funcion: Define el editor donde se escribiran todos los logs del sistema.
+*/
+void FILTROS::setLog(QPlainTextEdit *log){
+    mi_log = log;
+}
+
 
 
 
@@ -416,8 +441,8 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
     ////--------------------------------------------------------- Aplicacion del filtro:
 
-    double *resp_tmp = new double [ K * (cols + temp_dims - 1) * (rens + temp_dims - 1) ];
-    for( int xy = 0; xy < K * (cols + temp_dims - 1) * (rens + temp_dims - 1); xy++ ){
+    double *resp_tmp = new double [ K * (cols + temp_dims - 1) * (rows + temp_dims - 1) ];
+    for( int xy = 0; xy < K * (cols + temp_dims - 1) * (rows + temp_dims - 1); xy++ ){
         *(resp_tmp + xy) = -INF;
     }
 
@@ -426,7 +451,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 	DEB_MSG("Dimensiones del filtro: " << temp_dims << ", offset: " << offset);
 
     const int mis_cols = cols;
-    const int mis_rens = rens;
+    const int mis_rens = rows;
     const double *mi_org = org;
 
 #ifndef NDEBUG
@@ -485,7 +510,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     DEB_MSG("Filtros convolucionados");
 
     // Liberar la matriz de templates:
-    for( int xy = 0; xy < rens_cols; xy++){
+    for( int xy = 0; xy < rows_cols; xy++){
         *(resp +xy) =-INF;
     }
 
@@ -493,7 +518,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     FILE *fp_over = fopen("resp.fcs", "w");
     FILE *fp_org = fopen("org.fcs", "w");
 #endif
-    for (int y = 0; y < rens; y++) {
+    for (int y = 0; y < rows; y++) {
         for (int x = 0; x < cols; x++) {
             for( int k = 0; k < K; k++){
                 if( *(resp + x + y*cols) < *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1) + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1)) ){
@@ -541,12 +566,12 @@ void FILTROS::fftImgOrigen(){
     GETTIME_INI;
     if(!transformada){
         transformada = true;
-        Img_org = new double[rens_cols];
-        Img_fft = (fftw_complex*) fftw_malloc(rens*(cols/2+1)*sizeof(fftw_complex));
-        for(int xy = 0; xy < rens_cols; xy++){
+        Img_org = new double[rows_cols];
+        Img_fft = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
+        for(int xy = 0; xy < rows_cols; xy++){
             Img_org[xy] = 1.0 - org[xy];
         }
-        fftw_plan p_r2c = fftw_plan_dft_r2c_2d( rens, cols, Img_org, Img_fft, FFTW_ESTIMATE);
+        fftw_plan p_r2c = fftw_plan_dft_r2c_2d( rows, cols, Img_org, Img_fft, FFTW_ESTIMATE);
         fftw_execute(p_r2c);
         fftw_destroy_plan(p_r2c);
     }
@@ -570,48 +595,47 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     const int T = (int)test->vars[1];
     const int K = (int)test->vars[2];
 
-    // Calcular sx y sy:
+    // Calculate sx y sy:
     const double sx = (double)T / (2.0*sqrt(2.0 * log(2.0)));
     const double sy = L * sx;
 
     const double fx = 1.0 / (double)T;
     const double fy = 0.0;
 
-    // Para generar los 'u' y 'v':
     double *u = new double[cols*sizeof(double)];
-    double *v = new double[rens*sizeof(double)];
+    double *v = new double[rows*sizeof(double)];
 
     for( int x = 0; x < cols; x++){
         u[x] = (x - (double)cols/2.0) * (2.0 * PI / (double)cols);
     }
-    for( int y = 0; y < rens; y++){
-        v[y] = (y - (double)rens/2.0) * (2.0 * PI / (double)rens);
+    for( int y = 0; y < rows; y++){
+        v[y] = (y - (double)rows/2.0) * (2.0 * PI / (double)rows);
     }
 
-    //// Generar HPF como la gaussiana, se hace por partes para cambiar los cuadrantes (como fftshift en Matlab)
-    double *HPF = new double[rens_cols];
+    //// Generate the high-pass template HPF
+    double *HPF = new double[rows_cols];
 
-    for( int y = 0; y < rens/2; y++ ){
+    for( int y = 0; y < rows/2; y++ ){
         const double v_y = v[y];
         for( int x = 0; x < cols/2; x++){
-            HPF[(y+rens/2)*cols + x+cols/2] = 1.0 - exp( -( sy*sy*(u[x]*u[x] + v_y*v_y) )/2.0 );
+            HPF[(y+rows/2)*cols + x+cols/2] = 1.0 - exp( -( sy*sy*(u[x]*u[x] + v_y*v_y) )/2.0 );
         }
         for( int x = cols/2; x < cols; x++){
-            HPF[(y+rens/2)*cols + x-cols/2] = 1.0 - exp( -( sy*sy*(u[x]*u[x] + v_y*v_y) )/2.0 );
+            HPF[(y+rows/2)*cols + x-cols/2] = 1.0 - exp( -( sy*sy*(u[x]*u[x] + v_y*v_y) )/2.0 );
         }
     }
-    for( int y = rens/2; y < rens; y++ ){
+    for( int y = rows/2; y < rows; y++ ){
         const double v_y = v[y];
         for( int x = 0; x < cols/2; x++){
-            HPF[(y-rens/2)*cols + x+cols/2] = 1.0 - exp( -( sy*sy*(u[x]*u[x] + v_y*v_y) )/2.0 );
+            HPF[(y-rows/2)*cols + x+cols/2] = 1.0 - exp( -( sy*sy*(u[x]*u[x] + v_y*v_y) )/2.0 );
         }
         for( int x = cols/2; x < cols; x++){
-            HPF[(y-rens/2)*cols + x-cols/2] = 1.0 - exp( -( sy*sy*(u[x]*u[x] + v_y*v_y) )/2.0 );
+            HPF[(y-rows/2)*cols + x-cols/2] = 1.0 - exp( -( sy*sy*(u[x]*u[x] + v_y*v_y) )/2.0 );
         }
     }
 
-    // Multiplicar la imagen transformada por HPF:
-    for(int y = 0; y < rens; y++){
+    //// Apply the high-pass filter to the image in the frequencies domain:
+    for(int y = 0; y < rows; y++){
         for( int x = 0; x <= cols/2; x++){
             Img_fft[x+y*(cols/2+1)][0] *= HPF[x+y*cols];
             Img_fft[x+y*(cols/2+1)][1] *= HPF[x+y*cols];
@@ -619,64 +643,67 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     }
     delete [] HPF;
 
-    // Aplicar los filtros de Gabor a diferentes angulos:
-    fftw_complex *Img_filtro = (fftw_complex*) fftw_malloc(rens*(cols/2+1)*sizeof(fftw_complex));
-    double *Img_resp = new double[rens_cols];
-    double *max_resp = new double[rens_cols];
-    memset(Img_resp, 0, rens_cols*sizeof(double));
-    memset(max_resp, 0, rens_cols*sizeof(double));
+    // 'Img_filter' is the temporal filtered image in the frequencies domain:
+    fftw_complex *Img_filter = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
+
+    // 'Img_resp' contains the response of the gabor filter at certain orientation 'theta':
+    double *Img_resp = new double[rows_cols];
+    memset(Img_resp, 0, rows_cols*sizeof(double));
+
+    // 'max_resp' saves the highest response for every pixel of the input:
+    double *max_resp = new double[rows_cols];
+    memset(max_resp, 0, rows_cols*sizeof(double));
 
 
     fftw_plan p_c2r;
-    const double theta_inc = 180.0 / (double)K;
+    const double theta_increment = 180.0 / (double)K;
 
-    double Gabor, Vr, Ur;
+    double Gabor_xy, Vr, Ur;
 
-    for( double theta = 0.0; theta < 180.0; theta+=theta_inc){
-        //// Se rota la mascara del filtro en theta grados:
+    for( double theta = 0.0; theta < 180.0; theta+=theta_increment){
         const double stheta = sin(theta*PI/180.0);
         const double ctheta = cos(theta*PI/180.0);
 
-        // Se calcula el filtro de Gabor y se hace el shift similar a fftshift en Matlab:
-        for( int y = 0; y < rens/2; y++){
-            const double v_y = v[y+rens/2];
+        //// The Gabor filter is calculated for the rotated base at 'theta' degrees:
+        for( int y = 0; y < rows/2; y++){
+            const double v_y = v[y+rows/2];
             for( int x = 0; x < cols/2; x++){
                 Ur = u[x+cols/2]*ctheta + v_y*stheta;
                 Vr =-u[x+cols/2]*stheta + v_y*ctheta;
-                Gabor = exp(-(0.5)*(sx*sx*(Ur*Ur + 4.0*PI*fx*PI*fx) + sy*sy*(Vr*Vr + 4.0*PI*fy*PI*fy))) * cosh(2.0*PI*(sx*sx*fx*Ur + sy*sy*fy*Vr));
-                Img_filtro[y*(cols/2+1) + x][0] = Img_fft[y*(cols/2+1) + x][0] * Gabor;
-                Img_filtro[y*(cols/2+1) + x][1] = Img_fft[y*(cols/2+1) + x][1] * Gabor;
+                Gabor_xy = exp(-(0.5)*(sx*sx*(Ur*Ur + 4.0*PI*fx*PI*fx) + sy*sy*(Vr*Vr + 4.0*PI*fy*PI*fy))) * cosh(2.0*PI*(sx*sx*fx*Ur + sy*sy*fy*Vr));
+                Img_filter[y*(cols/2+1) + x][0] = Img_fft[y*(cols/2+1) + x][0] * Gabor_xy;
+                Img_filter[y*(cols/2+1) + x][1] = Img_fft[y*(cols/2+1) + x][1] * Gabor_xy;
             }
             Ur = u[0]*ctheta + v_y*stheta;
             Vr =-u[0]*stheta + v_y*ctheta;
-            Gabor = exp(-(0.5)*(sx*sx*(Ur*Ur + 4.0*PI*fx*PI*fx) + sy*sy*(Vr*Vr + 4.0*PI*fy*PI*fy))) * cosh(2.0*PI*(sx*sx*fx*Ur + sy*sy*fy*Vr));
-            Img_filtro[y*(cols/2+1) + cols/2][0] = Img_fft[y*(cols/2+1) + cols/2][0] * Gabor;
-            Img_filtro[y*(cols/2+1) + cols/2][1] = Img_fft[y*(cols/2+1) + cols/2][1] * Gabor;
+            Gabor_xy = exp(-(0.5)*(sx*sx*(Ur*Ur + 4.0*PI*fx*PI*fx) + sy*sy*(Vr*Vr + 4.0*PI*fy*PI*fy))) * cosh(2.0*PI*(sx*sx*fx*Ur + sy*sy*fy*Vr));
+            Img_filter[y*(cols/2+1) + cols/2][0] = Img_fft[y*(cols/2+1) + cols/2][0] * Gabor_xy;
+            Img_filter[y*(cols/2+1) + cols/2][1] = Img_fft[y*(cols/2+1) + cols/2][1] * Gabor_xy;
         }
-        for( int y = rens/2; y < rens; y++){
-            const double v_y = v[y-rens/2];
+        for( int y = rows/2; y < rows; y++){
+            const double v_y = v[y-rows/2];
             for( int x = 0; x < cols/2; x++){
                 Ur = u[x+cols/2]*ctheta + v_y*stheta;
                 Vr =-u[x+cols/2]*stheta + v_y*ctheta;
-                Gabor = exp(-(0.5)*(sx*sx*(Ur*Ur + 4.0*PI*fx*PI*fx) + sy*sy*(Vr*Vr + 4.0*PI*fy*PI*fy))) * cosh(2.0*PI*(sx*sx*fx*Ur + sy*sy*fy*Vr));
-                Img_filtro[y*(cols/2+1) + x][0] = Img_fft[y*(cols/2+1) + x][0] * Gabor;
-                Img_filtro[y*(cols/2+1) + x][1] = Img_fft[y*(cols/2+1) + x][1] * Gabor;
+                Gabor_xy = exp(-(0.5)*(sx*sx*(Ur*Ur + 4.0*PI*fx*PI*fx) + sy*sy*(Vr*Vr + 4.0*PI*fy*PI*fy))) * cosh(2.0*PI*(sx*sx*fx*Ur + sy*sy*fy*Vr));
+                Img_filter[y*(cols/2+1) + x][0] = Img_fft[y*(cols/2+1) + x][0] * Gabor_xy;
+                Img_filter[y*(cols/2+1) + x][1] = Img_fft[y*(cols/2+1) + x][1] * Gabor_xy;
 
             }
             Ur = u[0]*ctheta + v_y*stheta;
             Vr =-u[0]*stheta + v_y*ctheta;
-            Gabor = exp(-(0.5)*(sx*sx*(Ur*Ur + 4.0*PI*fx*PI*fx) + sy*sy*(Vr*Vr + 4.0*PI*fy*PI*fy))) * cosh(2.0*PI*(sx*sx*fx*Ur + sy*sy*fy*Vr));
-            Img_filtro[y*(cols/2+1) + cols/2][0] = Img_fft[y*(cols/2+1) + cols/2][0] * Gabor;
-            Img_filtro[y*(cols/2+1) + cols/2][1] = Img_fft[y*(cols/2+1) + cols/2][1] * Gabor;
+            Gabor_xy = exp(-(0.5)*(sx*sx*(Ur*Ur + 4.0*PI*fx*PI*fx) + sy*sy*(Vr*Vr + 4.0*PI*fy*PI*fy))) * cosh(2.0*PI*(sx*sx*fx*Ur + sy*sy*fy*Vr));
+            Img_filter[y*(cols/2+1) + cols/2][0] = Img_fft[y*(cols/2+1) + cols/2][0] * Gabor_xy;
+            Img_filter[y*(cols/2+1) + cols/2][1] = Img_fft[y*(cols/2+1) + cols/2][1] * Gabor_xy;
         }
 
-        //// Ap[licar la transformada inversa de fourier:
-        p_c2r = fftw_plan_dft_c2r_2d(rens, cols, Img_filtro, Img_resp, FFTW_ESTIMATE);
+        //// Transform the response to the original domain:
+        p_c2r = fftw_plan_dft_c2r_2d(rows, cols, Img_filter, Img_resp, FFTW_ESTIMATE);
         fftw_execute(p_c2r);
         fftw_destroy_plan(p_c2r);
 
-        //// Almacenar la respuesta maxima encontrada:
-        for( int xy = 0; xy < rens_cols; xy++){
+        //// Update the highest response for every pixel:
+        for( int xy = 0; xy < rows_cols; xy++){
             if( max_resp[xy] < Img_resp[xy]){
                 max_resp[xy] = Img_resp[xy];
             }
@@ -684,7 +711,7 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     }
 
 
-    fftw_free(Img_filtro);
+    fftw_free(Img_filter);
     delete [] Img_resp;
     delete [] u;
     delete [] v;
@@ -694,9 +721,8 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     double min_global = 1e12;
 #endif
 
-    for( int xy = 0; xy < rens_cols; xy++){
-        // La inversa de la FFT retorna los valores multiplicados por el tamaño del arreglo que se mete como argumento, por eso se divide entre el tamaño del arreglo.
-        resp[xy] = (mask[xy] > 0.5) ? (max_resp[xy] / rens_cols) : 0.0;
+    for( int xy = 0; xy < rows_cols; xy++){
+        resp[xy] = (mask[xy] > 0.5) ? (max_resp[xy] / rows_cols) : 0.0;
 #ifndef NDEBUG
         if(resp[xy] > max_global){
             max_global = resp[xy];
@@ -709,7 +735,6 @@ void FILTROS::respGabor(INDIV *test, double *resp){
 
     delete [] max_resp;
     GETTIME_FIN;
-
     std::cout << COLOR_BACK_GREEN COLOR_BLACK "Tiempo de filtrado: " << DIFTIME << "s. " COLOR_NORMAL << std::endl;
 }
 
@@ -739,7 +764,7 @@ int comp_resp( const void *a, const void *b){
 
 /*  Metodo: calcROC
 
-    Funcion: Calcula la 'receiver operating characteristic curve' ROC curve y el area bajo la curva, para prueba en espacio continuo.
+    Funcion: Calculates the area under the Receiver Operating Characteristic curve.
 */
 double FILTROS::calcROC(INDIV *test, double *resp){
 
@@ -748,36 +773,40 @@ double FILTROS::calcROC(INDIV *test, double *resp){
     GETTIME_INI;
 
     const double delta = test->vars[4];
-    DEB_MSG("Calculando ROC");
-    //// Contar la cantidad de pixeles blancos (unos) y negros (ceros)
-    int n_unos = 0, n_ceros = 0;
-    for( int xy = 0; xy < rens_cols; xy++){
+
+    //// Count the positive and negative individuals on the ground-truth that belong to the masked area:
+    int n_positive = 0, n_negative = 0;
+    for( int xy = 0; xy < rows_cols; xy++){
         if( *(ground_truth + xy) > 0.5 && *(mask + xy) > 0.5){
-            n_unos++;
+            n_positive++;
         }else{
-            n_ceros++;
+            n_negative++;
         }
     }
 
 
     //// Pasar las respuestas a los arreglos correspondientes a la respuesta en el Ground truth
-    double *arr_unos = new double[n_unos];
-    double *arr_ceros = new double[n_ceros];
-    n_unos = 0;
-    n_ceros = 0;
+    double *positive_array = new double[n_positive];
+    double *negative_array = new double[n_negative];
+    n_positive = 0;
+    n_negative = 0;
+
+    //// Store the values of the response in the corresponding array according to the ground-truth:
     double max_resp =-INF;
     double min_resp = INF;
 
-    for( int xy = 0; xy < rens_cols; xy++){
+    for( int xy = 0; xy < rows_cols; xy++){
+        //// Store the value only if belongs to the masked area:
         if( *(mask + xy) > 0.5 ){
             if( *(ground_truth + xy) >= 0.5 ){
-                arr_unos[n_unos] = resp[xy];
-                n_unos++;
+                positive_array[n_positive] = resp[xy];
+                n_positive++;
             }else{
-                arr_ceros[n_ceros] = resp[xy];
-                n_ceros++;
+                negative_array[n_negative] = resp[xy];
+                n_negative++;
             }
 
+            //// Determine minima and maxima in the response:
             if(max_resp < resp[xy]){
                 max_resp = resp[xy];
             }
@@ -789,71 +818,72 @@ double FILTROS::calcROC(INDIV *test, double *resp){
 
     DEB_MSG("min resp:" << COLOR_BLINK << min_resp << COLOR_NORMAL << ", max resp: " << COLOR_BLINK << max_resp << COLOR_NORMAL);
 
-    //// Ordenar ambos arreglos de acuerdo a la respuesta (de la mas alta a la mas baja):
-    qsort(arr_unos, n_unos, sizeof(double), comp_resp);
-    qsort(arr_ceros, n_ceros, sizeof(double), comp_resp);
+    //// Sort both arrays:
+    qsort(positive_array, n_positive, sizeof(double), comp_resp);
+    qsort(negative_array, n_negative, sizeof(double), comp_resp);
 
-    //// Comienzar con el threshold mas discriminativo:
+    //// Start with the most discriminant threshold
     double threshold = max_resp;
-    int i_unos = (n_unos-1), i_ceros = (n_ceros-1), i_threshold = 0;
-    double TP = 0.0, TN = (double)n_ceros;
+    int i_positive = (n_positive-1), i_negative = (n_negative-1), i_threshold = 0;
+    double TP = 0.0, TN = (double)n_negative;
 
-    double curva_TPR_old = 0.0;
-    double curva_FPR_old = 0.0;
+    double TPF_old = 0.0;
+    double FPF_old = 0.0;
 
-    double curva_TPR_new, curva_FPR_new;
+    double TPF_new, FPF_new;
     double Az = 0.0;
 
 #ifndef NDEBUG
     FILE *fp_ROC = fopen("ROC_curve.fcs", "w");
 #endif
 
-    // Continuar con el thresholding acumulando el area bajo cada punto en Az:
     min_resp -= delta;
     while( threshold > min_resp ){
-        //// Contar los verdaderos positivos:
-        while( i_unos > 0 ){
-            if(arr_unos[i_unos] >= threshold){
+        //// Count the positive and negative individuals at this threshold:
+
+        while( i_positive > 0 ){
+            if(positive_array[i_positive] >= threshold){
                 TP += 1.0;
-                i_unos--;
+                i_positive--;
             }else{
                 break;
             }
         }
 
-        while( i_ceros > 0){
-            if( arr_ceros[i_ceros] > threshold){
+        while( i_negative > 0){
+            if( negative_array[i_negative] > threshold){
                 TN -= 1.0;
-                i_ceros--;
+                i_negative--;
             }else{
                 break;
             }
         }
 
-        //// Almacenar la curva en este arreglo pasado como argumento:
-        curva_TPR_new = TP/(double)n_unos;
-        curva_FPR_new = 1.0 - TN/(double)n_ceros;
+        //// Compute the True Positive Fraction and the False Positive Fraction:
+        TPF_new = TP/(double)n_positive;
+        FPF_new = 1.0 - TN/(double)n_negative;
 
-        // Calcular el area con la Regla del Trapecio:
-        Az += (curva_FPR_new - curva_FPR_old)*(curva_TPR_new + curva_TPR_old)/2.0;
+        //// Approximate the area under the ROC curve with the Trapezoid Rule:
+        Az += (FPF_new - FPF_old)*(TPF_new + TPF_old)/2.0;
 
-        threshold-=delta;
+        //// Update the threshold:
+        threshold -= delta;
         i_threshold++;
 
         // Mover los valores de la curva:
-        curva_TPR_old = curva_TPR_new;
-        curva_FPR_old = curva_FPR_new;
+        TPF_old = TPF_new;
+        FPF_old = FPF_new;
 
 #ifndef NDEBUG
-        fprintf( fp_ROC , "%i %f %f %f %f\n", i_threshold, threshold, curva_TPR_old, curva_FPR_old, Az);
+        fprintf( fp_ROC , "%i %f %f %f %f\n", i_threshold, threshold, TPF_old, FPF_old, Az);
 #endif
     }
 
 #ifndef NDEBUG
     fclose(fp_ROC);
 #endif
-    delete [] arr_unos;
-    delete [] arr_ceros;
+    delete [] positive_array;
+    delete [] negative_array;
 
     GETTIME_FIN;
 
@@ -869,7 +899,7 @@ double FILTROS::calcROC(INDIV *test, double *resp){
 */
 double FILTROS::fitnessROC( INDIV *test ){
     //// Generar la respuesta del filtro de establecido para los parametros dados:
-    double *resp = new double [rens_cols];
+    double *resp = new double [rows_cols];
 
     switch(filtro_elegido){
         case SS_GABOR:
@@ -1253,7 +1283,6 @@ void FILTROS::BUMDA(){
 */
 void FILTROS::generarPob(INDIV *poblacion, const int n_gen, double *probs, double **tabla){
 //    TIMERS;
-    using namespace std;
 
     //Se generan n_pob - 1 individuos, y permanece el elite que se tiene.
     // VERIFICAR CUALES PARAMETROS SE BUSCAN:

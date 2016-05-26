@@ -256,6 +256,7 @@ DEB_MSG("min: " << min << ", max: " << max);
     actor->SetPosition(25,0);
 
     // Agregar el actor de la imagen al renderizador.
+    mi_renderer->Clear();
     mi_renderer->AddActor2D(actor);
 }
 
@@ -656,9 +657,6 @@ DEB_MSG("Ruta ground: " << rutaground_input);
             mallarPuntos(n_angios);
             isoCentro(n_angios);
 
-
-            mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
-
             imgs_delin.push_back(IMGVTK());
             existe_ground.push_back( false );
         }
@@ -683,8 +681,6 @@ DEB_MSG("Ruta ground: " << rutaground_input);
         mallarPuntos(n_angios);
         isoCentro(n_angios);
 
-
-        mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
         if( strcmp(rutaground_input, "NULL") ){
             DEB_MSG("Abriendo " << rutaground_input << " como ground truth");
             imgs_delin[ n_angios ].Cargar(rutaground_input, false, 0);
@@ -718,9 +714,6 @@ void RECONS3D::agregarInput( const char *rutabase_input ){
     pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
     normal_centros.push_back( norcen_temp );
 
-    mostrarImagen(imgs_base[n_angios], IMGVTK::BASE, mis_renderers[n_angios]);
-//        renderizar(mis_renderers[n_angios]);
-
     /// Mover el detector a su posicion definida por el archivo DICOM:
     mallarPuntos(n_angios);
     isoCentro(n_angios);
@@ -737,10 +730,55 @@ void RECONS3D::agregarInput( const char *rutabase_input ){
 void RECONS3D::agregarGroundtruth(const char *rutaground_input, const int angio_ID ){
     imgs_delin[ angio_ID ].Cargar(rutaground_input, false, 0);
     existe_ground[ angio_ID ] = true;
-
-    mostrarImagen(imgs_delin[angio_ID], IMGVTK::BASE, mis_renderers[angio_ID]);
 }
 
+
+/*  Metodo: setFiltroLimites
+
+    Funcion:
+*/
+void RECONS3D::setFiltroLimites(const FILTROS::PARAMETRO par, const double inf, const double sup, const unsigned char bits){
+    filtro.setLim( par, inf, sup, bits );
+}
+
+
+
+/*  Metodo: setFiltroEntrenamiento
+
+    Funcion:
+*/
+void RECONS3D::setFiltroEntrenamiento(const FILTROS::EVO_MET evo_met, const int m_iters, const int pob){
+    filtro.setEvoMet(evo_met, m_iters, pob);
+}
+
+
+/*  Metodo: setFiltroEval
+
+    Funcion:
+*/
+void RECONS3D::setFiltroEval(const FILTROS::FITNESS fit_fun){
+    filtro.setFitness( fit_fun );
+}
+
+
+
+/*  Metodo: setFiltroMetodo
+
+    Funcion:
+*/
+void RECONS3D::setFiltroMetodo(const FILTROS::SEG_FILTRO metodo_filtrado){
+    filtro.setFiltro( metodo_filtrado );
+}
+
+
+
+/*  Metodo: setFiltroParametros
+
+    Funcion:
+*/
+void RECONS3D::setFiltroParametros(const FILTROS::PARAMETRO par, const double val){
+    filtro.setPar(par, val);
+}
 
 
 
@@ -759,73 +797,16 @@ void RECONS3D::segmentarImagenBase(){
 
 /*  Metodo: segmentarImagen()
 
-    Funcion: Aplica el filtro de Gabor con los parametros definidos como mejors( tras la optimizacion con un algoritmo de evolucion computacional)
+    Funcion: Aplica el filtro con los parametros definidos
 */
-void RECONS3D::segmentarImagenBase( const int angio_ID ){
-
-    filtro.setFiltro(FILTROS::SS_GABOR);
-//    filtro.setFiltro(FILTROS::GMF);
-    filtro.setFitness(FILTROS::ROC);
-    filtro.setEvoMet(FILTROS::EDA_BUMDA, 50, 30);
-
+void RECONS3D::segmentarImagenBase( const int angio_ID){
     filtro.setInput(imgs_base[angio_ID]);
     if( existe_ground[angio_ID] ){
         filtro.setInputGround(imgs_delin[angio_ID]);
     }
 
-    // Parametros fijos (SS Gabor):
-    filtro.setPar(FILTROS::PAR_L, 2.65);
-    filtro.setPar(FILTROS::PAR_T, 15);
-    filtro.setPar(FILTROS::PAR_K, 180);
-    filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
-
-/*
-    //// Parametros fijos (GMF):
-    filtro.setPar(FILTROS::PAR_L, 13);
-    filtro.setPar(FILTROS::PAR_T, 15);
-    filtro.setPar(FILTROS::PAR_K, 12);
-    filtro.setPar(FILTROS::PAR_SIGMA, 2.82);
-    filtro.setPar(FILTROS::PAR_DELTA, 1e-4);
-*/
-
-	DEB_MSG("Listo para aplicar el filtro ...");
-
     filtro.filtrar();
-    imgs_base[angio_ID].Guardar(IMGVTK::SEGMENT, "segment.png", IMGVTK::PNG);
-
-	DEB_MSG("Filtro aplicado exitosamente ...");
-
-    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT, 0.041663);
-    imgs_base[angio_ID].Guardar(IMGVTK::THRESHOLD, "umbral_1.png", IMGVTK::PNG);
-
-    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT, 0.034763);
-    imgs_base[angio_ID].Guardar(IMGVTK::THRESHOLD, "umbral_70.png", IMGVTK::PNG);
-
-    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT, 0.027763);
-    imgs_base[angio_ID].Guardar(IMGVTK::THRESHOLD, "umbral_140.png", IMGVTK::PNG);
-
-    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT, 0.020763);
-    imgs_base[angio_ID].Guardar(IMGVTK::THRESHOLD, "umbral_210.png", IMGVTK::PNG);
-
-    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT, 0.013863);
-    imgs_base[angio_ID].Guardar(IMGVTK::THRESHOLD, "umbral_279.png", IMGVTK::PNG);
-
-    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT, 0.006863);
-    imgs_base[angio_ID].Guardar(IMGVTK::THRESHOLD, "umbral_349.png", IMGVTK::PNG);
-
-    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT,-0.000137);
-    imgs_base[angio_ID].Guardar(IMGVTK::THRESHOLD, "umbral_419.png", IMGVTK::PNG);
-
-
-    imgs_base[angio_ID].umbralizar(IMGVTK::SEGMENT);
-
-    /// Falta el linking broken vessels ..................
-    ///
-//    imgs_base[angio_ID].lengthFilter(IMGVTK::THRESHOLD, 1000);
-//    //imgs_base[angio_ID].lengthFilter(IMGVTK::THRESHOLD, imgs_base[angio_ID].cols * 5);
-//    imgs_base[angio_ID].regionFill(IMGVTK::THRESHOLD);
-//    mostrarImagen(imgs_base[angio_ID], IMGVTK::THRESHOLD, mis_renderers[angio_ID]);
-//    renderizar(mis_renderers[angio_ID]);
+    escribirLog( "El filtrado de la imagen base termino con exito" );
 }
 
 
@@ -840,7 +821,6 @@ void RECONS3D::skeletonize(){
         skeletonize( i );
     }
     escribirLog( "Extraccion de los esqueletos lista" );
-    renderizar( renderer_global );
 }
 
 
@@ -1170,7 +1150,7 @@ void RECONS3D::skeletonize(const int angio_ID){
         sprintf( nom_cilindros, "cilindros_%i.dat", angio_ID);
         FILE *fp_cilindros = fopen(nom_cilindros, "w");
         fprintf( fp_cilindros, "X1 Y1 Z1 RADIO X2 Y2 Z2\n");
-        mostrarRadios(puntos, cilindros, &n_pix, imgs_delin[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, 5, fp_cilindros);
+        mostrarRadios(puntos, cilindros, &n_pix, imgs_delin[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, 50, fp_cilindros);
 
         fclose( fp_cilindros );
 
@@ -1194,6 +1174,43 @@ void RECONS3D::skeletonize(const int angio_ID){
         renderer_global->AddActor( actor );
     }
 }
+
+
+/*  Metodo: mostrarBase
+
+    Funcion: Muestra la imagen base en el renderizador del input 'angio_ID'
+*/
+void RECONS3D::mostrarBase( const int angio_ID ){
+    if( angio_ID > n_angios ){
+        char mensaje[] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
+        sprintf(mensaje, "\n<<Error: El angiograma %i no ha sido agregado al reconstructor>>\n\n", angio_ID);
+        DEB_MSG(mensaje);
+        escribirLog( mensaje );
+    }else{
+        mostrarImagen( imgs_base[angio_ID], IMGVTK::BASE, mis_renderers[ angio_ID ]);
+    }
+}
+
+
+/*  Metodo: mostrarGroundtruth
+
+    Funcion: Muestra la imagen ground-truth en el renderizador del input 'angio_ID'
+*/
+void RECONS3D::mostrarGroundtruth( const int angio_ID ){
+    if( (angio_ID > n_angios) || (!existe_ground.at(angio_ID)) ){
+        char mensaje[] = "\n<<Error: El ground-truth para el angiograma XXX no ha sido agregado al reconstructor>>\n\n";
+        sprintf(mensaje, "\n<<Error: El ground-truth para el angiograma %i no ha sido agregado al reconstructor>>\n\n", angio_ID);
+        DEB_MSG(mensaje);
+        escribirLog( mensaje );
+    }else{
+        mostrarImagen( imgs_delin[angio_ID], IMGVTK::BASE, mis_renderers[ angio_ID ]);
+    }
+}
+
+
+
+
+
 
 
 
