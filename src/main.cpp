@@ -287,7 +287,17 @@ int main(int argc, char** argv ){
     //        delete [] rutas_grd[i];
     //    }
 
-        //reconstructor.segmentarImagenBase();
+
+        reconstructor.setFiltroEntrenamiento( FILTROS::EXHAUSTIVA, 1, 1);
+        reconstructor.setFiltroEval( FILTROS::ROC );
+        reconstructor.setFiltroMetodo( FILTROS::GMF );
+        reconstructor.setFiltroLimites( FILTROS::PAR_L, 10.0, 12.0, 1.0 );
+        reconstructor.setFiltroLimites( FILTROS::PAR_T, 15.0, 16.0, 0.5 );
+        reconstructor.setFiltroLimites( FILTROS::PAR_SIGMA, 1.5, 2.3, 0.4);
+        reconstructor.setFiltroParametros( FILTROS::PAR_K, 12.0);
+        reconstructor.setFiltroParametros( FILTROS::PAR_DELTA, 1e-4);
+
+        reconstructor.segmentarImagenBase();
         DEB_MSG("Listo para extraer esqueleto");
         reconstructor.skeletonize();
 
