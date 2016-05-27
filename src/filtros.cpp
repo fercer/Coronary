@@ -17,8 +17,30 @@ void FILTROS::escribirLog( const char *mensaje ){
     if( mi_log ){
         mi_log->appendPlainText( mensaje );
     }else{
-        std:cout << mensaje;
+        std:cout << mensaje << std::endl;
+        fflush(stdout);
     }
+}
+
+
+/*  Metodo: barraProgreso
+
+    Funcion: Actualiza la barra de progreso.
+*/
+void FILTROS::barraProgreso( const int avance, const int milestones ){
+    /// Limpiar el resto de la linea:
+    for( int i = 0; i < milestones+2; i++){
+        printf("\r");
+    }
+    printf(COLOR_BACK_RED "[");
+    for( int i = 0; i < avance; i++){
+        printf(COLOR_BACK_GREEN " ");
+    }
+    for( int i = avance; i < milestones; i++){
+        printf(COLOR_BACK_CYAN " ");
+    }
+    printf(COLOR_BACK_RED "]" COLOR_NORMAL);
+    fflush(stdout);
 }
 
 
@@ -883,9 +905,6 @@ double FILTROS::calcROC(INDIV *test, double *resp){
     delete [] negative_array;
 
     GETTIME_FIN;
-
-    std::cout << "Tiempo para obtener la curva de ROC: " << DIFTIME << " s.  Az = " << Az << std::endl;
-
     return Az;
 }
 
@@ -911,6 +930,38 @@ double FILTROS::fitnessROC( INDIV *test ){
 
 
 
+
+
+
+
+/*  Metodo: calcCorCon
+
+    Funcion: Calculates the correlation and contrast of the filtered response.
+*/
+double FILTROS::calcCorCon(double *resp){
+
+    //// Scale the response to 8 levels:
+    double max_resp =-INF;
+    double min_resp = INF;
+
+    for( int xy = 0; xy< rows_cols; xy++){
+        if( max_resp < *(resp + xy) ){
+            max_resp = *(resp + xy);
+        }
+        if( min_resp > *(resp + xy) ){
+            min_resp = *(resp + xy);
+        }
+    }
+
+    double *scaled_resp = new double [rows_cols];
+
+    for( int xy = 0; xy < rows_cols; xy++){
+        *(scaled_resp + xy) = 1 + (int)(7.0 * (*(resp + xy) - min_resp) / (max_resp - min_resp));
+    }
+
+    //// Compute the GLCM matrix using an intensity at 8 levels:
+
+}
 
 
 /*//        //      //      //      //      //      //        //      //      //      //      //      //        //      //      //      //      //      //        //      //      //      //      //      //
@@ -1077,7 +1128,7 @@ void FILTROS::generarPobInicial(INDIV *poblacion){
     Funcion:    Genera una poblacion de tamaño 'n_pob' individuos con una distribucion normal con medias y varianzas apra cada parametro los indicados.
 
 */
-void FILTROS::generarPob(INDIV *poblacion, const double *medias, const double *varianzas){
+void FILTROS::generarPob(double medias[5], double varianzas[5], INDIV *poblacion){
     double val_gen;
 
     //Se generan n_pob - 1 individuos, y permanece el elite que se tiene.
@@ -1086,7 +1137,7 @@ void FILTROS::generarPob(INDIV *poblacion, const double *medias, const double *v
     for(register int i = 0; i < n_pob; i++){
         for( int j = 0; j < n_pars; j++){
             const unsigned int k = idx_pars[j];
-            val_gen =  anorm( *(medias + k), *(varianzas + k));
+            val_gen =  anorm( medias[k], varianzas[k]);
             val_gen = (val_gen <= lim_sup[ k ]) ? ((val_gen >= lim_inf[ k ]) ? val_gen : lim_inf[ k ]) : lim_sup[ k ];
             (poblacion + i)->vars[ k ] = val_gen;
         }
@@ -1210,7 +1261,7 @@ void FILTROS::BUMDA(){
         (poblacion + n_pob)->eval = poblacion->eval;
 
         calcularPars(poblacion, truncamiento, medias, varianzas);
-        generarPob(poblacion, medias, varianzas);
+        generarPob(medias, varianzas, poblacion);
         qsort((void*)poblacion, n_pob+1, sizeof(INDIV), compIndiv); // El mejor fitness queda en la posicion 0 ya comparando el elite
 
 
@@ -1244,7 +1295,7 @@ void FILTROS::BUMDA(){
     Metodo:     generar_pob
     Funcion:   Genera una nueva poblacion en bsae al muestreo de cada atributo.
 */
-void FILTROS::generarPob(INDIV *poblacion, const double *probs, const double *deltas_var, const double *max_bits){
+void FILTROS::generarPob(INDIV *poblacion, const double *probs, const double *deltas_var){
     for(int i = 0; i < n_pob; i++){
         // Se muestrean los genes para cada parametro:
         unsigned int bits_recorridos = 0;
@@ -1257,7 +1308,7 @@ void FILTROS::generarPob(INDIV *poblacion, const double *probs, const double *de
                 cadena_val += ((poblacion + i)->cadena[ bits_recorridos ] ? 1.0 : 0.0) * (double)pow_2;
             }
             // Asignar el valor segun la cadena formada para el atributo 'k':
-            (poblacion + i)->vars[k] = cadena_val / *(max_bits + k) * *(deltas_var + k) + lim_inf[k];
+            (poblacion + i)->vars[k] = *(deltas_var + k) * cadena_val + lim_inf[k];
         }
 
         switch( fitness_elegido ){
@@ -1306,7 +1357,6 @@ void FILTROS::UMDA(){
     // Se cuentan los parametros activos:
     n_pars = 0;
     double deltas_vars[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
-    double max_bit_val[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
 
     unsigned int n_bits = 0;
     for( int p = 0; p < 5; p++){
@@ -1314,8 +1364,8 @@ void FILTROS::UMDA(){
             idx_pars[ n_pars ] = p;
 
             // Calcular el tamano de paso
-            max_bit_val[ p ] = pow(2, min_vars[p]);
-            deltas_vars[ p ] = (lim_sup[ p ] - lim_inf[ p ]) / (max_bit_val[p] - 1.0);
+            const double max_bit_val = pow(2, min_vars[p]) - 1;
+            deltas_vars[ p ] = (lim_sup[ p ] - lim_inf[ p ]) / max_bit_val;
 
             n_bits += (unsigned int)min_vars[ p ];
 
@@ -1338,9 +1388,9 @@ void FILTROS::UMDA(){
     int k = 0, truncamiento = (int)( (double)n_pob * 0.6);
     bool procesar = true;
 
-    char mensaje_iter[] = "[XXX/XXX] Best fit: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X\n";
+    char mensaje_iter[] = "\33[47m\33[47m\33[47m\33[47m\33[47m\33[47m\33[47m[XXX/XXX] Best fit: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X\n\33[47m\33[47m\33[47m\33[47m\33[47m\33[47m\33[47mXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
     do{
-        generarPob(poblacion, probs, deltas_vars, max_bit_val);
+        generarPob(poblacion, probs, deltas_vars);
         qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv);
         calcularPars(poblacion, n_bits, truncamiento, probs);
 
@@ -1355,7 +1405,12 @@ void FILTROS::UMDA(){
 
         sprintf( mensaje_iter, "[%i/%i] Best fit: %1.4f, L: %1.3f , T: %1.3f, Sigma: %2.3f, K: %3.0f\n", k, max_iters, (poblacion + n_pob)->eval, (poblacion + n_pob)->vars[PAR_L], (poblacion + n_pob)->vars[PAR_T], (poblacion + n_pob)->vars[PAR_SIGMA], (poblacion + n_pob)->vars[PAR_K]);
         escribirLog( mensaje_iter );
-
+        sprintf(mensaje_iter, COLOR_BACK_BLACK COLOR_CYAN " Probs: " COLOR_GREEN);
+        for( int i = 0; i < n_bits; i++){
+            sprintf( mensaje_iter, "%s [%1.2f]", mensaje_iter, probs[i]);
+        }
+        sprintf(mensaje_iter, "%s%c" COLOR_NORMAL, mensaje_iter, '\0');
+        escribirLog( mensaje_iter );
     }while(procesar);
 
     delete [] probs;
@@ -1374,7 +1429,7 @@ void FILTROS::UMDA(){
     Metodo:     generar_pob
     Funcion:   Genera una nueva poblacion en bsae al muestreo de cada atributo.
 */
-double FILTROS::generarPobInicial(INDIV *poblacion, const double *deltas_var, const double *max_bits){
+double FILTROS::generarPobInicial(INDIV *poblacion, const double *deltas_var){
     double sum_fitness = 0.0;
 
     for(int i = 0; i < n_pob; i++){
@@ -1389,8 +1444,12 @@ double FILTROS::generarPobInicial(INDIV *poblacion, const double *deltas_var, co
                 (poblacion + i)->cadena[bits_recorridos] = (HybTaus(0.0, 1.0) <= 0.5) ? 0 : 1;
                 cadena_val += ((poblacion + i)->cadena[bits_recorridos] ? 1.0 : 0.0) * (double)pow_2;
             }
+
             // Asignar el valor segun la cadena formada para el atributo 'k':
-            (poblacion + i)->vars[ k ] = *(deltas_var + k) * cadena_val / *(max_bits + k) + lim_inf[k];
+            (poblacion + i)->vars[ k ] = *(deltas_var + k) * cadena_val + lim_inf[k];
+
+
+            DEB_MSG(COLOR_GREEN "[" COLOR_BLUE << k << COLOR_GREEN "] cadena: " COLOR_BACK_WHITE COLOR_BLACK << cadena_val << "/" << (poblacion + i)->vars[ k ] << " :: " COLOR_BACK_BLACK COLOR_BLUE << "delta: " << *(deltas_var + k) << " :: lim_inf: " << lim_inf[k] << COLOR_NORMAL );
         }
 
         switch( fitness_elegido ){
@@ -1488,7 +1547,7 @@ void FILTROS::cruzaPob(INDIV* cruza, const INDIV* poblacion, const double *fitne
     Metodo:     generar_pob
     Funcion:   Genera una nueva poblacion en base al muestreo de cada atributo.
 */
-double FILTROS::generarPob(INDIV *poblacion, const INDIV *cruza, const double *deltas_var, const double *max_bits, const int seleccion){
+double FILTROS::generarPob(INDIV *poblacion, const INDIV *cruza, const double *deltas_var, const int seleccion){
     // Construir la nueva poblacion a partir de los hijos generados y la seleccion previa:
     double suma_fitness = 0.0;
     for( int i = 0; i < (n_pob - seleccion); i++){
@@ -1505,7 +1564,7 @@ double FILTROS::generarPob(INDIV *poblacion, const INDIV *cruza, const double *d
                 cadena_val += ((poblacion + i)->cadena[bits_recorridos] ? 1.0 : 0.0) * (double)pow_2;
             }
             // Asignar el valor segun la cadena formada para el atributo 'k':
-            (poblacion + i)->vars[ k ] = *(deltas_var + k) * cadena_val / *(max_bits + k) + lim_inf[k];
+            (poblacion + i)->vars[ k ] = *(deltas_var + k) * cadena_val + lim_inf[k];
         }
         switch( fitness_elegido ){
             case ROC:
@@ -1541,8 +1600,7 @@ void FILTROS::GA(){
 
     // Se cuentan los parametros activos:
     n_pars = 0;
-    double deltas_vars[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
-    double max_bit_val[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+    double deltas_var[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
 
     unsigned int n_bits = 0;
     for( int p = 0; p < 5; p++){
@@ -1550,9 +1608,9 @@ void FILTROS::GA(){
             idx_pars[ n_pars ] = p;
 
             // Calcular el tamano de paso
-            max_bit_val[ p ] = pow(2, min_vars[p]);
-            deltas_vars[ p ] = (lim_sup[ p ] - lim_inf[ p ]) / (max_bit_val[p] - 1.0);
-
+            const double max_bit_val = pow(2, min_vars[p]) - 1;
+            deltas_var[ p ] = (lim_sup[ p ] - lim_inf[ p ]) / max_bit_val;
+DEB_MSG(COLOR_GREEN "max bits [" COLOR_YELLOW << p << COLOR_GREEN "]: " COLOR_BACK_WHITE COLOR_BLACK << max_bit_val << "/" << deltas_var[p] << COLOR_NORMAL);
             n_bits += (unsigned int)min_vars[ p ];
 
             n_pars ++;
@@ -1569,7 +1627,7 @@ void FILTROS::GA(){
     bool procesar = true;
 
     //// Generar la primer poblacion:
-    double suma_fitness = generarPobInicial(poblacion, deltas_vars, max_bit_val);
+    double suma_fitness = generarPobInicial(poblacion, deltas_var);
     qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv);
 
     double *fitness_acum = new double [n_pob];
@@ -1579,7 +1637,7 @@ void FILTROS::GA(){
     do{
         acumFitness(poblacion, fitness_acum, suma_fitness);
         cruzaPob(cruza, poblacion, fitness_acum, n_bits, seleccion, 0.2);
-        generarPob(poblacion, cruza, deltas_vars, max_bit_val , seleccion);
+        generarPob(poblacion, cruza, deltas_var, seleccion);
 
         // Guardar el elite como el mejor de los individuos en la posicion 'n_pob' del arreglo:
         memcpy((poblacion + n_pob)->vars, poblacion->vars, 5*sizeof(double));
@@ -1637,6 +1695,7 @@ void FILTROS::busquedaExhaustiva(){
     char mensaje_iter[] = "[XXX/XXX] Last eval: X.XXXX, Best fit: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X\n";
 
     int idx = 0;
+    barraProgreso( 0, 120 );
     for( int i_L = 0; i_L <= max_bit_val[PAR_L]; i_L++){
         test->vars[PAR_L] = (double)i_L * min_vars[PAR_L] + lim_inf[PAR_L];
 
@@ -1663,7 +1722,8 @@ void FILTROS::busquedaExhaustiva(){
 
                     idx++;
                     sprintf( mensaje_iter, "[%i/%i] Last eval: %1.4f, Best fit: %1.4f, L: %1.3f , T: %1.3f, Sigma: %2.3f, K: %3.0f\n", idx, n_bits, test->eval, mi_elite->eval, test->vars[PAR_L], test->vars[PAR_T], test->vars[PAR_SIGMA], test->vars[PAR_K]);
-                    escribirLog( mensaje_iter );
+                    //escribirLog( mensaje_iter );
+                    barraProgreso( (int) (120.0 * (double)idx /(double)n_bits), 120);
                 }
             }
         }

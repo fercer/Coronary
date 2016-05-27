@@ -86,6 +86,7 @@ class FILTROS{
         // M E T O D O S      P R I V A D O S
 
         void escribirLog( const char *mensaje );
+        void barraProgreso( const int avance, const int milestones );
 
         inline double interpolacion(const double *pix, const int j, const int i, const double x, const double y, const int mis_rens, const int mis_cols);
         void rotarImg(const double *org, double *rot, const double ctheta, const double stheta, const int mis_rens, const int mis_cols, const int org_rens, const int org_cols);
@@ -112,19 +113,24 @@ class FILTROS{
         //================================================================================== ALGORITMOS EVOLUTIVOS:
         //// FUNCIONES DE FITNESS:
         double fitnessROC(INDIV *test);
+
+
+        double calcCorCon(double *resp);
+
+
         void generarPobInicial(INDIV *poblacion);
-        double generarPobInicial(INDIV *poblacion, const double *deltas_var, const double *max_bits);
+        double generarPobInicial(INDIV *poblacion, const double *deltas_var);
 
         //// ALGORITMOS:
         //--------------------------------------------------------------------------------------------------------------------------------- BUMDA:
-        void generarPob(INDIV *poblacion, const double *medias, const double *varianzas);
+        void generarPob(double medias[], double varianzas[], INDIV *poblacion);
         void calcularPars(const INDIV *poblacion, const int truncamiento, double *medias, double *varianzas);
         int seleccionarPob(double *theta_t, const INDIV *poblacion);
         void BUMDA();
 
 
         //--------------------------------------------------------------------------------------------------------------------------------- UMDA:
-        void generarPob(INDIV *poblacion, const double *probs, const double *deltas_var, const double *max_bits);
+        void generarPob(INDIV *poblacion, const double *probs, const double *deltas_var);
         void calcularPars(const INDIV *poblacion, const int n_bits, const int truncamiento, double *probs);
         void UMDA();
 
@@ -132,7 +138,7 @@ class FILTROS{
         //--------------------------------------------------------------------------------------------------------------------------------- GA:
         void acumFitness(const INDIV* poblacion, double *fitness_acum, const double suma_fitness);
         void cruzaPob(INDIV *cruza, const INDIV *poblacion, const double *fitness_acum, const unsigned int n_bits, const int seleccion, const double prob_mutacion);
-        double generarPob(INDIV *poblacion, const INDIV *cruza, const double *deltas_var, const double *max_bits, const int seleccion);
+        double generarPob(INDIV *poblacion, const INDIV *cruza, const double *deltas_var, const int seleccion);
         void GA();
 
         //--------------------------------------------------------------------------------------------------------------------------------- GA:
