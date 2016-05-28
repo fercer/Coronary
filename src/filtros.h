@@ -38,15 +38,15 @@
 class FILTROS{
     public: //----------------------------------------------------------------------------- PUBLIC ------- v
         // T I P O S        D E     D A T O S      P U B L I C O S
-        typedef enum SEG_FILTRO { GMF, SS_GABOR } SEG_FILTRO;
-        typedef enum EVO_MET { EXHAUSTIVA, EDA_BUMDA, EDA_UMDA, EA_GA } EVO_MET;
-        typedef enum FITNESS { ROC, ENTROPIA } FITNESS;
-        typedef enum PARAMETRO { PAR_L, PAR_T, PAR_K, PAR_SIGMA, PAR_DELTA} PARAMETRO;
+        typedef enum SEG_FILTRO { SEG_UNSET, GMF, SS_GABOR } SEG_FILTRO;
+        typedef enum EVO_MET { EVO_UNSET, EXHAUSTIVA, EDA_BUMDA, EDA_UMDA, EA_GA } EVO_MET;
+        typedef enum FITNESS { FIT_UNSET, ROC, CORCON } FITNESS;
+        typedef enum PARAMETRO { PAR_L, PAR_T, PAR_K, PAR_SIGMA } PARAMETRO;
 
         /** INDIV:	Define la estructura que contiene los atributos del individuo, y el valor de la funcion para este.  **/
         typedef struct INDIV {
             double eval;
-            double vars[5]; // 1: L, 2: T, 3: K, 4: sigma, 5: delta.
+            double vars[4]; // 1: L, 2: T, 3: K, 4: sigma
             unsigned char cadena[64];
         } INDIV;
 
@@ -112,11 +112,8 @@ class FILTROS{
 
         //================================================================================== ALGORITMOS EVOLUTIVOS:
         //// FUNCIONES DE FITNESS:
-        double fitnessROC(INDIV *test);
-
-
-        double calcCorCon(double *resp);
-
+        double fitnessROC(INDIV *test , double *mi_resp);
+        double fitnessCorCon( INDIV *test );
 
         void generarPobInicial(INDIV *poblacion);
         double generarPobInicial(INDIV *poblacion, const double *deltas_var);
@@ -170,11 +167,13 @@ class FILTROS{
         //================================================================================== FILTROS:
         void respGMF(INDIV *test, double *resp);
         bool transformada;
-        double *Img_org;
         fftw_complex *Img_fft;
         void fftImgOrigen();
         void respGabor(INDIV *test, double *resp);
-        double calcROC(INDIV *test, double *resp);
+
+
+        double calcROC( double *resp );
+        double calcCorCon( double *resp );
 };
 // C L A S E: FILTROS  ----------------------------------------------------------------------------------------- ^
 

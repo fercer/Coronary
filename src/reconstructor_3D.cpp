@@ -815,7 +815,7 @@ void RECONS3D::segmentarImagenBase( const int angio_ID){
         filtro.setInputGround(imgs_delin[angio_ID]);
     }
 
-    if( filtro.getParametrosOptimizar() > 0 ){
+    if( filtro.getParametrosOptimizar() > 1 ){
         filtro.setPar();
     }
 
