@@ -1,24 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>coronaryGUI</class>
- <widget class="QMainWindow" name="coronaryGUI" >
-  <property name="geometry" >
+ <widget class="QMainWindow" name="coronaryGUI">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>720</width>
+    <height>600</height>
    </rect>
   </property>
-  <property name="windowTitle" >
+  <property name="contextMenuPolicy">
+   <enum>Qt::CustomContextMenu</enum>
+  </property>
+  <property name="windowTitle">
    <string>coronaryGUI</string>
   </property>
-  <widget class="QMenuBar" name="menuBar" />
-  <widget class="QToolBar" name="mainToolBar" />
-  <widget class="QWidget" name="centralWidget" />
-  <widget class="QStatusBar" name="statusBar" />
+  <widget class="QWidget" name="centralWidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="0" column="0">
+       <widget class="QVTKWidget" name="qvtkVP1" native="true">
+        <property name="contextMenuPolicy">
+         <enum>Qt::CustomContextMenu</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QVTKWidget" name="qvtkVP2" native="true"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QVTKWidget" name="qvtkVP3" native="true"/>
+      </item>
+      <item row="1" column="1">
+       <widget class="QVTKWidget" name="qvtkVP4" native="true"/>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QPlainTextEdit" name="ptxtLog">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>100</height>
+       </size>
+      </property>
+      <property name="contextMenuPolicy">
+       <enum>Qt::CustomContextMenu</enum>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>720</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="separator"/>
+    <addaction name="action_Open_file"/>
+    <addaction name="action_Quit"/>
+   </widget>
+   <widget class="QMenu" name="menuDetection">
+    <property name="title">
+     <string>Detection</string>
+    </property>
+    <widget class="QMenu" name="menuGMF_filtering">
+     <property name="title">
+      <string>GMF filtering</string>
+     </property>
+     <addaction name="separator"/>
+     <addaction name="separator"/>
+     <addaction name="actionChaudhuri"/>
+     <addaction name="actionAl_Rawi"/>
+     <addaction name="actionKang"/>
+     <addaction name="actionGMF_ROC"/>
+    </widget>
+    <widget class="QMenu" name="menuGabor_Filtering">
+     <property name="title">
+      <string>Gabor Filtering</string>
+     </property>
+     <addaction name="actionSSG_Ranggayan"/>
+     <addaction name="actionSSG_ROC"/>
+     <addaction name="actionSSG_CC"/>
+    </widget>
+    <addaction name="menuGMF_filtering"/>
+    <addaction name="menuGabor_Filtering"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuDetection"/>
+  </widget>
+  <widget class="QToolBar" name="mainToolBar">
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+  <action name="action_Open_file">
+   <property name="text">
+    <string>&amp;Open file</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="action_Quit">
+   <property name="text">
+    <string>&amp;Quit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionChaudhuri">
+   <property name="text">
+    <string>Chaudhuri</string>
+   </property>
+  </action>
+  <action name="actionAl_Rawi">
+   <property name="text">
+    <string>Al-Rawi</string>
+   </property>
+  </action>
+  <action name="actionKang">
+   <property name="text">
+    <string>Kang</string>
+   </property>
+  </action>
+  <action name="actionSSG_ROC">
+   <property name="text">
+    <string>SSG ROC</string>
+   </property>
+  </action>
+  <action name="actionSSG_CC">
+   <property name="text">
+    <string>SSG CC</string>
+   </property>
+  </action>
+  <action name="actionSSG_Ranggayan">
+   <property name="text">
+    <string>SSG Ranggayan</string>
+   </property>
+  </action>
+  <action name="actionGMF_ROC">
+   <property name="text">
+    <string>GMF ROC</string>
+   </property>
+  </action>
  </widget>
- <layoutDefault spacing="6" margin="11" />
- <pixmapfunction></pixmapfunction>
+ <layoutdefault spacing="6" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>QVTKWidget</class>
+   <extends>QWidget</extends>
+   <header>QVTKWidget.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

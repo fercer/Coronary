@@ -11,6 +11,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = CoronaryGUI
 TEMPLATE = app
 
+INCLUDEPATH += /usr/local/include/vtk-6.3/
 
 SOURCES += main.cpp\
         coronarygui.cpp
