@@ -36,6 +36,8 @@ private slots:
 
     void on_actionChaudhuri_triggered();
 
+    void on_actionSkeletonize_triggered();
+
 private:
     Ui::coronaryGUI *ui;
     QMenu* qvtkVP1_CM;

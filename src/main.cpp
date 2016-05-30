@@ -1,5 +1,4 @@
-﻿
-#include <stdio.h>
+﻿#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -287,12 +286,29 @@ int main(int argc, char** argv ){
     //        delete [] rutas_grd[i];
     //    }
 
-        //reconstructor.segmentarImagenBase();
-        DEB_MSG("Listo para extraer esqueleto");
-        reconstructor.skeletonize();
 
 
+        reconstructor.setFiltroEntrenamiento( FILTROS::EXHAUSTIVA, 0, 0);
+        reconstructor.setFiltroEval( FILTROS::ROC );
+        reconstructor.setFiltroMetodo( FILTROS::SS_GABOR );
+        reconstructor.setFiltroParametros( FILTROS::PAR_L, 2.5, 5.0, 0.1);
+        reconstructor.setFiltroParametros( FILTROS::PAR_T, 11.0 );
+        reconstructor.setFiltroParametros( FILTROS::PAR_K, 45.0);
+        //reconstructor.setFiltroParametros( FILTROS::PAR_SIGMA, 1.5, 2.3, 0.001);
 
+        /*
+        reconstructor.setFiltroEntrenamiento( FILTROS::EDA_BUMDA, 2, 4);
+        reconstructor.setFiltroEval( FILTROS::ROC );
+        reconstructor.setFiltroMetodo( FILTROS::GMF );
+        reconstructor.setFiltroLimites( FILTROS::PAR_L, 8.0, 15.0, 1e-4);
+        reconstructor.setFiltroLimites( FILTROS::PAR_T, 8.0, 15.0, 1e-4);
+        reconstructor.setFiltroLimites( FILTROS::PAR_SIGMA, 1.0, 5.0, 1e-4);
+        reconstructor.setFiltroParametros( FILTROS::PAR_K, 12.0);
+        */
+
+
+        reconstructor.segmentarImagenBase();
+        //reconstructor.skeletonize();
     }
     delete [] parametros;
     return EXIT_SUCCESS;

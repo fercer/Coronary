@@ -99,8 +99,21 @@
     <addaction name="menuGMF_filtering"/>
     <addaction name="menuGabor_Filtering"/>
    </widget>
+   <widget class="QMenu" name="menuSegmentation">
+    <property name="title">
+     <string>Segmentation</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menu3D">
+    <property name="title">
+     <string>3D</string>
+    </property>
+    <addaction name="actionSkeletonize"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuDetection"/>
+   <addaction name="menuSegmentation"/>
+   <addaction name="menu3D"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
@@ -160,6 +173,11 @@
   <action name="actionGMF_ROC">
    <property name="text">
     <string>GMF ROC</string>
+   </property>
+  </action>
+  <action name="actionSkeletonize">
+   <property name="text">
+    <string>&amp;Skeletonize</string>
    </property>
   </action>
  </widget>

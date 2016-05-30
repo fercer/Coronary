@@ -72,14 +72,18 @@ void coronaryGUI::on_action_Open_file_triggered()
                 );
     QByteArray filename_ba = filename.toLatin1();
 
-    mi_rec3D.agregarInput( filename_ba.data() );
-    vtkSmartPointer< vtkRenderer > nuevo_renderer = mi_rec3D.getRenderer( 0 );
-    if( nuevo_renderer ){
-        ui->qvtkVP1->GetRenderWindow()->AddRenderer( nuevo_renderer );
-        qvtkVP1_CM_LoadGroundtruth = qvtkVP1_CM->addAction("Load file as groundtruth");
-        connect(qvtkVP1_CM_LoadGroundtruth,SIGNAL(triggered()),this,SLOT(loadGroundtruth()));
-        ui->action_Open_file->setEnabled(false);
-        mi_rec3D.mostrarBase( 0 );
+    DEB_MSG( "Abriendo archivo: '" << filename_ba.data() << "'");
+
+    if( strlen(filename_ba.data())  ){
+        mi_rec3D.agregarInput( filename_ba.data() );
+        vtkSmartPointer< vtkRenderer > nuevo_renderer = mi_rec3D.getRenderer( 0 );
+        if( nuevo_renderer ){
+            ui->qvtkVP1->GetRenderWindow()->AddRenderer( nuevo_renderer );
+            qvtkVP1_CM_LoadGroundtruth = qvtkVP1_CM->addAction("Load file as groundtruth");
+            connect(qvtkVP1_CM_LoadGroundtruth,SIGNAL(triggered()),this,SLOT(loadGroundtruth()));
+            ui->action_Open_file->setEnabled(false);
+            mi_rec3D.mostrarBase( 0 );
+        }
     }
 }
 
@@ -96,4 +100,9 @@ void coronaryGUI::on_actionGMF_ROC_triggered()
 void coronaryGUI::on_actionChaudhuri_triggered()
 {
 
+}
+
+void coronaryGUI::on_actionSkeletonize_triggered()
+{
+    mi_rec3D.skeletonize();
 }

@@ -1811,8 +1811,6 @@ DEB_MSG("Numero de fotogramas: " << n_niveles);
                 sprintf( nombre_ecg, "%s_%i.dat", nombre_ecg, n_niveles);
                 FILE *fp = fopen(nombre_ecg, "w");
 
-
-
                 for( int i = 0; i < ecg_np; i++){
                     fprintf(fp, "%i %i\n", i, el.GetValue(i));
                 }
@@ -2002,8 +2000,10 @@ DEB_MSG("Tipo UINT16");
 
                 unsigned char *gris = static_cast<unsigned char*>(extractGreyFilter->GetOutput()->GetScalarPointer(0,0,0));
 
-                for( int xy = 0; xy < mis_rens_cols; xy++){
-                    *(img_tmp + xy) = (double)*(gris+xy) / 255.0;
+                for( int y = 0; y < mis_rens; y++){
+                    for( int x = 0; x < mis_cols; x++){
+                        *(img_tmp + (mis_rens - 1 - y)*mis_cols + x ) = (double)*(gris + y*mis_cols + x) / 255.0;
+                    }
                 }
                 break;
             }
@@ -2031,13 +2031,13 @@ DEB_MSG("Tipo UINT16");
 
                 double color;
 
-                for( int i = 0 ; i < mis_rens; i++){
-                    for( int j = 0; j < mis_cols; j++ ){
-                        color = ((0.297)*ptR->GetScalarComponentAsDouble(j,i,0,0) +
-                                 (0.589)*ptG->GetScalarComponentAsDouble(j,i,0,0) +
-                                 (0.114)*ptB->GetScalarComponentAsDouble(j,i,0,0));
+                for( int y = 0 ; y < mis_rens; y++){
+                    for( int x = 0; x < mis_cols; x++ ){
+                        color = ((0.297)*ptR->GetScalarComponentAsDouble(x,y,0,0) +
+                                 (0.589)*ptG->GetScalarComponentAsDouble(x,y,0,0) +
+                                 (0.114)*ptB->GetScalarComponentAsDouble(x,y,0,0));
 
-                        *(img_tmp + j + i*mis_cols) = color / 255.0;
+                        *(img_tmp + (mis_rens - 1 - y)*mis_cols + x) = color / 255.0;
                     }
                 }
                 break;
@@ -2071,13 +2071,13 @@ DEB_MSG("Tipo UINT16");
                 //vtkImageData *ptA = extractAlphaFilter->GetOutput();
                 double color;
 
-                for( int i = 0 ; i < mis_rens; i++){
-                    for( int j = 0; j < mis_cols; j++ ){
-                        color = ((0.297)*ptR->GetScalarComponentAsDouble(j,i,0,0) +
-                                 (0.589)*ptG->GetScalarComponentAsDouble(j,i,0,0) +
-                                 (0.114)*ptB->GetScalarComponentAsDouble(j,i,0,0));
+                for( int y = 0 ; y < mis_rens; y++){
+                    for( int x = 0; x < mis_cols; x++ ){
+                        color = ((0.297)*ptR->GetScalarComponentAsDouble(x,y,0,0) +
+                                 (0.589)*ptG->GetScalarComponentAsDouble(x,y,0,0) +
+                                 (0.114)*ptB->GetScalarComponentAsDouble(x,y,0,0));
 
-                        *(img_tmp + j + i*mis_cols) = color / 255.0;
+                        *(img_tmp + (mis_rens - 1 - y)*mis_cols + x) = color / 255.0;
                     }
                 }
                 break;
