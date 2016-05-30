@@ -737,7 +737,7 @@ void RECONS3D::agregarGroundtruth(const char *rutaground_input, const int angio_
 
     Funcion:
 */
-void RECONS3D::setFiltroLimites(const FILTROS::PARAMETRO par, const double inf, const double sup, const double delta){
+void RECONS3D::setFiltroParametros(const FILTROS::PARAMETRO par, const double inf, const double sup, const double delta){
     filtro.setLim( par, inf, sup, delta );
 }
 
@@ -815,7 +815,8 @@ void RECONS3D::segmentarImagenBase( const int angio_ID){
         filtro.setInputGround(imgs_delin[angio_ID]);
     }
 
-    if( filtro.getParametrosOptimizar() > 1 ){
+    DEB_MSG("Optimizando parametros " << filtro.getParametrosOptimizar());
+    if( filtro.getParametrosOptimizar() >= 1 ){
         filtro.setPar();
     }
 

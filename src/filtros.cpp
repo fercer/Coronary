@@ -117,6 +117,7 @@ void FILTROS::setEvoMet( const EVO_MET evo_met, const int m_iters, const int pob
     metodo_elegido = evo_met;
     max_iters = m_iters;
     n_pob = pob;
+    seleccion = (int) (0.6 * n_pob);
 }
 
 
@@ -129,6 +130,8 @@ void FILTROS::setFiltro( const SEG_FILTRO seg_fil){
         case SS_GABOR:
             pars_optim[3] = false;
             mi_elite->vars[3] = 0.0;
+            lim_inf[3] = 0.0;
+            min_vars[3] = 0.0;
             fftImgOrigen();
             break;
     }
@@ -156,13 +159,16 @@ FILTROS::FILTROS(){
     cols = 0;
     rows_cols = 0;
 
-    n_pars = 5;
-    for( int p = 0; p < 5; p++){
+    n_pars = 4;
+    for( int p = 0; p < 4; p++){
         // Por defecto, se optimizan todos los parametros.
         pars_optim[p] = true;
     }
 
     mi_elite = new INDIV;
+    mi_elite->eval = 0.0;
+    memset( mi_elite->vars, 0, 4*sizeof(double) );
+
     semilla = NULL;
 
     filtro_elegido = SEG_UNSET;
@@ -170,6 +176,9 @@ FILTROS::FILTROS(){
     fitness_elegido = FIT_UNSET;
 
     transformada = false;
+
+
+    prob_mutacion = 0.3;
 }
 
 
@@ -191,6 +200,7 @@ FILTROS::~FILTROS(){
     GETTIME_INI;
     if(transformada){
         fftw_free(Img_fft);
+        fftw_free(Img_fft_HPF);
     }
     GETTIME_FIN;
     std::cout << COLOR_BACK_GREEN COLOR_BLACK "Tiempo para liberar memoria del FFT: " << DIFTIME << " s." COLOR_NORMAL << std::endl;
@@ -315,35 +325,26 @@ void FILTROS::setLim( const PARAMETRO par, const double inf, double sup, const d
     Funcion: Aplica el filtro sobre la imagen de origen y la almacena sobre la imagen destino.
 */
 void FILTROS::filtrar(){
-    // Ejecutar el filtro con los parametros optimos:
-    switch( filtro_elegido ){
-        case GMF:
-            respGMF(mi_elite, resp);
-            break;
-        case SS_GABOR:
-            respGabor(mi_elite, resp);
-            break;
-        default: /* SEG_UNSET */
-            char mensaje_error[] = COLOR_BACK_BLACK COLOR_RED "<<ERROR: " COLOR_YELLOW "No se ha definido el metodo de deteccion" COLOR_NORMAL "\n";
-            escribirLog( mensaje_error);
-    }
 
-    memcpy(dest, resp, rows_cols*sizeof(double));
+    memset( resp, 0, rows_cols * sizeof(double));
 
     double fitness = 0.0;
+
     switch( fitness_elegido ){
         case ROC:
-            fitness = calcROC(resp);
+            fitness = fitnessROC(mi_elite, resp);
+            DEB_MSG("Fitnes ROC: " << fitness << " :: L: " << mi_elite->vars[PAR_L] <<  ", T: " << mi_elite->vars[PAR_T] << ", K: " << mi_elite->vars[PAR_K] << ", sigma: " << mi_elite->vars[PAR_SIGMA]);
             break;
         case CORCON:
-            fitness = calcCorCon(resp);
+            fitness = fitnessCorCon(mi_elite, resp);
+            DEB_MSG("Fitnes Cor Con: " << fitness << " :: L: " << mi_elite->vars[PAR_L] <<  ", T: " << mi_elite->vars[PAR_T] << ", K: " << mi_elite->vars[PAR_K] << ", sigma: " << mi_elite->vars[PAR_SIGMA]);
             break;
         default: /* FIT_UNSET */
             char mensaje_error[] = COLOR_BACK_BLACK COLOR_RED "<<ERROR: " COLOR_YELLOW "No se ha definido la funcion de evaluacion (fitness)" COLOR_NORMAL "\n";
             escribirLog( mensaje_error);
     }
 
-    DEB_MSG("Fitnes: " << fitness);
+    memcpy(dest, resp, rows_cols*sizeof(double));
 }
 
 
@@ -391,7 +392,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     ////// Se calcula una linea de la gaussiana para el template, luego se copia hacia abajo:
     const double sig_2 = 2.0 * sigma * sigma;
     double sum = 0.0;
-    for( double x = -floor((double)T/2.0); x <= floor((double)T/2.0); x+=1.0){
+    for( double x = -floor((double)T/2.0) + (double)(1 - T%2)/2.0; x <= floor((double)T/2.0) - (double)(1 - T%2)/2.0; x+=1.0){
         *(gauss_ptr) = 1.0 - exp( -(x*x / sig_2) );
         sum += *(gauss_ptr);
         gauss_ptr++;
@@ -614,10 +615,11 @@ void FILTROS::fftImgOrigen(){
         transformada = true;
         double *Img_org = (double*) malloc(rows_cols * sizeof(double));
         Img_fft = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
+        Img_fft_HPF = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
         for(int xy = 0; xy < rows_cols; xy++){
             *(Img_org + xy) = 1.0 - *(org + xy);
         }
-        fftw_plan p_r2c = fftw_plan_dft_r2c_2d( rows, cols, Img_org, Img_fft, FFTW_ESTIMATE);
+        fftw_plan p_r2c = fftw_plan_dft_r2c_2d(rows, cols, Img_org, Img_fft, FFTW_ESTIMATE);
         fftw_execute(p_r2c);
         fftw_destroy_plan(p_r2c);
         free(Img_org);
@@ -642,10 +644,13 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     const int T = (int)test->vars[1];
     const int K = (int)test->vars[2];
 
+
     // Calculate sx y sy:
     double sx2 = (double)T / (2.0*sqrt(2.0 * log(2.0)));
     sx2 *= sx2;
     const double sy2 = L*L * sx2;
+
+    DEB_MSG("L: " << L << ", T: " << T << ", K: " << K << " :: sx2: " << sx2 << ", sy2: " << sy2);
 
     const double fx = 1.0 / (double)T;
     const double fy = 0.0;
@@ -663,11 +668,14 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     //// Generate the high-pass template HPF
     double *HPF = (double*) malloc( rows*(cols/2 + 1) * sizeof(double));
 
+    DEB_MSG("rows: " << rows << ", cols: " << cols);
+
     for( int y = 0; y < rows/2; y++ ){
         const double v_y2 = *(v + y) * *(v + y);
-        const double u_x2 = *(u) * *(u);
-        *(HPF + (y+rows/2)*(cols/2 + 1) + cols/2) = 1.0 - exp( -( sy2*(u_x2 + v_y2) )/2.0 );
-
+        {
+            const double u_x2 = *(u) * *(u);
+            *(HPF + (y+rows/2)*(cols/2 + 1) + cols/2) = 1.0 - exp( -( sy2*(u_x2 + v_y2) )/2.0 );
+        }
         for( int x = cols/2; x < cols; x++){
             const double u_x2 = *(u + x) * *(u + x);
             *(HPF + (y+rows/2)*(cols/2 + 1) + x-cols/2) = 1.0 - exp( -( sy2*(u_x2 + v_y2) )/2.0 );
@@ -675,54 +683,26 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     }
     for( int y = rows/2; y < rows; y++ ){
         const double v_y2 = *(v + y) * *(v + y);
-        const double u_x2 = *(u) * *(u);
-        *(HPF + (y-rows/2)*(cols/2 + 1) + cols/2) = 1.0 - exp( -( sy2*(u_x2 + v_y2) )/2.0 );
-
+        {
+            const double u_x2 = *(u) * *(u);
+            *(HPF + (y-rows/2)*(cols/2 + 1) + cols/2) = 1.0 - exp( -( sy2*(u_x2 + v_y2) )/2.0 );
+        }
         for( int x = cols/2; x < cols; x++){
             const double u_x2 = *(u + x) * *(u + x);
             *(HPF + (y-rows/2)*(cols/2 + 1) + x-cols/2) = 1.0 - exp( -( sy2*(u_x2 + v_y2) )/2.0 );
         }
     }
 
-
-
-FILE *fp_HPF = fopen("HPF.fcs", "w");
-
-for( int y = 0; y < rows; y++){
-    for( int x = 0; x <= cols/2+1; x++){
-        fprintf(fp_HPF, "%f ", *(HPF + x + y*(cols/2 + 1)));
-    }
-    fprintf(fp_HPF, "\n");
-}
-
-fclose( fp_HPF );
-
-
-FILE *fp_IFT = fopen("IFT.fcs", "w");
-
-for( int y = 0; y < rows; y++){
-    for( int x = 0; x <= cols/2; x++){
-        fprintf(fp_IFT, "%f ", *(*(Img_fft + x+y*(cols/2+1))  ));
-    }
-    for( int x = 0; x <= cols/2; x++){
-        fprintf(fp_IFT, "%f ", *(*(Img_fft + x+y*(cols/2+1))+1));
-    }
-    fprintf(fp_IFT, "\n");
-}
-
-fclose( fp_IFT );
-
-
     //// Apply the high-pass filter to the image in the frequencies domain:
     for(int y = 0; y < rows; y++){
         for( int x = 0; x <= cols/2; x++){
-            *(*(Img_fft + x+y*(cols/2+1))  ) = *(*(Img_fft + x+y*(cols/2+1))  ) * *(HPF + x+y*(cols/2 + 1));
-            *(*(Img_fft + x+y*(cols/2+1))+1) = *(*(Img_fft + x+y*(cols/2+1))+1) * *(HPF + x+y*(cols/2 + 1));
+            *(*(Img_fft_HPF + x+y*(cols/2+1))  ) = *(*(Img_fft + x+y*(cols/2+1))  ) * *(HPF + x+y*(cols/2 + 1));
+            *(*(Img_fft_HPF + x+y*(cols/2+1))+1) = *(*(Img_fft + x+y*(cols/2+1))+1) * *(HPF + x+y*(cols/2 + 1));
         }
     }
     free( HPF );
 
-
+    DEB_MSG("IMG_FFT: " << *(*(Img_fft_HPF + (cols/2 + 1))));
 
     // 'Img_filter' is the temporal filtered image in the frequencies domain:
     fftw_complex *Img_filter = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
@@ -749,19 +729,19 @@ fclose( fp_IFT );
 
         //// The Gabor filter is calculated for the rotated base at 'theta' degrees:
         for( int y = 0; y < rows/2; y++){
-            const double v_y = *(v + y+rows/2);
+            const double v_y = *(v+y+rows/2);
             for( int x = 0; x < cols/2; x++){
                 Ur = *(u + x+cols/2)*ctheta + v_y*stheta;
                 Vr =-*(u + x+cols/2)*stheta + v_y*ctheta;
                 Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*PI*fx*PI*fx) + sy2*(Vr*Vr + 4.0*PI*fy*PI*fy))) * cosh(2.0*PI*(sx2*fx*Ur + sy2*fy*Vr));
-                *(*(Img_filter + y*(cols/2+1) + x)  ) = *(*(Img_fft + y*(cols/2+1) + x)  ) * Gabor_xy;
-                *(*(Img_filter + y*(cols/2+1) + x)+1) = *(*(Img_fft + y*(cols/2+1) + x)+1) * Gabor_xy;
+                *(*(Img_filter + y*(cols/2+1) + x)  ) = *(*(Img_fft_HPF + y*(cols/2+1) + x)  ) * Gabor_xy;
+                *(*(Img_filter + y*(cols/2+1) + x)+1) = *(*(Img_fft_HPF + y*(cols/2+1) + x)+1) * Gabor_xy;
             }
             Ur = *(u)*ctheta + v_y*stheta;
             Vr =-*(u)*stheta + v_y*ctheta;
             Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*PI*fx*PI*fx) + sy2*(Vr*Vr + 4.0*PI*fy*PI*fy))) * cosh(2.0*PI*(sx2*fx*Ur + sy2*fy*Vr));
-            *(*(Img_filter + y*(cols/2+1) + cols/2)  ) = *(*(Img_fft + y*(cols/2+1) + cols/2)  ) * Gabor_xy;
-            *(*(Img_filter + y*(cols/2+1) + cols/2)+1) = *(*(Img_fft + y*(cols/2+1) + cols/2)+1) * Gabor_xy;
+            *(*(Img_filter + y*(cols/2+1) + cols/2)  ) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)  ) * Gabor_xy;
+            *(*(Img_filter + y*(cols/2+1) + cols/2)+1) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)+1) * Gabor_xy;
         }
 
         for( int y = rows/2; y < rows; y++){
@@ -770,15 +750,15 @@ fclose( fp_IFT );
                 Ur = *(u + x+cols/2)*ctheta + v_y*stheta;
                 Vr =-*(u + x+cols/2)*stheta + v_y*ctheta;
                 Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*PI*fx*PI*fx) + sy2*(Vr*Vr + 4.0*PI*fy*PI*fy))) * cosh(2.0*PI*(sx2*fx*Ur + sy2*fy*Vr));
-                *(*(Img_filter + y*(cols/2+1) + x)  ) = *(*(Img_fft + y*(cols/2+1) + x)  ) * Gabor_xy;
-                *(*(Img_filter + y*(cols/2+1) + x)+1) = *(*(Img_fft + y*(cols/2+1) + x)+1) * Gabor_xy;
+                *(*(Img_filter + y*(cols/2+1) + x)  ) = *(*(Img_fft_HPF + y*(cols/2+1) + x)  ) * Gabor_xy;
+                *(*(Img_filter + y*(cols/2+1) + x)+1) = *(*(Img_fft_HPF + y*(cols/2+1) + x)+1) * Gabor_xy;
 
             }
             Ur = *(u)*ctheta + v_y*stheta;
             Vr =-*(u)*stheta + v_y*ctheta;
             Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*PI*fx*PI*fx) + sy2*(Vr*Vr + 4.0*PI*fy*PI*fy))) * cosh(2.0*PI*(sx2*fx*Ur + sy2*fy*Vr));
-            *(*(Img_filter + y*(cols/2+1) + cols/2)  ) = *(*(Img_fft + y*(cols/2+1) + cols/2)  ) * Gabor_xy;
-            *(*(Img_filter + y*(cols/2+1) + cols/2)+1) = *(*(Img_fft + y*(cols/2+1) + cols/2)+1) * Gabor_xy;
+            *(*(Img_filter + y*(cols/2+1) + cols/2)  ) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)  ) * Gabor_xy;
+            *(*(Img_filter + y*(cols/2+1) + cols/2)+1) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)+1) * Gabor_xy;
         }
 
         //// Transform the response to the original domain:
@@ -790,21 +770,10 @@ fclose( fp_IFT );
         for( int xy = 0; xy < rows_cols; xy++){
             if( *(max_resp + xy) < *(Img_resp + xy)){
                 *(max_resp + xy) = *(Img_resp + xy);
-                *(max_resp_angles + xy) = - theta * PI / 180.0 + PI/2.0;
+                *(max_resp_angles + xy) = -theta * PI / 180.0 + PI/2.0;
             }
         }
     }
-
-FILE *fp_angles = fopen("angles.fcs", "w");
-
-for( int y = 0; y < rows; y++){
-    for( int x = 0; x < cols; x++){
-        fprintf(fp_angles, "%f ", *(max_resp_angles + x + y*cols));
-    }
-    fprintf(fp_angles, "\n");
-}
-
-fclose( fp_angles );
 
     fftw_free(Img_filter);
     free(Img_resp);
@@ -815,7 +784,10 @@ fclose( fp_angles );
         *(resp + xy) = (*(mask + xy) > 0.5) ? (*(max_resp + xy) / rows_cols) : 0.0;
     }
 
+    DEB_MSG("Max angles: " << *(max_resp_angles) << ", " << *(max_resp_angles + rows_cols) );
+
     free(max_resp);
+    free(max_resp_angles);
 
     GETTIME_FIN;
     char mensaje_Gabor[] = "COLOR_BACK_GREEN COLOR_BLACK Tiempo de filtrado: XXX.XXXX s. COLOR_NORMAL\n";
@@ -857,6 +829,8 @@ double FILTROS::calcROC( double *resp ){
         escribirLog( mensaje_error);
         return 0.0;
     }
+
+    DEB_MSG("RESP: " << *(resp) << ", " << *(resp + rows_cols));
 
     TIMERS;
 
@@ -980,7 +954,7 @@ double FILTROS::calcROC( double *resp ){
 
 
 /*  Metodo: fitnessROC
-    Funcion: Evalua los parametros 'L', 'T' y //'K'// para el filtro de Gabor y la curva de ROC:
+    Funcion: Evalua la eficacia de un detector utilizando el area bajo la curva de ROC:
 */
 double FILTROS::fitnessROC( INDIV *test, double *mi_resp ){
     //// Generar la respuesta del filtro de establecido para los parametros dados:
@@ -1105,7 +1079,7 @@ double FILTROS::calcCorCon(double *resp){
 /*  Metodo: fitnessCorCon
     Funcion: Evalua los parametros 'L', 'T' y //'K'// para el filtro de Gabor y el la correlacion y contraste:
 */
-double FILTROS::fitnessCorCon( INDIV *test ){
+double FILTROS::fitnessCorCon( INDIV *test, double *resp){
     //// Generar la respuesta del filtro de establecido para los parametros dados:
     switch(filtro_elegido){
         case SS_GABOR:
@@ -1115,7 +1089,6 @@ double FILTROS::fitnessCorCon( INDIV *test ){
             respGMF(test, resp);
             break;
     }
-
     return calcCorCon(resp);
 }
 
@@ -1619,15 +1592,28 @@ double FILTROS::generarPobInicial(INDIV *poblacion, const double *deltas_var){
 
 
 
-
 /*
-    Metodo:     acumFitness
-    Funcion:    Calcula los fitness acumulados para cada individuo:
+    Metodo:     selecPob
+    Funcion:    Genera el grupo de individuos seleccionados.
 */
-void FILTROS::acumFitness(const INDIV* poblacion, double *fitness_acum, const double suma_fitness){
+void FILTROS::selecPob(INDIV* sel_grp, const INDIV* poblacion, double *fitness_acum, const double suma_fitness){
+    // Calcular la funcion de distribucion de probabilidad F(x):
     *(fitness_acum + n_pob - 1) = (poblacion + n_pob - 1)->eval / suma_fitness;
     for( int i = n_pob-2; i >= 0; i--){
         *(fitness_acum + i) = *(fitness_acum + i + 1) + (poblacion + i)->eval / suma_fitness;
+    }
+
+    // Armar el grupo de seleccion:
+    for( int i = 0; i < seleccion; i++){
+        const double ruleta = HybTaus(0.0, 1.0);
+        int sel_pos = n_pob;
+        while( sel_pos > 0 ){
+            sel_pos--;
+            if( *(fitness_acum + sel_pos) >= ruleta ){
+                break;
+            }
+        }
+        memcpy( sel_grp + i, poblacion + sel_pos, sizeof(INDIV) );
     }
 }
 
@@ -1637,34 +1623,16 @@ void FILTROS::acumFitness(const INDIV* poblacion, double *fitness_acum, const do
     Metodo:     cruzaPob
     Funcion:    Calcula la siguiente generacion a partir de la cruza multipunto de los padres seleccionados, ademas se realiza una mutacion sobre un porcentage de los individuos.
 */
-void FILTROS::cruzaPob(INDIV* cruza, const INDIV* poblacion, const double *fitness_acum, const unsigned int n_bits, const int seleccion, const double prob_mutacion){
+void FILTROS::cruzaPob(INDIV* cruza, const INDIV* poblacion, const unsigned int n_bits){
 
     // Generar dos nuevos individuos a partir de dos padres, el proceso se repite hasta completar la fraccion 'seleccion'.
     for(int i = 0; i < seleccion; i+=2){
-        // Seleccionar los padres con el metodo de la ruleta:
-        const double ruleta1 = HybTaus(0.0, 1.0);
-        int padre_1 = -1;
-        int padre_1_pos = n_pob;
-        while( padre_1 < 0 && padre_1_pos > 0){
-            padre_1_pos--;
-            if( *(fitness_acum + padre_1_pos) >= ruleta1 ){
-                padre_1 = padre_1_pos;
-            }
-        }
 
-        const double ruleta2 = HybTaus(0.0, 1.0);
-        int padre_2 = -1;
-        int padre_2_pos = n_pob;
-        while( padre_2 < 0 && padre_2_pos > 0){
-            padre_2_pos--;
-            if( *(fitness_acum + padre_2_pos) >= ruleta2 ){
-                padre_2 = padre_2_pos;
-            }
-        }
-
+        int padre_1 = 2*i;
+        int padre_2 = 2*i + 1;
         int bits_ini = 0;
-        // Realizar cortes hasta terminar con la secuencia de los individuos:
 
+        // Realizar cortes hasta terminar con la secuencia de los individuos:
         while(bits_ini < n_bits){
             const unsigned int n_bits_cpy = (unsigned int)HybTaus(1.0, (double)(n_bits - bits_ini));
             memcpy( (cruza + 2*i  )->cadena + bits_ini, (poblacion + padre_1)->cadena + bits_ini, n_bits_cpy*sizeof(unsigned char));
@@ -1701,13 +1669,13 @@ void FILTROS::cruzaPob(INDIV* cruza, const INDIV* poblacion, const double *fitne
     Metodo:     generar_pob
     Funcion:   Genera una nueva poblacion en base al muestreo de cada atributo.
 */
-double FILTROS::generarPob(INDIV *poblacion, const INDIV *cruza, const double *deltas_var, const int seleccion){
+double FILTROS::generarPob(INDIV *poblacion, const INDIV *cruza, const INDIV *sel_grp, const double *deltas_var){
     // Construir la nueva poblacion a partir de los hijos generados y la seleccion previa:
     double suma_fitness = 0.0;
-    for( int i = 0; i < (n_pob - seleccion); i++){
-        suma_fitness += (poblacion + i)->eval;
-    }
-    for( int i = (n_pob - seleccion); i < n_pob; i++){
+
+    for( int i = 0; i < seleccion; i++){
+        memcpy( poblacion + i, cruza + i, sizeof(INDIV) );
+
         unsigned int bits_recorridos = 0;
         for( int j = 0; j < n_pars; j++){
             const unsigned int k = idx_pars[j];
@@ -1728,6 +1696,12 @@ double FILTROS::generarPob(INDIV *poblacion, const INDIV *cruza, const double *d
         suma_fitness += (poblacion + i)->eval;
     }
 
+    for( int i = seleccion; i < n_pob; i++){
+        const unsigned int sel_pos = (unsigned int)(HybTaus(0.0, (double)seleccion - 1e-8));
+        memcpy( poblacion + i, sel_grp + sel_pos, sizeof(INDIV) );
+        suma_fitness += (poblacion + i)->eval;
+    }
+
     return suma_fitness;
 }
 
@@ -1742,14 +1716,16 @@ void FILTROS::GA(){
     const int seleccion = (int)( (double)n_pob * 0.6);
 
     INDIV *poblacion = new INDIV [n_pob + 1];
+    INDIV *sel_grp = new INDIV [seleccion];
     INDIV *cruza = new INDIV [seleccion];
 
     // Poner los valores del elite por defecto:
-    for( int i = 0; i < n_pob; i++){
-        memcpy((poblacion + i)->vars, mi_elite->vars, 4*sizeof(double));
-    }
     for( int i = 0; i < seleccion; i++){
-        memcpy((cruza + i)->vars, mi_elite->vars, 4*sizeof(double));
+        memcpy(poblacion + i, mi_elite, sizeof(INDIV));
+        memcpy(cruza + i, mi_elite, sizeof(INDIV));
+    }
+    for( int i = seleccion; i < n_pob; i++){
+        memcpy(poblacion + i, mi_elite, sizeof(INDIV));
     }
 
     // Se cuentan los parametros activos:
@@ -1764,9 +1740,7 @@ void FILTROS::GA(){
             // Calcular el tamano de paso
             const double max_bit_val = pow(2, min_vars[p]) - 1;
             deltas_var[ p ] = (lim_sup[ p ] - lim_inf[ p ]) / max_bit_val;
-DEB_MSG(COLOR_GREEN "max bits [" COLOR_YELLOW << p << COLOR_GREEN "]: " COLOR_BACK_WHITE COLOR_BLACK << max_bit_val << "/" << deltas_var[p] << COLOR_NORMAL);
             n_bits += (unsigned int)min_vars[ p ];
-
             n_pars ++;
         }
     }
@@ -1786,12 +1760,11 @@ DEB_MSG(COLOR_GREEN "max bits [" COLOR_YELLOW << p << COLOR_GREEN "]: " COLOR_BA
 
     double *fitness_acum = new double [n_pob];
 
-
     char mensaje_iter[] = "[XXX/XXX] Best fit: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X\n";
     do{
-        acumFitness(poblacion, fitness_acum, suma_fitness);
-        cruzaPob(cruza, poblacion, fitness_acum, n_bits, seleccion, 0.2);
-        generarPob(poblacion, cruza, deltas_var, seleccion);
+        selecPob(sel_grp, poblacion, fitness_acum, suma_fitness);
+        cruzaPob(cruza, poblacion, n_bits);
+        suma_fitness = generarPob(poblacion, cruza, sel_grp, deltas_var);
 
         // Guardar el elite como el mejor de los individuos en la posicion 'n_pob' del arreglo:
         memcpy(poblacion + n_pob, poblacion, sizeof(INDIV));
@@ -1801,12 +1774,12 @@ DEB_MSG(COLOR_GREEN "max bits [" COLOR_YELLOW << p << COLOR_GREEN "]: " COLOR_BA
         //// Verificar condiciones de paro:
         procesar = (k < max_iters);
 
-
         sprintf( mensaje_iter, "[%i/%i] Best fit: %1.4f, L: %1.3f , T: %1.3f, Sigma: %2.3f, K: %3.0f\n", k, max_iters, (poblacion + n_pob)->eval, (poblacion + n_pob)->vars[PAR_L], (poblacion + n_pob)->vars[PAR_T], (poblacion + n_pob)->vars[PAR_SIGMA], (poblacion + n_pob)->vars[PAR_K]);
         escribirLog( mensaje_iter );
     }while(procesar);
 
     delete [] cruza;
+    delete [] sel_grp;
     delete [] fitness_acum;
 
     memcpy(mi_elite, poblacion + n_pob, sizeof(INDIV));
@@ -1826,9 +1799,7 @@ void FILTROS::busquedaExhaustiva(){
     n_pars = 0;
 
     INDIV *test = new INDIV;
-    memcpy( test->vars, mi_elite->vars, 5*sizeof(double));
-
-    mi_elite->eval = 0.0;
+    memcpy( test, mi_elite, sizeof(INDIV));
 
     unsigned int max_bit_val[4] = {0, 0, 0, 0};
 
@@ -1838,16 +1809,17 @@ void FILTROS::busquedaExhaustiva(){
             idx_pars[ n_pars ] = p;
 
             // Determinar cuantas particiones tiene cada variable:
-            max_bit_val[ p ] = ((lim_sup[ p ] - lim_inf[ p ] + 1e-12) / min_vars[p]);
+            max_bit_val[ p ] = (lim_sup[ p ] - lim_inf[ p ] + 1e-12) / min_vars[p];
             n_bits *= max_bit_val[ p ] + 1;
-
             n_pars ++;
         }
     }
-    char mensaje_iter[] = "[XXX/XXX] Last eval: X.XXXX, Best fit: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X\n";
+
 
     int idx = 0;
-    barraProgreso( 0, 120 );
+
+    char mensaje_iter[] = "[XXX/XXX] Best fit: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X\n";
+    //barraProgreso( 0, 120 );
     for( int i_L = 0; i_L <= max_bit_val[PAR_L]; i_L++){
         test->vars[PAR_L] = (double)i_L * min_vars[PAR_L] + lim_inf[PAR_L];
 
@@ -1860,26 +1832,30 @@ void FILTROS::busquedaExhaustiva(){
                 for( int i_Sigma = 0; i_Sigma <= max_bit_val[PAR_SIGMA]; i_Sigma++){
                     test->vars[PAR_SIGMA] = (double)i_Sigma * min_vars[PAR_SIGMA] + lim_inf[PAR_SIGMA];
 
-
                     switch( fitness_elegido ){
                         case ROC:
                             test->eval = fitnessROC( test, resp );
                             break;
                     }
 
-                    if( test->eval > mi_elite->eval ){
-                        mi_elite->eval = test->eval;
-                        memcpy( mi_elite->vars, test->vars, 5*sizeof(double));
+                    if( (test->eval) > (mi_elite->eval) ){
+                        memcpy( mi_elite, test, sizeof(INDIV));
                     }
 
                     idx++;
-                    sprintf( mensaje_iter, "[%i/%i] Last eval: %1.4f, Best fit: %1.4f, L: %1.3f , T: %1.3f, Sigma: %2.3f, K: %3.0f\n", idx, n_bits, test->eval, mi_elite->eval, test->vars[PAR_L], test->vars[PAR_T], test->vars[PAR_SIGMA], test->vars[PAR_K]);
+
+                    sprintf( mensaje_iter, "[%i/%i] Best fit: %1.8f, L: %1.3f , T: %1.3f, K: %3.0f, Sigma: %2.3f :: Laste eval: %1.8f, L: %1.3f , T: %1.3f, K: %3.0f, Sigma: %2.3f\n", idx, n_bits, mi_elite->eval, mi_elite->vars[PAR_L], mi_elite->vars[PAR_T], mi_elite->vars[PAR_K], mi_elite->vars[PAR_SIGMA], test->eval, test->vars[PAR_L], test->vars[PAR_T], test->vars[PAR_K], test->vars[PAR_SIGMA]);
                     escribirLog( mensaje_iter );
+
                     //barraProgreso( (int) (120.0 * (double)idx /(double)n_bits), 120);
                 }
             }
         }
     }
+
+
+    sprintf( mensaje_iter, "Best fit: %1.8f, L: %1.3f , T: %1.3f, K: %3.0f, Sigma: %2.3f\n", mi_elite->eval, mi_elite->vars[PAR_L], mi_elite->vars[PAR_T], mi_elite->vars[PAR_K], mi_elite->vars[PAR_SIGMA]);
+    escribirLog( mensaje_iter );
 
     delete test;
 }

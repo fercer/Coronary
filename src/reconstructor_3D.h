@@ -186,10 +186,11 @@ class RECONS3D{
         void mostrarBase( const int angio_ID );
         void mostrarGroundtruth(  const int angio_ID  );
 
-        void setFiltroLimites(const FILTROS::PARAMETRO par, const double inf, const double sup, const double delta);
         void setFiltroEntrenamiento( const FILTROS::EVO_MET evo_met, const int m_iters, const int pob);
         void setFiltroEval( const FILTROS::FITNESS fit_fun);
         void setFiltroMetodo( const FILTROS::SEG_FILTRO metodo_filtrado);
+
+        void setFiltroParametros(const FILTROS::PARAMETRO par, const double inf, const double sup, const double delta);
         void setFiltroParametros( const FILTROS::PARAMETRO par, const double val );
         void setFiltroParametros();
 

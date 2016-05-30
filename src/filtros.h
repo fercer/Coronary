@@ -113,7 +113,7 @@ class FILTROS{
         //================================================================================== ALGORITMOS EVOLUTIVOS:
         //// FUNCIONES DE FITNESS:
         double fitnessROC(INDIV *test , double *mi_resp);
-        double fitnessCorCon( INDIV *test );
+        double fitnessCorCon(INDIV *test , double *resp);
 
         void generarPobInicial(INDIV *poblacion);
         double generarPobInicial(INDIV *poblacion, const double *deltas_var);
@@ -133,9 +133,9 @@ class FILTROS{
 
 
         //--------------------------------------------------------------------------------------------------------------------------------- GA:
-        void acumFitness(const INDIV* poblacion, double *fitness_acum, const double suma_fitness);
-        void cruzaPob(INDIV *cruza, const INDIV *poblacion, const double *fitness_acum, const unsigned int n_bits, const int seleccion, const double prob_mutacion);
-        double generarPob(INDIV *poblacion, const INDIV *cruza, const double *deltas_var, const int seleccion);
+        void selecPob(INDIV *sel_grp, const INDIV* poblacion, double *fitness_acum, const double suma_fitness);
+        void cruzaPob(INDIV *cruza, const INDIV *poblacion, const unsigned int n_bits);
+        double generarPob(INDIV *poblacion, const INDIV *cruza, const INDIV *sel_grp, const double *deltas_var);
         void GA();
 
         //--------------------------------------------------------------------------------------------------------------------------------- GA:
@@ -145,8 +145,8 @@ class FILTROS{
         STAUS *semilla;
         unsigned int semilla_g;
 
-        bool pars_optim[5]; // Indica cuales parametros se van a optimizar: 1: L, 2: T, 3: K, 4: sigma(GMF), 5: delta del umbralizado(Gabor).
-        unsigned int idx_pars[5], n_pars;
+        bool pars_optim[4]; // Indica cuales parametros se van a optimizar: 1: L, 2: T, 3: K, 4: sigma(GMF), 5: delta del umbralizado(Gabor).
+        unsigned int idx_pars[4], n_pars;
         SEG_FILTRO filtro_elegido;
         EVO_MET metodo_elegido;
         FITNESS fitness_elegido;
@@ -158,9 +158,11 @@ class FILTROS{
         double *resp;
         double *org, *dest;
         double *ground_truth, *mask;
-        int rows, cols, rows_cols, n_pob, max_iters;
+        int rows, cols, rows_cols;
+        int n_pob, max_iters, seleccion;
+        double prob_mutacion;
 
-        double min_vars[5], lim_inf[5], lim_sup[5];
+        double min_vars[4], lim_inf[4], lim_sup[4];
 
         QPlainTextEdit *mi_log;
 
@@ -168,6 +170,7 @@ class FILTROS{
         void respGMF(INDIV *test, double *resp);
         bool transformada;
         fftw_complex *Img_fft;
+        fftw_complex *Img_fft_HPF;
         void fftImgOrigen();
         void respGabor(INDIV *test, double *resp);
 
