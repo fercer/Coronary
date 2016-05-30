@@ -47,8 +47,10 @@ class FILTROS{
         typedef struct INDIV {
             double eval;
             double vars[5]; // 1: L, 2: T, 3: K, 4: sigma, 5: delta.
-            bool cadena[64];
+            unsigned char cadena[64];
         } INDIV;
+
+        typedef double (*FITNESS_PTR)( FILTROS::INDIV *test );
 
         // M E T O D O S      P U B L I C O S
         FILTROS();
@@ -64,8 +66,8 @@ class FILTROS{
         void setPar();
         void setPar( const PARAMETRO par, const double val);
         INDIV getPars();
-        void setLim( const PARAMETRO par, const double inf, const double sup, const double min_var);
-        void setLim( const PARAMETRO par, const double inf, const double sup, const unsigned char bits);
+        int getParametrosOptimizar();
+        void setLim( const PARAMETRO par, const double inf, const double sup, const double var_delta);
 
         void filtrar();
 
@@ -111,35 +113,37 @@ class FILTROS{
         //// FUNCIONES DE FITNESS:
         double fitnessROC(INDIV *test);
         void generarPobInicial(INDIV *poblacion);
-        void generarPobInicial(INDIV *poblacion, double **tabla);
+        double generarPobInicial(INDIV *poblacion, const double *deltas_var, const double *max_bits);
 
         //// ALGORITMOS:
         //--------------------------------------------------------------------------------------------------------------------------------- BUMDA:
-        void generarPob(INDIV *poblacion, const int n_gen, double medias[5], double varianzas[5]);
-        void calcularPars(INDIV *poblacion, const int truncamiento, double *medias, double *varianzas);
-        int seleccionarPob(double *tetha_t, INDIV *poblacion);
+        void generarPob(INDIV *poblacion, const double *medias, const double *varianzas);
+        void calcularPars(const INDIV *poblacion, const int truncamiento, double *medias, double *varianzas);
+        int seleccionarPob(double *theta_t, const INDIV *poblacion);
         void BUMDA();
 
 
         //--------------------------------------------------------------------------------------------------------------------------------- UMDA:
-        void generarPob(INDIV *poblacion, const int n_gen, double *probs, double **tabla);
-        void calcularPars(INDIV *poblacion, const int truncamiento, double *probs);
+        void generarPob(INDIV *poblacion, const double *probs, const double *deltas_var, const double *max_bits);
+        void calcularPars(const INDIV *poblacion, const int n_bits, const int truncamiento, double *probs);
         void UMDA();
 
 
         //--------------------------------------------------------------------------------------------------------------------------------- GA:
-        void seleccionarPob(INDIV *poblacion, INDIV *probs, INDIV *pob_tmp, int *seleccion);
-        void generarPob(INDIV *poblacion, const double prob_mutacion, double **tabla);
+        void acumFitness(const INDIV* poblacion, double *fitness_acum, const double suma_fitness);
+        void cruzaPob(INDIV *cruza, const INDIV *poblacion, const double *fitness_acum, const unsigned int n_bits, const int seleccion, const double prob_mutacion);
+        double generarPob(INDIV *poblacion, const INDIV *cruza, const double *deltas_var, const double *max_bits, const int seleccion);
         void GA();
 
-
+        //--------------------------------------------------------------------------------------------------------------------------------- GA:
+        void busquedaExhaustiva();
 
         // M I E M B R O S      P R I V A D O S
         STAUS *semilla;
         unsigned int semilla_g;
 
         bool pars_optim[5]; // Indica cuales parametros se van a optimizar: 1: L, 2: T, 3: K, 4: sigma(GMF), 5: delta del umbralizado(Gabor).
-        int idx_pars[5], n_pars;
+        unsigned int idx_pars[5], n_pars;
         SEG_FILTRO filtro_elegido;
         EVO_MET metodo_elegido;
         FITNESS fitness_elegido;
@@ -148,13 +152,12 @@ class FILTROS{
         INDIV *mi_elite;
 
         // Entradas comunes:
+        double *resp;
         double *org, *dest;
         double *ground_truth, *mask;
         int rows, cols, rows_cols, n_pob, max_iters;
 
         double min_vars[5], lim_inf[5], lim_sup[5];
-        unsigned char bits_var[5], max_bits[5];
-        int n_bits;
 
         QPlainTextEdit *mi_log;
 

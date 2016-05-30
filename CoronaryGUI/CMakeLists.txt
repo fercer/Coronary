@@ -6,8 +6,9 @@ if(POLICY CMP0020)
 endif()
 
 SET(NOMBRE_PROYECTO CoronaryGUI)
-SET(HEADERS ../src/reconstructor_3D.h ../src/filtros.h ../src/IMGVTK.h)
-SET(SOURCES ../src/reconstructor_3D.cpp ../src/filtros.cpp ../src/IMGVTK.cpp)
+SET(SRC_DIR "../src")
+SET(HEADERS ${SRC_DIR}/reconstructor_3D.h ${SRC_DIR}/filtros.h ${SRC_DIR}/IMGVTK.h)
+SET(SOURCES ${SRC_DIR}/reconstructor_3D.cpp ${SRC_DIR}/filtros.cpp ${SRC_DIR}/IMGVTK.cpp)
 
 SET(CMAKE_C_FLAGS_DISTRIBUTION "-O3 -DNDEBUG -lm -fopenmp")
 SET(CMAKE_C_FLAGS_DEBUG "-g -lm -fopenmp")

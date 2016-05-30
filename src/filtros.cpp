@@ -106,8 +106,7 @@ void FILTROS::setFiltro( const SEG_FILTRO seg_fil){
         case SS_GABOR:
             pars_optim[3] = false;
             mi_elite->vars[3] = 0.0;
-            max_bits[3] = 0;
-            transformada = false;
+            fftImgOrigen();
             break;
     }
 }
@@ -128,11 +127,12 @@ void FILTROS::setFitness( const FITNESS fit_fun){
 */
 FILTROS::FILTROS(){
     mi_log = NULL;
+    resp = NULL;
+
     n_pars = 5;
     for( int p = 0; p < 5; p++){
         // Por defecto, se optimizan todos los parametros.
         pars_optim[p] = true;
-        max_bits[p] = 0;
     }
 
     mi_elite = new INDIV;
@@ -155,6 +155,11 @@ FILTROS::~FILTROS(){
     if( semilla ){
         delete semilla;
     }
+
+    if( resp ){
+        delete [] resp;
+    }
+
     TIMERS;
     GETTIME_INI;
     if(transformada){
@@ -180,11 +185,9 @@ void FILTROS::setInput(IMGVTK &img_org){
     rows = img_org.rens;
     rows_cols = img_org.rens_cols;
 
-    switch( filtro_elegido ){
-        case SS_GABOR:
-            fftImgOrigen();
-            break;
-    }
+    DEB_MSG("Dimensiones para el filtro: " << cols << "x" << rows);
+
+    resp = new double [rows_cols];
 }
 
 
@@ -206,24 +209,17 @@ void FILTROS::setPar(){
         case EA_GA:
             GA();
             break;
+
         case EDA_BUMDA:
             BUMDA();
             break;
+
         case EDA_UMDA:
             UMDA();
             break;
+
         case EXHAUSTIVA:
-            //TIMERS;
-            for( double L = 1.3; L <= 18.1; L+= 0.4){
-                mi_elite->vars[0] = L;
-                for( double T = 1.0; T <= 16.00; T+=1.0 ){
-                    mi_elite->vars[1] = T;
-                    //GETTIME_INI;
-                    mi_elite->eval = fitnessROC( mi_elite );
-                    //GETTIME_FIN;
-                    //cout << "Evaluado en " << DIFTIME << " segundos. eval: " << mi_elite->eval << " [L: " << L << ", T: " << T << "]." << endl;
-                }
-            }
+            busquedaExhaustiva();
             break;
     }
 }
@@ -234,8 +230,10 @@ void FILTROS::setPar(){
 */
 void FILTROS::setPar( const PARAMETRO par, const double val ){
     mi_elite->vars[ par ] = val;
+    // Si se fija el parametro, se omite este en la busqueda exhaustiva/metaheuristica
     pars_optim[ par ] = false;
-    max_bits[ par ] = 0;
+    min_vars[ par ] = 0.0;
+    lim_inf[ par ] = val;
 }
 
 
@@ -250,28 +248,27 @@ FILTROS::INDIV FILTROS::getPars(){
 }
 
 
-
-/*  Metodo: setLim
-    Funcion: Establece los limites de busqueda de los parametros, asi como la varianza minima que se espera obtener (para BUMDA)
+/*  Metodo: getPars
+    Funcion: Retorna los parametros utilzados para el filtro.
 */
-void FILTROS::setLim( const PARAMETRO par, const double inf, const double sup, const unsigned char bits){
-    lim_inf[ par ] = inf;
-    lim_sup[ par ] = sup;
-    pars_optim[ par ] = true; // Si se dan los limites de busqueda, se reactiva el parametro.
-    max_bits[ par ] = bits;
+int FILTROS::getParametrosOptimizar(){
+    int n_pars = 0;
+    for( int i = 0; i < 5; i++){
+        if( pars_optim[i] ){
+            n_pars++;
+        }
+    }
+    return n_pars;
 }
 
 
-
-
 /*  Metodo: setLim
-    Funcion: Establece los limites de busqueda de los parametros, asi como la varianza minima que se espera obtener (para BUMDA)
+    Funcion: Establece los limites de busqueda de los parametros, si se utiliza para metodos de codificacion binaria, var_delta indica cuantos bits se utilizaran.
 */
-void FILTROS::setLim( const PARAMETRO par, const double inf, double sup, const double min_var){
+void FILTROS::setLim( const PARAMETRO par, const double inf, double sup, const double var_delta){
     lim_inf[ par ] = inf;
     lim_sup[ par ] = sup;
-    min_vars[ par ] = min_var;
-    pars_optim[ par ] = true; // Si se dan los limites de busqueda, se reactiva el parametro.
+    min_vars[ par ] = var_delta;
 }
 
 
@@ -899,8 +896,6 @@ double FILTROS::calcROC(INDIV *test, double *resp){
 */
 double FILTROS::fitnessROC( INDIV *test ){
     //// Generar la respuesta del filtro de establecido para los parametros dados:
-    double *resp = new double [rows_cols];
-
     switch(filtro_elegido){
         case SS_GABOR:
             respGabor(test, resp);
@@ -909,9 +904,8 @@ double FILTROS::fitnessROC( INDIV *test ){
             respGMF(test, resp);
             break;
     }
-    double Az = calcROC(test, resp);
-    delete [] resp;
-    return Az;
+
+    return calcROC(test, resp);
 }
 
 
@@ -1031,12 +1025,6 @@ double FILTROS::anorm_est(){
  * //        //      //      //      //      //      //        //      //      //      //      //      //        //      //      //      //      //      //        //      //      //      //      //      //
 */
 
-
-
-
-
-
-
 /*
     Metodo:        compIndiv
     Funcion:    Compara el indidividuo A contra el B.
@@ -1055,148 +1043,122 @@ int FILTROS::compIndiv(const void* A, const void* B){
 
 
 
+// BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA
 /*
     Metodo:        generarPobInicial
     Funcion:    Genera una poblacion inicial dentro de los limites establecidos.
 
 */
 void FILTROS::generarPobInicial(INDIV *poblacion){
-//    TIMERS;
-    //Se generan n_pob - 1 individuos, y permanece el elite que se tiene.
     // VERIFICAR CUALES PARAMETROS SE BUSCAN:
     using namespace std;
     for(int i = 0; i < n_pob; i++){
-//        GETTIME_INI;
         memcpy( poblacion[i].vars, mi_elite->vars, 5*sizeof(double) );
 
         for( int j = 0; j < n_pars; j++){
-            const int k = idx_pars[j];
-            poblacion[i].vars[k] = HybTaus(lim_inf[k], lim_sup[k]);
+            const unsigned int k = idx_pars[j];
+            (poblacion + i)->vars[k] = HybTaus(lim_inf[k], lim_sup[k]);
         }
 
-        //// Evaluar los parametros en el filtro de Gabor con el area bajo de la curva de ROC:
         switch( fitness_elegido ){
             case ROC:
-                poblacion[i].eval = fitnessROC( &poblacion[i] );
+                (poblacion + i)->eval = fitnessROC( poblacion + i );
                 break;
         }
-		DEB_MSG("[" << omp_get_thread_num() << "/" << omp_get_num_threads() << ":" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4]);
-//        GETTIME_FIN;
- //       cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos." << endl;
     }
-
-    //Se reordena toda la poblacion, no solo la parte generada.
-    qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv);
-}
+}\
 
 
 
 
 
-// BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA ----- BUMDA
 /*
     Metodo:        generarPob
-    Funcion:    Genera una poblacion de tamaño ('n_pob' - 'ini') individuos con una distribucion indicada con 'fun_aln'. Evalua cada individuo conforme es evaluado en la funcion objetivo. Al final se ordenen de menor a mayor (porque se busca un minimo).
+    Funcion:    Genera una poblacion de tamaño 'n_pob' individuos con una distribucion normal con medias y varianzas apra cada parametro los indicados.
 
 */
-void FILTROS::generarPob(INDIV *poblacion, const int n_gen, double medias[5], double varianzas[5]){
-//    TIMERS;
+void FILTROS::generarPob(INDIV *poblacion, const double *medias, const double *varianzas){
     double val_gen;
 
     //Se generan n_pob - 1 individuos, y permanece el elite que se tiene.
     // VERIFICAR CUALES PARAMETROS SE BUSCAN:
     using namespace std;
-    for(register int i = n_gen; i < n_pob; i++){
- //       GETTIME_INI;
+    for(register int i = 0; i < n_pob; i++){
         for( int j = 0; j < n_pars; j++){
-            const int k = idx_pars[j];
-            val_gen =  anorm( medias[k], varianzas[k]);
-            val_gen = (val_gen <= lim_sup[k]) ? ((val_gen >= lim_inf[k]) ? val_gen : lim_inf[k]) : lim_sup[k];
-            poblacion[i].vars[k] = val_gen;
+            const unsigned int k = idx_pars[j];
+            val_gen =  anorm( *(medias + k), *(varianzas + k));
+            val_gen = (val_gen <= lim_sup[ k ]) ? ((val_gen >= lim_inf[ k ]) ? val_gen : lim_inf[ k ]) : lim_sup[ k ];
+            (poblacion + i)->vars[ k ] = val_gen;
         }
-        //// Evaluar los parametros en el filtro de Gabor con el area bajo de la curva de ROC:
         switch( fitness_elegido ){
             case ROC:
-                poblacion[i].eval = fitnessROC( &poblacion[i] );
+                (poblacion + i)->eval = fitnessROC( poblacion + i );
                 break;
         }
-
-		DEB_MSG("[" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4]);
- //       GETTIME_FIN;
- //       cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos. f(x) = " << poblacion[i].eval << "[L = " << poblacion[i].vars[0] << ", T = " << poblacion[i].vars[1] << "]" << endl;
     }
-
-    //Se reordena toda la poblacion, no solo la parte generada.
-    qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv);
 }
 
 
 
 /*
     Metodo:        calcularPars
-    Funcion:    Calula la media y la varianza para cada variable de la poblacion, utilizando solo a los individuos de la pobllacion.
+    Funcion:    Calula la media y la varianza para cada variable de la poblacion, utilizando solo a los individuos de la seleccion.
 */
-void FILTROS::calcularPars(INDIV *poblacion, const int truncamiento, double *medias, double *varianzas){
+void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, double *medias, double *varianzas){
 
     double sum_evals = 0.0;
-    double gx_sel = poblacion[truncamiento].eval - 1e-5;
+    double gx_sel = (poblacion + truncamiento)->eval - 1e-6;
         //Se calculan las medias primero:
         memset(medias, 0, 5*sizeof(double));
 
         for( int i = 0; i < truncamiento; i++){//Este es el ciclo para toda la seleccion.
-            const double g_bar = poblacion[i].eval - gx_sel;
+            const double g_bar = (poblacion + i)->eval - gx_sel;
             sum_evals += g_bar;
             for( int j = 0; j < n_pars; j++){
-                const int k = idx_pars[j];
-                medias[k] += poblacion[i].vars[k] * g_bar;
+                const unsigned int k = idx_pars[j];
+                *(medias + k) = *(medias + k) + (poblacion + i)->vars[ k ] * g_bar;
             }
         }
 
         for( int j = 0; j < n_pars; j++){
-            medias[ idx_pars[j] ] /= sum_evals;
+            *( medias + idx_pars[j] ) = *( medias + idx_pars[j] ) / sum_evals;
         }
 
         //Se calculan las varianzas:
         double tmp;
         memset(varianzas, 0, 5*sizeof(double));
         for( int i = 0; i < truncamiento; i++){
-            const double g_bar = poblacion[i].eval - gx_sel;
+            const double g_bar = (poblacion + i)->eval - gx_sel;
             for( int j = 0; j < n_pars; j++){
-                const int k = idx_pars[j];
-                tmp = (poblacion[i].vars[k] - medias[k]);
-                varianzas[k] += tmp*tmp * g_bar;
+                const unsigned int k = idx_pars[j];
+                tmp = (poblacion+i)->vars[k] - *(medias + k);
+                *(varianzas + k) = *(varianzas + k) + tmp*tmp * g_bar;
             }
         }
 
         for( int j = 0; j < n_pars; j++){
-            varianzas[ idx_pars[j] ] /= 1.0 + sum_evals;
+            *(varianzas + idx_pars[j] ) = *(varianzas + idx_pars[j] ) / (1.0 + sum_evals);
         }
 }
 
 
 
 /*
-    Metodo:        seleccionarPob
+    Metodo:     seleccionarPob
     Funcion:    Realiza la seleccion por truncamiento, redefiniendo el tetha para esta iteracion dentro del mismo apuntador de tetha.
 */
-int FILTROS::seleccionarPob(double *tetha_t, INDIV *poblacion){
-    int truncamiento = 0;
+int FILTROS::seleccionarPob(double *theta_t, const INDIV *poblacion){
+    int truncamiento;
 
-    for(register int i = n_pob/2; i >= 0; i--){
-        // Se trunca hasta el individuo con evaluacion en la funcion objetivo encima del tetha anterior.
-        if(poblacion[i].eval > (*tetha_t)){
-            truncamiento = i;
+    for( truncamiento = n_pob/2; truncamiento >= 0; truncamiento--){
+        // Se trunca hasta el individuo con evaluacion en la funcion objetivo encima del theta anterior.
+        if((poblacion + truncamiento)->eval > (*theta_t)){
             break;
         }
     }
 
-//    //Si todos los individuos son superiores al theta anterior
-//    if(truncamiento == (n_pob-1)){
-//        truncamiento = n_pob / 2;
-//    }
-
-    //Se asigna el nuevo tetha como la evaluacion del individuo en la posicion 'truncamiento'
-    *tetha_t = poblacion[truncamiento].eval;
+    //Se asigna el nuevo theta como la evaluacion del individuo en la posicion 'truncamiento'
+    *theta_t = (poblacion + truncamiento)->eval;
 
     return truncamiento;
 }
@@ -1208,14 +1170,14 @@ int FILTROS::seleccionarPob(double *tetha_t, INDIV *poblacion){
     Funcion:    Utiliza el algoritmo Boltzmann Univariate Marginal Distribution para encotnrar los parametros automaticamente.
 */
 void FILTROS::BUMDA(){
+    INDIV *poblacion = new INDIV [n_pob + 1];
+    // Poner los valores del elite por defecto:
+    for( int i = 0; i < n_pob; i++){
+        memcpy( (poblacion + i)->vars, mi_elite->vars, 5*sizeof(double));
+    }
 
-//    TIMERS;
-//    GETTIME_INI;
-
-    INDIV *poblacion = new INDIV [n_pob];
-
-    double *medias = new double [5];
-    double *varianzas = new double [5];
+    double medias[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+    double varianzas[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
 
     // Se cuantan los parametros activos:
     n_pars = 0;
@@ -1232,19 +1194,25 @@ void FILTROS::BUMDA(){
     semilla = ini_semilla(0);
 
     // Inicia el algoritmo BUMDA
-    int k = 0, truncamiento = n_pob-1, procesar = 1;
+    int k = 1, truncamiento = n_pob;
+    bool procesar = true;
 
     //// Generar la primer poblacion:
-	DEB_MSG("Generando " << n_pob << " individuos como poblacion inicial ...");
     generarPobInicial(poblacion);
-    DEB_MSG("Poblacion inicial generada, comenzando BUMDA ...");
+    qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv); // El mejor fitness queda en la posicion 0
 
     //Se define el theta en el tiempo 0 como el minimo de la poblacion inicial.
-    double tetha_t = poblacion[n_pob-1].eval;
-    using namespace std;
+    double tetha_t = (poblacion + n_pob - 1)->eval;
+    char mensaje_iter[] = "[XXX/XXX] Best fit: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X\n";
     do{
+        // Guardar el elite como el mejor de los individuos en la posicion 'n_pob' del arreglo:
+        memcpy((poblacion + n_pob)->vars, poblacion->vars, 5*sizeof(double));
+        (poblacion + n_pob)->eval = poblacion->eval;
+
         calcularPars(poblacion, truncamiento, medias, varianzas);
-        generarPob(poblacion, 1, medias, varianzas);
+        generarPob(poblacion, medias, varianzas);
+        qsort((void*)poblacion, n_pob+1, sizeof(INDIV), compIndiv); // El mejor fitness queda en la posicion 0 ya comparando el elite
+
 
         //En truncamiento se guarda el indice del individuo a partir del cual se trunca la poblacion.
         truncamiento = seleccionarPob(&tetha_t, poblacion);
@@ -1253,23 +1221,18 @@ void FILTROS::BUMDA(){
         //// Verificar condiciones de paro:
         int condicion = 0;
         for(int j = 0; j < n_pars; j++){
-            const int k = idx_pars[j];
-            condicion += (varianzas[ k ] <= min_vars[ k ]);
+            const unsigned int k = idx_pars[j];
+            condicion += ( *(varianzas + k) <= *(min_vars + k));
         }
         procesar = (k < max_iters) && (condicion < n_pars);
 
-        cout << "[" << k << "/" << max_iters << "] Best fit: " << poblacion[0].eval << ", L: " << poblacion[0].vars[0] << ", T: " << poblacion[0].vars[1] << endl;
-
+        sprintf( mensaje_iter, "[%i/%i] Best fit: %1.4f, L: %1.3f , T: %1.3f, Sigma: %2.3f, K: %3.0f\n", k, max_iters, poblacion->eval, poblacion->vars[PAR_L], poblacion->vars[PAR_T], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K]);
+        escribirLog( mensaje_iter );
     }while(procesar);
 
-    delete [] medias;
-    delete [] varianzas;
-
-    memcpy(mi_elite->vars, poblacion[0].vars, 5*sizeof(double));
-    mi_elite->eval = poblacion[0].eval;
+    memcpy(mi_elite->vars, poblacion->vars, 5*sizeof(double));
+    mi_elite->eval = poblacion->eval;
     delete [] poblacion;
-//    GETTIME_FIN;
-//    cout << " Mejor candidato encontrada con " << k << " iteraciones y " << DIFTIME << "segundos.\n Con evaluacion de la funcion objetivo: " << mi_elite->eval << endl;
 }
 
 
@@ -1281,50 +1244,28 @@ void FILTROS::BUMDA(){
     Metodo:     generar_pob
     Funcion:   Genera una nueva poblacion en bsae al muestreo de cada atributo.
 */
-void FILTROS::generarPob(INDIV *poblacion, const int n_gen, double *probs, double **tabla){
-//    TIMERS;
-
-    //Se generan n_pob - 1 individuos, y permanece el elite que se tiene.
-    // VERIFICAR CUALES PARAMETROS SE BUSCAN:
-    for(register int i = n_gen; i < n_pob; i++){
-//        GETTIME_INI;
-        // Se muestrean los genes:
-        for( int b = 0; b < n_bits; b++){
-            poblacion[i].cadena[b] = (HybTaus(0.0, 1.0) <= probs[b]) ? true : false;
-        }
-
-        // Decodificar la cadena en los valores de los parametros:
-        int idx_bit = 0;
+void FILTROS::generarPob(INDIV *poblacion, const double *probs, const double *deltas_var, const double *max_bits){
+    for(int i = 0; i < n_pob; i++){
+        // Se muestrean los genes para cada parametro:
+        unsigned int bits_recorridos = 0;
         for( int j = 0; j < n_pars; j++){
-            const int k = idx_pars[j];
-            unsigned int bit = 1, cadena_tmp = 0;
-            for( int b = 0; b < bits_var[k]; b++){
-                cadena_tmp |= poblacion[i].cadena[idx_bit] ? bit : 0;
-                bit = bit << 1;
-                idx_bit++;
+            const unsigned int k = idx_pars[j];
+            double cadena_val = 0;
+            unsigned char pow_2 = 1;
+            for( int b = 0; b < (int)min_vars[k]; b++, bits_recorridos++, pow_2<<1){
+                (poblacion + i)->cadena[ bits_recorridos ] = (HybTaus(0.0, 1.0) <= *(probs + bits_recorridos)) ? 1 : 0;
+                cadena_val += ((poblacion + i)->cadena[ bits_recorridos ] ? 1.0 : 0.0) * (double)pow_2;
             }
-
             // Asignar el valor segun la cadena formada para el atributo 'k':
-            poblacion[i].vars[k] = tabla[k][ (int)cadena_tmp ];
+            (poblacion + i)->vars[k] = cadena_val / *(max_bits + k) * *(deltas_var + k) + lim_inf[k];
         }
 
-        //// Evaluar los parametros en el filtro de Gabor con el area bajo de la curva de ROC:
         switch( fitness_elegido ){
             case ROC:
-                poblacion[i].eval = fitnessROC( &poblacion[i] );
+                (poblacion + i)->eval = fitnessROC( poblacion + i );
                 break;
         }
-
-		DEB_MSG("[" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4]);
-//        GETTIME_FIN;
-//        cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos." << endl;
     }
-
-    DEB_MSG("Reordenando poblacion ...");
-    //Se reordena toda la poblacion, no solo la parte generada.
-    qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv);
-
-    DEB_MSG("Poblacion rordenada");
 }
 
 
@@ -1334,17 +1275,15 @@ void FILTROS::generarPob(INDIV *poblacion, const int n_gen, double *probs, doubl
     Metodo:     calcular_pars
     Funcion:    Calcula las probabilidades de cada distribucion marginal.
 */
-void FILTROS::calcularPars(INDIV *poblacion, const int truncamiento, double *probs){
-    // Se estiman las probabilidades:
+void FILTROS::calcularPars(const INDIV *poblacion, const int n_bits, const int truncamiento, double *probs){
+    // Se estiman las probabilidades para cada bit de todos los parametro:
     memset(probs, 0, n_bits*sizeof(double));
-    for(int i = 0; i < truncamiento; i++){//Este es el ciclo para toda la seleccion.
-        for( int b = 0; b < n_bits; b++){
-            probs[b] += poblacion[i].cadena[b] ? 1.0 : 0.0;
-        }
-    }
+    const double fraccion = 1.0 / (double)truncamiento;
 
-    for( int b = 0; b < n_bits; b++){
-        probs[b] /= (double)truncamiento;
+    for(int i = 0; i < truncamiento; i++){
+        for( int b = 0; b < n_bits; b++){
+            *(probs + b) = *(probs + b) + ((poblacion + i)->cadena[b] ? fraccion : 0.0);
+        }
     }
 }
 
@@ -1358,30 +1297,30 @@ void FILTROS::calcularPars(INDIV *poblacion, const int truncamiento, double *pro
 */
 void FILTROS::UMDA(){
 
-//    TIMERS;
-//    GETTIME_INI;
-
-    INDIV *poblacion = new INDIV [n_pob];
+    INDIV *poblacion = new INDIV [n_pob + 1];
     // Poner los valores del elite por defecto:
     for( int i = 0; i < n_pob; i++){
-        memcpy(poblacion[i].vars, mi_elite->vars, 5*sizeof(double));
+        memcpy( (poblacion + i)->vars, mi_elite->vars, 5*sizeof(double));
     }
 
     // Se cuentan los parametros activos:
     n_pars = 0;
+    double deltas_vars[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+    double max_bit_val[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+
+    unsigned int n_bits = 0;
     for( int p = 0; p < 5; p++){
         if( pars_optim[p] ){
-            idx_pars[n_pars] = p;
+            idx_pars[ n_pars ] = p;
+
+            // Calcular el tamano de paso
+            max_bit_val[ p ] = pow(2, min_vars[p]);
+            deltas_vars[ p ] = (lim_sup[ p ] - lim_inf[ p ]) / (max_bit_val[p] - 1.0);
+
+            n_bits += (unsigned int)min_vars[ p ];
+
             n_pars ++;
         }
-    }
-
-    // Se cuentan el numero total de bits que se van a usar:
-    n_bits = 0;
-    for( int j = 0; j < n_pars; j++){
-        const int k = idx_pars[j];
-        bits_var[k] = (unsigned char)log2(max_bits[k]);
-        n_bits += bits_var[k];
     }
 
     double *probs = new double [n_bits];
@@ -1390,54 +1329,41 @@ void FILTROS::UMDA(){
         probs[b] = 0.5;
     }
 
-    // Generar la tabla de valores:
-    double *tabla[5];
-    for( int j = 0; j < n_pars; j++){
-        const int k = idx_pars[j];
-        tabla[k] = new double [(int)max_bits[k]];
-        const double incremento = (lim_sup[k] - lim_inf[k]) / ((int)max_bits[k] - 1);
-        for( int b = 0; b < (int)max_bits[k]; b++){
-            tabla[k][b] = lim_inf[k] + b*incremento;
-        }
-    }
-
     if(semilla){
         delete semilla;
     }
     semilla = ini_semilla(0);
 
     // Inicia el algoritmo UMDA
-    int k = 0, truncamiento = (int)( (double)n_pob * 0.6), procesar = 1;
+    int k = 0, truncamiento = (int)( (double)n_pob * 0.6);
+    bool procesar = true;
 
-    //// Generar la primer poblacion:
-	DEB_MSG("Generando " << n_pob << " individuos como poblacion inicial ...");
-    generarPob( poblacion, 0, probs, tabla);
-    DEB_MSG("Poblacion inicial generada, comenzando UMDA ...");
-
-    using namespace std;
+    char mensaje_iter[] = "[XXX/XXX] Best fit: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X\n";
     do{
-        calcularPars(poblacion, truncamiento, probs);
-        generarPob(poblacion, 1, probs, tabla);
+        generarPob(poblacion, probs, deltas_vars, max_bit_val);
+        qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv);
+        calcularPars(poblacion, n_bits, truncamiento, probs);
+
+        // Guardar el elite como el mejor de los individuos en la posicion 'n_pob' del arreglo:
+        memcpy((poblacion + n_pob)->vars, poblacion->vars, 5*sizeof(double));
+        (poblacion + n_pob)->eval = poblacion->eval;
+
         k++;
 
         //// Verificar condiciones de paro:
         procesar = (k < max_iters);
 
-        cout << "[" << k << "/" << max_iters << "] Best fit: " << poblacion[0].eval << ", L: " << poblacion[0].vars[0] << ", T: " << poblacion[0].vars[1] << endl;
+        sprintf( mensaje_iter, "[%i/%i] Best fit: %1.4f, L: %1.3f , T: %1.3f, Sigma: %2.3f, K: %3.0f\n", k, max_iters, (poblacion + n_pob)->eval, (poblacion + n_pob)->vars[PAR_L], (poblacion + n_pob)->vars[PAR_T], (poblacion + n_pob)->vars[PAR_SIGMA], (poblacion + n_pob)->vars[PAR_K]);
+        escribirLog( mensaje_iter );
 
     }while(procesar);
 
     delete [] probs;
 
-    for(int j = 0; j < n_pars; j++){
-        delete [] tabla[ idx_pars[j] ];
-    }
+    memcpy(mi_elite->vars, (poblacion + n_pob)->vars, 5*sizeof(double));
+    mi_elite->eval = (poblacion + n_pob)->eval;
 
-    memcpy(mi_elite->vars, poblacion[0].vars, 5*sizeof(double));
-    mi_elite->eval = poblacion[0].eval;
     delete [] poblacion;
-//    GETTIME_FIN;
-//    cout << " Mejor candidato encontrado con " << k << " iteraciones. y " << DIFTIME << "segundos. \n Con evaluacion de la funcion objetivo: " << mi_elite->eval << endl;
 }
 
 
@@ -1448,215 +1374,148 @@ void FILTROS::UMDA(){
     Metodo:     generar_pob
     Funcion:   Genera una nueva poblacion en bsae al muestreo de cada atributo.
 */
-void FILTROS::generarPobInicial(INDIV *poblacion, double **tabla){
-    using namespace std;
+double FILTROS::generarPobInicial(INDIV *poblacion, const double *deltas_var, const double *max_bits){
+    double sum_fitness = 0.0;
 
-    //Se generan todos los individuos de la poblacion con genes elegidos aleatoriamente.
-    // VERIFICAR CUALES PARAMETROS SE BUSCAN:
     for(int i = 0; i < n_pob; i++){
-        // Se muestrean los genes aleatoriamente:
-        for( int b = 0; b < n_bits; b++){
-            poblacion[i].cadena[b] = (HybTaus(0.0, 1.0) <= 0.5) ? true : false;
-            DEB_MSG("cadena [" << b << "]: " << poblacion[i].cadena[b]);
+        // Se genera cada bit con la misma probabilidad de ser 0 o 1:
 
-        }
-
-        // Decodificar la cadena en los valores de los parametros:
-        int idx_bit = 0;
+        unsigned int bits_recorridos = 0;
         for( int j = 0; j < n_pars; j++){
-            const int k = idx_pars[j];
-            unsigned int bit = 1, cadena_tmp = 0;
-            for( int b = 0; b < bits_var[k]; b++){
-                cadena_tmp |= poblacion[i].cadena[idx_bit] ? bit : 0;
-                bit = bit << 1;
-                idx_bit++;
+            const unsigned int k = idx_pars[j];
+            unsigned int pow_2 = 1;
+            double cadena_val = 0.0;
+            for( int b = 0; b < (int)min_vars[k]; b++, bits_recorridos++, pow_2<<1){
+                (poblacion + i)->cadena[bits_recorridos] = (HybTaus(0.0, 1.0) <= 0.5) ? 0 : 1;
+                cadena_val += ((poblacion + i)->cadena[bits_recorridos] ? 1.0 : 0.0) * (double)pow_2;
             }
             // Asignar el valor segun la cadena formada para el atributo 'k':
-            poblacion[i].vars[k] = tabla[k][ (int)cadena_tmp ];
+            (poblacion + i)->vars[ k ] = *(deltas_var + k) * cadena_val / *(max_bits + k) + lim_inf[k];
         }
+
+        switch( fitness_elegido ){
+            case ROC:
+                (poblacion + i)->eval = fitnessROC( poblacion + i );
+                break;
+        }
+        sum_fitness += (poblacion + i)->eval;
     }
 
-    // Evaluacion de los individuos:
-    switch( fitness_elegido ){
-        case ROC:
-            //#pragma omp parallel for shared(poblacion)
-            for(int i = 0; i < n_pob; i++){
-//                TIMERS;
-//                GETTIME_INI;
-                //// Evaluar los parametros en el filtro de Gabor con el area bajo de la curva de ROC:
-                poblacion[i].eval = fitnessROC( &poblacion[i] );
-
-//                DEB_MSG("[PROCESS_" << omp_get_thread_num() << "][" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4])
-//                GETTIME_FIN;
-//                cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos." << endl;
-            }
-            break;
-    }
-    //Se reordena toda la poblacion, no solo la parte generada.
-    qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv);
-
+    return sum_fitness;
 }
 
 
 
 
 /*
-    Metodo:    seleccionPob
-    Funcion:   Selecciona individuos que pasan a ser los padres dela siguiente generacion mediante el metodo de la ruleta.
+    Metodo:     acumFitness
+    Funcion:    Calcula los fitness acumulados para cada individuo:
 */
-void FILTROS::seleccionarPob(INDIV* poblacion, INDIV* probs, INDIV* pob_tmp, int *seleccion){
-    // Sumar todos los fitnes, a la par, generar las probabilidades de la ruleta para la seleccion de individuos:
-    double sum_fitness = 0.0;
-    for(int i = 0; i < n_pob; i++){
-        sum_fitness += poblacion[i].eval;
-        probs[i].eval = HybTaus(0.0, 1.0); // Se genera la probabilidad de la ruleta uniformemente.
-        probs[i].vars[0] = (double)i; // Se guarda el indice donde se genera la probabilidad
-        memcpy(pob_tmp[i].vars, poblacion[i].vars, 5*sizeof(double));
-        memcpy(pob_tmp[i].cadena, poblacion[i].cadena, n_bits*sizeof(bool));
-        pob_tmp[i].eval = poblacion[i].eval;
-    }
-
-    DEB_MSG("Probabilidades de la ruleta calculadas, el fitness global es: " << sum_fitness);
-
-    // Se requiere reordenar las probabilidades para elegir los padres a partir de las probabilidades acumuladas:
-    qsort((void*)probs, n_pob, sizeof(INDIV), compIndiv);
-    DEB_MSG("Probabilidades ordenadas: " << probs[0].eval << " === " << probs[n_pob-1].eval);
-
-    int i_selec = n_pob-1;
-
-    // Calcular la probabilidad relativa y acumulada de cada individuo, y determinar los individuos que pasan al grupo seleccionado.
-    double acum_fitness = 0.0;
-    double nuevo_acum;
-    for(int i = n_pob-1; i >= 0; i--){
-        nuevo_acum = acum_fitness + poblacion[i].eval / sum_fitness;
-        DEB_MSG("Fitness acumulado: " << nuevo_acum);
-        while( (i_selec >= 0) && (nuevo_acum > probs[i_selec].eval) && (probs[i_selec].eval > acum_fitness) ){
-            seleccion[i_selec] = (int)probs[i_selec].vars[0];
-            DEB_MSG("       Probabilidad: " << probs[i_selec].eval);
-            i_selec--;
-        }
-        acum_fitness = nuevo_acum;
-    }
-    DEB_MSG("faltan por seleccionar: " << i_selec+1);
-
-    // Pasar la seleccion a la poblacion:
-    for(int i = 0; i < n_pob; i++){
-        memcpy(poblacion[i].vars, pob_tmp[seleccion[i]].vars, 5*sizeof(double));
-        memcpy(poblacion[i].cadena, pob_tmp[seleccion[i]].cadena, n_bits*sizeof(bool));
-        poblacion[i].eval = pob_tmp[seleccion[i]].eval;
+void FILTROS::acumFitness(const INDIV* poblacion, double *fitness_acum, const double suma_fitness){
+    *(fitness_acum + n_pob - 1) = (poblacion + n_pob - 1)->eval / suma_fitness;
+    for( int i = n_pob-2; i >= 0; i--){
+        *(fitness_acum + i) = *(fitness_acum + i + 1) + (poblacion + i)->eval / suma_fitness;
     }
 }
 
 
 
-
 /*
-    Metodo:     generarPob
+    Metodo:     cruzaPob
     Funcion:    Calcula la siguiente generacion a partir de la cruza multipunto de los padres seleccionados, ademas se realiza una mutacion sobre un porcentage de los individuos.
 */
-void FILTROS::generarPob(INDIV* poblacion, const double prob_mutacion, double **tabla){
+void FILTROS::cruzaPob(INDIV* cruza, const INDIV* poblacion, const double *fitness_acum, const unsigned int n_bits, const int seleccion, const double prob_mutacion){
 
-//    TIMERS;
-
-    // Generar dos nuevos individuos a partir de dos padres:
-    for(int i = 0; i < n_pob; i+=2){
-        INDIV hijo_1, hijo_2;
-        int inicio = 0;
-        int padre_1 = 0;
-        // Realizar cortes hasta terminar con la secuencia de los individuos:
-
-        while(inicio < n_bits){
-            int corte = (int)HybTaus((double)inicio, (double)n_bits - 1);
-            DEB_MSG("inicio: " << inicio << ", corte: " << corte);
-            for(int b = inicio; b <= corte; b++){
-                hijo_1.cadena[b] = poblacion[i + padre_1].cadena[b];
-                hijo_2.cadena[b] = poblacion[i + 1 - padre_1].cadena[b];
-                padre_1 = 1 - padre_1;
-                DEB_MSG("hijo 1 [" << b << "]: " << hijo_1.cadena[b]);
-                DEB_MSG("hijo 2 [" << b << "]: " << hijo_2.cadena[b]);
+    // Generar dos nuevos individuos a partir de dos padres, el proceso se repite hasta completar la fraccion 'seleccion'.
+    for(int i = 0; i < seleccion; i+=2){
+        // Seleccionar los padres con el metodo de la ruleta:
+        const double ruleta1 = HybTaus(0.0, 1.0);
+        int padre_1 = -1;
+        int padre_1_pos = n_pob;
+        while( padre_1 < 0 && padre_1_pos > 0){
+            padre_1_pos--;
+            if( *(fitness_acum + padre_1_pos) >= ruleta1 ){
+                padre_1 = padre_1_pos;
             }
-            inicio = corte + 1;
         }
 
-//        GETTIME_INI;
-        // Realizar mutacion sobre los hijos generados con cierta probabilidad:
+        const double ruleta2 = HybTaus(0.0, 1.0);
+        int padre_2 = -1;
+        int padre_2_pos = n_pob;
+        while( padre_2 < 0 && padre_2_pos > 0){
+            padre_2_pos--;
+            if( *(fitness_acum + padre_2_pos) >= ruleta2 ){
+                padre_2 = padre_2_pos;
+            }
+        }
+
+        int bits_ini = 0;
+        // Realizar cortes hasta terminar con la secuencia de los individuos:
+
+        while(bits_ini < n_bits){
+            const unsigned int n_bits_cpy = (unsigned int)HybTaus(1.0, (double)(n_bits - bits_ini));
+            memcpy( (cruza + 2*i  )->cadena + bits_ini, (poblacion + padre_1)->cadena + bits_ini, n_bits_cpy*sizeof(unsigned char));
+            memcpy( (cruza + 2*i+1)->cadena + bits_ini, (poblacion + padre_2)->cadena + bits_ini, n_bits_cpy*sizeof(unsigned char));
+
+            int padre_swap = padre_1;
+            padre_1 = padre_2;
+            padre_2 = padre_swap;
+
+            bits_ini += n_bits_cpy;
+        }
+
+        // Realizar mutacion sobre los hijos generados con cierta probabilidad: 'prob_mutacion'
         // Mutar el hijo 1:
         if( HybTaus(0.0, 1.0) <= prob_mutacion ){
             // Seleccionar un gen a mutar:
-            const int gen = (int)(HybTaus(-1.0, (double)n_bits-1.0))+1;
-            hijo_1.cadena[gen] ^= hijo_1.cadena[gen];
+            const unsigned int gen = (unsigned int)(HybTaus(0.0, (double)n_bits - 1e-8));
+            (cruza + 2*i)->cadena[gen] = 1 - (cruza + 2*i)->cadena[gen];
         }
 
-        // Evaluar las cadenas de los nuevos individuos:
-        //----------------------------------------------------------------- Hijo 1
-        // Decodificar la cadena en los valores de los parametros:
-        int idx_bit = 0;
-        for( int j = 0; j < n_pars; j++){
-            const int k = idx_pars[j];
-            unsigned int bit = 1, cadena_tmp = 0;
-            for( int b = 0; b < bits_var[k]; b++){
-                cadena_tmp |= hijo_1.cadena[idx_bit] ? bit : 0;
-                poblacion[i].cadena[idx_bit] = hijo_1.cadena[idx_bit];
-                bit = bit << 1;
-                idx_bit++;
-            }
-
-            // Asignar el valor segun la cadena formada para el atributo 'k':
-            poblacion[i].vars[k] = tabla[k][ (int)cadena_tmp ];
-        }
-
-        //// Evaluar los parametros en el filtro de Gabor con el area bajo de la curva de ROC:
-        switch( fitness_elegido ){
-            case ROC:
-                poblacion[i].eval = fitnessROC( &poblacion[i] );
-                break;
-        }
-
-		DEB_MSG("[" << i << "] " << poblacion[i].eval << ": " << poblacion[i].vars[0] << ", " << poblacion[i].vars[1] << ", " << poblacion[i].vars[2] << ", " << poblacion[i].vars[3] << ", " << poblacion[i].vars[4]);
-//        GETTIME_FIN;
-//        cout << "Individuo " << i << " generado y evaluado en " << DIFTIME << " segundos." << endl;
-
-
-//        GETTIME_INI;
         // Mutar el hijo 2:
         if( HybTaus(0.0, 1.0) <= prob_mutacion ){
             // Seleccionar un gen a mutar:
-            const int gen = (int)(HybTaus(-1.0, (double)n_bits-1.0))+1;
-            hijo_2.cadena[gen] ^= hijo_2.cadena[gen];
+            const unsigned int gen = (unsigned int)(HybTaus(0.0, (double)n_bits - 1e-8));
+            (cruza + 2*i + 1)->cadena[gen] = 1 - (cruza + 2*i + 1)->cadena[gen];
         }
+    }
+}
 
-        //----------------------------------------------------------------- Hijo 2
-        // Decodificar la cadena en los valores de los parametros:
-        idx_bit = 0;
+
+
+
+/*
+    Metodo:     generar_pob
+    Funcion:   Genera una nueva poblacion en base al muestreo de cada atributo.
+*/
+double FILTROS::generarPob(INDIV *poblacion, const INDIV *cruza, const double *deltas_var, const double *max_bits, const int seleccion){
+    // Construir la nueva poblacion a partir de los hijos generados y la seleccion previa:
+    double suma_fitness = 0.0;
+    for( int i = 0; i < (n_pob - seleccion); i++){
+        suma_fitness += (poblacion + i)->eval;
+    }
+    for( int i = (n_pob - seleccion); i < n_pob; i++){
+        unsigned int bits_recorridos = 0;
         for( int j = 0; j < n_pars; j++){
-            const int k = idx_pars[j];
-            unsigned int bit = 1, cadena_tmp = 0;
-            for( int b = 0; b < bits_var[k]; b++){
-                cadena_tmp |= hijo_2.cadena[idx_bit] ? bit : 0;
-                poblacion[i+1].cadena[idx_bit] = hijo_2.cadena[idx_bit];
-                bit = bit << 1;
-                idx_bit++;
+            const unsigned int k = idx_pars[j];
+            unsigned int pow_2 = 1;
+            double cadena_val = 0.0;
+            for( int b = 0; b < (int)min_vars[k]; b++, bits_recorridos++, pow_2<<1){
+                (poblacion + i)->cadena[bits_recorridos] = (HybTaus(0.0, 1.0) <= 0.5) ? 0 : 1;
+                cadena_val += ((poblacion + i)->cadena[bits_recorridos] ? 1.0 : 0.0) * (double)pow_2;
             }
-
             // Asignar el valor segun la cadena formada para el atributo 'k':
-            poblacion[i+1].vars[k] = tabla[k][ (int)cadena_tmp ];
+            (poblacion + i)->vars[ k ] = *(deltas_var + k) * cadena_val / *(max_bits + k) + lim_inf[k];
         }
-
-        //// Evaluar los parametros en el filtro de Gabor con el area bajo de la curva de ROC:
         switch( fitness_elegido ){
             case ROC:
-                poblacion[i+1].eval = fitnessROC( &poblacion[i+1] );
+                (poblacion + i)->eval = fitnessROC( poblacion + i );
                 break;
         }
-
- //       DEB_MSG("[" << i+1 << "] " << poblacion[i+1].eval << ": " << poblacion[i+1].vars[0] << ", " << poblacion[i+1].vars[1] << ", " << poblacion[i+1].vars[2] << ", " << poblacion[i+1].vars[3] << ", " << poblacion[i+1].vars[4])
-//        GETTIME_FIN;
-//        cout << "Individuo " << i+1 << " generado y evaluado en " << DIFTIME << " segundos." << endl;
+        suma_fitness += (poblacion + i)->eval;
     }
 
-
-    //Se reordena toda la poblacion, no solo la parte generada.
-    qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv);
+    return suma_fitness;
 }
 
 
@@ -1667,45 +1526,36 @@ void FILTROS::generarPob(INDIV* poblacion, const double prob_mutacion, double **
     Funcion:    Utiliza el algoritmo genetico para encotnrar los parametros automaticamente.
 */
 void FILTROS::GA(){
+    const int seleccion = (int)( (double)n_pob * 0.6);
 
-//    TIMERS;
-//    GETTIME_INI;
-
-    INDIV *poblacion = new INDIV [n_pob];
-    INDIV *probs = new INDIV [n_pob];
-    INDIV *pob_tmp = new INDIV [n_pob];
+    INDIV *poblacion = new INDIV [n_pob + 1];
+    INDIV *cruza = new INDIV [seleccion];
 
     // Poner los valores del elite por defecto:
     for( int i = 0; i < n_pob; i++){
-        memcpy(poblacion[i].vars, mi_elite->vars, 5*sizeof(double));
+        memcpy((poblacion + i)->vars, mi_elite->vars, 5*sizeof(double));
+    }
+    for( int i = 0; i < seleccion; i++){
+        memcpy((cruza + i)->vars, mi_elite->vars, 5*sizeof(double));
     }
 
     // Se cuentan los parametros activos:
     n_pars = 0;
+    double deltas_vars[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+    double max_bit_val[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+
+    unsigned int n_bits = 0;
     for( int p = 0; p < 5; p++){
         if( pars_optim[p] ){
-            idx_pars[n_pars] = p;
+            idx_pars[ n_pars ] = p;
+
+            // Calcular el tamano de paso
+            max_bit_val[ p ] = pow(2, min_vars[p]);
+            deltas_vars[ p ] = (lim_sup[ p ] - lim_inf[ p ]) / (max_bit_val[p] - 1.0);
+
+            n_bits += (unsigned int)min_vars[ p ];
+
             n_pars ++;
-        }
-    }
-
-    // Se cuentan el numero total de bits que se van a usar:
-    n_bits = 0;
-    for( int j = 0; j < n_pars; j++){
-        const int k = idx_pars[j];
-        bits_var[k] = (unsigned char)log2(max_bits[k]);
-        n_bits += bits_var[k];
-    }
-
-
-    // Generar la tabla de valores:
-    double *tabla[5];
-    for( int j = 0; j < n_pars; j++){
-        const int k = idx_pars[j];
-        tabla[k] = new double [(int)max_bits[k]];
-        const double incremento = (lim_sup[k] - lim_inf[k]) / ((int)max_bits[k] - 1);
-        for( int b = 0; b < (int)max_bits[k]; b++){
-            tabla[k][b] = lim_inf[k] + b*incremento;
         }
     }
 
@@ -1714,49 +1564,110 @@ void FILTROS::GA(){
     }
     semilla = ini_semilla(0);
 
-    int *seleccion = new int [n_pob];
-
     // Inicia el algoritmo GA
-    int k = 0, procesar = 1;
+    int k = 1;
+    bool procesar = true;
 
     //// Generar la primer poblacion:
-	DEB_MSG("Generando " << n_pob << " individuos como poblacion inicial ...");
-    generarPobInicial(poblacion, tabla);
-    DEB_MSG("Poblacion inicial generada, comenzando GA ...");
+    double suma_fitness = generarPobInicial(poblacion, deltas_vars, max_bit_val);
+    qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv);
 
-    mi_elite->eval = 0.0;
+    double *fitness_acum = new double [n_pob];
 
-    using namespace std;
+
+    char mensaje_iter[] = "[XXX/XXX] Best fit: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X\n";
     do{
-        seleccionarPob(poblacion, probs, pob_tmp, seleccion);
+        acumFitness(poblacion, fitness_acum, suma_fitness);
+        cruzaPob(cruza, poblacion, fitness_acum, n_bits, seleccion, 0.2);
+        generarPob(poblacion, cruza, deltas_vars, max_bit_val , seleccion);
 
-        generarPob(poblacion, 0.05, tabla);
+        // Guardar el elite como el mejor de los individuos en la posicion 'n_pob' del arreglo:
+        memcpy((poblacion + n_pob)->vars, poblacion->vars, 5*sizeof(double));
+        (poblacion + n_pob)->eval = poblacion->eval;
 
         k++;
 
         //// Verificar condiciones de paro:
         procesar = (k < max_iters);
 
-        cout << "[" << k << "/" << max_iters << "] Best fit: " << poblacion[0].eval << ", L: " << poblacion[0].vars[0] << ", T: " << poblacion[0].vars[1] << endl;
 
-        // Extraer el elite de la poblacion:
-        if(mi_elite->eval < poblacion[0].eval){
-            memcpy(mi_elite->vars, poblacion[0].vars, 5*sizeof(double));
-            mi_elite->eval = poblacion[0].eval;
-        }
+        sprintf( mensaje_iter, "[%i/%i] Best fit: %1.4f, L: %1.3f , T: %1.3f, Sigma: %2.3f, K: %3.0f\n", k, max_iters, (poblacion + n_pob)->eval, (poblacion + n_pob)->vars[PAR_L], (poblacion + n_pob)->vars[PAR_T], (poblacion + n_pob)->vars[PAR_SIGMA], (poblacion + n_pob)->vars[PAR_K]);
+        escribirLog( mensaje_iter );
     }while(procesar);
 
-    for(int j = 0; j < n_pars; j++){
-        delete [] tabla[ idx_pars[j] ];
+    delete [] cruza;
+    delete [] fitness_acum;
+
+    memcpy(mi_elite->vars, (poblacion + n_pob)->vars, 5*sizeof(double));
+    mi_elite->eval = (poblacion + n_pob)->eval;
+
+    delete [] poblacion;
+}
+
+
+
+
+/*
+    Metodo:     busquedaExhaustiva
+    Funcion:    Realiza una busqueda exhaustiva en los limites de los parametros
+*/
+void FILTROS::busquedaExhaustiva(){
+    // Determinar cuales parametros se van a optimizar:
+    n_pars = 0;
+
+    INDIV *test = new INDIV;
+    memcpy( test->vars, mi_elite->vars, 5*sizeof(double));
+
+    mi_elite->eval = 0.0;
+
+    unsigned int max_bit_val[5] = {0, 0, 0, 0, 0};
+
+    unsigned int n_bits = 1;
+    for( int p = 0; p < 5; p++){
+        if( pars_optim[p] ){
+            idx_pars[ n_pars ] = p;
+
+            // Determinar cuantas particiones tiene cada variable:
+            max_bit_val[ p ] = ((lim_sup[ p ] - lim_inf[ p ] + 1e-12) / min_vars[p]);
+            n_bits *= max_bit_val[ p ] + 1;
+
+            n_pars ++;
+        }
+    }
+    char mensaje_iter[] = "[XXX/XXX] Last eval: X.XXXX, Best fit: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X\n";
+
+    int idx = 0;
+    for( int i_L = 0; i_L <= max_bit_val[PAR_L]; i_L++){
+        test->vars[PAR_L] = (double)i_L * min_vars[PAR_L] + lim_inf[PAR_L];
+
+        for( int i_T = 0; i_T <= max_bit_val[PAR_T]; i_T++){
+            test->vars[PAR_T] = (double)i_T * min_vars[PAR_T] + lim_inf[PAR_T];
+
+            for( int i_K = 0; i_K <= max_bit_val[PAR_K]; i_K++){
+                test->vars[PAR_K] = (double)i_K * min_vars[PAR_K] + lim_inf[PAR_K];
+
+                for( int i_Sigma = 0; i_Sigma <= max_bit_val[PAR_SIGMA]; i_Sigma++){
+                    test->vars[PAR_SIGMA] = (double)i_Sigma * min_vars[PAR_SIGMA] + lim_inf[PAR_SIGMA];
+
+
+                    switch( fitness_elegido ){
+                        case ROC:
+                            test->eval = fitnessROC( test );
+                            break;
+                    }
+
+                    if( test->eval > mi_elite->eval ){
+                        mi_elite->eval = test->eval;
+                        memcpy( mi_elite->vars, test->vars, 5*sizeof(double));
+                    }
+
+                    idx++;
+                    sprintf( mensaje_iter, "[%i/%i] Last eval: %1.4f, Best fit: %1.4f, L: %1.3f , T: %1.3f, Sigma: %2.3f, K: %3.0f\n", idx, n_bits, test->eval, mi_elite->eval, test->vars[PAR_L], test->vars[PAR_T], test->vars[PAR_SIGMA], test->vars[PAR_K]);
+                    escribirLog( mensaje_iter );
+                }
+            }
+        }
     }
 
-//    memcpy(mi_elite->vars, poblacion[0].vars, 5*sizeof(double));
-//    mi_elite->eval = poblacion[0].eval;
-    delete [] poblacion;
-    delete [] pob_tmp;
-    delete [] probs;
-    delete [] seleccion;
-
-//    GETTIME_FIN;
-//    cout << " Mejor candidato encontrado con " << k << " iteraciones. y " << DIFTIME << "segundos. \n Con evaluacion de la funcion objetivo: " << mi_elite->eval << endl;
+    delete test;
 }
