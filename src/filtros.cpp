@@ -403,7 +403,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     gauss_ptr = gauss_0;
     const double media = sum / ((double)T * (double)L);
 
-    for( double x = -floor((double)T/2.0); x <= floor((double)T/2.0); x+=1.0){
+    for( double x = -floor((double)T/2.0) + (double)(1 - T%2)/2.0; x <= x <= floor((double)T/2.0) - (double)(1 - T%2)/2.0; x+=1.0){
         *(gauss_ptr) = (*(gauss_ptr) - media) / sum;
          gauss_ptr++;
     }
@@ -644,7 +644,6 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     const int T = (int)test->vars[1];
     const int K = (int)test->vars[2];
 
-
     // Calculate sx y sy:
     double sx2 = (double)T / (2.0*sqrt(2.0 * log(2.0)));
     sx2 *= sx2;
@@ -783,8 +782,6 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     for( int xy = 0; xy < rows_cols; xy++){
         *(resp + xy) = (*(mask + xy) > 0.5) ? (*(max_resp + xy) / rows_cols) : 0.0;
     }
-
-    DEB_MSG("Max angles: " << *(max_resp_angles) << ", " << *(max_resp_angles + rows_cols) );
 
     free(max_resp);
     free(max_resp_angles);
@@ -984,6 +981,8 @@ double FILTROS::fitnessROC( INDIV *test, double *mi_resp ){
 double FILTROS::calcCorCon(double *resp){
 
     //// Scale the response to 8 levels:
+    const int levels = 8;
+
     double max_resp =-INF;
     double min_resp = INF;
 
@@ -996,81 +995,169 @@ double FILTROS::calcCorCon(double *resp){
         }
     }
 
-    const double scalar = 7.0 / (max_resp - min_resp);
-    const double increment = 1.0 - scalar * min_resp;
+    const double range = max_resp - min_resp;
+    const double scalar = (double)(levels - 1) / range;
 
     int *scaled_resp = (int*) malloc(rows_cols * sizeof(int));
 
     for( int xy = 0; xy < rows_cols; xy++){
-        *(scaled_resp + xy) = (int)round( scalar * *(resp + xy) + increment ) - 1;
+        *(scaled_resp + xy) = (int)round( scalar * (*(resp + xy) - min_resp) );
     }
-
-    FILE *fp_scaled = NULL;
-
-    fp_scaled = fopen("scaled.fcs","w");
-    for( int y = 0; y < rows; y++){
-        for( int x = 0; x < cols; x++){
-            fprintf(fp_scaled, "%i ", *(scaled_resp + x + y*cols));
-        }
-        fprintf(fp_scaled, "\n");
-    }
-    fclose( fp_scaled );
 
     //// Compute the GLCM matrix using an intensity at 8 levels, for 4 orientations:
-    unsigned int *GLCM_mat = (unsigned int*) calloc(256, sizeof(unsigned int));
+    double *GLCM_mat = (double*) calloc((levels * levels * 4), sizeof(double));
+
+    const double fraction_1 = 1.0 / (double)((cols-1) *   rows  );
+    const double fraction_2 = 1.0 / (double)((cols-1) * (rows-1));
+    const double fraction_3 = 1.0 / (double)(  cols   * (rows-1));
+    const double fraction_4 = 1.0 / (double)((cols-1) * (rows-1));
+
+    double contrast_1 = 0.0, contrast_2 = 0.0, contrast_3 = 0.0, contrast_4 = 0.0;
+
+    double m_i[4] = {0.0, 0.0, 0.0, 0.0};
+    double m_j[4] = {0.0, 0.0, 0.0, 0.0};
 
     for( int x = 0; x < cols-1; x++){
         // SI(x + 1, y    )
         const int i = *(scaled_resp +   x  );
         const int j = *(scaled_resp + (x+1));
-        *(GLCM_mat + 32*i + 4*j  ) = *(GLCM_mat + 32*i + 4*j  ) + 1;
+
+        *(GLCM_mat + (levels*4)*i + 4*j  ) = *(GLCM_mat + (levels*4)*i + 4*j  ) + fraction_1;
+        contrast_1 += (double)((i-j)*(i-j)) * fraction_1;
+
+        *(m_i  ) += (double)(i+1) * fraction_1;
+        *(m_j  ) += (double)(j+1) * fraction_1;
     }
 
     for( int y = 1; y < rows; y++){
         // SI(x   , y - 1)
         const int i = *(scaled_resp + (y+1)*cols - 1);
         const int j = *(scaled_resp +   y  *cols - 1);
-        *(GLCM_mat + 32*i + 4*j+2) = *(GLCM_mat + 32*i + 4*j+2) + 1;
+        *(GLCM_mat + (levels*4)*i + 4*j+2) = *(GLCM_mat + (levels*4)*i + 4*j+2) + fraction_3;
+        contrast_3 += (double)((i-j)*(i-j)) * fraction_3;
+
+        *(m_i+2) += (double)(i+1) * fraction_3;
+        *(m_j+2) += (double)(j+1) * fraction_3;
     }
+
 
     for( int y = 1; y < rows; y++){
         for( int x = 0; x < cols-1; x++){
             {// SI(x + 1, y    )
                 const int i = *(scaled_resp + ( x ) + ( y )*cols);
                 const int j = *(scaled_resp + (x+1) + ( y )*cols);
-                *(GLCM_mat + 32*i + 4*j  ) = *(GLCM_mat + 32*i + 4*j  ) + 1;
+                *(GLCM_mat + (levels*4)*i + 4*j  ) = *(GLCM_mat + (levels*4)*i + 4*j  ) + fraction_1;
+                contrast_1 += (double)((i-j)*(i-j)) * fraction_1;
+
+                *(m_i  ) += (double)(i+1) * fraction_1;
+                *(m_j  ) += (double)(j+1) * fraction_1;
+
             }
             {// SI(x + 1, y - 1)
                 const int i = *(scaled_resp + ( x ) + ( y )*cols);
                 const int j = *(scaled_resp + (x+1) + (y-1)*cols);
-                *(GLCM_mat + 32*i + 4*j+1) = *(GLCM_mat + 32*i + 4*j+1) + 1;
+                *(GLCM_mat + (levels*4)*i + 4*j+1) = *(GLCM_mat + (levels*4)*i + 4*j+1) + fraction_2;
+                contrast_2 += (double)((i-j)*(i-j)) * fraction_2;
+
+                *(m_i+1) += (double)(i+1) * fraction_2;
+                *(m_j+1) += (double)(j+1) * fraction_2;
             }
             {// SI(x    , y - 1)
                 const int i = *(scaled_resp + ( x ) + ( y )*cols);
                 const int j = *(scaled_resp + ( x ) + (y-1)*cols);
-                *(GLCM_mat + 32*i + 4*j+2) = *(GLCM_mat + 32*i + 4*j+2) + 1;
+                *(GLCM_mat + (levels*4)*i + 4*j+2) = *(GLCM_mat + (levels*4)*i + 4*j+2) + fraction_3;
+                contrast_3 += (double)((i-j)*(i-j)) * fraction_3;
+
+                *(m_i+2) += (double)(i+1) * fraction_3;
+                *(m_j+2) += (double)(j+1) * fraction_3;
             }
             {// SI(x - 1, y - 1)
                 const int i = *(scaled_resp + (x+1) + ( y )*cols);
                 const int j = *(scaled_resp + ( x ) + (y-1)*cols);
-                *(GLCM_mat + 32*i + 4*j+3) = *(GLCM_mat + 32*i + 4*j+3) + 1;
+                *(GLCM_mat + (levels*4)*i + 4*j+3) = *(GLCM_mat + (levels*4)*i + 4*j+3) + fraction_4;
+                contrast_4 += (double)((i-j)*(i-j)) * fraction_4;
+
+                *(m_i+3) += (double)(i+1) * fraction_4;
+                *(m_j+3) += (double)(j+1) * fraction_4;
             }
         }
     }
 
-
-    FILE *fp_glcm = fopen("glcm.fcs", "w");
-    for( int i = 0; i < 8; i++){
-        for( int j = 0; j < 32; j++){
-            fprintf(fp_glcm, "%i ", *(GLCM_mat + 32*i + j) );
-        }
-        fprintf(fp_glcm, "\n");
-    }
-    fclose(fp_glcm);
-
-
-    free(GLCM_mat);
     free(scaled_resp);
+    DEB_MSG( "Contrast: " << contrast_1 << ", " << contrast_2 << ", " << contrast_3 << ", " << contrast_4 << ", mean: " << (contrast_1 + contrast_2 + contrast_3 + contrast_4)/ 4.0);
+
+    double s_i[4] = {0.0, 0.0, 0.0, 0.0};
+    double s_j[4] = {0.0, 0.0, 0.0, 0.0};
+
+    //// Calculate variance for i and j form GLCM:
+    for( int i = 0; i < levels; i++){
+        const double i_m_1 = (double)(i+1) - *(m_i  );
+        const double i_m_2 = (double)(i+1) - *(m_i+1);
+        const double i_m_3 = (double)(i+1) - *(m_i+2);
+        const double i_m_4 = (double)(i+1) - *(m_i+3);
+
+        for( int j = 0; j < levels; j++){
+            const double j_m_1 = (double)(j+1) - *(m_j  );
+            const double j_m_2 = (double)(j+1) - *(m_j+1);
+            const double j_m_3 = (double)(j+1) - *(m_j+2);
+            const double j_m_4 = (double)(j+1) - *(m_j+3);
+
+            *(s_i  ) += i_m_1 * i_m_1 * *(GLCM_mat + (levels*4)*i + 4*j  );
+            *(s_j  ) += j_m_1 * j_m_1 * *(GLCM_mat + (levels*4)*i + 4*j  );
+
+            *(s_i+1) += i_m_2 * i_m_2 * *(GLCM_mat + (levels*4)*i + 4*j+1);
+            *(s_j+1) += j_m_2 * j_m_2 * *(GLCM_mat + (levels*4)*i + 4*j+1);
+
+            *(s_i+2) += i_m_3 * i_m_3 * *(GLCM_mat + (levels*4)*i + 4*j+2);
+            *(s_j+2) += j_m_3 * j_m_3 * *(GLCM_mat + (levels*4)*i + 4*j+2);
+
+            *(s_i+3) += i_m_4 * i_m_4 * *(GLCM_mat + (levels*4)*i + 4*j+3);
+            *(s_j+3) += j_m_4 * j_m_4 * *(GLCM_mat + (levels*4)*i + 4*j+3);
+        }
+    }
+
+    //// Calculate standard deviation for i and j form GLCM:
+    *(s_i  ) = sqrt( *(s_i  ) );
+    *(s_j  ) = sqrt( *(s_j  ) );
+
+    *(s_i+1) = sqrt( *(s_i+1) );
+    *(s_j+1) = sqrt( *(s_j+1) );
+
+    *(s_i+2) = sqrt( *(s_i+2) );
+    *(s_j+2) = sqrt( *(s_j+2) );
+
+    *(s_i+3) = sqrt( *(s_i+3) );
+    *(s_j+3) = sqrt( *(s_j+3) );
+
+    //// Calculate correlation form GLCM:
+    double correlation_1 = 0.0, correlation_2 = 0.0, correlation_3 = 0.0, correlation_4 = 0.0;
+    for( int i = 0; i < levels; i++){
+        const double i_m_1 = (double)(i+1) - *(m_i  );
+        const double i_m_2 = (double)(i+1) - *(m_i+1);
+        const double i_m_3 = (double)(i+1) - *(m_i+2);
+        const double i_m_4 = (double)(i+1) - *(m_i+3);
+
+        const double i_s_1 = *(s_i  );
+        const double i_s_2 = *(s_i+1);
+        const double i_s_3 = *(s_i+2);
+        const double i_s_4 = *(s_i+3);
+
+        for( int j = 0; j < levels; j++){
+            const double j_m_1 = (double)(j+1) - *(m_j  );
+            const double j_m_2 = (double)(j+1) - *(m_j+1);
+            const double j_m_3 = (double)(j+1) - *(m_j+2);
+            const double j_m_4 = (double)(j+1) - *(m_j+3);
+
+            correlation_1 += *(GLCM_mat + (levels*4)*i + 4*j  ) * i_m_1*j_m_1 / (i_s_1 * *(s_j  ));
+            correlation_2 += *(GLCM_mat + (levels*4)*i + 4*j+1) * i_m_2*j_m_2 / (i_s_2 * *(s_j+1));
+            correlation_3 += *(GLCM_mat + (levels*4)*i + 4*j+2) * i_m_3*j_m_3 / (i_s_3 * *(s_j+2));
+            correlation_4 += *(GLCM_mat + (levels*4)*i + 4*j+3) * i_m_4*j_m_4 / (i_s_4 * *(s_j+3));
+        }
+    }
+    free(GLCM_mat);
+
+    DEB_MSG( "Correlation: " << correlation_1 << ", " << correlation_2 << ", " << correlation_3 << ", " << correlation_4 << ", mean: " << (correlation_1 + correlation_2 + correlation_3 + correlation_4)/ 4.0);
+
     return 0.0;
 }
 

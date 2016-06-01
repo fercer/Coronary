@@ -1148,7 +1148,7 @@ void RECONS3D::skeletonize(const int angio_ID){
     const double ccc = cos(imgs_delin[angio_ID].CRACAU/180.0 * PI);
     const double scc = sin(imgs_delin[angio_ID].CRACAU/180.0 * PI);
 
-    const double DDP = imgs_delin[angio_ID].DDP;
+    const double DDP = 0.0;//imgs_delin[angio_ID].DDP;
     const int n_niveles = imgs_delin[angio_ID].n_niveles;
 
     DEB_MSG("numero de niveles: " << n_niveles);
@@ -1156,7 +1156,7 @@ void RECONS3D::skeletonize(const int angio_ID){
     {
         // Recorrer el grafo y generar en 3D una burda reconstruccion.
 
-        DEB_MSG("Mostrando los radios de cada 5 pixeles del esqueleto...");
+        DEB_MSG("Mostrando los radios de cada 100 pixeles del esqueleto...");
         vtkSmartPointer< vtkPoints > puntos = vtkSmartPointer< vtkPoints >::New();
         vtkSmartPointer< vtkCellArray > cilindros = vtkSmartPointer< vtkCellArray >::New();
         int n_pix = 0;
@@ -1165,7 +1165,7 @@ void RECONS3D::skeletonize(const int angio_ID){
         sprintf( nom_cilindros, "cilindros_%i.dat", angio_ID);
         FILE *fp_cilindros = fopen(nom_cilindros, "w");
         fprintf( fp_cilindros, "X1 Y1 Z1 RADIO X2 Y2 Z2\n");
-        mostrarRadios(puntos, cilindros, &n_pix, imgs_delin[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, 50, fp_cilindros);
+        mostrarRadios(puntos, cilindros, &n_pix, imgs_delin[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, 100, fp_cilindros);
 
         fclose( fp_cilindros );
 
@@ -1191,6 +1191,9 @@ void RECONS3D::skeletonize(const int angio_ID){
 }
 
 
+
+
+
 /*  Metodo: mostrarBase
 
     Funcion: Muestra la imagen base en el renderizador del input 'angio_ID'
@@ -1205,6 +1208,9 @@ void RECONS3D::mostrarBase( const int angio_ID ){
         mostrarImagen( imgs_base[angio_ID], IMGVTK::BASE, mis_renderers[ angio_ID ]);
     }
 }
+
+
+
 
 
 /*  Metodo: mostrarGroundtruth
