@@ -1158,7 +1158,7 @@ double FILTROS::calcCorCon(double *resp){
 
     DEB_MSG( "Correlation: " << correlation_1 << ", " << correlation_2 << ", " << correlation_3 << ", " << correlation_4 << ", mean: " << (correlation_1 + correlation_2 + correlation_3 + correlation_4)/ 4.0);
 
-    return 0.0;
+    return (correlation_1 + correlation_2 + correlation_3 + correlation_4) / 4.0 + (double)((levels-1)*(levels-1)) - (contrast_1 + contrast_2 + contrast_3 + contrast_4)/4.0;
 }
 
 
@@ -1176,6 +1176,9 @@ double FILTROS::fitnessCorCon( INDIV *test, double *resp){
             respGMF(test, resp);
             break;
     }
+
+    DEB_MSG("Correlacion y contraste: " << calcCorCon(resp));
+
     return calcCorCon(resp);
 }
 
