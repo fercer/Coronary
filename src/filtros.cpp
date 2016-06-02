@@ -218,8 +218,8 @@ void FILTROS::setInput(IMGVTK &img_org){
 
     // Obtener las dimensiones de la imagen:
     cols = img_org.cols;
-    rows = img_org.rens;
-    rows_cols = img_org.rens_cols;
+    rows = img_org.rows;
+    rows_cols = img_org.rows_cols;
 
     DEB_MSG("Dimensiones para el filtro: " << cols << "x" << rows);
 
@@ -1177,8 +1177,6 @@ double FILTROS::fitnessCorCon( INDIV *test, double *resp){
             break;
     }
 
-    DEB_MSG("Correlacion y contraste: " << calcCorCon(resp));
-
     return calcCorCon(resp);
 }
 
@@ -1337,6 +1335,9 @@ void FILTROS::generarPobInicial(INDIV *poblacion){
             case ROC:
                 (poblacion + i)->eval = fitnessROC( poblacion + i, resp );
                 break;
+            case CORCON:
+                (poblacion + i)->eval = fitnessCorCon( poblacion + i, resp );
+                break;
         }
     }
 }\
@@ -1366,6 +1367,10 @@ void FILTROS::generarPob(double medias[4], double varianzas[4], INDIV *poblacion
         switch( fitness_elegido ){
             case ROC:
                 (poblacion + i)->eval = fitnessROC( poblacion + i, resp );
+                break;
+
+            case CORCON:
+                (poblacion + i)->eval = fitnessCorCon( poblacion + i, resp );
                 break;
         }
     }
@@ -1533,6 +1538,9 @@ void FILTROS::generarPob(INDIV *poblacion, const double *probs, const double *de
         switch( fitness_elegido ){
             case ROC:
                 (poblacion + i)->eval = fitnessROC( poblacion + i, resp );
+                break;
+            case CORCON:
+                (poblacion + i)->eval = fitnessCorCon( poblacion + i, resp );
                 break;
         }
     }
@@ -1908,8 +1916,10 @@ void FILTROS::busquedaExhaustiva(){
 
     int idx = 0;
 
-    char mensaje_iter[] = "[XXX/XXX] Best fit: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X\n";
     //barraProgreso( 0, 120 );
+    TIMERS;
+
+    GETTIME_INI;
     for( int i_L = 0; i_L <= max_bit_val[PAR_L]; i_L++){
         test->vars[PAR_L] = (double)i_L * min_vars[PAR_L] + lim_inf[PAR_L];
 
@@ -1926,6 +1936,9 @@ void FILTROS::busquedaExhaustiva(){
                         case ROC:
                             test->eval = fitnessROC( test, resp );
                             break;
+                        case CORCON:
+                            test->eval = fitnessCorCon( test, resp );
+                            break;
                     }
 
                     if( (test->eval) > (mi_elite->eval) ){
@@ -1934,17 +1947,15 @@ void FILTROS::busquedaExhaustiva(){
 
                     idx++;
 
-                    sprintf( mensaje_iter, "[%i/%i] Best fit: %1.8f, L: %1.3f , T: %1.3f, K: %3.0f, Sigma: %2.3f :: Laste eval: %1.8f, L: %1.3f , T: %1.3f, K: %3.0f, Sigma: %2.3f\n", idx, n_bits, mi_elite->eval, mi_elite->vars[PAR_L], mi_elite->vars[PAR_T], mi_elite->vars[PAR_K], mi_elite->vars[PAR_SIGMA], test->eval, test->vars[PAR_L], test->vars[PAR_T], test->vars[PAR_K], test->vars[PAR_SIGMA]);
-                    escribirLog( mensaje_iter );
-
                     //barraProgreso( (int) (120.0 * (double)idx /(double)n_bits), 120);
                 }
             }
         }
     }
+    GETTIME_FIN;
 
-
-    sprintf( mensaje_iter, "Best fit: %1.8f, L: %1.3f , T: %1.3f, K: %3.0f, Sigma: %2.3f\n", mi_elite->eval, mi_elite->vars[PAR_L], mi_elite->vars[PAR_T], mi_elite->vars[PAR_K], mi_elite->vars[PAR_SIGMA]);
+    char mensaje_iter[] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
+    sprintf( mensaje_iter, "Best fit: %1.8f, L: %1.3f , T: %1.3f, K: %3.0f, Sigma: %2.3f :: en %5.4f s.\n", mi_elite->eval, mi_elite->vars[PAR_L], mi_elite->vars[PAR_T], mi_elite->vars[PAR_K], mi_elite->vars[PAR_SIGMA], DIFTIME);
     escribirLog( mensaje_iter );
 
     delete test;

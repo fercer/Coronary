@@ -59,7 +59,7 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
 
     if( !map_ptr ){
         mapa_dist = vtkSmartPointer<vtkImageData>::New();
-        mapa_dist->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+        mapa_dist->SetExtent(0, cols-1, 0, rows-1, 0, 0);
         mapa_dist->AllocateScalars( VTK_DOUBLE, 1);
         mapa_dist->SetOrigin(0.0, 0.0, 0.0);
         mapa_dist->SetSpacing(1.0, 1.0, 1.0);
@@ -67,18 +67,18 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
         map_ptr = static_cast<double*>(mapa_dist->GetScalarPointer(0,0,0));
     }
 
-    for( int xy = 0 ; xy < rens_cols; xy++ ){
+    for( int xy = 0 ; xy < rows_cols; xy++ ){
         *(map_ptr + xy) = (*(img_ptr + xy) < 1.0) ? 0.0 : INF;
     }
 
-    double *f = new double[ rens > cols ? rens : cols  ];
-    double *dh = new double[ rens ];
-    int *vh= new int[ rens ];
-    double *zh = new double[ rens+1 ];
+    double *f = new double[ rows > cols ? rows : cols  ];
+    double *dh = new double[ rows ];
+    int *vh= new int[ rows ];
+    double *zh = new double[ rows+1 ];
 
     // transform along columns
     for (int x = 0; x < cols; x++){
-        for (int y = 0; y < rens; y++){
+        for (int y = 0; y < rows; y++){
             f[y] = *(map_ptr + y*cols + x);
         }
 
@@ -87,7 +87,7 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
         zh[0] = -INF;
         zh[1] = +INF;
 
-        for (int q = 1; q < rens; q++){
+        for (int q = 1; q < rows; q++){
             double s  = ((f[q]+(q*q))-(f[vh[k]]+(vh[k]*vh[k])))/(2*q-2*vh[k]);
 
             while(s <= zh[k]){
@@ -102,7 +102,7 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
         }
 
         k = 0;
-        for (int y = 0; y < rens; y++){
+        for (int y = 0; y < rows; y++){
             while (zh[k+1] < y){
                 k++;
             }
@@ -119,7 +119,7 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
     double *zw = new double[cols+1];
 
     // transform along rows
-    for (int y = 0; y < rens; y++){
+    for (int y = 0; y < rows; y++){
         for (int x = 0; x < cols; x++){
             f[x] = *(map_ptr + y*cols + x);
         }
@@ -175,7 +175,7 @@ void IMGVTK::detectarBorde( IMG_IDX img_idx ){
 	if (!borders) {
 		borders = vtkSmartPointer<vtkImageData>::New();
 
-        borders->SetExtent(0, cols - 1, 0, rens - 1, 0, 0);
+        borders->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
         borders->AllocateScalars(VTK_DOUBLE, 1);
         borders->SetOrigin(0.0, 0.0, 0.0);
         borders->SetSpacing(1.0, 1.0, 1.0);
@@ -183,9 +183,9 @@ void IMGVTK::detectarBorde( IMG_IDX img_idx ){
         borders_ptr = static_cast<double*>(borders->GetScalarPointer(0, 0, 0));
     }
 
-	memset(borders_ptr, 0, rens_cols*sizeof(double));
+        memset(borders_ptr, 0, rows_cols*sizeof(double));
 
-	for (int xy = 0; xy < rens_cols; xy++) {
+	for (int xy = 0; xy < rows_cols; xy++) {
 		if ( (*(base_ptr + xy) > 0.5) && (*(map_ptr + xy) < 2.0) ) {
 			*(borders_ptr + xy) = 1.0;
 		}
@@ -865,7 +865,7 @@ void IMGVTK::lengthFilter(IMG_IDX img_idx, const int min_length){
             break;
     }
 
-    lengthFilter(img_ptr, min_length, cols, rens);
+    lengthFilter(img_ptr, min_length, cols, rows);
 }
 
 
@@ -931,7 +931,7 @@ void IMGVTK::regionFill(IMG_IDX img_idx){
             break;
     }
 
-    regionFill(img_ptr, cols, rens);
+    regionFill(img_ptr, cols, rows);
 }
 
 
@@ -1134,10 +1134,10 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
 
     PIX_PAR *temp = new PIX_PAR;
 
-    const unsigned char resp = sklMask( skl_tmp, x, y, cols+2, rens);
+    const unsigned char resp = sklMask( skl_tmp, x, y, cols+2, rows);
 
     temp->x = (x-1 - (double)cols/2)*pixX;
-    temp->y = (y-1 - (double)rens/2)*pixY;
+    temp->y = (y-1 - (double)rows/2)*pixY;
 
     temp->n_hijos = 0;
 
@@ -1151,7 +1151,7 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
     const int min_x = ((x - max_dist - 1) < 0) ? 0 : (x - max_dist - 1);
     const int max_x = ((x + max_dist - 1) >= cols) ? cols : (x + max_dist - 1);
     const int min_y = ((y - max_dist - 1) < 0) ? 0 : (y - max_dist - 1);
-    const int max_y = ((y + max_dist - 1) >= rens) ? rens : (y + max_dist - 1);
+    const int max_y = ((y + max_dist - 1) >= rows) ? rows : (y + max_dist - 1);
 
     double dist, radio = (max_dist + 0.5) * (max_dist + 0.5);
     double x_r, y_r;
@@ -1167,7 +1167,7 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
     }
 
     temp->radio = sqrt(radio) * pixX;
-    temp->y_r = (y_r - (double)rens/2)*pixY;
+    temp->y_r = (y_r - (double)rows/2)*pixY;
     temp->x_r = (x_r - (double)cols/2)*pixX;
     temp->alpha = atan2(temp->y_r - temp->y, temp->x_r - temp->x);// + PI / 2.0;
 
@@ -1323,13 +1323,13 @@ void IMGVTK::extraerCaract( IMG_IDX img_idx ){
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-    double *skl_tmp = new double [(rens+2)*(cols+2)];
-    memcpy( skl_tmp, skl_ptr, (rens+2)*(cols+2)*sizeof(double));
+    double *skl_tmp = new double [(rows+2)*(cols+2)];
+    memcpy( skl_tmp, skl_ptr, (rows+2)*(cols+2)*sizeof(double));
 
 
     /// Buscar un punto 'end' del esqueleto y empezar a generar el grafo a aprtir de ahi.
-    bool *visitados = new bool [rens_cols];
-    memset(visitados, 0, rens_cols*sizeof(bool));
+    bool *visitados = new bool [rows_cols];
+    memset(visitados, 0, rows_cols*sizeof(bool));
 
     int x_ini, y_ini, xy = cols+2;
     unsigned char resp;
@@ -1337,7 +1337,7 @@ void IMGVTK::extraerCaract( IMG_IDX img_idx ){
         xy++;
         x_ini = xy % (cols+2);
         y_ini = (int) (double)xy / ((double)cols+2);
-        resp = sklMask( skl_ptr, x_ini, y_ini, cols+2, rens) * (*(skl_ptr + xy) > 0.0);
+        resp = sklMask( skl_ptr, x_ini, y_ini, cols+2, rows) * (*(skl_ptr + xy) > 0.0);
     }while( tabla[resp] != (unsigned char)1 );
 
     *(skl_tmp + xy ) = 2.0;
@@ -1407,7 +1407,7 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
     if( !skl_ptr ){
         skeleton = vtkSmartPointer<vtkImageData>::New();
 
-        skeleton->SetExtent(0, cols+1, 0, rens+1, 0, 0);
+        skeleton->SetExtent(0, cols+1, 0, rows+1, 0, 0);
         skeleton->AllocateScalars( VTK_DOUBLE, 1);
         skeleton->SetOrigin(0.0, 0.0, 0.0);
         skeleton->SetSpacing(1.0, 1.0, 1.0);
@@ -1415,14 +1415,14 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
         skl_ptr = static_cast<double*>(skeleton->GetScalarPointer(0,0,0));
     }
 
-    memset(skl_ptr, 0, (rens+2)*(cols+2)*sizeof(double));
+    memset(skl_ptr, 0, (rows+2)*(cols+2)*sizeof(double));
 
-    for( int y = 0; y < rens; y++ ){
+    for( int y = 0; y < rows; y++ ){
         memcpy( skl_ptr + (y+1)*(cols+2)+1, img_ptr + y*cols, cols*sizeof(double) );
     }
 
-    double *skl_mark = new double [(rens+2)*(cols+2)];
-    memcpy(skl_mark, skl_ptr, (rens+2)*(cols+2)*sizeof(double));
+    double *skl_mark = new double [(rows+2)*(cols+2)];
+    memcpy(skl_mark, skl_ptr, (rows+2)*(cols+2)*sizeof(double));
 
     const unsigned char tabla[] = {
         0, 0, 0, 1, 0, 0, 1, 3, 0, 0, 3, 1, 1, 0, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 3, 0, 3, 3,
@@ -1438,10 +1438,10 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
     do{
         n_borrado = 0;
         // Primer paso:
-        for(int y = 1; y <= rens; y++){
+        for(int y = 1; y <= rows; y++){
             for(int x = 1; x <= cols; x++){
                 if(skl_ptr[x+y*(cols+2)] > 0){
-                    const unsigned char resp = tabla[ sklMask(skl_ptr, x, y, cols+2, rens) ];
+                    const unsigned char resp = tabla[ sklMask(skl_ptr, x, y, cols+2, rows) ];
                     if(resp == 1 || resp == 3 ){
                         skl_mark[x+y*(cols+2)] = 0.0;
                         n_borrado++;
@@ -1450,13 +1450,13 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
             }
         }
 
-        memcpy(skl_ptr, skl_mark, (rens+2)*(cols+2)*sizeof(double));
+        memcpy(skl_ptr, skl_mark, (rows+2)*(cols+2)*sizeof(double));
 
         // Segundo paso:
-        for(int y = 1; y <= rens; y++){
+        for(int y = 1; y <= rows; y++){
             for(int x = 1; x <= cols; x++){
                 if(skl_ptr[x+y*(cols+2)] > 0){
-                    unsigned char resp = tabla[ sklMask(skl_ptr, x, y, cols+2, rens) ];
+                    unsigned char resp = tabla[ sklMask(skl_ptr, x, y, cols+2, rows) ];
                     if(resp == 2 || resp == 3 ){
                         skl_mark[x+y*(cols+2)] = 0.0;
                         n_borrado++;
@@ -1465,7 +1465,7 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
             }
         }
 
-        memcpy(skl_ptr, skl_mark, (rens+1)*(cols+1)*sizeof(double));
+        memcpy(skl_ptr, skl_mark, (rows+1)*(cols+1)*sizeof(double));
 
         DEB_MSG("Borrados: " << n_borrado);
 
@@ -1509,104 +1509,25 @@ void IMGVTK::definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer
 
 
 
-/*  Metodo: umbralizar
-    Funcion: Umbralizar la imagen usando un nivel definido de umbral.
-*/
-void IMGVTK::umbralizar(IMG_IDX img_idx, const double umbral){
 
-    if( !threshold_ptr ){
-        threshold = vtkSmartPointer<vtkImageData>::New();
-
-        threshold->SetExtent(0, cols-1, 0, rens-1, 0, 0);
-        threshold->AllocateScalars( VTK_DOUBLE, 1);
-        threshold->SetOrigin(0.0, 0.0, 0.0);
-        threshold->SetSpacing(1.0, 1.0, 1.0);
-
-        threshold_ptr = static_cast<double*>(threshold->GetScalarPointer(0,0,0));
-    }
-
-    double *img_ptr = NULL;
-    switch( img_idx ){
-        case BASE:
-            img_ptr = base_ptr;
-            break;
-        case MASK:
-            img_ptr = mask_ptr;
-            break;
-        case SEGMENT:
-            img_ptr = segment_ptr;
-            break;
-    }
-
-DEB_MSG("Umbral: " << umbral);
-    // Se umbraliza la imagen con el valor definido:
-    for( int xy = 0; xy < rens_cols; xy++){
-        *(threshold_ptr + xy) = (*(img_ptr + xy) >= umbral) ? 1.0 : 0.0;
-    }
-}
-
-
-
-
-
-/*  Metodo: umbralizar
+/*  Metodo: umbralizarOTSU
     Funcion: Utiliza el metodo de Otsu para umbralizar la imagen y separar el fondo y el primer plano de la imagen.
 */
-void IMGVTK::umbralizar(IMG_IDX img_idx){
-
-    if( !threshold_ptr ){
-        threshold = vtkSmartPointer<vtkImageData>::New();
-
-        threshold->SetExtent(0, cols-1, 0, rens-1, 0, 0);
-        threshold->AllocateScalars( VTK_DOUBLE, 1);
-        threshold->SetOrigin(0.0, 0.0, 0.0);
-        threshold->SetSpacing(1.0, 1.0, 1.0);
-
-        threshold_ptr = static_cast<double*>(threshold->GetScalarPointer(0,0,0));
-    }
-
-    double *img_ptr = NULL;
-    switch( img_idx ){
-        case BASE:
-            img_ptr = base_ptr;
-            break;
-        case MASK:
-            img_ptr = mask_ptr;
-            break;
-        case SEGMENT:
-            img_ptr = segment_ptr;
-            break;
-    }
-
-    double max =-1e100;
-    double min = 1e100;
-
-    for( int xy = 0; xy < rens_cols; xy++){
-        if( *(img_ptr + xy) < min){
-            min = *(img_ptr + xy);
-        }
-        if( *(img_ptr + xy) > max){
-            max = *(img_ptr + xy);
-        }
-    }
-DEB_MSG("min resp: " << min << ", max resp: " << max);
-
-    // Obtener el numero de clases con la regla de Sturges:
+double IMGVTK::umbralizarOTSU( const double *img_ptr, const double min, const double max){
     const int clases = 256;//(int)(1.0 + 3.322*log10(rens_cols));
-    double *histograma_frecuencias = new double [clases];
-    memset(histograma_frecuencias, 0, clases*sizeof(double));
+    double *histograma_frecuencias = (double*) calloc(clases, sizeof(double));
 
     // Obtener el histograma de frecuencias a cada nivel de grises de la imagen y las frecuencias acumuladas:
     double suma = 0.0;
-    const double fraccion = 1.0 / (double)rens_cols;
+    const double fraccion = 1.0 / (double)rows_cols;
 
-    for( int xy = 0; xy < rens_cols; xy ++){
+    for( int xy = 0; xy < rows_cols; xy ++){
         const int clase_i = (int)((clases-1) * (*(img_ptr + xy) - min)/(max - min));
         histograma_frecuencias[ clase_i ] += fraccion;
         suma += (double)(clase_i+1);
     }
 
-	suma *= fraccion;
+    suma *= fraccion;
 
     double suma_back = 0;
     double peso_back = 0.0;
@@ -1631,14 +1552,122 @@ DEB_MSG("min resp: " << min << ", max resp: " << max);
         }
     }
 
-    delete [] histograma_frecuencias;
-DEB_MSG("Umbral: " << umbral);
+    free( histograma_frecuencias );
+    DEB_MSG("Umbral: " << umbral);
 
-    // Se umbraliza la imagen con el valor optimo encontrado:
-    for( int xy = 0; xy < rens_cols; xy++){
-        *(threshold_ptr + xy) = ( ((*(img_ptr + xy) - min) / (max - min)) >= umbral) ? 1.0 : 0.0;
+    return umbral;
+}
+
+
+
+
+
+/*  Metodo: umbralizarRIDCAL
+    Funcion: Utiliza el metodo de Otsu para umbralizar la imagen y separar el fondo y el primer plano de la imagen.
+*/
+double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const double max){
+    double umbral_nuevo = 0.0;
+    // Obtener la media de la intensidad de la imagen como primera aproximacion del umbral
+    const double rango = 1.0 / (max - min);
+    const double fraccion = 1.0 / (double)rows_cols;
+    for( int xy = 0; xy < rows_cols; xy ++){
+        umbral_nuevo += *(img_ptr + xy) * rango;
+    }
+    umbral_nuevo *= fraccion;
+
+    double umbral;
+    while( 1 ){
+        const double umbral_previo = umbral_nuevo;
+        umbral = umbral_previo;
+
+        double m_abajo = 0.0;
+        double m_arriba = 0.0;
+
+        for( int xy = 0; xy < rows_cols; xy++){
+            if( *(img_ptr + xy) <= umbral ){
+                m_abajo += *(img_ptr + xy);
+            }else{
+                m_arriba += *(img_ptr + xy);
+            }
+        }
+
+        m_abajo *= fraccion;
+        m_arriba *= fraccion;
+
+        umbral_nuevo = (m_arriba + m_abajo) / 2.0;
+
+        if( fabs(umbral_nuevo - umbral_previo) < 1e-5 ){
+            break;
+        }
     }
 
+    DEB_MSG("Umbral: " << umbral);
+
+    return umbral;
+}
+
+
+
+
+/*  Metodo: umbralizar
+    Funcion: Utiliza el metodo de Otsu o Ridler & Calvard para umbralizar la imagen y separar el fondo y el primer plano de la imagen.
+*/
+void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const double nivel){
+
+    if( !threshold_ptr ){
+        threshold = vtkSmartPointer<vtkImageData>::New();
+
+        threshold->SetExtent(0, cols-1, 0, rows-1, 0, 0);
+        threshold->AllocateScalars( VTK_DOUBLE, 1);
+        threshold->SetOrigin(0.0, 0.0, 0.0);
+        threshold->SetSpacing(1.0, 1.0, 1.0);
+
+        threshold_ptr = static_cast<double*>(threshold->GetScalarPointer(0,0,0));
+    }
+
+    double *img_ptr = NULL;
+    switch( img_idx ){
+        case BASE:
+            img_ptr = base_ptr;
+            break;
+        case MASK:
+            img_ptr = mask_ptr;
+            break;
+        case SEGMENT:
+            img_ptr = segment_ptr;
+            break;
+    }
+
+    double max =-1e100;
+    double min = 1e100;
+
+    for( int xy = 0; xy < rows_cols; xy++){
+        if( *(img_ptr + xy) < min){
+            min = *(img_ptr + xy);
+        }
+        if( *(img_ptr + xy) > max){
+            max = *(img_ptr + xy);
+        }
+    }
+
+    double umbral = 0.0;
+
+    switch( tipo_umb ){
+        case NIVEL:
+            umbral = nivel;
+            break;
+        case OTSU:
+            umbral = umbralizarOTSU( img_ptr, min, max);
+            break;
+        case RIDLER_CALVARD:
+            umbral = umbralizarRIDCAL( img_ptr, min, max);
+            break;
+    }
+
+    // Se umbraliza la imagen con el valor optimo encontrado:
+    for( int xy = 0; xy < rows_cols; xy++){
+        *(threshold_ptr + xy) = ( ((*(img_ptr + xy) - min) / (max - min)) >= umbral) ? 1.0 : 0.0;
+    }
 }
 
 
@@ -2174,12 +2203,12 @@ void IMGVTK::Cargar(const char *ruta_origen, const bool enmascarar, const int ni
     base->GetDimensions( dims );
 
     cols = dims[0];
-    rens = dims[1];
-    rens_cols = rens*cols;
+    rows = dims[1];
+    rows_cols = rows*cols;
 
     if( !segment ){
         segment = vtkSmartPointer<vtkImageData>::New();
-        segment->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+        segment->SetExtent(0, cols-1, 0, rows-1, 0, 0);
         segment->AllocateScalars( VTK_DOUBLE, 1);
         segment->SetOrigin(0.0, 0.0, 0.0);
         segment->SetSpacing(1.0, 1.0, 1.0);
@@ -2207,11 +2236,11 @@ void IMGVTK::Cargar(char **rutas , const int n_imgs, const bool enmascarar){
     base->GetDimensions( dims );
 
     cols = dims[0];
-    rens = dims[1];
-    rens_cols = rens*cols;
+    rows = dims[1];
+    rows_cols = rows*cols;
 
     segment = vtkSmartPointer<vtkImageData>::New();
-    segment->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+    segment->SetExtent(0, cols-1, 0, rows-1, 0, 0);
     segment->AllocateScalars( VTK_DOUBLE, 1);
     segment->SetOrigin(0.0, 0.0, 0.0);
     segment->SetSpacing(1.0, 1.0, 1.0);
@@ -2257,7 +2286,7 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
 
     // Alojar memoria para la imagen:
     vtkSmartPointer<vtkImageData> img_out = vtkSmartPointer<vtkImageData>::New();
-    img_out->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+    img_out->SetExtent(0, cols-1, 0, rows-1, 0, 0);
     img_out->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
     img_out->SetOrigin(0.0, 0.0, 0.0);
     img_out->SetSpacing(1.0, 1.0, 1.0);
@@ -2266,7 +2295,7 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
     double min = INF;
     double max =-INF;
 
-    for( int y = 0; y < rens; y++ ){
+    for( int y = 0; y < rows; y++ ){
         for( int x = 0; x < cols; x++ ){
             if( min > *(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) ){
                 min = *(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2));
@@ -2284,7 +2313,7 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
 
     DEB_MSG(COLOR_BACK_GREEN COLOR_BACK_BLACK "GUARDAR" COLOR_NORMAL " min: " << min << ", " << max);
 
-    for( int y = 0; y < rens; y++ ){
+    for( int y = 0; y < rows; y++ ){
         for( int x = 0; x < cols; x++ ){
             *(img_out_ptr + x + y*cols) = (unsigned char)(255.0 * (*(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) - min) / (max - min));
         }
@@ -2323,7 +2352,7 @@ IMGVTK::IMGVTK(){
     mi_log = NULL;
 
     cols = 0;
-    rens = 0;
+    rows = 0;
     max_dist = 0;
 
     map_ptr = NULL;
@@ -2377,73 +2406,73 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
 
 
     cols = origen.cols;
-    rens = origen.rens;
-    rens_cols = rens * cols;
+    rows = origen.rows;
+    rows_cols = rows * cols;
 
     if(origen.base_ptr){
 
         base = vtkSmartPointer<vtkImageData>::New();
-        base->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+        base->SetExtent(0, cols-1, 0, rows-1, 0, 0);
         base->AllocateScalars( VTK_DOUBLE, 1);
         base->SetOrigin(0.0, 0.0, 0.0);
         base->SetSpacing(1.0, 1.0, 1.0);
 
         base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
-        memcpy(base_ptr, origen.base_ptr, rens_cols*sizeof(double));
+        memcpy(base_ptr, origen.base_ptr, rows_cols*sizeof(double));
 
         if(origen.mask_ptr){
             mask = vtkSmartPointer<vtkImageData>::New();
-            mask->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+            mask->SetExtent(0, cols-1, 0, rows-1, 0, 0);
             mask->AllocateScalars( VTK_DOUBLE, 1);
             mask->SetOrigin(0.0, 0.0, 0.0);
             mask->SetSpacing(1.0, 1.0, 1.0);
             mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
 
-            memcpy(mask_ptr, origen.mask_ptr, rens_cols*sizeof(double));
+            memcpy(mask_ptr, origen.mask_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.segment_ptr){
             segment = vtkSmartPointer<vtkImageData>::New();
-            segment->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+            segment->SetExtent(0, cols-1, 0, rows-1, 0, 0);
             segment->AllocateScalars( VTK_DOUBLE, 1);
             segment->SetOrigin(0.0, 0.0, 0.0);
             segment->SetSpacing(1.0, 1.0, 1.0);
             segment_ptr = static_cast<double*>(segment->GetScalarPointer(0, 0, 0));
 
-            memcpy(segment_ptr, origen.segment_ptr, rens_cols*sizeof(double));
+            memcpy(segment_ptr, origen.segment_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.skl_ptr){
             skeleton = vtkSmartPointer<vtkImageData>::New();
-            skeleton->SetExtent(0, cols+1, 0, rens+1, 0, 0);
+            skeleton->SetExtent(0, cols+1, 0, rows+1, 0, 0);
             skeleton->AllocateScalars( VTK_DOUBLE, 1);
             skeleton->SetOrigin(0.0, 0.0, 0.0);
             skeleton->SetSpacing(1.0, 1.0, 1.0);
             skl_ptr = static_cast<double*>(skeleton->GetScalarPointer(0, 0, 0));
 
-            memcpy(skl_ptr, origen.skl_ptr, rens_cols*sizeof(double));
+            memcpy(skl_ptr, origen.skl_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.map_ptr){
             mapa_dist = vtkSmartPointer<vtkImageData>::New();
-            mapa_dist->SetExtent(0, cols, 0, rens, 0, 0);
+            mapa_dist->SetExtent(0, cols, 0, rows, 0, 0);
             mapa_dist->AllocateScalars( VTK_DOUBLE, 1);
             mapa_dist->SetOrigin(0.0, 0.0, 0.0);
             mapa_dist->SetSpacing(1.0, 1.0, 1.0);
             map_ptr = static_cast<double*>(mapa_dist->GetScalarPointer(0, 0, 0));
 
-            memcpy(map_ptr, origen.map_ptr, rens_cols*sizeof(double));
+            memcpy(map_ptr, origen.map_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.borders_ptr){
             borders = vtkSmartPointer<vtkImageData>::New();
-            borders->SetExtent(0, cols, 0, rens, 0, 0);
+            borders->SetExtent(0, cols, 0, rows, 0, 0);
             borders->AllocateScalars( VTK_DOUBLE, 1);
             borders->SetOrigin(0.0, 0.0, 0.0);
             borders->SetSpacing(1.0, 1.0, 1.0);
             borders_ptr = static_cast<double*>(borders->GetScalarPointer(0, 0, 0));
 
-            memcpy(borders_ptr, origen.borders_ptr, rens_cols*sizeof(double));
+            memcpy(borders_ptr, origen.borders_ptr, rows_cols*sizeof(double));
         }
     }
 }
@@ -2552,73 +2581,73 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
 
 
     cols = origen.cols;
-    rens = origen.rens;
-    rens_cols = rens * cols;
+    rows = origen.rows;
+    rows_cols = rows * cols;
 
     if(origen.base_ptr){
 
         base = vtkSmartPointer<vtkImageData>::New();
-        base->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+        base->SetExtent(0, cols-1, 0, rows-1, 0, 0);
         base->AllocateScalars( VTK_DOUBLE, 1);
         base->SetOrigin(0.0, 0.0, 0.0);
         base->SetSpacing(1.0, 1.0, 1.0);
 
         base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
-        memcpy(base_ptr, origen.base_ptr, rens_cols*sizeof(double));
+        memcpy(base_ptr, origen.base_ptr, rows_cols*sizeof(double));
 
         if(origen.mask_ptr){
             mask = vtkSmartPointer<vtkImageData>::New();
-            mask->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+            mask->SetExtent(0, cols-1, 0, rows-1, 0, 0);
             mask->AllocateScalars( VTK_DOUBLE, 1);
             mask->SetOrigin(0.0, 0.0, 0.0);
             mask->SetSpacing(1.0, 1.0, 1.0);
             mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
 
-            memcpy(mask_ptr, origen.mask_ptr, rens_cols*sizeof(double));
+            memcpy(mask_ptr, origen.mask_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.segment_ptr){
             segment = vtkSmartPointer<vtkImageData>::New();
-            segment->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+            segment->SetExtent(0, cols-1, 0, rows-1, 0, 0);
             segment->AllocateScalars( VTK_DOUBLE, 1);
             segment->SetOrigin(0.0, 0.0, 0.0);
             segment->SetSpacing(1.0, 1.0, 1.0);
             segment_ptr = static_cast<double*>(segment->GetScalarPointer(0, 0, 0));
 
-            memcpy(segment_ptr, origen.segment_ptr, rens_cols*sizeof(double));
+            memcpy(segment_ptr, origen.segment_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.skl_ptr){
             skeleton = vtkSmartPointer<vtkImageData>::New();
-            skeleton->SetExtent(0, cols+1, 0, rens+1, 0, 0);
+            skeleton->SetExtent(0, cols+1, 0, rows+1, 0, 0);
             skeleton->AllocateScalars( VTK_DOUBLE, 1);
             skeleton->SetOrigin(0.0, 0.0, 0.0);
             skeleton->SetSpacing(1.0, 1.0, 1.0);
             skl_ptr = static_cast<double*>(skeleton->GetScalarPointer(0, 0, 0));
 
-            memcpy(skl_ptr, origen.skl_ptr, rens_cols*sizeof(double));
+            memcpy(skl_ptr, origen.skl_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.map_ptr){
             mapa_dist = vtkSmartPointer<vtkImageData>::New();
-            mapa_dist->SetExtent(0, cols, 0, rens, 0, 0);
+            mapa_dist->SetExtent(0, cols, 0, rows, 0, 0);
             mapa_dist->AllocateScalars( VTK_DOUBLE, 1);
             mapa_dist->SetOrigin(0.0, 0.0, 0.0);
             mapa_dist->SetSpacing(1.0, 1.0, 1.0);
             map_ptr = static_cast<double*>(mapa_dist->GetScalarPointer(0, 0, 0));
 
-            memcpy(map_ptr, origen.map_ptr, rens_cols*sizeof(double));
+            memcpy(map_ptr, origen.map_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.borders_ptr){
             borders = vtkSmartPointer<vtkImageData>::New();
-            borders->SetExtent(0, cols, 0, rens, 0, 0);
+            borders->SetExtent(0, cols, 0, rows, 0, 0);
             borders->AllocateScalars( VTK_DOUBLE, 1);
             borders->SetOrigin(0.0, 0.0, 0.0);
             borders->SetSpacing(1.0, 1.0, 1.0);
             borders_ptr = static_cast<double*>(borders->GetScalarPointer(0, 0, 0));
 
-            memcpy(borders_ptr, origen.borders_ptr, rens_cols*sizeof(double));
+            memcpy(borders_ptr, origen.borders_ptr, rows_cols*sizeof(double));
         }
     }
 

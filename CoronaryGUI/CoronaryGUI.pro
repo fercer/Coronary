@@ -14,8 +14,14 @@ TEMPLATE = app
 INCLUDEPATH += /usr/local/include/vtk-6.3/
 
 SOURCES += main.cpp\
-        coronarygui.cpp
+           coronarygui.cpp\
+           ../src/IMGVTK.cpp\
+           ../src/reconstructor_3D.cpp\
+           ../src/filtros.cpp
 
-HEADERS  += coronarygui.h
+HEADERS  += coronarygui.h\
+            ../src/IMGVTK.h\
+            ../src/reconstructor_3D.h\
+            ../src/filtros.h
 
 FORMS    += coronarygui.ui

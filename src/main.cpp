@@ -291,8 +291,8 @@ int main(int argc, char** argv ){
         reconstructor.setFiltroEntrenamiento( FILTROS::EXHAUSTIVA, 0, 0);
         reconstructor.setFiltroEval( FILTROS::CORCON );
         reconstructor.setFiltroMetodo( FILTROS::SS_GABOR );
-        reconstructor.setFiltroParametros( FILTROS::PAR_L, 2.9);//, 5.0, 0.1);
-        reconstructor.setFiltroParametros( FILTROS::PAR_T, 11.0 );
+        reconstructor.setFiltroParametros( FILTROS::PAR_L, 1.0, 18.0, 0.1);
+        reconstructor.setFiltroParametros( FILTROS::PAR_T, 1.0, 16.0, 1.0);
         reconstructor.setFiltroParametros( FILTROS::PAR_K, 45.0);
         //reconstructor.setFiltroParametros( FILTROS::PAR_SIGMA, 1.5, 2.3, 0.001);
 
@@ -305,7 +305,6 @@ int main(int argc, char** argv ){
         reconstructor.setFiltroLimites( FILTROS::PAR_SIGMA, 1.0, 5.0, 1e-4);
         reconstructor.setFiltroParametros( FILTROS::PAR_K, 12.0);
         */
-
 
         reconstructor.segmentarImagenBase();
         //reconstructor.skeletonize();

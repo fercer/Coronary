@@ -66,7 +66,7 @@ void RECONS3D::isoCentro( const int angio_ID ){
     const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
 
     const int mis_cols = imgs_base[angio_ID].cols;
-    const int mis_rens = imgs_base[angio_ID].rens;
+    const int mis_rens = imgs_base[angio_ID].rows;
 
     const double mi_DDP = imgs_base[angio_ID].DDP;
 
@@ -138,7 +138,7 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
     const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
 
     const int mis_cols = imgs_base[angio_ID].cols;
-    const int mis_rens = imgs_base[angio_ID].rens;
+    const int mis_rens = imgs_base[angio_ID].rows;
     const double mi_pixX = imgs_base[angio_ID].pixX;
     const double mi_pixY = imgs_base[angio_ID].pixY;
 
@@ -183,9 +183,8 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
 */
 void RECONS3D::mostrarImagen( IMGVTK &img_src, IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer){
 
-
     int mis_cols = img_src.cols;
-    int mis_rens = img_src.rens;
+    int mis_rens = img_src.rows;
 
     vtkSmartPointer< vtkImageData> img_ptr = NULL;
 
@@ -210,9 +209,9 @@ void RECONS3D::mostrarImagen( IMGVTK &img_src, IMGVTK::IMG_IDX img_idx, vtkSmart
         case IMGVTK::MAPDIST:
             img_ptr = img_src.mapa_dist;
             break;
-		case IMGVTK::BORDERS:
-			img_ptr = img_src.borders;
-			break;
+        case IMGVTK::BORDERS:
+                img_ptr = img_src.borders;
+                break;
     }
 
     const int mis_rens_cols = mis_rens*mis_cols;
@@ -270,7 +269,7 @@ DEB_MSG("min: " << min << ", max: " << max);
 */
 void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
     const int mis_cols = imgs_base[angio_ID].cols;
-    const int mis_rens = imgs_base[angio_ID].rens;
+    const int mis_rens = imgs_base[angio_ID].rows;
 
     int offset_y = 0, offset_x = 0;
     double *img_ptr = NULL;
@@ -296,9 +295,9 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
         case IMGVTK::MAPDIST:
             img_ptr = imgs_base[angio_ID].map_ptr;
             break;
-		case IMGVTK::BORDERS:
-			img_ptr = imgs_base[angio_ID].borders_ptr;
-			break;
+        case IMGVTK::BORDERS:
+                img_ptr = imgs_base[angio_ID].borders_ptr;
+                break;
     }
 
     vtkSmartPointer<vtkUnsignedCharArray> intensidades = vtkSmartPointer<vtkUnsignedCharArray>::New();
@@ -542,7 +541,7 @@ void RECONS3D::mostrarDetector(const int angio_ID){
 
 DEB_MSG("Mostrando detector para: " << angio_ID << ", LAORAO: " << imgs_base[angio_ID].LAORAO << ", CRACAU: " << imgs_base[angio_ID].CRACAU << ", SID: " << imgs_base[angio_ID].SID << ", SOD: " << imgs_base[angio_ID].SOD );
 
-    const int mis_rens = imgs_base[n_angios].rens;
+    const int mis_rens = imgs_base[n_angios].rows;
     const int mis_cols = imgs_base[n_angios].cols;
 
     const double mi_pixX = imgs_base[angio_ID].pixX;
@@ -733,12 +732,23 @@ void RECONS3D::agregarGroundtruth(const char *rutaground_input, const int angio_
 }
 
 
-/*  Metodo: setFiltroLimites
+
+/*  Metodo: setFiltroParametros
 
     Funcion:
 */
 void RECONS3D::setFiltroParametros(const FILTROS::PARAMETRO par, const double inf, const double sup, const double delta){
     filtro.setLim( par, inf, sup, delta );
+}
+
+
+
+/*  Metodo: umbralizar
+
+    Funcion:
+*/
+void RECONS3D::umbralizar( const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbral, const double umbral ){
+    imgs_base[ angio_ID ].umbralizar( IMGVTK::SEGMENT, mi_umbral, umbral );
 }
 
 
@@ -750,6 +760,7 @@ void RECONS3D::setFiltroParametros(const FILTROS::PARAMETRO par, const double in
 void RECONS3D::setFiltroEntrenamiento(const FILTROS::EVO_MET evo_met, const int m_iters, const int pob){
     filtro.setEvoMet(evo_met, m_iters, pob);
 }
+
 
 
 /*  Metodo: setFiltroEval
@@ -791,56 +802,83 @@ void RECONS3D::setFiltroParametros(){
 }
 
 
-/*  Metodo: segmentarImagen()
 
-    Funcion: Aplica el filtro a todas las imagenes.
+
+/*  Metodo: getRows
+
+    Funcion:
 */
-void RECONS3D::segmentarImagenBase(){
-    for( int i = 0; i <= n_angios; i++){
-        segmentarImagenBase( i );
-    }
+int RECONS3D::getRows( const int angio_ID ){
+    return imgs_base[angio_ID].rows;
+}
+
+
+
+/*  Metodo: getCols
+
+    Funcion:
+*/
+int RECONS3D::getCols( const int angio_ID ){
+    return imgs_base[angio_ID].cols;
 }
 
 
 
 
-/*  Metodo: segmentarImagen()
+/*  Metodo: get_pixelData
+
+    Funcion: Retorna el apuntador a la informacion de la imagen seleccionada con img_idx
+*/
+double* RECONS3D::get_pixelData(const int angio_ID, IMGVTK::IMG_IDX img_idx){
+
+    double *img_ptr = NULL;
+
+    switch(img_idx){
+        case IMGVTK::BASE:
+            img_ptr = imgs_base[angio_ID].base_ptr;
+            break;
+        case IMGVTK::MASK:
+            img_ptr = imgs_base[angio_ID].mask_ptr;
+            break;
+        case IMGVTK::SKELETON:
+            img_ptr = imgs_base[angio_ID].skl_ptr;
+            break;
+        case IMGVTK::SEGMENT:
+            img_ptr = imgs_base[angio_ID].segment_ptr;
+            break;
+        case IMGVTK::THRESHOLD:
+            img_ptr = imgs_base[angio_ID].threshold_ptr;
+            break;
+        case IMGVTK::MAPDIST:
+            img_ptr = imgs_base[angio_ID].map_ptr;
+            break;
+        case IMGVTK::BORDERS:
+            img_ptr = imgs_base[angio_ID].borders_ptr;
+            break;
+    }
+
+    return img_ptr;
+}
+
+
+/*  Metodo: segmentarImagen
 
     Funcion: Aplica el filtro con los parametros definidos
 */
-void RECONS3D::segmentarImagenBase( const int angio_ID){
+void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
     filtro.setInput(imgs_base[angio_ID]);
     if( existe_ground[angio_ID] ){
         filtro.setInputGround(imgs_delin[angio_ID]);
     }
 
-    DEB_MSG("Optimizando parametros " << filtro.getParametrosOptimizar());
     if( filtro.getParametrosOptimizar() >= 1 ){
         filtro.setPar();
     }
 
     filtro.filtrar();
-    escribirLog( "El filtrado de la imagen base termino con exito" );
+    escribirLog( "\nEl filtrado de la imagen base termino con exito\n" );
 }
-
-
-
-
-/*  Metodo: skeletonize
-
-    Funcion: Obtiene el esqueleto de todas las imagenes:
-*/
-void RECONS3D::skeletonize(){
-    for( int i = 0; i <= n_angios; i++){
-        skeletonize( i );
-    }
-    escribirLog( "Extraccion de los esqueletos lista" );
-}
-
-
-
-
 
 
 
@@ -1119,7 +1157,6 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
     for( int i = 0; i < grafo->n_hijos; i++){
         mostrarRadios(puntos, vert_skl, grafo_nivel, n_pix, grafo->hijos[i], DDP, crl, srl, ccc, scc, n_niveles);
     }
-
 }
 
 
@@ -1138,7 +1175,7 @@ void RECONS3D::skeletonize(const int angio_ID){
 
     //if( !imgs_base[angio_ID].pix_caract ){
     if( !imgs_delin[angio_ID].pix_caract ){
-        DEB_MSG("No existe grafo...");
+        DEB_MSG("No existe grafo alguno...");
         return;
     }
 
@@ -1206,6 +1243,7 @@ void RECONS3D::mostrarBase( const int angio_ID ){
         escribirLog( mensaje );
     }else{
         mostrarImagen( imgs_base[angio_ID], IMGVTK::BASE, mis_renderers[ angio_ID ]);
+        renderizar( mis_renderers[angio_ID] );
     }
 }
 

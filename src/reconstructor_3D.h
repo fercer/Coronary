@@ -150,7 +150,6 @@ class RECONS3D{
         void mostrarImagen(IMGVTK &imagen, IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer );
         void mostrarImagen(const int angio_ID, IMGVTK::IMG_IDX img_idx);
 
-
         void agregarVector(NORCEN org_dir, const double t, double color[], vtkSmartPointer<vtkRenderer> &mi_renderer);
         void agregarEjes(vtkSmartPointer<vtkRenderer> &mi_renderer);
         void agregarEsfera(const double x, const double y, const double z, const double radio, double color[3], vtkSmartPointer<vtkRenderer> mi_renderer );
@@ -178,13 +177,14 @@ class RECONS3D{
 
         void agregarGroundtruth(const char *rutaground_input, const int angio_ID);
 
-        void segmentarImagenBase();
         void segmentarImagenBase(const int angio_ID );
-        void skeletonize();
+
         void skeletonize(const int angio_ID);
 
         void mostrarBase( const int angio_ID );
         void mostrarGroundtruth(  const int angio_ID  );
+
+        void umbralizar(const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbral, const double umbral );
 
         void setFiltroEntrenamiento( const FILTROS::EVO_MET evo_met, const int m_iters, const int pob);
         void setFiltroEval( const FILTROS::FITNESS fit_fun);
@@ -193,6 +193,11 @@ class RECONS3D{
         void setFiltroParametros(const FILTROS::PARAMETRO par, const double inf, const double sup, const double delta);
         void setFiltroParametros( const FILTROS::PARAMETRO par, const double val );
         void setFiltroParametros();
+
+        int getRows( const int angio_ID );
+        int getCols( const int angio_ID );
+
+        double *get_pixelData( const int angio_ID, IMGVTK::IMG_IDX img_idx );
 
         vtkSmartPointer< vtkRenderer > getRenderer();
         vtkSmartPointer< vtkRenderer > getRenderer( const int angio_ID );

@@ -44,26 +44,26 @@
 
 
 #define COLOR_NORMAL		"\33[0m"
-#define COLOR_BOLD			"\33[1m"
-#define COLOR_UNDER			"\33[4m"
-#define COLOR_BLINK			"\33[5m"
+#define COLOR_BOLD		"\33[1m"
+#define COLOR_UNDER		"\33[4m"
+#define COLOR_BLINK		"\33[5m"
 #define COLOR_INVERSE		"\33[7m"
-#define COLOR_BLACK			"\33[30m"
-#define COLOR_RED			"\33[31m"
-#define COLOR_GREEN			"\33[32m"
+#define COLOR_BLACK		"\33[30m"
+#define COLOR_RED		"\33[31m"
+#define COLOR_GREEN		"\33[32m"
 #define COLOR_YELLOW		"\33[33m"
-#define COLOR_BLUE			"\33[34m"
+#define COLOR_BLUE		"\33[34m"
 #define COLOR_MAGENTA		"\33[35m"
-#define COLOR_CYAN			"\33[36m"
-#define COLOR_WHITE			"\33[37m"
-#define COLOR_BACK_BLACK    "\33[40m"
-#define COLOR_BACK_RED      "\33[41m"
-#define COLOR_BACK_GREEN    "\33[42m"
-#define COLOR_BACK_YELLOW   "\33[43m"
-#define COLOR_BACK_BLUE     "\33[44m"
-#define COLOR_BACK_MAGENTA  "\33[45m"
-#define COLOR_BACK_CYAN     "\33[46m"
-#define COLOR_BACK_WHITE    "\33[47m"
+#define COLOR_CYAN		"\33[36m"
+#define COLOR_WHITE		"\33[37m"
+#define COLOR_BACK_BLACK        "\33[40m"
+#define COLOR_BACK_RED          "\33[41m"
+#define COLOR_BACK_GREEN        "\33[42m"
+#define COLOR_BACK_YELLOW       "\33[43m"
+#define COLOR_BACK_BLUE         "\33[44m"
+#define COLOR_BACK_MAGENTA      "\33[45m"
+#define COLOR_BACK_CYAN         "\33[46m"
+#define COLOR_BACK_WHITE        "\33[47m"
 
 
 #ifdef _OPENMP
@@ -118,6 +118,9 @@ class IMGVTK{
         /** TIPO_CARACT:   **/
         typedef enum TIPO_CARACT { PIX_SKL, PIX_END, PIX_BRANCH, PIX_CROSS } TIPO_CARACT;
 
+        /** TIPO_UMBRAL:    **/
+        typedef enum TIPO_UMBRAL { NIVEL, OTSU, RIDLER_CALVARD} TIPO_UMBRAL;
+
         /** PIX_PAR:   **/
         typedef struct PIX_PAR {
             double x, y, x_r, y_r;
@@ -132,8 +135,7 @@ class IMGVTK{
         // M E T O D O S      P U B L I C O S
         void definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src );
         void skeletonization(IMG_IDX img_idx);
-        void umbralizar(IMG_IDX img_idx, const double umbral);
-        void umbralizar(IMG_IDX img_idx);
+        void umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const double nivel);
         void lengthFilter(IMG_IDX img_idx, const int min_length);
         void regionFill(IMG_IDX img_idx);
         void mapaDistancias(IMG_IDX img_idx);
@@ -165,9 +167,9 @@ class IMGVTK{
         vtkSmartPointer<vtkImageData> segment;
         vtkSmartPointer<vtkImageData> threshold;
         vtkSmartPointer<vtkImageData> mapa_dist;
-		vtkSmartPointer<vtkImageData> borders;
+        vtkSmartPointer<vtkImageData> borders;
 
-        int rens, cols, rens_cols;
+        int rows, cols, rows_cols;
         int n_niveles;
         double *base_ptr;
         double *skl_ptr;
@@ -175,7 +177,7 @@ class IMGVTK{
         double *segment_ptr;
         double *threshold_ptr;
         double *map_ptr;
-		double *borders_ptr;
+        double *borders_ptr;
 
         //// Datos extraidos del archivo DICOM:
         double SID, SOD, DDP, DISO;
@@ -208,6 +210,9 @@ class IMGVTK{
         bool regionFilling5( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
         bool regionFilling3( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
         void regionFill( double *ptr, const int mis_cols, const int mis_rens);
+
+        double umbralizarOTSU(const double *img_ptr, const double min, const double max);
+        double umbralizarRIDCAL( const double *img_ptr, const double min, const double max);
 
         inline unsigned char sklMask(const double *skl_ptr, const int x, const int y, const int mis_cols, const int mis_rens);
 
