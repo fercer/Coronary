@@ -11,6 +11,7 @@
 #include <QPixmap>
 #include <QVector>
 #include <QRgb>
+#include <QSlider>
 
 #include <vector>
 
@@ -31,7 +32,7 @@ public:
 private slots:
     void defineColors();
 
-    void showImage(IMGVTK::IMG_IDX, const int viewport_ID );
+    void showImage(IMGVTK::IMG_IDX, const int viewport_ID , const int img_i);
 
     void loadBase();
     void loadGroundtruth();
@@ -49,6 +50,8 @@ private slots:
 
     void on_btnMaximizeVP4_clicked();
 
+    void on_hsldImages_valueChanged(int value);
+
 private:
     QVector<QRgb> colors;
     Ui::coronaryGUI *ui;
@@ -56,7 +59,7 @@ private:
     QImage *imgBase;
 
     RECONS3D mi_rec3D;
-    bool loaded, show_gt;
+    bool loaded, showing_gt;
     bool maximized;
 };
 

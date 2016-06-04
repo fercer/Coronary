@@ -170,14 +170,14 @@ class RECONS3D{
         ~RECONS3D();
 
     // M E T O D O S        P U B L I C O S
-        void agregarInput(char **rutasbase_input, char **rutasground_input, const int n_imgs);
         void agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input);
         void agregarInput(const char *rutabase_input);
+        void agregarInput(char **rutasbase_input, const int n_imgs);
 
         void agregarGroundtruth(const char *rutaground_input, const int angio_ID);
+        void agregarGroundtruth(char **rutasground_input, const int n_imgs, const int angio_ID );
 
         void segmentarImagenBase(const int angio_ID );
-
         void skeletonize(const int angio_ID);
 
         void mostrarBase( const int angio_ID );

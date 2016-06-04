@@ -615,23 +615,6 @@ DEB_MSG("Mostrando detector para: " << angio_ID << ", LAORAO: " << imgs_base[ang
 //-------------------------------------------------------------------------------------------------- PUBLIC----- v
 
 // M I E M B R O S      P U B L I C O S
-/*  Metodo: agregarInput
-
-    Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
-*/
-void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, const int n_imgs){
-    n_angios++;
-
-    imgs_base.push_back(IMGVTK(rutasbase_input, n_imgs, true));
-    imgs_base[n_angios].setLog( mi_log );
-    imgs_base.push_back(IMGVTK());
-
-    // Mostrar la imagen en un renderizador
-    mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
-
-}
-
-
 
 /*  Metodo: agregarInput
 
@@ -715,6 +698,39 @@ void RECONS3D::agregarInput( const char *rutabase_input ){
 
 
 
+
+/*  Metodo: agregarInput
+
+    Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
+*/
+void RECONS3D::agregarInput( char **rutasbase_input, const int n_imgs){
+
+
+    n_angios++;
+
+    NORCEN norcen_temp;
+
+    imgs_base.push_back(IMGVTK(rutasbase_input, n_imgs, true));
+    imgs_base[n_angios].setLog( mi_log );
+    existe_ground.push_back( false );
+
+    // Mostrar la imagen en un renderizador
+    mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
+
+    puntos.push_back(vtkSmartPointer<vtkPoints>::New());
+    pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
+    normal_centros.push_back( norcen_temp );
+
+    /// Mover el detector a su posicion definida por el archivo DICOM:
+    mallarPuntos(n_angios);
+    isoCentro(n_angios);
+
+}
+
+
+
+
+
 /*  Metodo: agregarGroundtruth
 
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
@@ -726,6 +742,25 @@ void RECONS3D::agregarGroundtruth(const char *rutaground_input, const int angio_
         escribirLog( mensaje );
     }else{
         imgs_base[ angio_ID ].Cargar(IMGVTK::GROUNDTRUTH, rutaground_input, false, 0);
+        existe_ground[ angio_ID ] = true;
+    }
+}
+
+
+
+
+
+/*  Metodo: agregarGroundtruth
+
+    Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
+*/
+void RECONS3D::agregarGroundtruth(char **rutasground_input, const int n_imgs, const int angio_ID ){
+    if( angio_ID > n_angios ){
+        char mensaje[] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
+        sprintf(mensaje, "\n<<Error: El angiograma %i no ha sido agregado al reconstructor>>\n\n", angio_ID);
+        escribirLog( mensaje );
+    }else{
+        imgs_base[ angio_ID ].Cargar(IMGVTK::GROUNDTRUTH, rutasground_input, n_imgs, false);
         existe_ground[ angio_ID ] = true;
     }
 }
