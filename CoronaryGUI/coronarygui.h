@@ -43,10 +43,6 @@ private slots:
 
     void on_action_Quit_triggered();
 
-    void on_actionGMF_ROC_triggered();
-
-    void on_actionChaudhuri_triggered();
-
     void on_actionSkeletonize_triggered();
 
     void on_btnLoadGT_clicked();

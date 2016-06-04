@@ -39,21 +39,24 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
     double *img_ptr = NULL;
 
     switch( img_idx ){
-        case BASE:
-            img_ptr = base_ptr;
-            break;
-        case MASK:
-            img_ptr = mask_ptr;
-            break;
-        case SKELETON:
-            img_ptr = skl_ptr;
-            break;
-        case SEGMENT:
-            img_ptr = segment_ptr;
-            break;
-        case THRESHOLD:
-            img_ptr = threshold_ptr;
-            break;
+    case BASE:
+        img_ptr = base_ptr;
+        break;
+    case GROUNDTRUTH:
+        img_ptr = gt_ptr;
+        break;
+    case MASK:
+        img_ptr = mask_ptr;
+        break;
+    case SKELETON:
+        img_ptr = skl_ptr;
+        break;
+    case SEGMENT:
+        img_ptr = segment_ptr;
+        break;
+    case THRESHOLD:
+        img_ptr = threshold_ptr;
+        break;
     }
 
 
@@ -183,7 +186,7 @@ void IMGVTK::detectarBorde( IMG_IDX img_idx ){
         borders_ptr = static_cast<double*>(borders->GetScalarPointer(0, 0, 0));
     }
 
-        memset(borders_ptr, 0, rows_cols*sizeof(double));
+    memset(borders_ptr, 0, rows_cols*sizeof(double));
 
 	for (int xy = 0; xy < rows_cols; xy++) {
 		if ( (*(base_ptr + xy) > 0.5) && (*(map_ptr + xy) < 2.0) ) {
@@ -1678,6 +1681,12 @@ void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const doubl
 void IMGVTK::Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel, const bool enmascarar){
 
     const int ruta_l = strlen(ruta_origen);
+
+    if( ruta_l <= 0 ){
+        escribirLog( "\n<<Error: Hay un problema con la ruta de entrada, tiene longitud 0 >>\n\n" );
+        return;
+    }
+
 DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
     esDICOM = true;
     esDICOM *= strcmp(ruta_origen + ruta_l - 3, "png");
@@ -2186,25 +2195,119 @@ void IMGVTK::Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkIm
 /*  Metodo: Cargar
     Funcion: Cargar la imagen a formato VTK desde un archivo.
 */
-void IMGVTK::Cargar(const char *ruta_origen, const bool enmascarar, const int nivel){
-    if( !base ){
-        base = vtkSmartPointer<vtkImageData>::New();
+void IMGVTK::Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool enmascarar, const int nivel){
+
+    DEB_MSG("Cargando imagen desde: " COLOR_GREEN << ruta_origen << COLOR_NORMAL);
+
+    vtkSmartPointer<vtkImageData> img_temp = NULL;
+
+    switch( img_idx){
+    case BASE:
+        if( !base ){
+            base = vtkSmartPointer<vtkImageData>::New();
+        }
+        img_temp = base;
+
+        if( !mask ){
+            mask = vtkSmartPointer<vtkImageData>::New();
+        }
+        break;
+
+    case GROUNDTRUTH:
+        if( !ground ){
+            ground = vtkSmartPointer<vtkImageData>::New();
+        }
+        img_temp = ground;
+        break;
     }
-    if( !mask ){
-        mask = vtkSmartPointer<vtkImageData>::New();
+
+
+    Cargar(ruta_origen, img_temp, mask, nivel, enmascarar);
+
+    switch( img_idx ){
+    case BASE:
+        base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
+        mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
+        break;
+
+    case GROUNDTRUTH:
+        gt_ptr = static_cast<double*>(ground->GetScalarPointer(0, 0, 0));
     }
 
-    Cargar(ruta_origen, base, mask, nivel, enmascarar);
+    if( !cols ){
+        int dims[3];
+        img_temp->GetDimensions( dims );
 
-    base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
-    mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
+        cols = dims[0];
+        rows = dims[1];
+        rows_cols = rows*cols;
+    }
 
-    int dims[3];
-    base->GetDimensions( dims );
+    if( !segment ){
+        segment = vtkSmartPointer<vtkImageData>::New();
+        segment->SetExtent(0, cols-1, 0, rows-1, 0, 0);
+        segment->AllocateScalars( VTK_DOUBLE, 1);
+        segment->SetOrigin(0.0, 0.0, 0.0);
+        segment->SetSpacing(1.0, 1.0, 1.0);
 
-    cols = dims[0];
-    rows = dims[1];
-    rows_cols = rows*cols;
+        segment_ptr = static_cast<double*>(segment->GetScalarPointer(0, 0, 0));
+    }
+
+    escribirLog(COLOR_CYAN "\nImagen cargada exitosamente" COLOR_NORMAL);
+}
+
+
+
+/*  Metodo: Cargar
+    Funcion: Cargar la imagen a formato VTK desde varios archivos.
+*/
+void IMGVTK::Cargar(const IMG_IDX img_idx, char **rutas_origen, const int n_imgs, const bool enmascarar){
+
+    DEB_MSG("Cargando imagen desde: " COLOR_GREEN << rutas_origen << COLOR_NORMAL);
+
+    vtkSmartPointer<vtkImageData> img_temp = NULL;
+
+    switch( img_idx){
+    case BASE:
+        if( !base ){
+            base = vtkSmartPointer<vtkImageData>::New();
+        }
+        img_temp = base;
+
+        if( !mask ){
+            mask = vtkSmartPointer<vtkImageData>::New();
+        }
+        break;
+
+    case GROUNDTRUTH:
+        if( !ground ){
+            ground = vtkSmartPointer<vtkImageData>::New();
+        }
+        img_temp = ground;
+        break;
+    }
+
+    Cargar( img_temp, mask, rutas_origen, n_imgs, enmascarar );
+
+    switch( img_idx ){
+    case BASE:
+        base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
+        mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
+        break;
+
+    case GROUNDTRUTH:
+        gt_ptr = static_cast<double*>(ground->GetScalarPointer(0, 0, 0));
+    }
+
+
+    if( !cols ){
+        int dims[3];
+        img_temp->GetDimensions( dims );
+
+        cols = dims[0];
+        rows = dims[1];
+        rows_cols = rows*cols;
+    }
 
     if( !segment ){
         segment = vtkSmartPointer<vtkImageData>::New();
@@ -2219,37 +2322,6 @@ void IMGVTK::Cargar(const char *ruta_origen, const bool enmascarar, const int ni
 
 
 
-/*  Metodo: Cargar
-    Funcion: Cargar la imagen a formato VTK desde varios archivos.
-*/
-void IMGVTK::Cargar(char **rutas , const int n_imgs, const bool enmascarar){
-    base = vtkSmartPointer<vtkImageData>::New();
-    mask = vtkSmartPointer<vtkImageData>::New();
-
-    Cargar( base, mask, rutas, n_imgs, enmascarar );
-
-    base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
-    mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
-
-
-    int dims[3];
-    base->GetDimensions( dims );
-
-    cols = dims[0];
-    rows = dims[1];
-    rows_cols = rows*cols;
-
-    segment = vtkSmartPointer<vtkImageData>::New();
-    segment->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-    segment->AllocateScalars( VTK_DOUBLE, 1);
-    segment->SetOrigin(0.0, 0.0, 0.0);
-    segment->SetSpacing(1.0, 1.0, 1.0);
-
-    segment_ptr = static_cast<double*>(segment->GetScalarPointer(0, 0, 0));
-}
-
-
-
 
 /*  Metodo: Guardar
     Funcion: Guarda la imagen en la ruta especificada con la extension especificada.
@@ -2259,29 +2331,32 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
     int offset_x = 0, offset_y = 0;
 
     switch( img_idx ){
-        case BASE:
-            img_ptr = base_ptr;
-            break;
-        case MASK:
-            img_ptr = mask_ptr;
-            break;
-        case SKELETON:
-            img_ptr = skl_ptr;
-            offset_x = 1;
-            offset_y = 1;
-            break;
-        case SEGMENT:
-            img_ptr = segment_ptr;
-            break;
-        case MAPDIST:
-            img_ptr = map_ptr;
-            break;
-        case THRESHOLD:
-            img_ptr = threshold_ptr;
-            break;
-		case BORDERS:
-			img_ptr = borders_ptr;
-			break;
+    case BASE:
+        img_ptr = base_ptr;
+        break;
+    case GROUNDTRUTH:
+        img_ptr = gt_ptr;
+        break;
+    case MASK:
+        img_ptr = mask_ptr;
+        break;
+    case SKELETON:
+        img_ptr = skl_ptr;
+        offset_x = 1;
+        offset_y = 1;
+        break;
+    case SEGMENT:
+        img_ptr = segment_ptr;
+        break;
+    case MAPDIST:
+        img_ptr = map_ptr;
+        break;
+    case THRESHOLD:
+        img_ptr = threshold_ptr;
+        break;
+    case BORDERS:
+        img_ptr = borders_ptr;
+        break;
     }
 
     // Alojar memoria para la imagen:
@@ -2355,12 +2430,13 @@ IMGVTK::IMGVTK(){
     rows = 0;
     max_dist = 0;
 
+    base_ptr = NULL;
+    gt_ptr = NULL;
+    skl_ptr = NULL;
+    mask_ptr = NULL;
     map_ptr = NULL;
     borders_ptr = NULL;
-    base_ptr = NULL;
-    skl_ptr = NULL;
     pix_caract = NULL;
-    mask_ptr = NULL;
     segment_ptr = NULL;
     threshold_ptr = NULL;
 
@@ -2383,12 +2459,13 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
     mi_log = origen.mi_log;
     max_dist = origen.max_dist;
 
+    base_ptr = NULL;
+    gt_ptr = NULL;
+    skl_ptr = NULL;
+    mask_ptr = NULL;
     map_ptr = NULL;
     borders_ptr = NULL;
-    base_ptr = NULL;
-    skl_ptr = NULL;
     pix_caract = NULL;
-    mask_ptr = NULL;
     segment_ptr = NULL;
     threshold_ptr = NULL;
 
@@ -2419,6 +2496,17 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
 
         base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
         memcpy(base_ptr, origen.base_ptr, rows_cols*sizeof(double));
+
+        if(origen.gt_ptr){
+            ground = vtkSmartPointer<vtkImageData>::New();
+            ground->SetExtent(0, cols-1, 0, rows-1, 0, 0);
+            ground->AllocateScalars( VTK_DOUBLE, 1);
+            ground->SetOrigin(0.0, 0.0, 0.0);
+            ground->SetSpacing(1.0, 1.0, 1.0);
+            gt_ptr = static_cast<double*>(ground->GetScalarPointer(0, 0, 0));
+
+            memcpy(gt_ptr, origen.gt_ptr, rows_cols*sizeof(double));
+        }
 
         if(origen.mask_ptr){
             mask = vtkSmartPointer<vtkImageData>::New();
@@ -2455,7 +2543,7 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
 
         if(origen.map_ptr){
             mapa_dist = vtkSmartPointer<vtkImageData>::New();
-            mapa_dist->SetExtent(0, cols, 0, rows, 0, 0);
+            mapa_dist->SetExtent(0, cols-1, 0, rows-1, 0, 0);
             mapa_dist->AllocateScalars( VTK_DOUBLE, 1);
             mapa_dist->SetOrigin(0.0, 0.0, 0.0);
             mapa_dist->SetSpacing(1.0, 1.0, 1.0);
@@ -2466,7 +2554,7 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
 
         if(origen.borders_ptr){
             borders = vtkSmartPointer<vtkImageData>::New();
-            borders->SetExtent(0, cols, 0, rows, 0, 0);
+            borders->SetExtent(0, cols-1, 0, rows-1, 0, 0);
             borders->AllocateScalars( VTK_DOUBLE, 1);
             borders->SetOrigin(0.0, 0.0, 0.0);
             borders->SetSpacing(1.0, 1.0, 1.0);
@@ -2483,12 +2571,13 @@ IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
     mi_log = NULL;
     max_dist = 0;
 
+    base_ptr = NULL;
+    gt_ptr = NULL;
+    skl_ptr = NULL;
+    mask_ptr = NULL;
     map_ptr = NULL;
     borders_ptr = NULL;
-    base_ptr = NULL;
-    skl_ptr = NULL;
     pix_caract = NULL;
-    mask_ptr = NULL;
     segment_ptr = NULL;
     threshold_ptr = NULL;
 
@@ -2504,7 +2593,12 @@ IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
     WCenter = 127.5;
     WWidth = 255.0;
 
-    Cargar(rutas_origen, n_imgs, enmascarar );
+
+    cols = 0;
+    rows = 0;
+    max_dist = 0;
+
+    Cargar(BASE, rutas_origen, n_imgs, enmascarar );
 }
 
 
@@ -2512,12 +2606,13 @@ IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel)
     mi_log = NULL;
     max_dist = 0;
 
+    base_ptr = NULL;
+    gt_ptr = NULL;
+    skl_ptr = NULL;
+    mask_ptr = NULL;
     map_ptr = NULL;
     borders_ptr = NULL;
-    base_ptr = NULL;
-    skl_ptr = NULL;
     pix_caract = NULL;
-    mask_ptr = NULL;
     segment_ptr = NULL;
     threshold_ptr = NULL;
 
@@ -2533,7 +2628,13 @@ IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel)
     WCenter = 127.5;
     WWidth = 255.0;
 
-    Cargar(ruta_origen, enmascarar, nivel);
+    cols = 0;
+    rows = 0;
+    max_dist = 0;
+
+    DEB_MSG("Cargando imagen desde: " COLOR_GREEN << ruta_origen << COLOR_NORMAL);
+
+    Cargar(BASE, ruta_origen, enmascarar, nivel);
 }
 
 
@@ -2557,12 +2658,13 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
     mi_log = origen.mi_log;
     max_dist = origen.max_dist;
 
+    base_ptr = NULL;
+    gt_ptr = NULL;
+    skl_ptr = NULL;
+    mask_ptr = NULL;
     map_ptr = NULL;
     borders_ptr = NULL;
-    base_ptr = NULL;
-    skl_ptr = NULL;
     pix_caract = NULL;
-    mask_ptr = NULL;
     segment_ptr = NULL;
     threshold_ptr = NULL;
 
@@ -2594,6 +2696,18 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
 
         base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
         memcpy(base_ptr, origen.base_ptr, rows_cols*sizeof(double));
+
+        if(origen.gt_ptr){
+            mask = vtkSmartPointer<vtkImageData>::New();
+            ground->SetExtent(0, cols-1, 0, rows-1, 0, 0);
+            ground->AllocateScalars( VTK_DOUBLE, 1);
+            ground->SetOrigin(0.0, 0.0, 0.0);
+            ground->SetSpacing(1.0, 1.0, 1.0);
+            gt_ptr = static_cast<double*>(ground->GetScalarPointer(0, 0, 0));
+
+            memcpy(gt_ptr, origen.gt_ptr, rows_cols*sizeof(double));
+        }
+
 
         if(origen.mask_ptr){
             mask = vtkSmartPointer<vtkImageData>::New();
@@ -2630,7 +2744,7 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
 
         if(origen.map_ptr){
             mapa_dist = vtkSmartPointer<vtkImageData>::New();
-            mapa_dist->SetExtent(0, cols, 0, rows, 0, 0);
+            mapa_dist->SetExtent(0, cols-1, 0, rows-1, 0, 0);
             mapa_dist->AllocateScalars( VTK_DOUBLE, 1);
             mapa_dist->SetOrigin(0.0, 0.0, 0.0);
             mapa_dist->SetSpacing(1.0, 1.0, 1.0);
@@ -2641,7 +2755,7 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
 
         if(origen.borders_ptr){
             borders = vtkSmartPointer<vtkImageData>::New();
-            borders->SetExtent(0, cols, 0, rows, 0, 0);
+            borders->SetExtent(0, cols-1, 0, rows-1, 0, 0);
             borders->AllocateScalars( VTK_DOUBLE, 1);
             borders->SetOrigin(0.0, 0.0, 0.0);
             borders->SetSpacing(1.0, 1.0, 1.0);

@@ -19,7 +19,6 @@ coronaryGUI::coronaryGUI(QWidget *parent) : QMainWindow(parent), ui(new Ui::coro
 
     //// Connect Reconstructor to viewports and log:
     maximized = false;
-    ui->btnMaximizeVP4->setEnabled(false);
     ui->qvtkVP4->GetRenderWindow()->AddRenderer( mi_rec3D.getRenderer() );
     mi_rec3D.setLog( ui->ptxtLog );
 }
@@ -42,8 +41,6 @@ void coronaryGUI::loadBase(){
                 "Png (*.png);;Bitmap (*.bmp);;Jpeg (*.jpg,*.jpeg);;DICOM (*.dcm,*.*)"
                 );
     QByteArray filename_ba = filename.toLatin1();
-
-    DEB_MSG( "Abriendo archivo: '" << filename_ba.data() << "'");
 
     if( strlen(filename_ba.data())  ){
         mi_rec3D.agregarInput( filename_ba.data() );
@@ -105,9 +102,11 @@ void coronaryGUI::showImage( IMGVTK::IMG_IDX img_idx, const int viewport_ID ){
             ui->lblVP1->setAlignment(Qt::AlignCenter);
             ui->lblVP1->setMinimumSize(cols, rows);
             ui->lblVP1->setPixmap(QPixmap::fromImage(*imgBase));
-            //ui->lblVP1->show();
+            ui->lblVP1->show();
             break;
     }
+
+
 
 }
 
@@ -134,6 +133,7 @@ void coronaryGUI::minimizeVP4()
     ui->lblVP1->setVisible( true );
     ui->lblVP2->setVisible( true );
     ui->lblVP3->setVisible( true );
+    ui->btnLoadGT->setVisible( true );
 
     maximized = false;
 }
@@ -143,6 +143,7 @@ void coronaryGUI::maximizeVP4()
     ui->lblVP1->setVisible( false );
     ui->lblVP2->setVisible( false );
     ui->lblVP3->setVisible( false );
+    ui->btnLoadGT->setVisible( false );
 
     maximized = true;
 }
@@ -158,16 +159,6 @@ void coronaryGUI::on_action_Quit_triggered()
     close();
 }
 
-void coronaryGUI::on_actionGMF_ROC_triggered()
-{
-
-}
-
-void coronaryGUI::on_actionChaudhuri_triggered()
-{
-
-}
-
 void coronaryGUI::on_actionSkeletonize_triggered()
 {
     mi_rec3D.skeletonize( 0 );
@@ -181,11 +172,13 @@ void coronaryGUI::on_btnLoadGT_clicked()
         ui->btnLoadGT->setText( "Show Ground-truth" );
     }else{
         if( show_gt ){
-            showImage( 0, IMGVTK::BASE );
+            showImage( IMGVTK::GROUNDTRUTH, 1 );
             ui->btnLoadGT->setText( "Show Base" );
+            show_gt = false;
         }else{
-            showImage( 0, IMGVTK::BASE );
+            showImage( IMGVTK::BASE, 1 );
             ui->btnLoadGT->setText( "Show Ground-truth" );
+            show_gt = true;
         }
     }
 }
@@ -194,7 +187,9 @@ void coronaryGUI::on_btnMaximizeVP4_clicked()
 {
     if( maximized ){
         minimizeVP4();
+        ui->btnMaximizeVP4->setText( "Maximize 3D canvas" );
     }else{
         maximizeVP4();
+        ui->btnMaximizeVP4->setText( "Minimize 3D canvas" );
     }
 }

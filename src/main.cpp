@@ -155,17 +155,17 @@ void genDICOM(const char *ruta_origen, const char *ruta_img_phantom, const char 
     // Abrir la imagen:
     IMGVTK img_phantom( ruta_img_phantom, false, 0);
     const int mis_cols = img_phantom.cols;
-    const int mis_rens = img_phantom.rens;
-    const int mis_rens_cols = img_phantom.rens_cols;
+    const int mis_rows = img_phantom.rows;
+    const int mis_rows_cols = img_phantom.rows_cols;
 
     // Alojar memoria para la imagen dentro del archivo DICOM:
     gdcm::SmartPointer<gdcm::Image> im = new gdcm::Image;
 
-    char * buffer = new char[mis_rens_cols];
+    char * buffer = new char[mis_rows_cols];
 
     im->SetNumberOfDimensions( 2 );
     im->SetDimension(0, mis_cols );
-    im->SetDimension(1, mis_rens);
+    im->SetDimension(1, mis_rows);
 
     // Definir el espaciado entre pixeles
     double pixX = 1.0, pixY = 1.0;
@@ -188,9 +188,9 @@ DEB_MSG("pixY: " << pixY << ", pixX: " << pixX);
     im->SetSpacing(1, pixX);
 
     // Almacenar la imagen phantom al archivo DICOM:
-    for( int y = 0; y < mis_rens; y++ ){
+    for( int y = 0; y < mis_rows; y++ ){
         for( int x = 0; x < mis_cols; x++ ){
-            *(buffer + x + y*mis_cols) = (char) (255.0 * *(img_phantom.base_ptr + x + (mis_rens - y - 1)*mis_cols));
+            *(buffer + x + y*mis_cols) = (char) (255.0 * *(img_phantom.base_ptr + x + (mis_rows - y - 1)*mis_cols));
         }
     }
 
@@ -199,7 +199,7 @@ DEB_MSG("pixY: " << pixY << ", pixX: " << pixX);
 
     unsigned long l = im->GetBufferLength();
 
-    if( l != mis_rens_cols ){
+    if( l != mis_rows_cols ){
         std::cout << "\33[44m" << "<<Error al generar la imagen para el archivo DICOM>>" << "\33[0m" << std::endl;
         delete[] buffer;
         return;
@@ -291,8 +291,8 @@ int main(int argc, char** argv ){
         reconstructor.setFiltroEntrenamiento( FILTROS::EXHAUSTIVA, 0, 0);
         reconstructor.setFiltroEval( FILTROS::CORCON );
         reconstructor.setFiltroMetodo( FILTROS::SS_GABOR );
-        reconstructor.setFiltroParametros( FILTROS::PAR_L, 1.0, 18.0, 0.1);
-        reconstructor.setFiltroParametros( FILTROS::PAR_T, 1.0, 16.0, 1.0);
+        reconstructor.setFiltroParametros( FILTROS::PAR_L, 4.0);//1.0, 18.0, 0.1);
+        reconstructor.setFiltroParametros( FILTROS::PAR_T, 11.0);//, 16.0, 1.0);
         reconstructor.setFiltroParametros( FILTROS::PAR_K, 45.0);
         //reconstructor.setFiltroParametros( FILTROS::PAR_SIGMA, 1.5, 2.3, 0.001);
 
@@ -306,8 +306,8 @@ int main(int argc, char** argv ){
         reconstructor.setFiltroParametros( FILTROS::PAR_K, 12.0);
         */
 
-        reconstructor.segmentarImagenBase();
-        //reconstructor.skeletonize();
+        reconstructor.segmentarImagenBase( 0 );
+        //reconstructor.skeletonize( 0 );
     }
     delete [] parametros;
     return EXIT_SUCCESS;

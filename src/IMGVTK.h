@@ -110,7 +110,7 @@ class IMGVTK{
     public: //----------------------------------------------------------------------------- PUBLIC ------- v
         // T I P O S        D E     D A T O S       Y       E S T R U C T U R A S      P U B L I C A S        // IMG_IDX
         /** IMG_IDX:   **/
-        typedef enum IMG_IDX { BASE, MASK, SKELETON, SEGMENT, THRESHOLD, MAPDIST, BORDERS } IMG_IDX;
+        typedef enum IMG_IDX { BASE, GROUNDTRUTH, MASK, SKELETON, SEGMENT, THRESHOLD, MAPDIST, BORDERS } IMG_IDX;
 
         /** TIPO_IMG:   **/
         typedef enum TIPO_IMG { PNG, PGM } TIPO_IMG;
@@ -141,8 +141,8 @@ class IMGVTK{
         void mapaDistancias(IMG_IDX img_idx);
         void detectarBorde(IMG_IDX img_idx);
 
-        void Cargar(const char *ruta_origen, const bool enmascarar, const int nivel);
-        void Cargar(char **rutas , const int n_imgs, const bool enmascarar);
+        void Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool enmascarar, const int nivel);
+        void Cargar(const IMG_IDX img_idx, char **rutas_origen , const int n_imgs, const bool enmascarar);
 
         void Guardar( IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida );
 
@@ -162,6 +162,7 @@ class IMGVTK{
 
         // M I E M B R O S      P U B L I C O S
         vtkSmartPointer<vtkImageData> base;
+        vtkSmartPointer<vtkImageData> ground;
         vtkSmartPointer<vtkImageData> mask;
         vtkSmartPointer<vtkImageData> skeleton;
         vtkSmartPointer<vtkImageData> segment;
@@ -172,8 +173,9 @@ class IMGVTK{
         int rows, cols, rows_cols;
         int n_niveles;
         double *base_ptr;
-        double *skl_ptr;
+        double *gt_ptr;
         double *mask_ptr;
+        double *skl_ptr;
         double *segment_ptr;
         double *threshold_ptr;
         double *map_ptr;
@@ -232,8 +234,6 @@ class IMGVTK{
         // M I E M B R O S      P R I V A D O S
         QPlainTextEdit *mi_log;
         int max_dist;
-
-
 };
 // C L A S E: IMGVTK  ---------------------------------------------------------------------------------------------- ^
 

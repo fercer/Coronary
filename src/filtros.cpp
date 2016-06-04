@@ -215,6 +215,7 @@ void FILTROS::setInput(IMGVTK &img_org){
     org = img_org.base_ptr;
     mask = img_org.mask_ptr;
     dest = img_org.segment_ptr;
+    ground_truth = img_org.gt_ptr;
 
     // Obtener las dimensiones de la imagen:
     cols = img_org.cols;
@@ -232,15 +233,6 @@ void FILTROS::setInput(IMGVTK &img_org){
             fftImgOrigen();
             break;
     }
-}
-
-
-
-/*  Metodo: setInputGround
-    Funcion: Establece las imagenes origen yu ground truth.
-*/
-void FILTROS::setInputGround( IMGVTK &img_ground){
-    ground_truth = img_ground.base_ptr;
 }
 
 

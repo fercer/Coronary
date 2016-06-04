@@ -61,7 +61,6 @@ class FILTROS{
         void setFitness( const FITNESS fit_fun);
 
         void setInput(IMGVTK &img_org);
-        void setInputGround(IMGVTK &img_ground);
 
         void setPar();
         void setPar( const PARAMETRO par, const double val);

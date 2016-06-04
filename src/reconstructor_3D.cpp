@@ -181,37 +181,40 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
 
     Funcion: Muestra la imagen en una ventana VTK.
 */
-void RECONS3D::mostrarImagen( IMGVTK &img_src, IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer){
+void RECONS3D::mostrarImagen(IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer, const int angio_ID){
 
-    int mis_cols = img_src.cols;
-    int mis_rens = img_src.rows;
+    int mis_cols = imgs_base[angio_ID].cols;
+    int mis_rens = imgs_base[angio_ID].rows;
 
     vtkSmartPointer< vtkImageData> img_ptr = NULL;
 
     switch(img_idx){
-        case IMGVTK::BASE:
-            img_ptr = img_src.base;
-            break;
-        case IMGVTK::MASK:
-            img_ptr = img_src.mask;
-            break;
-        case IMGVTK::SKELETON:
-            img_ptr = img_src.skeleton;
-            mis_rens+=2;
-            mis_cols+=2;
-            break;
-        case IMGVTK::SEGMENT:
-            img_ptr = img_src.segment;
-            break;
-        case IMGVTK::THRESHOLD:
-            img_ptr = img_src.threshold;
-            break;
-        case IMGVTK::MAPDIST:
-            img_ptr = img_src.mapa_dist;
-            break;
-        case IMGVTK::BORDERS:
-                img_ptr = img_src.borders;
-                break;
+    case IMGVTK::BASE:
+        img_ptr = imgs_base[angio_ID].base;
+        break;
+    case IMGVTK::GROUNDTRUTH:
+        img_ptr = imgs_base[angio_ID].ground;
+        break;
+    case IMGVTK::MASK:
+        img_ptr = imgs_base[angio_ID].mask;
+        break;
+    case IMGVTK::SKELETON:
+        img_ptr = imgs_base[angio_ID].skeleton;
+        mis_rens+=2;
+        mis_cols+=2;
+        break;
+    case IMGVTK::SEGMENT:
+        img_ptr = imgs_base[angio_ID].segment;
+        break;
+    case IMGVTK::THRESHOLD:
+        img_ptr = imgs_base[angio_ID].threshold;
+        break;
+    case IMGVTK::MAPDIST:
+        img_ptr = imgs_base[angio_ID].mapa_dist;
+        break;
+    case IMGVTK::BORDERS:
+        img_ptr = imgs_base[angio_ID].borders;
+        break;
     }
 
     const int mis_rens_cols = mis_rens*mis_cols;
@@ -621,8 +624,6 @@ void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, co
 
     imgs_base.push_back(IMGVTK(rutasbase_input, n_imgs, true));
     imgs_base[n_angios].setLog( mi_log );
-    imgs_delin.push_back(IMGVTK(rutasground_input, n_imgs, false));
-    imgs_delin[n_angios].setLog( mi_log );
     imgs_base.push_back(IMGVTK());
 
     // Mostrar la imagen en un renderizador
@@ -655,8 +656,6 @@ DEB_MSG("Ruta ground: " << rutaground_input);
             /// Mover el detector a su posicion definida por el archivo DICOM:
             mallarPuntos(n_angios);
             isoCentro(n_angios);
-
-            imgs_delin.push_back(IMGVTK());
             existe_ground.push_back( false );
         }
 
@@ -665,9 +664,6 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
         imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
         imgs_base[n_angios].setLog( mi_log );
-
-        imgs_delin.push_back(IMGVTK());
-        imgs_delin[n_angios].setLog( mi_log );
         existe_ground.push_back( false );
 
         mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
@@ -682,7 +678,7 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
         if( strcmp(rutaground_input, "NULL") ){
             DEB_MSG("Abriendo " << rutaground_input << " como ground truth");
-            imgs_delin[ n_angios ].Cargar(rutaground_input, false, 0);
+            imgs_base[ n_angios ].Cargar(IMGVTK::GROUNDTRUTH, rutaground_input, false, 0);
             existe_ground[ n_angios ] = true;
         }
 
@@ -703,9 +699,6 @@ void RECONS3D::agregarInput( const char *rutabase_input ){
 
     imgs_base.push_back(IMGVTK(rutabase_input, true, 0));
     imgs_base[n_angios].setLog( mi_log );
-
-    imgs_delin.push_back(IMGVTK());
-    imgs_delin[n_angios].setLog( mi_log );
     existe_ground.push_back( false );
 
     mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
@@ -727,8 +720,14 @@ void RECONS3D::agregarInput( const char *rutabase_input ){
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
 void RECONS3D::agregarGroundtruth(const char *rutaground_input, const int angio_ID ){
-    imgs_delin[ angio_ID ].Cargar(rutaground_input, false, 0);
-    existe_ground[ angio_ID ] = true;
+    if( angio_ID > n_angios ){
+        char mensaje[] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
+        sprintf(mensaje, "\n<<Error: El angiograma %i no ha sido agregado al reconstructor>>\n\n", angio_ID);
+        escribirLog( mensaje );
+    }else{
+        imgs_base[ angio_ID ].Cargar(IMGVTK::GROUNDTRUTH, rutaground_input, false, 0);
+        existe_ground[ angio_ID ] = true;
+    }
 }
 
 
@@ -834,27 +833,30 @@ double* RECONS3D::get_pixelData(const int angio_ID, IMGVTK::IMG_IDX img_idx){
     double *img_ptr = NULL;
 
     switch(img_idx){
-        case IMGVTK::BASE:
-            img_ptr = imgs_base[angio_ID].base_ptr;
-            break;
-        case IMGVTK::MASK:
-            img_ptr = imgs_base[angio_ID].mask_ptr;
-            break;
-        case IMGVTK::SKELETON:
-            img_ptr = imgs_base[angio_ID].skl_ptr;
-            break;
-        case IMGVTK::SEGMENT:
-            img_ptr = imgs_base[angio_ID].segment_ptr;
-            break;
-        case IMGVTK::THRESHOLD:
-            img_ptr = imgs_base[angio_ID].threshold_ptr;
-            break;
-        case IMGVTK::MAPDIST:
-            img_ptr = imgs_base[angio_ID].map_ptr;
-            break;
-        case IMGVTK::BORDERS:
-            img_ptr = imgs_base[angio_ID].borders_ptr;
-            break;
+    case IMGVTK::BASE:
+        img_ptr = imgs_base[angio_ID].base_ptr;
+        break;
+    case IMGVTK::GROUNDTRUTH:
+        img_ptr = imgs_base[angio_ID].gt_ptr;
+        break;
+    case IMGVTK::MASK:
+        img_ptr = imgs_base[angio_ID].mask_ptr;
+        break;
+    case IMGVTK::SKELETON:
+        img_ptr = imgs_base[angio_ID].skl_ptr;
+        break;
+    case IMGVTK::SEGMENT:
+        img_ptr = imgs_base[angio_ID].segment_ptr;
+        break;
+    case IMGVTK::THRESHOLD:
+        img_ptr = imgs_base[angio_ID].threshold_ptr;
+        break;
+    case IMGVTK::MAPDIST:
+        img_ptr = imgs_base[angio_ID].map_ptr;
+        break;
+    case IMGVTK::BORDERS:
+        img_ptr = imgs_base[angio_ID].borders_ptr;
+        break;
     }
 
     return img_ptr;
@@ -868,9 +870,6 @@ double* RECONS3D::get_pixelData(const int angio_ID, IMGVTK::IMG_IDX img_idx){
 void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
     filtro.setInput(imgs_base[angio_ID]);
-    if( existe_ground[angio_ID] ){
-        filtro.setInputGround(imgs_delin[angio_ID]);
-    }
 
     if( filtro.getParametrosOptimizar() >= 1 ){
         filtro.setPar();
@@ -1169,24 +1168,23 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
 void RECONS3D::skeletonize(const int angio_ID){
 
     DEB_MSG("Extrayendo esquelto a " << angio_ID);
-    //imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
-    imgs_delin[angio_ID].skeletonization(IMGVTK::BASE);
+    imgs_base[angio_ID].skeletonization(IMGVTK::GROUNDTRUTH);
 
 
     //if( !imgs_base[angio_ID].pix_caract ){
-    if( !imgs_delin[angio_ID].pix_caract ){
+    if( !imgs_base[angio_ID].pix_caract ){
         DEB_MSG("No existe grafo alguno...");
         return;
     }
 
     // Rotar los puntos segun LAO/RAO y CAU/CRA:
-    const double crl = cos(imgs_delin[angio_ID].LAORAO/180.0 * PI);
-    const double srl = sin(imgs_delin[angio_ID].LAORAO/180.0 * PI);
-    const double ccc = cos(imgs_delin[angio_ID].CRACAU/180.0 * PI);
-    const double scc = sin(imgs_delin[angio_ID].CRACAU/180.0 * PI);
+    const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * PI);
+    const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * PI);
+    const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * PI);
+    const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
 
-    const double DDP = 0.0;//imgs_delin[angio_ID].DDP;
-    const int n_niveles = imgs_delin[angio_ID].n_niveles;
+    const double DDP = 0.0;//imgs_base[angio_ID].DDP;
+    const int n_niveles = imgs_base[angio_ID].n_niveles;
 
     DEB_MSG("numero de niveles: " << n_niveles);
 
@@ -1202,7 +1200,7 @@ void RECONS3D::skeletonize(const int angio_ID){
         sprintf( nom_cilindros, "cilindros_%i.dat", angio_ID);
         FILE *fp_cilindros = fopen(nom_cilindros, "w");
         fprintf( fp_cilindros, "X1 Y1 Z1 RADIO X2 Y2 Z2\n");
-        mostrarRadios(puntos, cilindros, &n_pix, imgs_delin[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, 100, fp_cilindros);
+        mostrarRadios(puntos, cilindros, &n_pix, imgs_base[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, 100, fp_cilindros);
 
         fclose( fp_cilindros );
 
@@ -1237,12 +1235,12 @@ void RECONS3D::skeletonize(const int angio_ID){
 */
 void RECONS3D::mostrarBase( const int angio_ID ){
     if( angio_ID > n_angios ){
-        char mensaje[] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
-        sprintf(mensaje, "\n<<Error: El angiograma %i no ha sido agregado al reconstructor>>\n\n", angio_ID);
-        DEB_MSG(mensaje);
-        escribirLog( mensaje );
+        char mensaje_err[] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
+        sprintf(mensaje_err, "\n<<Error: El angiograma %i no ha sido agregado al reconstructor>>\n\n", angio_ID);
+        DEB_MSG(mensaje_err);
+        escribirLog( mensaje_err );
     }else{
-        mostrarImagen( imgs_base[angio_ID], IMGVTK::BASE, mis_renderers[ angio_ID ]);
+        mostrarImagen( IMGVTK::BASE, mis_renderers[ angio_ID ], angio_ID);
         renderizar( mis_renderers[angio_ID] );
     }
 }
@@ -1262,7 +1260,7 @@ void RECONS3D::mostrarGroundtruth( const int angio_ID ){
         DEB_MSG(mensaje);
         escribirLog( mensaje );
     }else{
-        mostrarImagen( imgs_delin[angio_ID], IMGVTK::BASE, mis_renderers[ angio_ID ]);
+        mostrarImagen( IMGVTK::GROUNDTRUTH, mis_renderers[ angio_ID ], angio_ID);
     }
 }
 
@@ -1310,9 +1308,6 @@ void RECONS3D::setLog(QPlainTextEdit *log ){
     mi_log = log;
 
     for( std::vector< IMGVTK >::iterator it = imgs_base.begin(); it != imgs_base.end(); it++){
-        it->setLog( mi_log );
-    }
-    for( std::vector< IMGVTK >::iterator it = imgs_delin.begin(); it != imgs_delin.end(); it++){
         it->setLog( mi_log );
     }
 

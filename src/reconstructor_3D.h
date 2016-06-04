@@ -128,7 +128,6 @@ class RECONS3D{
 
         // Miembros para cargar las imagenes:
         std::vector< IMGVTK > imgs_base;
-        std::vector< IMGVTK > imgs_delin;
         std::vector< bool > existe_ground;
 
         int n_angios;
@@ -147,7 +146,7 @@ class RECONS3D{
         void escribirLog( const char *mensaje );
 
         void renderizar(vtkSmartPointer<vtkRenderer> mi_renderer);
-        void mostrarImagen(IMGVTK &imagen, IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer );
+        void mostrarImagen(IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer, const int angio_ID);
         void mostrarImagen(const int angio_ID, IMGVTK::IMG_IDX img_idx);
 
         void agregarVector(NORCEN org_dir, const double t, double color[], vtkSmartPointer<vtkRenderer> &mi_renderer);
