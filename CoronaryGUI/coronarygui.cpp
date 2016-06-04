@@ -4,38 +4,28 @@
 
 coronaryGUI::coronaryGUI(QWidget *parent) : QMainWindow(parent), ui(new Ui::coronaryGUI){
     ui->setupUi(this);
-    defineColors();
 
+
+    //// Define characteristics for show images in QLabels
+    defineColors();
     imgBase = NULL;
 
-    //// Create context menu for vtk viewports
-    lblVP1_CM = new QMenu(ui->lblVP1);
-    qvtkVP4_CM = new QMenu(ui->qvtkVP4);
+    //// Define status for load grond-truth:
+    loaded = false;
+    show_gt = true;
+    ui->btnLoadGT->setEnabled(false);
 
 
-    //// Connect context menu actions
-    connect(ui->lblVP1, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(on_lblVP1_customContextMenuRequested(QPoint)));
-    connect(ui->qvtkVP4, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(on_qvtkVP4_customContextMenuRequested(QPoint)));
-
-    qvtkVP4_CM_Maximize = qvtkVP4_CM->addAction("Maximize Viewport 3D");
-    connect(qvtkVP4_CM_Maximize,SIGNAL(triggered()),this,SLOT(maximizeVP4()));
 
     //// Connect Reconstructor to viewports and log:
+    maximized = false;
+    ui->btnMaximizeVP4->setEnabled(false);
     ui->qvtkVP4->GetRenderWindow()->AddRenderer( mi_rec3D.getRenderer() );
     mi_rec3D.setLog( ui->ptxtLog );
 }
 
 coronaryGUI::~coronaryGUI(){
     delete ui;
-
-    if( lblVP1_CM ){
-        delete lblVP1_CM;
-    }
-
-    if( qvtkVP4_CM ){
-        delete qvtkVP4_CM;
-    }
-
     if( imgBase ){
         delete imgBase;
     }
@@ -57,12 +47,10 @@ void coronaryGUI::loadBase(){
 
     if( strlen(filename_ba.data())  ){
         mi_rec3D.agregarInput( filename_ba.data() );
-
-        lblVP1_CM_LoadGroundtruth = lblVP1_CM->addAction("Load file as groundtruth");
-        connect(lblVP1_CM_LoadGroundtruth,SIGNAL(triggered()),this,SLOT(loadGroundtruth()));
         ui->action_Open_file->setEnabled(false);
-
-        showImageBase( IMGVTK::BASE, 1);
+        ui->btnLoadGT->setEnabled(true);
+        ui->btnMaximizeVP4->setEnabled(true);
+        showImage( IMGVTK::BASE, 1);
     }
 }
 
@@ -71,13 +59,13 @@ void coronaryGUI::loadBase(){
 void coronaryGUI::defineColors(){
 
     for( double c = 0.0; c <= 255.0; c++){
-        colors.append( qRgb( c / 255.0 , c / 255.0, c / 255.0 ) );
+        colors.append( qRgb( c , c , c ) );
     }
 }
 
 
 
-void coronaryGUI::showImageBase( IMGVTK::IMG_IDX img_idx, const int viewport_ID ){
+void coronaryGUI::showImage( IMGVTK::IMG_IDX img_idx, const int viewport_ID ){
 
     const int cols = mi_rec3D.getCols(0);
     const int rows = mi_rec3D.getRows(0);
@@ -88,7 +76,7 @@ void coronaryGUI::showImageBase( IMGVTK::IMG_IDX img_idx, const int viewport_ID 
     imgBase = new QImage( cols, rows, QImage::Format_Indexed8 );
     imgBase->setColorTable( colors );
 
-    const double *img_ptr = mi_rec3D.get_pixelData( 0, IMGVTK::BASE );
+    const double *img_ptr = mi_rec3D.get_pixelData( 0, img_idx );
 
     double min = INF;
     double max =-INF;
@@ -136,32 +124,10 @@ void coronaryGUI::loadGroundtruth(){
 
     if( strlen(filename_ba.data())  ){
         mi_rec3D.agregarGroundtruth( filename_ba.data(), 0 );
-        lblVP1_CM->removeAction( lblVP1_CM_LoadGroundtruth );
-        lblVP1_CM_LoadGroundtruth = NULL;
-        lblVP1_CM_ShowGroundtruth = lblVP1_CM->addAction("Show ground-truth");
-        connect(lblVP1_CM_ShowGroundtruth,SIGNAL(triggered()),this,SLOT(showGroundtruth()));
+        loaded = true;
     }
 }
 
-void coronaryGUI::showGroundtruth()
-{
-    lblVP1_CM->removeAction( lblVP1_CM_ShowGroundtruth );
-    lblVP1_CM_ShowGroundtruth = NULL;
-    lblVP1_CM_ShowBase = lblVP1_CM->addAction("Show base");
-    connect(lblVP1_CM_ShowBase,SIGNAL(triggered()),this,SLOT(showBase()));
-
-    mi_rec3D.mostrarGroundtruth( 0 );
-}
-
-void coronaryGUI::showBase()
-{
-    lblVP1_CM->removeAction( lblVP1_CM_ShowBase );
-    lblVP1_CM_ShowBase = NULL;
-    lblVP1_CM_ShowGroundtruth = lblVP1_CM->addAction("Show ground-truth");
-    connect(lblVP1_CM_ShowGroundtruth,SIGNAL(triggered()),this,SLOT(showGroundtruth()));
-
-    mi_rec3D.mostrarBase( 0 );
-}
 
 void coronaryGUI::minimizeVP4()
 {
@@ -169,10 +135,7 @@ void coronaryGUI::minimizeVP4()
     ui->lblVP2->setVisible( true );
     ui->lblVP3->setVisible( true );
 
-    qvtkVP4_CM->removeAction( qvtkVP4_CM_Minimize );
-    qvtkVP4_CM_Minimize = NULL;
-    qvtkVP4_CM_Maximize = qvtkVP4_CM->addAction("Maximize Viewport 3D");
-    connect(qvtkVP4_CM_Maximize,SIGNAL(triggered()),this,SLOT(maximizeVP4()));
+    maximized = false;
 }
 
 void coronaryGUI::maximizeVP4()
@@ -181,10 +144,7 @@ void coronaryGUI::maximizeVP4()
     ui->lblVP2->setVisible( false );
     ui->lblVP3->setVisible( false );
 
-    qvtkVP4_CM->removeAction( qvtkVP4_CM_Maximize );
-    qvtkVP4_CM_Maximize = NULL;
-    qvtkVP4_CM_Minimize = qvtkVP4_CM->addAction("Minimize Viewport 3D");
-    connect(qvtkVP4_CM_Minimize, SIGNAL(triggered()),this,SLOT(minimizeVP4()));
+    maximized = true;
 }
 
 
@@ -213,14 +173,28 @@ void coronaryGUI::on_actionSkeletonize_triggered()
     mi_rec3D.skeletonize( 0 );
 }
 
-void coronaryGUI::on_qvtkVP4_customContextMenuRequested(const QPoint &pos)
+
+void coronaryGUI::on_btnLoadGT_clicked()
 {
-    ui->ptxtLog->appendPlainText("Trying to pop-up the menu...");
-    qvtkVP4_CM->popup(mapToGlobal(pos));
+    if( !loaded ){
+        loadGroundtruth();
+        ui->btnLoadGT->setText( "Show Ground-truth" );
+    }else{
+        if( show_gt ){
+            showImage( 0, IMGVTK::BASE );
+            ui->btnLoadGT->setText( "Show Base" );
+        }else{
+            showImage( 0, IMGVTK::BASE );
+            ui->btnLoadGT->setText( "Show Ground-truth" );
+        }
+    }
 }
 
-void coronaryGUI::on_lblVP1_customContextMenuRequested(const QPoint &pos)
+void coronaryGUI::on_btnMaximizeVP4_clicked()
 {
-    ui->ptxtLog->appendPlainText("Trying to pop-up form VP1");
-    lblVP1_CM->popup(mapToGlobal(pos));
+    if( maximized ){
+        minimizeVP4();
+    }else{
+        maximizeVP4();
+    }
 }

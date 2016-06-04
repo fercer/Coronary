@@ -31,12 +31,10 @@ public:
 private slots:
     void defineColors();
 
-    void showImageBase(IMGVTK::IMG_IDX, const int viewport_ID );
+    void showImage(IMGVTK::IMG_IDX, const int viewport_ID );
 
     void loadBase();
     void loadGroundtruth();
-    void showGroundtruth();
-    void showBase();
 
     void minimizeVP4();
     void maximizeVP4();
@@ -51,22 +49,19 @@ private slots:
 
     void on_actionSkeletonize_triggered();
 
-    void on_qvtkVP4_customContextMenuRequested(const QPoint &pos);
+    void on_btnLoadGT_clicked();
 
-    void on_lblVP1_customContextMenuRequested(const QPoint &pos);
+    void on_btnMaximizeVP4_clicked();
 
-    private:
+private:
     QVector<QRgb> colors;
     Ui::coronaryGUI *ui;
-    QMenu *lblVP1_CM;
-    QMenu *qvtkVP4_CM;
-    QAction *lblVP1_CM_LoadGroundtruth, *lblVP1_CM_ShowGroundtruth, *lblVP1_CM_ShowBase;
-    QAction *qvtkVP4_CM_Maximize, *qvtkVP4_CM_Minimize;
 
     QImage *imgBase;
 
     RECONS3D mi_rec3D;
     bool loaded, show_gt;
+    bool maximized;
 };
 
 #endif // CORONARYGUI_H
