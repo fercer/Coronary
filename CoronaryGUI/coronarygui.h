@@ -12,8 +12,14 @@
 #include <QVector>
 #include <QRgb>
 #include <QSlider>
+#include <QCheckBox>
+#include <QComboBox>
 
 #include <vector>
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "../src/reconstructor_3D.h"
 
@@ -34,6 +40,8 @@ private slots:
 
     void showImage(IMGVTK::IMG_IDX, const int viewport_ID , const int img_i);
 
+    void writeConfiguration(const char *path);
+    void readConfiguration(const char *path);
     void loadBase();
     void loadGroundtruth();
 
@@ -51,6 +59,26 @@ private slots:
     void on_btnMaximizeVP4_clicked();
 
     void on_hsldImages_valueChanged(int value);
+
+    void on_actionSet_filter_parameters_triggered();
+
+    void on_actionImport_parameters_triggered();
+
+    void on_chkFixT_toggled(bool checked);
+
+    void on_actionExport_parameters_triggered();
+
+    void on_chkFixK_toggled(bool checked);
+
+    void on_chkFixL_toggled(bool checked);
+
+    void on_chkFixSigma_toggled(bool checked);
+
+    void on_cmbAlgorithm_currentIndexChanged(int index);
+
+    void on_cmbFilter_currentIndexChanged(int index);
+
+    void on_btnRunConfiguration_clicked();
 
 private:
     QVector<QRgb> colors;

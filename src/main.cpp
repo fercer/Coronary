@@ -288,7 +288,7 @@ int main(int argc, char** argv ){
 
 
 
-        reconstructor.setFiltroEntrenamiento( FILTROS::EXHAUSTIVA, 0, 0);
+        reconstructor.setFiltroEntrenamiento( FILTROS::EXHAUSTIVA);
         reconstructor.setFiltroEval( FILTROS::CORCON );
         reconstructor.setFiltroMetodo( FILTROS::SS_GABOR );
         reconstructor.setFiltroParametros( FILTROS::PAR_L, 4.0);//1.0, 18.0, 0.1);

@@ -170,6 +170,8 @@ class RECONS3D{
         ~RECONS3D();
 
     // M E T O D O S        P U B L I C O S
+        void umbralizar(const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbral, const double umbral );
+
         void agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input);
         void agregarInput(const char *rutabase_input);
         void agregarInput(char **rutasbase_input, const int n_imgs);
@@ -183,13 +185,12 @@ class RECONS3D{
         void mostrarBase( const int angio_ID );
         void mostrarGroundtruth(  const int angio_ID  );
 
-        void umbralizar(const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbral, const double umbral );
-
-        void setFiltroEntrenamiento( const FILTROS::EVO_MET evo_met, const int m_iters, const int pob);
+        void setFiltroEntrenamiento(const FILTROS::EVO_MET evo_met);
+        void setFiltroEntrenamientoPars(const FILTROS::EVO_MET_PAR evo_par, const double val);
         void setFiltroEval( const FILTROS::FITNESS fit_fun);
         void setFiltroMetodo( const FILTROS::SEG_FILTRO metodo_filtrado);
 
-        void setFiltroParametros(const FILTROS::PARAMETRO par, const double inf, const double sup, const double delta);
+        void setFiltroParametros( const FILTROS::PARAMETRO par, const FILTROS::LIMITES lim, const double val);
         void setFiltroParametros( const FILTROS::PARAMETRO par, const double val );
         void setFiltroParametros();
 

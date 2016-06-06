@@ -113,12 +113,32 @@ void FILTROS::rotarImg( const double *org, double *rot, const double ctheta, con
 /*  Metodo: setEvoMet
     Funcion: Define el metodo evolutivo que se usara para establecer los mejores aprametros del filtro.
 */
-void FILTROS::setEvoMet( const EVO_MET evo_met, const int m_iters, const int pob){
+void FILTROS::setEvoMet(const EVO_MET evo_met){
     metodo_elegido = evo_met;
-    max_iters = m_iters;
-    n_pob = pob;
-    seleccion = (int) (0.6 * n_pob);
 }
+
+
+
+/*  Metodo: setEvoMetPar
+    Funcion: Define elparametro para el metodo de optimizacion.
+*/
+void FILTROS::setEvoMetPar(const EVO_MET_PAR evo_par, const double val){
+    switch( evo_par ){
+    case POPSIZE:
+        n_pob = (int)val;
+        break;
+    case MAXGEN:
+        max_iters = (int)val;
+        break;
+    case CR:
+        seleccion = (int)(val * (double)n_pob);
+        break;
+    case MR:
+        prob_mutacion = val;
+        break;
+    }
+}
+
 
 
 /*  Metodo: setFiltro
@@ -177,8 +197,10 @@ FILTROS::FILTROS(){
 
     transformada = false;
 
-
-    prob_mutacion = 0.3;
+    n_pob = 0;
+    prob_mutacion = 0.0;
+    seleccion = 0;
+    max_iters = 0;
 }
 
 
@@ -304,10 +326,18 @@ int FILTROS::getParametrosOptimizar(){
 /*  Metodo: setLim
     Funcion: Establece los limites de busqueda de los parametros, si se utiliza para metodos de codificacion binaria, var_delta indica cuantos bits se utilizaran.
 */
-void FILTROS::setLim( const PARAMETRO par, const double inf, double sup, const double var_delta){
-    lim_inf[ par ] = inf;
-    lim_sup[ par ] = sup;
-    min_vars[ par ] = var_delta;
+void FILTROS::setLim( const PARAMETRO par, const LIMITES lim, const double val){
+    switch( lim ){
+    case INFERIOR:
+        lim_inf[ par ] = val;
+        break;
+    case SUPERIOR:
+        lim_sup[ par ] = val;
+        break;
+    case DELTA:
+        min_vars[ par ] = val;
+        break;
+    }
 }
 
 
@@ -395,7 +425,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     gauss_ptr = gauss_0;
     const double media = sum / ((double)T * (double)L);
 
-    for( double x = -floor((double)T/2.0) + (double)(1 - T%2)/2.0; x <= x <= floor((double)T/2.0) - (double)(1 - T%2)/2.0; x+=1.0){
+    for( double x = -floor((double)T/2.0) + (double)(1 - T%2)/2.0; x <= floor((double)T/2.0) - (double)(1 - T%2)/2.0; x+=1.0){
         *(gauss_ptr) = (*(gauss_ptr) - media) / sum;
          gauss_ptr++;
     }

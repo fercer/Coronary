@@ -38,8 +38,10 @@
 class FILTROS{
     public: //----------------------------------------------------------------------------- PUBLIC ------- v
         // T I P O S        D E     D A T O S      P U B L I C O S
+        typedef enum LIMITES { INFERIOR, SUPERIOR, DELTA } LIMITES;
         typedef enum SEG_FILTRO { SEG_UNSET, GMF, SS_GABOR } SEG_FILTRO;
         typedef enum EVO_MET { EVO_UNSET, EXHAUSTIVA, EDA_BUMDA, EDA_UMDA, EA_GA } EVO_MET;
+        typedef enum EVO_MET_PAR { POPSIZE, MAXGEN, CR, MR} EVO_MET_PAR;
         typedef enum FITNESS { FIT_UNSET, ROC, CORCON } FITNESS;
         typedef enum PARAMETRO { PAR_L, PAR_T, PAR_K, PAR_SIGMA } PARAMETRO;
 
@@ -56,7 +58,9 @@ class FILTROS{
         FILTROS();
         ~FILTROS();
 
-        void setEvoMet( const EVO_MET evo_met, const int m_iters, const int pob);
+        void setEvoMet( const EVO_MET evo_met);
+        void setEvoMetPar( const EVO_MET_PAR evo_par, const double val);
+
         void setFiltro( const SEG_FILTRO seg_fil);
         void setFitness( const FITNESS fit_fun);
 
@@ -66,7 +70,8 @@ class FILTROS{
         void setPar( const PARAMETRO par, const double val);
         INDIV getPars();
         int getParametrosOptimizar();
-        void setLim( const PARAMETRO par, const double inf, const double sup, const double var_delta);
+
+        void setLim(const PARAMETRO par, const LIMITES lim, const double val);
 
         void filtrar();
 

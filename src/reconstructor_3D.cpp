@@ -616,6 +616,16 @@ DEB_MSG("Mostrando detector para: " << angio_ID << ", LAORAO: " << imgs_base[ang
 
 // M I E M B R O S      P U B L I C O S
 
+
+/*  Metodo: umbralizar
+
+    Funcion:
+*/
+void RECONS3D::umbralizar( const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbral, const double umbral ){
+    imgs_base[ angio_ID ].umbralizar( IMGVTK::SEGMENT, mi_umbral, umbral );
+}
+
+
 /*  Metodo: agregarInput
 
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
@@ -767,34 +777,24 @@ void RECONS3D::agregarGroundtruth(char **rutasground_input, const int n_imgs, co
 
 
 
-/*  Metodo: setFiltroParametros
-
-    Funcion:
-*/
-void RECONS3D::setFiltroParametros(const FILTROS::PARAMETRO par, const double inf, const double sup, const double delta){
-    filtro.setLim( par, inf, sup, delta );
-}
-
-
-
-/*  Metodo: umbralizar
-
-    Funcion:
-*/
-void RECONS3D::umbralizar( const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbral, const double umbral ){
-    imgs_base[ angio_ID ].umbralizar( IMGVTK::SEGMENT, mi_umbral, umbral );
-}
-
-
 
 /*  Metodo: setFiltroEntrenamiento
 
     Funcion:
 */
-void RECONS3D::setFiltroEntrenamiento(const FILTROS::EVO_MET evo_met, const int m_iters, const int pob){
-    filtro.setEvoMet(evo_met, m_iters, pob);
+void RECONS3D::setFiltroEntrenamiento(const FILTROS::EVO_MET evo_met){
+    filtro.setEvoMet(evo_met);
 }
 
+
+
+/*  Metodo: setFiltroEntrenamientoPars
+
+    Funcion:
+*/
+void RECONS3D::setFiltroEntrenamientoPars(const FILTROS::EVO_MET_PAR evo_par, const double val){
+    filtro.setEvoMetPar(evo_par, val);
+}
 
 
 /*  Metodo: setFiltroEval
@@ -813,6 +813,17 @@ void RECONS3D::setFiltroEval(const FILTROS::FITNESS fit_fun){
 */
 void RECONS3D::setFiltroMetodo(const FILTROS::SEG_FILTRO metodo_filtrado){
     filtro.setFiltro( metodo_filtrado );
+}
+
+
+
+
+/*  Metodo: setFiltroParametros
+
+    Funcion:
+*/
+void RECONS3D::setFiltroParametros(const FILTROS::PARAMETRO par, const FILTROS::LIMITES lim, const double val){
+    filtro.setLim( par, lim, val );
 }
 
 

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>727</width>
-    <height>652</height>
+    <width>1116</width>
+    <height>687</height>
    </rect>
   </property>
   <property name="contextMenuPolicy">
@@ -18,7 +18,7 @@
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout_2">
-    <item row="8" column="0">
+    <item row="11" column="0">
      <widget class="QProgressBar" name="pbarLog">
       <property name="maximumSize">
        <size>
@@ -36,7 +36,7 @@
       </property>
      </widget>
     </item>
-    <item row="7" column="0">
+    <item row="10" column="0">
      <widget class="QPlainTextEdit" name="ptxtLog">
       <property name="maximumSize">
        <size>
@@ -52,7 +52,7 @@
       </property>
      </widget>
     </item>
-    <item row="0" column="0">
+    <item row="9" column="0">
      <widget class="QTabWidget" name="tabParameters">
       <property name="tabPosition">
        <enum>QTabWidget::West</enum>
@@ -156,49 +156,77 @@
         <string>Filtering Parameters</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_3">
-        <item row="0" column="9">
-         <spacer name="horizontalSpacer_6">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
+        <item row="3" column="4" rowspan="2">
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <item>
+           <layout class="QHBoxLayout" name="lyoLimitsL">
+            <item>
+             <widget class="QLabel" name="lblLeftL">
+              <property name="font">
+               <font>
+                <pointsize>15</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>(</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="dspbInfL">
+              <property name="singleStep">
+               <double>0.100000000000000</double>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="lblComaL">
+              <property name="font">
+               <font>
+                <pointsize>15</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>,</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="dspbSupL"/>
+            </item>
+            <item>
+             <widget class="QLabel" name="lblRightL">
+              <property name="font">
+               <font>
+                <pointsize>15</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>)</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="dspbFixedL">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>16777215</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
-        <item row="8" column="7" rowspan="2" colspan="2">
-         <spacer name="horizontalSpacer_9">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="13" column="0" colspan="10">
-         <spacer name="verticalSpacer_4">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeType">
-           <enum>QSizePolicy::Expanding</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="6" column="0">
+        <item row="7" column="0">
          <widget class="QCheckBox" name="chkFixK">
           <property name="layoutDirection">
            <enum>Qt::RightToLeft</enum>
@@ -207,19 +235,6 @@
            <string>Fixed</string>
           </property>
          </widget>
-        </item>
-        <item row="3" column="4" rowspan="2">
-         <spacer name="horizontalSpacer">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
         </item>
         <item row="3" column="0">
          <widget class="QLabel" name="label_4">
@@ -242,198 +257,13 @@
           </property>
          </widget>
         </item>
-        <item row="5" column="2" rowspan="2">
-         <layout class="QHBoxLayout" name="horizontalLayout_4">
-          <item>
-           <widget class="QLabel" name="label_7">
-            <property name="font">
-             <font>
-              <pointsize>15</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>(</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QSpinBox" name="spbInfK"/>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_8">
-            <property name="font">
-             <font>
-              <pointsize>15</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>,</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QSpinBox" name="spbSupK">
-            <property name="maximum">
-             <number>180</number>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_9">
-            <property name="font">
-             <font>
-              <pointsize>15</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>)</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item row="3" column="6">
-         <widget class="QLabel" name="label_5">
-          <property name="font">
-           <font>
-            <pointsize>12</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>L:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="11" column="8">
-         <widget class="QLabel" name="lblParL">
-          <property name="text">
-           <string>delta</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0" colspan="3">
-         <widget class="QLabel" name="label_6">
-          <property name="maximumSize">
-           <size>
-            <width>512</width>
-            <height>16777215</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>12</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>Filtering method:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="12" column="0">
-         <widget class="QLabel" name="label_24">
-          <property name="text">
-           <string>K:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="9" rowspan="4">
-         <spacer name="horizontalSpacer_3">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="12" column="3">
-         <widget class="QLabel" name="lblParK">
-          <property name="text">
-           <string>delta</string>
-          </property>
-         </widget>
-        </item>
-        <item row="11" column="7">
-         <widget class="QDoubleSpinBox" name="dspbDeltaS">
-          <property name="decimals">
-           <number>6</number>
-          </property>
-          <property name="minimum">
-           <double>0.000001000000000</double>
-          </property>
-          <property name="maximum">
-           <double>100.000000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="4" rowspan="2">
-         <spacer name="horizontalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="11" column="6">
-         <widget class="QLabel" name="label_23">
-          <property name="text">
-           <string>L:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="11" column="3">
-         <widget class="QLabel" name="lblParT">
-          <property name="text">
-           <string>delta</string>
-          </property>
-         </widget>
-        </item>
-        <item row="8" column="6">
-         <widget class="QSpinBox" name="spbPop">
-          <property name="minimum">
-           <number>2</number>
-          </property>
-          <property name="maximum">
-           <number>1000</number>
-          </property>
-          <property name="singleStep">
-           <number>2</number>
-          </property>
-         </widget>
-        </item>
-        <item row="7" column="0" colspan="10">
+        <item row="9" column="0" colspan="9">
          <spacer name="verticalSpacer">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
           </property>
           <property name="sizeType">
-           <enum>QSizePolicy::Expanding</enum>
+           <enum>QSizePolicy::Minimum</enum>
           </property>
           <property name="sizeHint" stdset="0">
            <size>
@@ -442,19 +272,6 @@
            </size>
           </property>
          </spacer>
-        </item>
-        <item row="12" column="7">
-         <widget class="QDoubleSpinBox" name="dspbDeltaSigma">
-          <property name="decimals">
-           <number>6</number>
-          </property>
-          <property name="minimum">
-           <double>0.000001000000000</double>
-          </property>
-          <property name="maximum">
-           <double>100.000000000000000</double>
-          </property>
-         </widget>
         </item>
         <item row="4" column="0">
          <widget class="QCheckBox" name="chkFixT">
@@ -466,73 +283,7 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="7" rowspan="2">
-         <layout class="QHBoxLayout" name="horizontalLayout_6">
-          <item>
-           <widget class="QLabel" name="label_15">
-            <property name="font">
-             <font>
-              <pointsize>15</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>(</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QDoubleSpinBox" name="dspbInfL">
-            <property name="singleStep">
-             <double>0.100000000000000</double>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_17">
-            <property name="font">
-             <font>
-              <pointsize>15</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>,</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QDoubleSpinBox" name="dspbSupL"/>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_18">
-            <property name="font">
-             <font>
-              <pointsize>15</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>)</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item row="4" column="6">
-         <widget class="QCheckBox" name="chkFixL">
-          <property name="layoutDirection">
-           <enum>Qt::RightToLeft</enum>
-          </property>
-          <property name="text">
-           <string>Fixed</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="0">
+        <item row="6" column="0">
          <widget class="QLabel" name="label_16">
           <property name="maximumSize">
            <size>
@@ -553,7 +304,7 @@
           </property>
          </widget>
         </item>
-        <item row="10" column="0" colspan="10">
+        <item row="12" column="0" colspan="9">
          <spacer name="verticalSpacer_2">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -569,28 +320,109 @@
           </property>
          </spacer>
         </item>
-        <item row="12" column="8">
-         <widget class="QLabel" name="lblParSigma">
-          <property name="text">
-           <string>delta</string>
-          </property>
-         </widget>
-        </item>
-        <item row="8" column="9">
-         <spacer name="horizontalSpacer_4">
+        <item row="1" column="0" colspan="9">
+         <spacer name="verticalSpacer_3">
           <property name="orientation">
-           <enum>Qt::Horizontal</enum>
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Minimum</enum>
           </property>
           <property name="sizeHint" stdset="0">
            <size>
-            <width>40</width>
-            <height>20</height>
+            <width>20</width>
+            <height>40</height>
            </size>
           </property>
          </spacer>
         </item>
-        <item row="8" column="1" colspan="2">
+        <item row="11" column="0">
+         <widget class="QLabel" name="lblFitness">
+          <property name="text">
+           <string>Objetive Function</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="0">
+         <widget class="QLabel" name="label_3">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="text">
+           <string>Algorithm</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_6">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Filtering method:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="11" column="4">
+         <widget class="QSpinBox" name="spbGen">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>10000</number>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="3">
+         <widget class="QLabel" name="lblPop">
+          <property name="maximumSize">
+           <size>
+            <width>512</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Population size</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="3">
+         <widget class="QCheckBox" name="chkFixL">
+          <property name="layoutDirection">
+           <enum>Qt::RightToLeft</enum>
+          </property>
+          <property name="text">
+           <string>Fixed</string>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="1">
          <widget class="QComboBox" name="cmbAlgorithm">
+          <item>
+           <property name="text">
+            <string>Unset</string>
+           </property>
+          </item>
           <item>
            <property name="text">
             <string>Exhaustive Search</string>
@@ -613,158 +445,42 @@
           </item>
          </widget>
         </item>
-        <item row="12" column="6">
-         <widget class="QLabel" name="label_25">
-          <property name="text">
-           <string>Sigma:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="8" rowspan="2">
-         <widget class="QDoubleSpinBox" name="doubleSpinBox_13">
-          <property name="maximumSize">
-           <size>
-            <width>0</width>
-            <height>16777215</height>
-           </size>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="3" rowspan="2">
-         <widget class="QSpinBox" name="spinBox">
-          <property name="maximumSize">
-           <size>
-            <width>0</width>
-            <height>16777215</height>
-           </size>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="6" colspan="3">
-         <spacer name="horizontalSpacer_5">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="9" column="6">
-         <widget class="QSpinBox" name="spGen">
-          <property name="minimum">
-           <number>1</number>
-          </property>
+        <item row="10" column="7">
+         <widget class="QDoubleSpinBox" name="dspbCR">
           <property name="maximum">
-           <number>10000</number>
+           <double>1.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
           </property>
          </widget>
         </item>
-        <item row="1" column="0" colspan="10">
-         <spacer name="verticalSpacer_3">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeType">
-           <enum>QSizePolicy::Minimum</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="9" column="0">
-         <widget class="QLabel" name="label_10">
+        <item row="11" column="3">
+         <widget class="QLabel" name="lblGen">
           <property name="text">
-           <string>Objetive Function</string>
+           <string>Max generations</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
          </widget>
         </item>
-        <item row="5" column="6">
-         <widget class="QLabel" name="chkFixSigma">
-          <property name="font">
-           <font>
-            <pointsize>12</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>σ:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
+        <item row="11" column="1">
+         <widget class="QComboBox" name="cmbFitness">
+          <item>
+           <property name="text">
+            <string>Area under ROC curve</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Correlation + Contrast</string>
+           </property>
+          </item>
          </widget>
         </item>
-        <item row="5" column="7" rowspan="2">
-         <layout class="QHBoxLayout" name="horizontalLayout_5">
-          <item>
-           <widget class="QLabel" name="label_12">
-            <property name="font">
-             <font>
-              <pointsize>15</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>(</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QDoubleSpinBox" name="dspbInfSigma"/>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_13">
-            <property name="font">
-             <font>
-              <pointsize>15</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>,</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QDoubleSpinBox" name="dspbSupSigma">
-            <property name="singleStep">
-             <double>0.010000000000000</double>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_14">
-            <property name="font">
-             <font>
-              <pointsize>15</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>)</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item row="6" column="6">
-         <widget class="QCheckBox" name="checkBox_5">
+        <item row="7" column="3">
+         <widget class="QCheckBox" name="chkFixSigma">
           <property name="layoutDirection">
            <enum>Qt::RightToLeft</enum>
           </property>
@@ -773,48 +489,12 @@
           </property>
          </widget>
         </item>
-        <item row="8" column="0">
-         <widget class="QLabel" name="label_3">
-          <property name="enabled">
-           <bool>true</bool>
-          </property>
-          <property name="text">
-           <string>Algorithm</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="11" column="9" rowspan="2">
-         <spacer name="horizontalSpacer_7">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="11" column="0">
-         <widget class="QLabel" name="label_22">
-          <property name="text">
-           <string>T:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="2" rowspan="2">
+        <item row="3" column="1" rowspan="2">
          <layout class="QHBoxLayout" name="horizontalLayout">
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_7">
+           <layout class="QHBoxLayout" name="lyoLimitsT">
             <item>
-             <widget class="QLabel" name="label_19">
+             <widget class="QLabel" name="lblLeftT">
               <property name="font">
                <font>
                 <pointsize>15</pointsize>
@@ -831,7 +511,7 @@
              <widget class="QSpinBox" name="spbInfT"/>
             </item>
             <item>
-             <widget class="QLabel" name="label_20">
+             <widget class="QLabel" name="lblComaT">
               <property name="font">
                <font>
                 <pointsize>15</pointsize>
@@ -848,7 +528,7 @@
              <widget class="QSpinBox" name="spbSupT"/>
             </item>
             <item>
-             <widget class="QLabel" name="label_21">
+             <widget class="QLabel" name="lblRightT">
               <property name="font">
                <font>
                 <pointsize>15</pointsize>
@@ -864,10 +544,10 @@
            </layout>
           </item>
           <item>
-           <widget class="QSpinBox" name="spinBox_12">
+           <widget class="QSpinBox" name="spbFixedT">
             <property name="maximumSize">
              <size>
-              <width>0</width>
+              <width>16777215</width>
               <height>16777215</height>
              </size>
             </property>
@@ -875,58 +555,15 @@
           </item>
          </layout>
         </item>
-        <item row="9" column="1" colspan="2">
-         <widget class="QComboBox" name="cmbFitness">
-          <item>
-           <property name="text">
-            <string>Area under ROC curve</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Correlation + Contrast</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-        <item row="5" column="8" rowspan="2">
-         <widget class="QDoubleSpinBox" name="doubleSpinBox_14">
-          <property name="maximumSize">
-           <size>
-            <width>0</width>
-            <height>16777215</height>
-           </size>
-          </property>
-         </widget>
-        </item>
-        <item row="8" column="5">
-         <widget class="QLabel" name="label">
-          <property name="maximumSize">
-           <size>
-            <width>512</width>
-            <height>16777215</height>
-           </size>
-          </property>
+        <item row="11" column="6">
+         <widget class="QLabel" name="lblMR">
           <property name="text">
-           <string>Population size</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           <string>Mutation-Rate</string>
           </property>
          </widget>
         </item>
-        <item row="9" column="5">
-         <widget class="QLabel" name="label_2">
-          <property name="text">
-           <string>Max generations</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="8" column="3" rowspan="2" colspan="2">
-         <spacer name="horizontalSpacer_8">
+        <item row="3" column="6" rowspan="2" colspan="3">
+         <spacer name="horizontalSpacer_3">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -938,7 +575,224 @@
           </property>
          </spacer>
         </item>
-        <item row="0" column="3" colspan="3">
+        <item row="6" column="6" rowspan="2" colspan="3">
+         <spacer name="horizontalSpacer_6">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="3" column="2" rowspan="2">
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Minimum</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="11" column="7">
+         <widget class="QDoubleSpinBox" name="dspbMR">
+          <property name="maximum">
+           <double>1.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="1" rowspan="2">
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <layout class="QHBoxLayout" name="lyoLimitsK">
+            <item>
+             <widget class="QLabel" name="lblLeftK">
+              <property name="font">
+               <font>
+                <pointsize>15</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>(</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spbInfK"/>
+            </item>
+            <item>
+             <widget class="QLabel" name="lblComaK">
+              <property name="font">
+               <font>
+                <pointsize>15</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>,</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spbSupK">
+              <property name="maximum">
+               <number>180</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="lblRightK">
+              <property name="font">
+               <font>
+                <pointsize>15</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>)</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spbFixedK">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>16777215</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="10" column="6">
+         <widget class="QLabel" name="lblCR">
+          <property name="text">
+           <string>Crossover-Ratio</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="3">
+         <widget class="QLabel" name="label_5">
+          <property name="font">
+           <font>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>L:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="4" rowspan="2">
+         <layout class="QHBoxLayout" name="horizontalLayout_8">
+          <item>
+           <layout class="QHBoxLayout" name="lyoLimitsSigma">
+            <item>
+             <widget class="QLabel" name="lblLeftSigma">
+              <property name="font">
+               <font>
+                <pointsize>15</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>(</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="dspbInfSigma"/>
+            </item>
+            <item>
+             <widget class="QLabel" name="lblComaSigma">
+              <property name="font">
+               <font>
+                <pointsize>15</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>,</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="dspbSupSigma">
+              <property name="singleStep">
+               <double>0.010000000000000</double>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="lblRightSigma">
+              <property name="font">
+               <font>
+                <pointsize>15</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>)</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="dspbFixedSigma">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>16777215</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="6" column="2" rowspan="2">
+         <spacer name="horizontalSpacer_5">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Minimum</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="0" column="1" colspan="2">
          <widget class="QComboBox" name="cmbFilter">
           <item>
            <property name="text">
@@ -952,8 +806,73 @@
           </item>
          </widget>
         </item>
-        <item row="11" column="1" colspan="2">
-         <widget class="QDoubleSpinBox" name="dspbDeltaT">
+        <item row="6" column="3">
+         <widget class="QLabel" name="lblSigmaFixed">
+          <property name="font">
+           <font>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>σ:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="4">
+         <widget class="QSpinBox" name="spbPop">
+          <property name="minimum">
+           <number>2</number>
+          </property>
+          <property name="maximum">
+           <number>1000</number>
+          </property>
+          <property name="singleStep">
+           <number>2</number>
+          </property>
+         </widget>
+        </item>
+        <item row="13" column="4">
+         <widget class="QPushButton" name="btnRunConfiguration">
+          <property name="text">
+           <string>Run</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="2">
+         <widget class="QLabel" name="lblParT">
+          <property name="text">
+           <string>delta</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="3" colspan="6">
+         <spacer name="horizontalSpacer_7">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="8" column="2">
+         <widget class="QLabel" name="lblParK">
+          <property name="text">
+           <string>delta</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="4">
+         <widget class="QDoubleSpinBox" name="dspbDeltaL">
+          <property name="toolTip">
+           <string>L delta or bits for optimization</string>
+          </property>
           <property name="decimals">
            <number>6</number>
           </property>
@@ -965,8 +884,57 @@
           </property>
          </widget>
         </item>
-        <item row="12" column="1" colspan="2">
+        <item row="5" column="5">
+         <widget class="QLabel" name="lblParL">
+          <property name="text">
+           <string>delta</string>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="5">
+         <widget class="QLabel" name="lblParSigma">
+          <property name="text">
+           <string>delta</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="1">
+         <widget class="QDoubleSpinBox" name="dspbDeltaT">
+          <property name="toolTip">
+           <string>T delta or Number of bits for optimization</string>
+          </property>
+          <property name="decimals">
+           <number>6</number>
+          </property>
+          <property name="minimum">
+           <double>0.000001000000000</double>
+          </property>
+          <property name="maximum">
+           <double>100.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="1">
          <widget class="QDoubleSpinBox" name="dspbDeltaK">
+          <property name="toolTip">
+           <string>K delta or Number of bits for optimization</string>
+          </property>
+          <property name="decimals">
+           <number>6</number>
+          </property>
+          <property name="minimum">
+           <double>0.000001000000000</double>
+          </property>
+          <property name="maximum">
+           <double>100.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="4">
+         <widget class="QDoubleSpinBox" name="dspbDeltaSigma">
+          <property name="toolTip">
+           <string>Sigma delta or Number of bits for optimization</string>
+          </property>
           <property name="decimals">
            <number>6</number>
           </property>
@@ -980,51 +948,45 @@
         </item>
        </layout>
        <zorder>label_16</zorder>
-       <zorder>cmbFilter</zorder>
        <zorder>chkFixK</zorder>
        <zorder>cmbAlgorithm</zorder>
        <zorder>label_3</zorder>
        <zorder>label_4</zorder>
-       <zorder>label_5</zorder>
-       <zorder>chkFixSigma</zorder>
-       <zorder>doubleSpinBox_13</zorder>
-       <zorder>doubleSpinBox_14</zorder>
-       <zorder>horizontalSpacer_2</zorder>
        <zorder>chkFixT</zorder>
-       <zorder>chkFixL</zorder>
-       <zorder>checkBox_5</zorder>
        <zorder>verticalSpacer</zorder>
-       <zorder>spinBox</zorder>
-       <zorder>horizontalSpacer</zorder>
-       <zorder>horizontalSpacer_3</zorder>
-       <zorder>horizontalSpacer_5</zorder>
-       <zorder>horizontalSpacer_6</zorder>
        <zorder>verticalSpacer_3</zorder>
-       <zorder>spbPop</zorder>
-       <zorder>horizontalSpacer_8</zorder>
-       <zorder>label_22</zorder>
-       <zorder>label_23</zorder>
-       <zorder>label_24</zorder>
-       <zorder>label_25</zorder>
        <zorder>verticalSpacer_2</zorder>
-       <zorder>dspbDeltaT</zorder>
-       <zorder>dspbDeltaK</zorder>
-       <zorder>dspbDeltaS</zorder>
-       <zorder>dspbDeltaSigma</zorder>
-       <zorder>lblParT</zorder>
-       <zorder>lblParK</zorder>
-       <zorder>lblParL</zorder>
-       <zorder>lblParSigma</zorder>
-       <zorder>verticalSpacer_4</zorder>
-       <zorder>horizontalSpacer_4</zorder>
-       <zorder>horizontalSpacer_7</zorder>
-       <zorder>label_10</zorder>
+       <zorder>lblFitness</zorder>
        <zorder>cmbFitness</zorder>
-       <zorder>spGen</zorder>
-       <zorder>horizontalSpacer_9</zorder>
        <zorder>label_6</zorder>
-       <zorder>label</zorder>
-       <zorder>label_2</zorder>
+       <zorder>dspbCR</zorder>
+       <zorder>lblCR</zorder>
+       <zorder>lblMR</zorder>
+       <zorder>dspbMR</zorder>
+       <zorder>horizontalSpacer_3</zorder>
+       <zorder>horizontalSpacer_6</zorder>
+       <zorder></zorder>
+       <zorder>horizontalSpacer_2</zorder>
+       <zorder>horizontalSpacer_5</zorder>
+       <zorder>label_5</zorder>
+       <zorder>chkFixL</zorder>
+       <zorder>lblSigmaFixed</zorder>
+       <zorder>chkFixSigma</zorder>
+       <zorder>cmbFilter</zorder>
+       <zorder>lblPop</zorder>
+       <zorder>lblGen</zorder>
+       <zorder>spbPop</zorder>
+       <zorder>spbGen</zorder>
+       <zorder>horizontalSpacer_7</zorder>
+       <zorder>btnRunConfiguration</zorder>
+       <zorder>dspbDeltaT</zorder>
+       <zorder>lblParT</zorder>
+       <zorder>dspbDeltaK</zorder>
+       <zorder>lblParK</zorder>
+       <zorder>dspbDeltaL</zorder>
+       <zorder>lblParL</zorder>
+       <zorder>dspbDeltaSigma</zorder>
+       <zorder>lblParSigma</zorder>
       </widget>
      </widget>
     </item>
@@ -1035,7 +997,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>727</width>
+     <width>1116</width>
      <height>27</height>
     </rect>
    </property>
@@ -1045,7 +1007,6 @@
     </property>
     <addaction name="separator"/>
     <addaction name="action_Open_file"/>
-    <addaction name="actionOpen_directory_file"/>
     <addaction name="separator"/>
     <addaction name="action_Quit"/>
    </widget>
@@ -1063,9 +1024,6 @@
     <property name="title">
      <string>Segmentation</string>
     </property>
-    <addaction name="actionOtsu"/>
-    <addaction name="actionRidler_Calvard"/>
-    <addaction name="actionNivel_fijo"/>
    </widget>
    <widget class="QMenu" name="menu3D">
     <property name="title">
@@ -1103,61 +1061,6 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="actionChaudhuri">
-   <property name="text">
-    <string>Chaudhuri</string>
-   </property>
-  </action>
-  <action name="actionAl_Rawi">
-   <property name="text">
-    <string>Al-Rawi</string>
-   </property>
-  </action>
-  <action name="actionKang">
-   <property name="text">
-    <string>Kang</string>
-   </property>
-  </action>
-  <action name="actionSSG_ROC">
-   <property name="text">
-    <string>SSG ROC</string>
-   </property>
-  </action>
-  <action name="actionSSG_CC">
-   <property name="text">
-    <string>SSG CC</string>
-   </property>
-  </action>
-  <action name="actionSSG_Ranggayan">
-   <property name="text">
-    <string>SSG Ranggayan</string>
-   </property>
-  </action>
-  <action name="actionGMF_ROC">
-   <property name="text">
-    <string>GMF ROC</string>
-   </property>
-  </action>
-  <action name="actionSkeletonize">
-   <property name="text">
-    <string>&amp;Skeletonize</string>
-   </property>
-  </action>
-  <action name="actionOtsu">
-   <property name="text">
-    <string>Otsu</string>
-   </property>
-  </action>
-  <action name="actionRidler_Calvard">
-   <property name="text">
-    <string>Ridler y Calvard</string>
-   </property>
-  </action>
-  <action name="actionNivel_fijo">
-   <property name="text">
-    <string>Nivel fijo</string>
-   </property>
-  </action>
   <action name="actionExport_parameters">
    <property name="text">
     <string>Export parameters</string>
@@ -1173,9 +1076,9 @@
     <string>Import parameters</string>
    </property>
   </action>
-  <action name="actionOpen_directory_file">
+  <action name="actionSkeletonize">
    <property name="text">
-    <string>Open directory file</string>
+    <string>Skeletonize</string>
    </property>
   </action>
  </widget>
