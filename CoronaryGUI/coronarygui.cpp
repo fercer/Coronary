@@ -730,6 +730,12 @@ void coronaryGUI::on_cmbFilter_currentIndexChanged(int index)
 
 void coronaryGUI::on_btnRunConfiguration_clicked()
 {
+
+    if( !loaded ){
+        ui->ptxtLog->appendPlainText( "\n\nThere is no Image loaded yet\n" );
+        return;
+    }
+
     switch( ui->cmbFilter->currentIndex() ){
     case 0:
         mi_rec3D.setFiltroMetodo( FILTROS::GMF );
@@ -771,6 +777,8 @@ void coronaryGUI::on_btnRunConfiguration_clicked()
     mi_rec3D.setFiltroEntrenamientoPars(FILTROS::CR, ui->dspbCR->value() );
     mi_rec3D.setFiltroEntrenamientoPars(FILTROS::MR, ui->dspbMR->value() );
 
+    DEB_MSG("is T fixed? " << (ui->chkFixT->isChecked() ? "YES" : "NO"));
+
     if( ui->chkFixT->isChecked() ){
         mi_rec3D.setFiltroParametros(FILTROS::PAR_T, (double)ui->spbFixedT->value() );
     }else{
@@ -787,7 +795,7 @@ void coronaryGUI::on_btnRunConfiguration_clicked()
         mi_rec3D.setFiltroParametros(FILTROS::PAR_L, FILTROS::DELTA, ui->dspbDeltaL->value() );
     }
 
-    if( ui->chkFixT->isChecked() ){
+    if( ui->chkFixK->isChecked() ){
         mi_rec3D.setFiltroParametros(FILTROS::PAR_K, (double)ui->spbFixedK->value() );
     }else{
         mi_rec3D.setFiltroParametros(FILTROS::PAR_K, FILTROS::INFERIOR, (double)ui->spbInfK->value() );

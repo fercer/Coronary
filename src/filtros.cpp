@@ -315,6 +315,7 @@ FILTROS::INDIV FILTROS::getPars(){
 int FILTROS::getParametrosOptimizar(){
     int n_pars = 0;
     for( int i = 0; i < 4; i++){
+        DEB_MSG("Par[" << i << "]: " << pars_optim[i] );
         if( pars_optim[i] ){
             n_pars++;
         }
@@ -338,6 +339,7 @@ void FILTROS::setLim( const PARAMETRO par, const LIMITES lim, const double val){
         min_vars[ par ] = val;
         break;
     }
+    pars_optim[ par ] = true;
 }
 
 
@@ -848,8 +850,6 @@ double FILTROS::calcROC( double *resp ){
         escribirLog( mensaje_error);
         return 0.0;
     }
-
-    DEB_MSG("RESP: " << *(resp) << ", " << *(resp + rows_cols));
 
     TIMERS;
 
