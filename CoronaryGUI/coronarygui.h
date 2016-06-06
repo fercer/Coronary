@@ -80,6 +80,10 @@ private slots:
 
     void on_btnRunConfiguration_clicked();
 
+    void on_ptxtLog_customContextMenuRequested(const QPoint &pos);
+
+    void on_actionLog_configuration_triggered();
+
 private:
     QVector<QRgb> colors;
     Ui::coronaryGUI *ui;
@@ -89,6 +93,8 @@ private:
     RECONS3D mi_rec3D;
     bool loaded, showing_gt;
     bool maximized;
+
+    FILE *fp_filters;
 };
 
 #endif // CORONARYGUI_H

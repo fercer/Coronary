@@ -28,6 +28,39 @@ void RECONS3D::escribirLog( const char *mensaje ){
 
 
 
+
+
+/*  Metodo: barraProgreso
+
+    Funcion: Actualiza la barra de progreso.
+*/
+void RECONS3D::barraProgreso( const int avance, const int milestones ){
+
+    if( mi_pbar ){
+        mi_pbar->setMinimum( 1 );
+        mi_pbar->setMaximum( milestones );
+        mi_pbar->setValue( avance );
+    }else{
+        /// Limpiar el resto de la linea:
+        int max_ancho = 100;
+        for( int i = 0; i < max_ancho; i++){
+            printf("\r");
+        }
+        printf(COLOR_BACK_RED "[");
+        int avance_milestones = (int)((double)max_ancho * (double)avance / (double)milestones);
+        for( int i = 0; i < avance_milestones; i++){
+            printf(COLOR_BACK_GREEN " ");
+        }
+        for( int i = avance_milestones; i < max_ancho; i++){
+            printf(COLOR_BACK_CYAN " ");
+        }
+        printf(COLOR_BACK_RED "]" COLOR_NORMAL);
+        fflush(stdout);
+    }
+}
+
+
+
 /*  Metodo: renderizar()
 
     Funcion: Renderiza los 'actores' contenidos en 'renderer' en una ventana de VTK.
@@ -1363,6 +1396,37 @@ void RECONS3D::setLog(QPlainTextEdit *log ){
 
 
 
+/*  Metodo: setFiltroLog
+
+    Funcion: Define el editor donde se escribiran todos los logs del filtrado
+*/
+void RECONS3D::setFiltroLog(QPlainTextEdit *log ){
+    filtro.setLog( log );
+}
+
+
+
+/*  Metodo: setFiltroLog
+
+    Funcion: Define el editor donde se escribiran todos los logs del filtrado
+*/
+void RECONS3D::setFiltroLog( FILE *fplog ){
+    filtro.setLog( fplog );
+}
+
+
+
+/*  Metodo: setProgressBar
+
+    Funcion: Define la barra para mostrar el progreso de los procesos del reconstructor
+*/
+void RECONS3D::setProgressBar( QProgressBar *pbar ){
+    mi_pbar = pbar;
+    filtro.setProgressBar( mi_pbar );
+}
+
+
+
 
 // C O N S T R U C T O R E S    /   D E S T R U C T O R E S
 /*  Constructor ()
@@ -1370,6 +1434,7 @@ void RECONS3D::setLog(QPlainTextEdit *log ){
 */
 RECONS3D::RECONS3D(){
     mi_log = NULL;
+    mi_pbar = NULL;
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
 
     detalle = 180;

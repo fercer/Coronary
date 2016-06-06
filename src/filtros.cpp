@@ -16,6 +16,8 @@
 void FILTROS::escribirLog( const char *mensaje ){
     if( mi_log ){
         mi_log->appendPlainText( mensaje );
+    }else if(mi_fplog){
+        fprintf(mi_fplog, "%s", mensaje);
     }else{
         std:cout << mensaje << std::endl;
         fflush(stdout);
@@ -28,19 +30,28 @@ void FILTROS::escribirLog( const char *mensaje ){
     Funcion: Actualiza la barra de progreso.
 */
 void FILTROS::barraProgreso( const int avance, const int milestones ){
-    /// Limpiar el resto de la linea:
-    for( int i = 0; i < milestones+2; i++){
-        printf("\r");
+
+    if( mi_pbar ){
+        mi_pbar->setMinimum( 1 );
+        mi_pbar->setMaximum( milestones );
+        mi_pbar->setValue( avance );
+    }else{
+        /// Limpiar el resto de la linea:
+        int max_ancho = 100;
+        for( int i = 0; i < max_ancho; i++){
+            printf("\r");
+        }
+        printf(COLOR_BACK_RED "[");
+        int avance_milestones = (int)((double)max_ancho * (double)avance / (double)milestones);
+        for( int i = 0; i < avance_milestones; i++){
+            printf(COLOR_BACK_GREEN " ");
+        }
+        for( int i = avance_milestones; i < max_ancho; i++){
+            printf(COLOR_BACK_CYAN " ");
+        }
+        printf(COLOR_BACK_RED "]" COLOR_NORMAL);
+        fflush(stdout);
     }
-    printf(COLOR_BACK_RED "[");
-    for( int i = 0; i < avance; i++){
-        printf(COLOR_BACK_GREEN " ");
-    }
-    for( int i = avance; i < milestones; i++){
-        printf(COLOR_BACK_CYAN " ");
-    }
-    printf(COLOR_BACK_RED "]" COLOR_NORMAL);
-    fflush(stdout);
 }
 
 
@@ -173,6 +184,8 @@ void FILTROS::setFitness( const FITNESS fit_fun){
 */
 FILTROS::FILTROS(){
     mi_log = NULL;
+    mi_fplog = NULL;
+    mi_pbar = NULL;
     resp = NULL;
 
     rows = 0;
@@ -378,8 +391,27 @@ void FILTROS::filtrar(){
 */
 void FILTROS::setLog(QPlainTextEdit *log){
     mi_log = log;
+    mi_fplog = NULL;
 }
 
+
+
+/*  Metodo: setLog
+    Funcion: Define el stream donde se imprimen los logs del sistema.
+*/
+void FILTROS::setLog(FILE *fplog){
+    mi_fplog = fplog;
+    mi_log = NULL;
+}
+
+
+
+/*  Metodo: setProgressBar
+    Funcion: Define la barra para mostrar el progreso de los procesos de filtrado
+*/
+void FILTROS::setProgressBar(QProgressBar *pbar){
+    mi_pbar = pbar;
+}
 
 
 
@@ -399,9 +431,9 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
 	GETTIME_INI;
 
-    const int L = (int)test->vars[0];
-    const int T = (int)test->vars[1];
-    const int K = (int)test->vars[2];
+    const int L = round(test->vars[0]);
+    const int T = round(test->vars[1]);
+    const int K = round(test->vars[2]);
     const double sigma = test->vars[3];
     const int temp_dims = 1.5 * ((T > L) ? T : L);
 
@@ -665,8 +697,8 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     GETTIME_INI;
 
     const double L = test->vars[0];
-    const int T = (int)test->vars[1];
-    const int K = (int)test->vars[2];
+    const int T = round(test->vars[1]);
+    const int K = round(test->vars[2]);
 
     // Calculate sx y sy:
     double sx2 = (double)T / (2.0*sqrt(2.0 * log(2.0)));
@@ -1407,7 +1439,13 @@ void FILTROS::generarPob(double medias[4], double varianzas[4], INDIV *poblacion
 void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, double *medias, double *varianzas){
 
     double sum_evals = 0.0;
-    double gx_sel = (poblacion + truncamiento)->eval - 1e-6;
+
+    DEB_MSG("truncamiento: " << truncamiento);
+
+    const double gx_sel = (poblacion + truncamiento)->eval - 1e-6;
+
+    DEB_MSG("gx_sel: " << gx_sel << " best: " << poblacion->eval << ", worst: " << (poblacion + truncamiento)->eval);
+
         //Se calculan las medias primero:
         memset(medias, 0, 4*sizeof(double));
 
@@ -1428,8 +1466,12 @@ void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, doubl
         double tmp;
         memset(varianzas, 0, 4*sizeof(double));
         for( int i = 0; i < truncamiento; i++){
+
+            DEB_MSG("[" << i << "/" << (truncamiento-1) << " (" <<  (poblacion+i)->vars[0] << ", " << (poblacion+i)->vars[1] << ", " << (poblacion+i)->vars[2] << ", " << (poblacion+i)->vars[3] << ") = " << (poblacion+i)->eval );
+
             const double g_bar = (poblacion + i)->eval - gx_sel;
             for( int j = 0; j < n_pars; j++){
+
                 const unsigned int k = idx_pars[j];
                 tmp = (poblacion+i)->vars[k] - *(medias + k);
                 *(varianzas + k) = *(varianzas + k) + tmp*tmp * g_bar;
@@ -1437,7 +1479,7 @@ void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, doubl
         }
 
         for( int j = 0; j < n_pars; j++){
-            *(varianzas + idx_pars[j] ) = *(varianzas + idx_pars[j] ) / (1.0 + sum_evals);
+            *(varianzas + idx_pars[j] ) = *(varianzas + idx_pars[j] ) / (1e-5 + sum_evals);
         }
 }
 
@@ -1450,7 +1492,7 @@ void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, doubl
 int FILTROS::seleccionarPob(double *theta_t, const INDIV *poblacion){
     int truncamiento;
 
-    for( truncamiento = n_pob/2; truncamiento >= 0; truncamiento--){
+    for( truncamiento = n_pob-1; truncamiento >= (n_pob/2); truncamiento--){
         // Se trunca hasta el individuo con evaluacion en la funcion objetivo encima del theta anterior.
         if((poblacion + truncamiento)->eval > (*theta_t)){
             break;
@@ -1503,10 +1545,19 @@ void FILTROS::BUMDA(){
 
     //Se define el theta en el tiempo 0 como el minimo de la poblacion inicial.
     double tetha_t = (poblacion + n_pob - 1)->eval;
-    char mensaje_iter[] = "[XXX/XXX] Best fit: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X\n";
+    char mensaje_iter[] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
+    escribirLog( "iteration\tbest_fit\tT\tL\tSigma\tK\telapsed_time\n" );
+
+    TIMERS;
+    GETTIME_INI;
     do{
         // Guardar el elite como el mejor de los individuos en la posicion 'n_pob' del arreglo:
         memcpy(poblacion + n_pob, poblacion, sizeof(INDIV));
+
+        GETTIME_FIN;
+        sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, poblacion->eval, poblacion->vars[PAR_T], poblacion->vars[PAR_L], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K], DIFTIME);
+        escribirLog( mensaje_iter );
+        barraProgreso( k, max_iters);
 
         calcularPars(poblacion, truncamiento, medias, varianzas);
         generarPob(medias, varianzas, poblacion);
@@ -1519,16 +1570,21 @@ void FILTROS::BUMDA(){
         //// Verificar condiciones de paro:
         int condicion = 0;
         for(int j = 0; j < n_pars; j++){
-            const unsigned int k = idx_pars[j];
-            condicion += ( *(varianzas + k) <= *(min_vars + k));
+            const unsigned int v = idx_pars[j];
+            DEB_MSG("var[" << v << "] = " << *(varianzas + v) << "/" << *(min_vars + v));
+            condicion += ( *(varianzas + v) <= *(min_vars + v));
         }
         procesar = (k < max_iters) && (condicion < n_pars);
 
-        sprintf( mensaje_iter, "[%i/%i] Best fit: %1.4f, L: %1.3f , T: %1.3f, Sigma: %2.3f, K: %3.0f\n", k, max_iters, poblacion->eval, poblacion->vars[PAR_L], poblacion->vars[PAR_T], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K]);
-        escribirLog( mensaje_iter );
     }while(procesar);
 
     memcpy(mi_elite, poblacion, sizeof(INDIV));
+
+    GETTIME_FIN;
+    sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+    escribirLog( mensaje_iter );
+    barraProgreso( max_iters, max_iters);
+
     delete [] poblacion;
 }
 
@@ -1637,7 +1693,13 @@ void FILTROS::UMDA(){
     int k = 0, truncamiento = (int)( (double)n_pob * 0.6);
     bool procesar = true;
 
-    char mensaje_iter[] = "\33[47m\33[47m\33[47m\33[47m\33[47m\33[47m\33[47m[XXX/XXX] Best fit: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X\n\33[47m\33[47m\33[47m\33[47m\33[47m\33[47m\33[47mXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+
+    char mensaje_iter[] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
+    escribirLog( "iteration\tbest_fit\tT\tL\tSigma\tK\telapsed_time\n" );
+
+    TIMERS;
+    GETTIME_INI;
+
     do{
         generarPob(poblacion, probs, deltas_vars);
         qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv);
@@ -1651,20 +1713,21 @@ void FILTROS::UMDA(){
         //// Verificar condiciones de paro:
         procesar = (k < max_iters);
 
-        sprintf( mensaje_iter, "[%i/%i] Best fit: %1.4f, L: %1.3f , T: %1.3f, Sigma: %2.3f, K: %3.0f\n", k, max_iters, (poblacion + n_pob)->eval, (poblacion + n_pob)->vars[PAR_L], (poblacion + n_pob)->vars[PAR_T], (poblacion + n_pob)->vars[PAR_SIGMA], (poblacion + n_pob)->vars[PAR_K]);
+        GETTIME_FIN;
+        sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, poblacion->eval, poblacion->vars[PAR_T], poblacion->vars[PAR_L], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K], DIFTIME);
         escribirLog( mensaje_iter );
-        sprintf(mensaje_iter, COLOR_BACK_BLACK COLOR_CYAN " Probs: " COLOR_GREEN);
-        for( int i = 0; i < n_bits; i++){
-            sprintf( mensaje_iter, "%s [%1.2f]", mensaje_iter, probs[i]);
-        }
-        sprintf(mensaje_iter, "%s%c" COLOR_NORMAL, mensaje_iter, '\0');
-        escribirLog( mensaje_iter );
+        barraProgreso( k, max_iters);
     }while(procesar);
 
-    delete [] probs;
 
     memcpy(mi_elite, poblacion + n_pob, sizeof(INDIV));
 
+    GETTIME_FIN;
+    sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+    escribirLog( mensaje_iter );
+    barraProgreso( k, max_iters);
+
+    delete [] probs;
     delete [] poblacion;
 }
 
@@ -1880,7 +1943,11 @@ void FILTROS::GA(){
 
     double *fitness_acum = new double [n_pob];
 
-    char mensaje_iter[] = "[XXX/XXX] Best fit: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X\n";
+    char mensaje_iter[] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
+    escribirLog( "iteration\tbest_fit\tT\tL\tSigma\tK\telapsed_time\n" );
+
+    TIMERS;
+    GETTIME_INI;
     do{
         selecPob(sel_grp, poblacion, fitness_acum, suma_fitness);
         cruzaPob(cruza, poblacion, n_bits);
@@ -1894,16 +1961,23 @@ void FILTROS::GA(){
         //// Verificar condiciones de paro:
         procesar = (k < max_iters);
 
-        sprintf( mensaje_iter, "[%i/%i] Best fit: %1.4f, L: %1.3f , T: %1.3f, Sigma: %2.3f, K: %3.0f\n", k, max_iters, (poblacion + n_pob)->eval, (poblacion + n_pob)->vars[PAR_L], (poblacion + n_pob)->vars[PAR_T], (poblacion + n_pob)->vars[PAR_SIGMA], (poblacion + n_pob)->vars[PAR_K]);
+        GETTIME_FIN;
+        sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, poblacion->eval, poblacion->vars[PAR_T], poblacion->vars[PAR_L], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K], DIFTIME);
         escribirLog( mensaje_iter );
+        barraProgreso( k, max_iters);
+
     }while(procesar);
+
+    memcpy(mi_elite, poblacion + n_pob, sizeof(INDIV));
+
+    GETTIME_FIN;
+    sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+    escribirLog( mensaje_iter );
+    barraProgreso( k, max_iters);
 
     delete [] cruza;
     delete [] sel_grp;
     delete [] fitness_acum;
-
-    memcpy(mi_elite, poblacion + n_pob, sizeof(INDIV));
-
     delete [] poblacion;
 }
 
@@ -1938,7 +2012,11 @@ void FILTROS::busquedaExhaustiva(){
 
     int idx = 0;
 
-    //barraProgreso( 0, 120 );
+
+    char mensaje_iter[] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
+    escribirLog( "iteration\tbest_fit\tT\tL\tSigma\tK\telapsed_time\n" );
+
+
     TIMERS;
 
     GETTIME_INI;
@@ -1966,19 +2044,21 @@ void FILTROS::busquedaExhaustiva(){
                     if( (test->eval) > (mi_elite->eval) ){
                         memcpy( mi_elite, test, sizeof(INDIV));
                     }
-
                     idx++;
 
-                    //barraProgreso( (int) (120.0 * (double)idx /(double)n_bits), 120);
+                    GETTIME_FIN;
+                    sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", idx, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+                    escribirLog( mensaje_iter );
+                    barraProgreso( idx, n_bits);
                 }
             }
         }
     }
-    GETTIME_FIN;
 
-    char mensaje_iter[] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
-    sprintf( mensaje_iter, "Best fit: %1.8f, L: %1.3f , T: %1.3f, K: %3.0f, Sigma: %2.3f :: en %5.4f s.\n", mi_elite->eval, mi_elite->vars[PAR_L], mi_elite->vars[PAR_T], mi_elite->vars[PAR_K], mi_elite->vars[PAR_SIGMA], DIFTIME);
+    GETTIME_FIN;
+    sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", idx, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
     escribirLog( mensaje_iter );
+    barraProgreso( idx, n_bits);
 
     delete test;
 }

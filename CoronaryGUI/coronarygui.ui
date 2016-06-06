@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1116</width>
+    <width>1140</width>
     <height>687</height>
    </rect>
   </property>
@@ -58,7 +58,7 @@
        <enum>QTabWidget::West</enum>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tabImages">
        <attribute name="title">
@@ -156,7 +156,36 @@
         <string>Filtering Parameters</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_3">
-        <item row="3" column="4" rowspan="2">
+        <item row="11" column="1">
+         <widget class="QComboBox" name="cmbAlgorithm">
+          <item>
+           <property name="text">
+            <string>Unset</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Exhaustive Search</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Genetic Algorithm</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Univariate Marginal Distribution Algorithm</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Boltzmann Univariate MarginalDistribution Algorithm</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="4" column="4" rowspan="2">
          <layout class="QHBoxLayout" name="horizontalLayout_3">
           <item>
            <layout class="QHBoxLayout" name="lyoLimitsL">
@@ -226,7 +255,7 @@
           </item>
          </layout>
         </item>
-        <item row="7" column="0">
+        <item row="8" column="0">
          <widget class="QCheckBox" name="chkFixK">
           <property name="layoutDirection">
            <enum>Qt::RightToLeft</enum>
@@ -236,7 +265,7 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="0">
+        <item row="4" column="0">
          <widget class="QLabel" name="label_4">
           <property name="maximumSize">
            <size>
@@ -257,7 +286,7 @@
           </property>
          </widget>
         </item>
-        <item row="9" column="0" colspan="9">
+        <item row="10" column="0" colspan="9">
          <spacer name="verticalSpacer">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -273,7 +302,7 @@
           </property>
          </spacer>
         </item>
-        <item row="4" column="0">
+        <item row="5" column="0">
          <widget class="QCheckBox" name="chkFixT">
           <property name="layoutDirection">
            <enum>Qt::RightToLeft</enum>
@@ -283,7 +312,7 @@
           </property>
          </widget>
         </item>
-        <item row="6" column="0">
+        <item row="7" column="0">
          <widget class="QLabel" name="label_16">
           <property name="maximumSize">
            <size>
@@ -304,7 +333,7 @@
           </property>
          </widget>
         </item>
-        <item row="12" column="0" colspan="9">
+        <item row="13" column="0" colspan="9">
          <spacer name="verticalSpacer_2">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -320,7 +349,7 @@
           </property>
          </spacer>
         </item>
-        <item row="1" column="0" colspan="9">
+        <item row="2" column="0" colspan="9">
          <spacer name="verticalSpacer_3">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -336,7 +365,7 @@
           </property>
          </spacer>
         </item>
-        <item row="11" column="0">
+        <item row="12" column="0">
          <widget class="QLabel" name="lblFitness">
           <property name="text">
            <string>Objetive Function</string>
@@ -346,7 +375,17 @@
           </property>
          </widget>
         </item>
-        <item row="10" column="0">
+        <item row="12" column="4">
+         <widget class="QSpinBox" name="spbGen">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>10000</number>
+          </property>
+         </widget>
+        </item>
+        <item row="11" column="0">
          <widget class="QLabel" name="label_3">
           <property name="enabled">
            <bool>true</bool>
@@ -359,7 +398,7 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="0">
+        <item row="1" column="0">
          <widget class="QLabel" name="label_6">
           <property name="maximumSize">
            <size>
@@ -380,17 +419,7 @@
           </property>
          </widget>
         </item>
-        <item row="11" column="4">
-         <widget class="QSpinBox" name="spbGen">
-          <property name="minimum">
-           <number>1</number>
-          </property>
-          <property name="maximum">
-           <number>10000</number>
-          </property>
-         </widget>
-        </item>
-        <item row="10" column="3">
+        <item row="11" column="3">
          <widget class="QLabel" name="lblPop">
           <property name="maximumSize">
            <size>
@@ -406,46 +435,7 @@
           </property>
          </widget>
         </item>
-        <item row="4" column="3">
-         <widget class="QCheckBox" name="chkFixL">
-          <property name="layoutDirection">
-           <enum>Qt::RightToLeft</enum>
-          </property>
-          <property name="text">
-           <string>Fixed</string>
-          </property>
-         </widget>
-        </item>
-        <item row="10" column="1">
-         <widget class="QComboBox" name="cmbAlgorithm">
-          <item>
-           <property name="text">
-            <string>Unset</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Exhaustive Search</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Genetic Algorithm</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Univariate Marginal Distribution Algorithm</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Boltzmann Univariate MarginalDistribution Algorithm</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-        <item row="10" column="7">
+        <item row="11" column="7">
          <widget class="QDoubleSpinBox" name="dspbCR">
           <property name="maximum">
            <double>1.000000000000000</double>
@@ -455,17 +445,17 @@
           </property>
          </widget>
         </item>
-        <item row="11" column="3">
-         <widget class="QLabel" name="lblGen">
-          <property name="text">
-           <string>Max generations</string>
+        <item row="5" column="3">
+         <widget class="QCheckBox" name="chkFixL">
+          <property name="layoutDirection">
+           <enum>Qt::RightToLeft</enum>
           </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          <property name="text">
+           <string>Fixed</string>
           </property>
          </widget>
         </item>
-        <item row="11" column="1">
+        <item row="12" column="1">
          <widget class="QComboBox" name="cmbFitness">
           <item>
            <property name="text">
@@ -479,7 +469,24 @@
           </item>
          </widget>
         </item>
-        <item row="7" column="3">
+        <item row="12" column="3">
+         <widget class="QLabel" name="lblGen">
+          <property name="text">
+           <string>Max generations</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="12" column="6">
+         <widget class="QLabel" name="lblMR">
+          <property name="text">
+           <string>Mutation-Rate</string>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="3">
          <widget class="QCheckBox" name="chkFixSigma">
           <property name="layoutDirection">
            <enum>Qt::RightToLeft</enum>
@@ -489,7 +496,17 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="1" rowspan="2">
+        <item row="12" column="7">
+         <widget class="QDoubleSpinBox" name="dspbMR">
+          <property name="maximum">
+           <double>1.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1" rowspan="2">
          <layout class="QHBoxLayout" name="horizontalLayout">
           <item>
            <layout class="QHBoxLayout" name="lyoLimitsT">
@@ -508,7 +525,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QSpinBox" name="spbInfT"/>
+             <widget class="QDoubleSpinBox" name="spbInfT"/>
             </item>
             <item>
              <widget class="QLabel" name="lblComaT">
@@ -525,7 +542,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QSpinBox" name="spbSupT"/>
+             <widget class="QDoubleSpinBox" name="spbSupT"/>
             </item>
             <item>
              <widget class="QLabel" name="lblRightT">
@@ -544,7 +561,7 @@
            </layout>
           </item>
           <item>
-           <widget class="QSpinBox" name="spbFixedT">
+           <widget class="QDoubleSpinBox" name="spbFixedT">
             <property name="maximumSize">
              <size>
               <width>16777215</width>
@@ -556,13 +573,13 @@
          </layout>
         </item>
         <item row="11" column="6">
-         <widget class="QLabel" name="lblMR">
+         <widget class="QLabel" name="lblCR">
           <property name="text">
-           <string>Mutation-Rate</string>
+           <string>Crossover-Ratio</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="6" rowspan="2" colspan="3">
+        <item row="4" column="6" rowspan="2" colspan="3">
          <spacer name="horizontalSpacer_3">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
@@ -575,7 +592,7 @@
           </property>
          </spacer>
         </item>
-        <item row="6" column="6" rowspan="2" colspan="3">
+        <item row="7" column="6" rowspan="2" colspan="3">
          <spacer name="horizontalSpacer_6">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
@@ -588,7 +605,7 @@
           </property>
          </spacer>
         </item>
-        <item row="3" column="2" rowspan="2">
+        <item row="4" column="2" rowspan="2">
          <spacer name="horizontalSpacer_2">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
@@ -604,17 +621,7 @@
           </property>
          </spacer>
         </item>
-        <item row="11" column="7">
-         <widget class="QDoubleSpinBox" name="dspbMR">
-          <property name="maximum">
-           <double>1.000000000000000</double>
-          </property>
-          <property name="singleStep">
-           <double>0.100000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="1" rowspan="2">
+        <item row="7" column="1" rowspan="2">
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
            <layout class="QHBoxLayout" name="lyoLimitsK">
@@ -633,7 +640,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QSpinBox" name="spbInfK"/>
+             <widget class="QDoubleSpinBox" name="spbInfK"/>
             </item>
             <item>
              <widget class="QLabel" name="lblComaK">
@@ -650,11 +657,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QSpinBox" name="spbSupK">
-              <property name="maximum">
-               <number>180</number>
-              </property>
-             </widget>
+             <widget class="QDoubleSpinBox" name="spbSupK"/>
             </item>
             <item>
              <widget class="QLabel" name="lblRightK">
@@ -673,7 +676,7 @@
            </layout>
           </item>
           <item>
-           <widget class="QSpinBox" name="spbFixedK">
+           <widget class="QDoubleSpinBox" name="spbFixedK">
             <property name="maximumSize">
              <size>
               <width>16777215</width>
@@ -684,14 +687,21 @@
           </item>
          </layout>
         </item>
-        <item row="10" column="6">
-         <widget class="QLabel" name="lblCR">
-          <property name="text">
-           <string>Crossover-Ratio</string>
-          </property>
+        <item row="1" column="1" colspan="2">
+         <widget class="QComboBox" name="cmbFilter">
+          <item>
+           <property name="text">
+            <string>Gaussian Matched Filter</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>single-Scale Gabor</string>
+           </property>
+          </item>
          </widget>
         </item>
-        <item row="3" column="3">
+        <item row="4" column="3">
          <widget class="QLabel" name="label_5">
           <property name="font">
            <font>
@@ -706,7 +716,7 @@
           </property>
          </widget>
         </item>
-        <item row="6" column="4" rowspan="2">
+        <item row="7" column="4" rowspan="2">
          <layout class="QHBoxLayout" name="horizontalLayout_8">
           <item>
            <layout class="QHBoxLayout" name="lyoLimitsSigma">
@@ -776,7 +786,7 @@
           </item>
          </layout>
         </item>
-        <item row="6" column="2" rowspan="2">
+        <item row="7" column="2" rowspan="2">
          <spacer name="horizontalSpacer_5">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
@@ -792,21 +802,27 @@
           </property>
          </spacer>
         </item>
-        <item row="0" column="1" colspan="2">
-         <widget class="QComboBox" name="cmbFilter">
-          <item>
-           <property name="text">
-            <string>Gaussian Matched Filter</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>single-Scale Gabor</string>
-           </property>
-          </item>
+        <item row="11" column="4">
+         <widget class="QSpinBox" name="spbPop">
+          <property name="minimum">
+           <number>2</number>
+          </property>
+          <property name="maximum">
+           <number>1000</number>
+          </property>
+          <property name="singleStep">
+           <number>2</number>
+          </property>
          </widget>
         </item>
-        <item row="6" column="3">
+        <item row="14" column="4">
+         <widget class="QPushButton" name="btnRunConfiguration">
+          <property name="text">
+           <string>Run</string>
+          </property>
+         </widget>
+        </item>
+        <item row="7" column="3">
          <widget class="QLabel" name="lblSigmaFixed">
           <property name="font">
            <font>
@@ -821,34 +837,21 @@
           </property>
          </widget>
         </item>
-        <item row="10" column="4">
-         <widget class="QSpinBox" name="spbPop">
-          <property name="minimum">
-           <number>2</number>
-          </property>
-          <property name="maximum">
-           <number>1000</number>
-          </property>
-          <property name="singleStep">
-           <number>2</number>
-          </property>
-         </widget>
-        </item>
-        <item row="13" column="4">
-         <widget class="QPushButton" name="btnRunConfiguration">
-          <property name="text">
-           <string>Run</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="2">
+        <item row="6" column="2">
          <widget class="QLabel" name="lblParT">
           <property name="text">
            <string>delta</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="3" colspan="6">
+        <item row="9" column="2">
+         <widget class="QLabel" name="lblParK">
+          <property name="text">
+           <string>delta</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="3" colspan="6">
          <spacer name="horizontalSpacer_7">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
@@ -861,14 +864,21 @@
           </property>
          </spacer>
         </item>
-        <item row="8" column="2">
-         <widget class="QLabel" name="lblParK">
+        <item row="6" column="5">
+         <widget class="QLabel" name="lblParL">
           <property name="text">
            <string>delta</string>
           </property>
          </widget>
         </item>
-        <item row="5" column="4">
+        <item row="9" column="5">
+         <widget class="QLabel" name="lblParSigma">
+          <property name="text">
+           <string>delta</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="4">
          <widget class="QDoubleSpinBox" name="dspbDeltaL">
           <property name="toolTip">
            <string>L delta or bits for optimization</string>
@@ -884,37 +894,7 @@
           </property>
          </widget>
         </item>
-        <item row="5" column="5">
-         <widget class="QLabel" name="lblParL">
-          <property name="text">
-           <string>delta</string>
-          </property>
-         </widget>
-        </item>
-        <item row="8" column="5">
-         <widget class="QLabel" name="lblParSigma">
-          <property name="text">
-           <string>delta</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="1">
-         <widget class="QDoubleSpinBox" name="dspbDeltaT">
-          <property name="toolTip">
-           <string>T delta or Number of bits for optimization</string>
-          </property>
-          <property name="decimals">
-           <number>6</number>
-          </property>
-          <property name="minimum">
-           <double>0.000001000000000</double>
-          </property>
-          <property name="maximum">
-           <double>100.000000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="8" column="1">
+        <item row="9" column="1">
          <widget class="QDoubleSpinBox" name="dspbDeltaK">
           <property name="toolTip">
            <string>K delta or Number of bits for optimization</string>
@@ -930,7 +910,23 @@
           </property>
          </widget>
         </item>
-        <item row="8" column="4">
+        <item row="6" column="1">
+         <widget class="QDoubleSpinBox" name="dspbDeltaT">
+          <property name="toolTip">
+           <string>T delta or Number of bits for optimization</string>
+          </property>
+          <property name="decimals">
+           <number>6</number>
+          </property>
+          <property name="minimum">
+           <double>0.000001000000000</double>
+          </property>
+          <property name="maximum">
+           <double>100.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="9" column="4">
          <widget class="QDoubleSpinBox" name="dspbDeltaSigma">
           <property name="toolTip">
            <string>Sigma delta or Number of bits for optimization</string>
@@ -997,7 +993,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1116</width>
+     <width>1140</width>
      <height>27</height>
     </rect>
    </property>
@@ -1019,6 +1015,8 @@
     <addaction name="separator"/>
     <addaction name="actionImport_parameters"/>
     <addaction name="actionExport_parameters"/>
+    <addaction name="separator"/>
+    <addaction name="actionLog_configuration"/>
    </widget>
    <widget class="QMenu" name="menuSegmentation">
     <property name="title">
@@ -1079,6 +1077,11 @@
   <action name="actionSkeletonize">
    <property name="text">
     <string>Skeletonize</string>
+   </property>
+  </action>
+  <action name="actionLog_configuration">
+   <property name="text">
+    <string>Log configuration</string>
    </property>
   </action>
  </widget>

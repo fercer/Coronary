@@ -3,7 +3,7 @@
 
 coronaryGUI::coronaryGUI(QWidget *parent) : QMainWindow(parent), ui(new Ui::coronaryGUI){
     ui->setupUi(this);
-
+    fp_filters = NULL;
 
     //// Define characteristics for show images in QLabels
     defineColors();
@@ -18,7 +18,7 @@ coronaryGUI::coronaryGUI(QWidget *parent) : QMainWindow(parent), ui(new Ui::coro
     maximized = false;
     ui->qvtkVP4->GetRenderWindow()->AddRenderer( mi_rec3D.getRenderer() );
     mi_rec3D.setLog( ui->ptxtLog );
-
+    mi_rec3D.setProgressBar( ui->pbarLog );
 
     /// Set visibility for fixed values of parameters:
     ui->chkFixT->toggle();
@@ -47,6 +47,9 @@ coronaryGUI::~coronaryGUI(){
     delete ui;
     if( imgBase ){
         delete imgBase;
+    }
+    if( fp_filters ){
+        fclose( fp_filters );
     }
 }
 
@@ -171,9 +174,7 @@ void coronaryGUI::showImage( IMGVTK::IMG_IDX img_idx, const int viewport_ID, con
 
     switch( viewport_ID ){
         case 1:
-            ui->lblVP1->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
             ui->lblVP1->setAlignment(Qt::AlignCenter);
-            ui->lblVP1->setMinimumSize(cols, rows);
             ui->lblVP1->setPixmap(QPixmap::fromImage(*imgBase));
             ui->lblVP1->show();
             break;
@@ -217,7 +218,7 @@ void coronaryGUI::writeConfiguration(const char *path)
 
     fprintf(fp_config, "#@ Parameters\n");
     if( ui->chkFixT->isChecked() ){
-        fprintf(fp_config, "T\t%i\n", ui->spbFixedT->value());
+        fprintf(fp_config, "T\t%f\n", ui->spbFixedT->value());
     }else{
         fprintf(fp_config, "T\to\n");
     }
@@ -229,7 +230,7 @@ void coronaryGUI::writeConfiguration(const char *path)
     }
 
     if( ui->chkFixK->isChecked() ){
-        fprintf(fp_config, "K\t%i\n", ui->spbFixedK->value());
+        fprintf(fp_config, "K\t%f\n", ui->spbFixedK->value());
     }else{
         fprintf(fp_config, "K\to\n");
     }
@@ -245,7 +246,7 @@ void coronaryGUI::writeConfiguration(const char *path)
     if( ui->chkFixT->isChecked() ){
         fprintf(fp_config, "Tinf\t0\nTsup\t0\nTdel\t0.0\n");
     }else{
-        fprintf(fp_config, "Tinf\t%i\nTsup\t%i\nTdel\t%f\n", ui->spbInfT->value(), ui->spbSupT->value(), ui->dspbDeltaT->value());
+        fprintf(fp_config, "Tinf\t%f\nTsup\t%f\nTdel\t%f\n", ui->spbInfT->value(), ui->spbSupT->value(), ui->dspbDeltaT->value());
     }
 
     if( ui->chkFixL->isChecked() ){
@@ -257,7 +258,7 @@ void coronaryGUI::writeConfiguration(const char *path)
     if( ui->chkFixK->isChecked() ){
         fprintf(fp_config, "Kinf\t0\nKsup\t0\nKdel\t0.0\n");
     }else{
-        fprintf(fp_config, "Kinf\t%i\nKsup\t%i\nKdel\t%f\n", ui->spbInfK->value(), ui->spbSupK->value(), ui->dspbDeltaK->value());
+        fprintf(fp_config, "Kinf\t%f\nKsup\t%f\nKdel\t%f\n", ui->spbInfK->value(), ui->spbSupK->value(), ui->dspbDeltaK->value());
     }
 
     if( ui->chkFixSigma->isChecked() ){
@@ -328,7 +329,7 @@ void coronaryGUI::readConfiguration( const char *path )
                 }
             }else if( strcmp( tmp_par, "T") == 0 ){
                 if( tmp_val[0] != 'o' ){
-                    const int par_t = atoi(tmp_val);
+                    const double par_t = atof(tmp_val);
                     ui->spbFixedT->setValue( par_t );
                     ui->chkFixT->setChecked( true );
                 }else{
@@ -344,7 +345,7 @@ void coronaryGUI::readConfiguration( const char *path )
                 }
             }else if( strcmp( tmp_par, "K") == 0 ){
                 if( tmp_val[0] != 'o' ){
-                    const int par_k = atoi(tmp_val);
+                    const double par_k = atof(tmp_val);
                     ui->spbFixedK->setValue( par_k );
                     ui->chkFixK->setChecked( true );
                 }else{
@@ -359,10 +360,10 @@ void coronaryGUI::readConfiguration( const char *path )
                     ui->chkFixSigma->setChecked( false );
                 }
             }else if( strcmp( tmp_par, "Tinf") == 0 ){
-                const int inf_t = atoi(tmp_val);
+                const double inf_t = atof(tmp_val);
                 ui->spbInfT->setValue( inf_t );
             }else if( strcmp( tmp_par, "Tsup") == 0 ){
-                const int sup_t = atoi(tmp_val);
+                const double sup_t = atof(tmp_val);
                 ui->spbSupT->setValue( sup_t );
             }else if( strcmp( tmp_par, "Tdel") == 0 ){
                 const double del_t = atof(tmp_val);
@@ -377,10 +378,10 @@ void coronaryGUI::readConfiguration( const char *path )
                 const double del_l = atof(tmp_val);
                 ui->dspbDeltaL->setValue( del_l );
             }else if( strcmp( tmp_par, "Kinf") == 0 ){
-                const int inf_k = atoi(tmp_val);
+                const double inf_k = atof(tmp_val);
                 ui->spbInfK->setValue( inf_k );
             }else if( strcmp( tmp_par, "Ksup") == 0 ){
-                const int sup_k = atoi(tmp_val);
+                const double sup_k = atof(tmp_val);
                 ui->spbSupK->setValue( sup_k );
             }else if( strcmp( tmp_par, "Kdel") == 0 ){
                 const double del_k = atof(tmp_val);
@@ -540,11 +541,11 @@ void coronaryGUI::on_btnLoadGT_clicked()
         ui->btnLoadGT->setText( "Show Ground-truth" );
     }else{
         if( !showing_gt ){
-            showImage( IMGVTK::GROUNDTRUTH, 1, ui->hsldImages->value() );
+            showImage( IMGVTK::GROUNDTRUTH, 1, ui->hsldImages->value()-1 );
             ui->btnLoadGT->setText( "Show Base" );
             showing_gt = true;
         }else{
-            showImage( IMGVTK::BASE, 1, ui->hsldImages->value() );
+            showImage( IMGVTK::BASE, 1, ui->hsldImages->value()-1 );
             ui->btnLoadGT->setText( "Show Ground-truth" );
             showing_gt = false;
         }
@@ -812,6 +813,39 @@ void coronaryGUI::on_btnRunConfiguration_clicked()
             mi_rec3D.setFiltroParametros(FILTROS::PAR_SIGMA, FILTROS::DELTA, ui->dspbDeltaSigma->value() );
         }
     }
-
+    if( !fp_filters ){
+        mi_rec3D.setFiltroLog( ui->ptxtLog );
+    }
     mi_rec3D.segmentarImagenBase( 0 );
+    if( fp_filters ){
+        fclose(fp_filters);
+        fp_filters = NULL;
+    }
+}
+
+void coronaryGUI::on_ptxtLog_customContextMenuRequested(const QPoint &pos)
+{
+    ui->ptxtLog->appendPlainText( "\nContext menu displaying ...\n" );
+}
+
+void coronaryGUI::on_actionLog_configuration_triggered()
+{
+    QFileDialog dlgLogExport(this);
+    dlgLogExport.setDirectory("~");
+
+    dlgLogExport.setFileMode(QFileDialog::AnyFile);
+    dlgLogExport.setAcceptMode(QFileDialog::AcceptSave);
+    dlgLogExport.setNameFilter(trUtf8("Log File (*.log)"));
+    dlgLogExport.setWindowTitle("Export log of Filtering process");
+
+    if( dlgLogExport.exec() ){
+        QStringList filename = dlgLogExport.selectedFiles();
+        QByteArray filename_ba = filename.at(0).toLatin1();
+
+        ui->ptxtLog->appendPlainText( filename_ba );
+        if( strlen(filename_ba.data())  ){
+            fp_filters = fopen( filename_ba.data(), "w" );
+            mi_rec3D.setFiltroLog( fp_filters );
+        }
+    }
 }

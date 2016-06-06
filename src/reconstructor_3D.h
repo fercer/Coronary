@@ -12,7 +12,7 @@
 
 // Librerias de uso comun con QT:
 #include <QPlainTextEdit>
-
+#include <QProgressBar>
 
 // Librerias de uso comun:
 #include <vtkVersion.h>
@@ -125,6 +125,7 @@ class RECONS3D{
 
     // M I E M B R O S      P R I V A D O S
         QPlainTextEdit *mi_log;
+        QProgressBar *mi_pbar;
 
         // Miembros para cargar las imagenes:
         std::vector< IMGVTK > imgs_base;
@@ -144,6 +145,7 @@ class RECONS3D{
 
     // M E T O D O S       P R I V A D O S
         void escribirLog( const char *mensaje );
+        void barraProgreso( const int avance, const int milestones );
 
         void renderizar(vtkSmartPointer<vtkRenderer> mi_renderer);
         void mostrarImagen(IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer, const int angio_ID);
@@ -204,6 +206,9 @@ class RECONS3D{
 
 
         void setLog( QPlainTextEdit *log );
+        void setFiltroLog( QPlainTextEdit *log );
+        void setFiltroLog( FILE *fplog );
+        void setProgressBar( QProgressBar *pbar );
     // O P E R A D O R E S  S O B R E C A R G A D O S
     //--------------------------------------------------------------------------------------- PUBLIC ----- ^
 };
