@@ -1,11 +1,11 @@
-#@ Filter
+#@ Filter:
 GMF	1
 SSG	0
 #@ Parameters
-T	13
-L	9
+T	15
+L	13
 K	12
-sig	2.0
+sig	2.82
 #@ Limits
 Tinf	0.0
 Tsup	0.0
