@@ -41,7 +41,7 @@ void FILTROS::barraProgreso( const int avance, const int milestones ){
     for( int i = avance_milestones; i < max_ancho; i++){
         printf(COLOR_BACK_CYAN " ");
     }
-    printf(COLOR_BACK_RED "]" COLOR_NORMAL "\n");
+    printf(COLOR_BACK_RED "]" COLOR_NORMAL);
     fflush(stdout);
 }
 
@@ -1338,20 +1338,13 @@ void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, doubl
             }
         }
 
-        std::cout << "medias: (";
         for( int j = 0; j < n_pars; j++){
             *( medias + idx_pars[j] ) = *( medias + idx_pars[j] ) / sum_evals;
-            std::cout << *(medias + idx_pars[j]) << ", ";
         }
-        std::cout << ")" << std::endl;
-
         //Se calculan las varianzas:
         double tmp;
         memset(varianzas, 0, 4*sizeof(double));
         for( int i = 0; i < truncamiento; i++){
-
-            std::cout << "[" << i << "/" << (truncamiento-1) << " (" <<  (poblacion+i)->vars[0] << ", " << (poblacion+i)->vars[1] << ", " << (poblacion+i)->vars[2] << ", " << (poblacion+i)->vars[3] << ") = " << (poblacion+i)->eval << std::endl;
-
             const double g_bar = (poblacion + i)->eval - gx_sel;
             for( int j = 0; j < n_pars; j++){
 
@@ -1361,12 +1354,9 @@ void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, doubl
             }
         }
 
-        std::cout << "varianzas: (";
         for( int j = 0; j < n_pars; j++){
             *(varianzas + idx_pars[j] ) = *(varianzas + idx_pars[j] ) / (1.0 + sum_evals);
-            std::cout << *(varianzas + idx_pars[j]) << ", ";
         }
-        std::cout << ")" << std::endl;
 }
 
 

@@ -26,7 +26,7 @@ void definirParametros(PARS_ENTRADA *parametros){
     parametros[0].mi_tipo = CHAR;
     sprintf(parametros[0].short_tag, "-b1");
     sprintf(parametros[0].long_tag, "--base1");
-    sprintf(parametros[0].mi_default.par_s, "ang_1.png");
+    sprintf(parametros[0].mi_default.par_s, "NULL");
     sprintf(parametros[0].pregunta, "Imagen angiografica BASE 1 de entrada (.PNG, .BMP, .JPEG/.JPG, o archivo DICOM)");
     parametros[0].opcional = 1;
     // Parametro nivel extraido del archivo DICOM:
@@ -303,35 +303,75 @@ int main(int argc, char** argv ){
         char *tmp_ptr = tmp_str;
         do{
             tmp = fgetc(fp_dataset);
+            if( tmp == '\n' || tmp == EOF ){
+                break;
+            }
             *(tmp_ptr) = tmp;
             tmp_ptr++;
-        }while( !(tmp == '\n' || tmp == EOF) );
+        }while( 1 );
         *(tmp_ptr) = '\0';
+        tmp_ptr = tmp_str;
         const int n_imgs = atoi(tmp_str);
 
         char **rutas = new char* [ n_imgs ];
         for( int i = 0; i < n_imgs; i++){
-            fgets(tmp_str, 511, fp_dataset );
+            do{
+                tmp = fgetc(fp_dataset);
+                if(tmp == EOF || tmp == '\n'){
+                    break;
+                }
+                *(tmp_ptr) = tmp;
+                tmp_ptr++;
+            }while( 1 );
+
+            *(tmp_ptr) = '\0';
+            tmp_ptr = tmp_str;
+
             rutas[i] = new char [(int)strlen(tmp_str)+1];
             sprintf(rutas[i], "%s", tmp_str);
+            DEB_MSG("[" << i << "]: '" << rutas[i]);
         }
 
         fclose( fp_dataset );
 
         /// Leer el ground truth del dataset:
-        fp_dataset = fopen( parametros[14].mi_valor.par_s, "r" );
+        fp_dataset = fopen( parametros[15].mi_valor.par_s, "r" );
+
+        do{
+            tmp = fgetc(fp_dataset);
+            if( tmp == '\n' || tmp == EOF ){
+                break;
+            }
+            *(tmp_ptr) = tmp;
+            tmp_ptr++;
+        }while( 1 );
+        *(tmp_ptr) = '\0';
+        tmp_ptr = tmp_str;
+
         char **rutas_gt = new char* [ n_imgs ];
         for( int i = 0; i < n_imgs; i++){
-            fgets(tmp_str, 511, fp_dataset );
+            do{
+                tmp = fgetc(fp_dataset);
+                if(tmp == EOF || tmp == '\n'){
+                    break;
+                }
+                *(tmp_ptr) = tmp;
+                tmp_ptr++;
+            }while( 1 );
+
+            *(tmp_ptr) = '\0';
+            tmp_ptr = tmp_str;
+
             rutas_gt[i] = new char [(int)strlen(tmp_str)+1];
             sprintf(rutas_gt[i], "%s", tmp_str);
+            DEB_MSG("[" << i << "]: '" << rutas_gt[i]);
         }
 
         fclose( fp_dataset );
 
         RECONS3D reconstructor;
         reconstructor.agregarInput( rutas, n_imgs );
-        reconstructor.agregarInput( rutas_gt, n_imgs );
+        reconstructor.agregarGroundtruth(rutas_gt, n_imgs, 0);
         reconstructor.leerConfiguracion( parametros[16].mi_valor.par_s );
 
         if( strcmp( parametros[17].mi_valor.par_s, "NULL") ){
@@ -339,7 +379,15 @@ int main(int argc, char** argv ){
         }
 
         reconstructor.segmentarImagenBase( 0 );
+
+        for( int i = 0; i < n_imgs; i++){
+            delete [] rutas[i];
+            delete [] rutas_gt[i];
+        }
+        delete [] rutas;
+        delete [] rutas_gt;
     }
+
     delete [] parametros;
     return EXIT_SUCCESS;
 }

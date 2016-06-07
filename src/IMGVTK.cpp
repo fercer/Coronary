@@ -1681,7 +1681,7 @@ void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const doubl
 void IMGVTK::Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel, const bool enmascarar){
 
     const int ruta_l = strlen(ruta_origen);
-
+DEB_MSG("Archivo de entrada: " << ruta_origen);
     if( ruta_l <= 0 ){
         escribirLog( "\n<<Error: Hay un problema con la ruta de entrada, tiene longitud 0 >>\n\n" );
         return;
