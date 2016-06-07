@@ -10,10 +10,6 @@
 #define RECONSTRUCTOR_HPP_INCLUDED
 
 
-// Librerias de uso comun con QT:
-#include <QPlainTextEdit>
-#include <QProgressBar>
-
 // Librerias de uso comun:
 #include <vtkVersion.h>
 #include <vtkSmartPointer.h>
@@ -124,9 +120,6 @@ class RECONS3D{
         } NORCEN;
 
     // M I E M B R O S      P R I V A D O S
-        QPlainTextEdit *mi_log;
-        QProgressBar *mi_pbar;
-
         // Miembros para cargar las imagenes:
         std::vector< IMGVTK > imgs_base;
         std::vector< bool > existe_ground;
@@ -181,6 +174,8 @@ class RECONS3D{
         void agregarGroundtruth(const char *rutaground_input, const int angio_ID);
         void agregarGroundtruth(char **rutasground_input, const int n_imgs, const int angio_ID );
 
+        void leerConfiguracion( const char *ruta_conf);
+
         void segmentarImagenBase(const int angio_ID );
         void skeletonize(const int angio_ID);
 
@@ -204,11 +199,8 @@ class RECONS3D{
         vtkSmartPointer< vtkRenderer > getRenderer();
         vtkSmartPointer< vtkRenderer > getRenderer( const int angio_ID );
 
-
-        void setLog( QPlainTextEdit *log );
-        void setFiltroLog( QPlainTextEdit *log );
         void setFiltroLog( FILE *fplog );
-        void setProgressBar( QProgressBar *pbar );
+        void setFiltroLog( const char* ruta_log );
     // O P E R A D O R E S  S O B R E C A R G A D O S
     //--------------------------------------------------------------------------------------- PUBLIC ----- ^
 };

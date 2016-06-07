@@ -2232,6 +2232,7 @@ void IMGVTK::Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool e
 
     case GROUNDTRUTH:
         gt_ptr = static_cast<double*>(ground->GetScalarPointer(0, 0, 0));
+        break;
     }
 
     if( !cols ){
@@ -2252,8 +2253,6 @@ void IMGVTK::Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool e
 
         segment_ptr = static_cast<double*>(segment->GetScalarPointer(0, 0, 0));
     }
-
-    escribirLog(COLOR_CYAN "\nImagen cargada exitosamente" COLOR_NORMAL);
 }
 
 

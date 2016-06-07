@@ -29,8 +29,6 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkImageData.h>
-#include <QPlainTextEdit>
-#include <QProgressBar>
 
 #include "IMGVTK.h"
 
@@ -76,9 +74,8 @@ class FILTROS{
 
         void filtrar();
 
-        void setLog( QPlainTextEdit *log );
         void setLog( FILE *fplog );
-        void setProgressBar( QProgressBar *pbar );
+        void setLog(const char *ruta_log);
 
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
         // T I P O S        D E     D A T O S      P R I V A D O S
@@ -141,7 +138,7 @@ class FILTROS{
 
         //--------------------------------------------------------------------------------------------------------------------------------- GA:
         void selecPob(INDIV *sel_grp, const INDIV* poblacion, double *fitness_acum, const double suma_fitness);
-        void cruzaPob(INDIV *cruza, const INDIV *poblacion, const unsigned int n_bits);
+        void cruzaPob(INDIV *cruza, const INDIV *sel_grp, const unsigned int n_bits);
         double generarPob(INDIV *poblacion, const INDIV *cruza, const INDIV *sel_grp, const double *deltas_var);
         void GA();
 
@@ -171,9 +168,8 @@ class FILTROS{
 
         double min_vars[4], lim_inf[4], lim_sup[4];
 
+        char *mi_ruta_log;
         FILE *mi_fplog;
-        QPlainTextEdit *mi_log;
-        QProgressBar *mi_pbar;
 
         //================================================================================== FILTROS:
         void respGMF(INDIV *test, double *resp);

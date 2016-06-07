@@ -14,9 +14,7 @@
     Funcion: Escribe un mensaje en el log.
 */
 void FILTROS::escribirLog( const char *mensaje ){
-    if( mi_log ){
-        mi_log->appendPlainText( mensaje );
-    }else if(mi_fplog){
+    if(mi_fplog){
         fprintf(mi_fplog, "%s", mensaje);
     }else{
         std:cout << mensaje << std::endl;
@@ -30,28 +28,21 @@ void FILTROS::escribirLog( const char *mensaje ){
     Funcion: Actualiza la barra de progreso.
 */
 void FILTROS::barraProgreso( const int avance, const int milestones ){
-
-    if( mi_pbar ){
-        mi_pbar->setMinimum( 1 );
-        mi_pbar->setMaximum( milestones );
-        mi_pbar->setValue( avance );
-    }else{
-        /// Limpiar el resto de la linea:
-        int max_ancho = 100;
-        for( int i = 0; i < max_ancho; i++){
-            printf("\r");
-        }
-        printf(COLOR_BACK_RED "[");
-        int avance_milestones = (int)((double)max_ancho * (double)avance / (double)milestones);
-        for( int i = 0; i < avance_milestones; i++){
-            printf(COLOR_BACK_GREEN " ");
-        }
-        for( int i = avance_milestones; i < max_ancho; i++){
-            printf(COLOR_BACK_CYAN " ");
-        }
-        printf(COLOR_BACK_RED "]" COLOR_NORMAL);
-        fflush(stdout);
+    /// Limpiar el resto de la linea:
+    int max_ancho = 100;
+    for( int i = 0; i < max_ancho; i++){
+        printf("\r");
     }
+    printf(COLOR_BACK_RED "[");
+    int avance_milestones = (int)((double)max_ancho * (double)avance / (double)milestones);
+    for( int i = 0; i < avance_milestones; i++){
+        printf(COLOR_BACK_GREEN " ");
+    }
+    for( int i = avance_milestones; i < max_ancho; i++){
+        printf(COLOR_BACK_CYAN " ");
+    }
+    printf(COLOR_BACK_RED "]" COLOR_NORMAL);
+    fflush(stdout);
 }
 
 
@@ -143,6 +134,8 @@ void FILTROS::setEvoMetPar(const EVO_MET_PAR evo_par, const double val){
         break;
     case CR:
         seleccion = (int)(val * (double)n_pob);
+        seleccion += (seleccion%2);
+        DEB_MSG("Selection size: " << seleccion);
         break;
     case MR:
         prob_mutacion = val;
@@ -183,9 +176,8 @@ void FILTROS::setFitness( const FITNESS fit_fun){
     Funcion: Inicializa los parametros en valores por defecto.
 */
 FILTROS::FILTROS(){
-    mi_log = NULL;
+    mi_ruta_log = NULL;
     mi_fplog = NULL;
-    mi_pbar = NULL;
     resp = NULL;
 
     rows = 0;
@@ -229,6 +221,12 @@ FILTROS::~FILTROS(){
 
     if( resp ){
         delete [] resp;
+    }
+
+    if( mi_ruta_log ){
+        fclose( mi_fplog );
+        delete [] mi_ruta_log;
+        mi_ruta_log = NULL;
     }
 
     TIMERS;
@@ -385,34 +383,24 @@ void FILTROS::filtrar(){
 }
 
 
-
 /*  Metodo: setLog
-    Funcion: Define el editor donde se escribiran todos los logs del sistema.
+    Funcion: Define el stream donde se imprimen los logs del sistema.
 */
-void FILTROS::setLog(QPlainTextEdit *log){
-    mi_log = log;
-    mi_fplog = NULL;
+void FILTROS::setLog(FILE *fplog){
+    mi_fplog = fplog;
 }
+
 
 
 
 /*  Metodo: setLog
     Funcion: Define el stream donde se imprimen los logs del sistema.
 */
-void FILTROS::setLog(FILE *fplog){
-    mi_fplog = fplog;
-    mi_log = NULL;
+void FILTROS::setLog( const char *ruta_log){
+    mi_ruta_log = new char [(int)strlen(ruta_log) + 1];
+    sprintf(mi_ruta_log, "%s", ruta_log);
+    mi_fplog = fopen( mi_ruta_log, "w" );
 }
-
-
-
-/*  Metodo: setProgressBar
-    Funcion: Define la barra para mostrar el progreso de los procesos de filtrado
-*/
-void FILTROS::setProgressBar(QProgressBar *pbar){
-    mi_pbar = pbar;
-}
-
 
 
 
@@ -443,8 +431,6 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     double *gauss_0 = new double[T];
 	double *gauss_ptr = gauss_0;
 
-	DEB_MSG("Calculando la base gaussiana...");
-
     ////// Se calcula una linea de la gaussiana para el template, luego se copia hacia abajo:
     const double sig_2 = 2.0 * sigma * sigma;
     double sum = 0.0;
@@ -464,7 +450,6 @@ void FILTROS::respGMF(INDIV *test, double *resp){
          gauss_ptr++;
     }
 
-	DEB_MSG("Replicando la base gaussiana...");
 
     //// Se termina de construir el template a 0°:
     templates[0] = new double [temp_dims * temp_dims];
@@ -476,72 +461,22 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 //        }
     }
 
-#ifndef NDEBUG
-    char nombre_tmp[] = "tmp_XX.fcs";
-    FILE *fp = NULL;
-
-        sprintf(nombre_tmp, "tmp_%i.fcs", 0);
-
-        fp = fopen(nombre_tmp, "w");
-        double media_tmp = 0.0;
-        for (int y = 0; y < temp_dims; y++) {
-            for (int x = 0; x < temp_dims; x++) {
-                fprintf(fp, "%f ", templates[0][x + y*temp_dims]);
-                media_tmp += templates[0][x + y*temp_dims];
-            }
-            fprintf(fp, "\n");
-        }
-        media_tmp /= (double)(temp_dims*temp_dims);
-        DEB_MSG("media template " << 0 << " = " << COLOR_BACK_GREEN COLOR_BLACK << media_tmp << COLOR_NORMAL);
-        fclose(fp);
-#endif
-
 
     // Rotar el template segun el numero de rotaciones 'K':
     const double theta_inc = 180.0 / (double)K;
     double theta = 0.0;
-	DEB_MSG("Rotando el template...");
-
 
     for( int k = 1; k < K; k++){
         theta += theta_inc;
-
-        DEB_MSG("theta: " << theta);
         const double ctheta = cos( -theta * PI/180.0 );
         const double stheta = sin( -theta * PI/180.0 );
 
         templates[k] = new double [temp_dims * temp_dims];
         memset(templates[k], 0, temp_dims*temp_dims*sizeof(double));
         rotarImg( templates[0], templates[k], ctheta, stheta, temp_dims, temp_dims, temp_dims, temp_dims);
-
-#ifndef NDEBUG
-		sprintf(nombre_tmp, "tmp_%i.fcs", k);
-
-		fp = fopen(nombre_tmp, "w");
-        double media_tmp = 0.0;
-		for (int y = 0; y < temp_dims; y++) {
-			for (int x = 0; x < temp_dims; x++) {
-				fprintf(fp, "%f ", templates[k][x + y*temp_dims]);
-                media_tmp += templates[k][x + y*temp_dims];
-			}
-			fprintf(fp, "\n");
-		}
-        media_tmp /= (double)(temp_dims*temp_dims);
-        DEB_MSG("media template " << k << " = " << COLOR_BACK_GREEN COLOR_BLACK << media_tmp << COLOR_NORMAL);
-#endif
-
-
     }
 
-#ifndef NDEBUG
-	fclose(fp);
-#endif
-
 	delete[] gauss_0;
-
-
-	DEB_MSG("Listo para aplicar los filtros...");
-
     ////--------------------------------------------------------- Aplicacion del filtro:
 
     double *resp_tmp = new double [ K * (cols + temp_dims - 1) * (rows + temp_dims - 1) ];
@@ -550,23 +485,12 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     }
 
 	const int offset = (int)(temp_dims/2);
-
-	DEB_MSG("Dimensiones del filtro: " << temp_dims << ", offset: " << offset);
-
     const int mis_cols = cols;
     const int mis_rens = rows;
     const double *mi_org = org;
 
-#ifndef NDEBUG
-    FILE *fp_resps = NULL;
-    char resp_nom[] = "resp_00.fcs";
-#endif
     //#pragma omp parallel for shared(resp_tmp, mi_org, templates) firstprivate(mis_rens, mis_cols, temp_dims, K)
     for( int k = 0; k < K; k++ ){
-#ifndef NDEBUG
-        sprintf(resp_nom, "resp_%i.fcs", k);
-        fp_resps = fopen(resp_nom, "w");
-#endif
         for( int yR = 0; yR < (mis_rens + temp_dims - 1); yR++){
 			// Definir los limites en el eje y que pueden recorrerse del template:
 			const int min_y = (yR > (temp_dims - 1)) ? (yR - temp_dims + 1) : 0;
@@ -588,39 +512,15 @@ void FILTROS::respGMF(INDIV *test, double *resp){
                 if (resp_k > *(resp_tmp + yR*(mis_cols + temp_dims - 1) + xR)) {
                     *(resp_tmp + yR*(mis_cols + temp_dims - 1) + xR + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1)) = resp_k;
                 }
-
-
-#ifndef NDEBUG
-                if( (((yR-offset) > 56 && (yR-offset) < 118) && ((xR-offset) >= 287 && (xR-offset) < 349)) ){
-                    fprintf(fp_resps, "%f ", resp_k);
-                }
-#endif
             }
-#ifndef NDEBUG
-            if( ((yR-offset) > 56 && (yR-offset) < 118) ){
-                fprintf(fp_resps, "\n");
-            }
-#endif
         }
-        DEB_MSG("[" << omp_get_thread_num() << "] Filtro " << COLOR_BACK_WHITE  COLOR_BLACK<< (k+1) << COLOR_NORMAL << "/" << K);
-#ifndef NDEBUG
-        fclose( fp_resps );
-#endif
     }
-
-
-
-    DEB_MSG("Filtros convolucionados");
 
     // Liberar la matriz de templates:
     for( int xy = 0; xy < rows_cols; xy++){
         *(resp +xy) =-INF;
     }
 
-#ifndef NDEBUG
-    FILE *fp_over = fopen("resp.fcs", "w");
-    FILE *fp_org = fopen("org.fcs", "w");
-#endif
     for (int y = 0; y < rows; y++) {
         for (int x = 0; x < cols; x++) {
             for( int k = 0; k < K; k++){
@@ -628,24 +528,9 @@ void FILTROS::respGMF(INDIV *test, double *resp){
                     *(resp + x + y*cols) = *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1) + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1));
                 }
             }
-#ifndef NDEBUG
-            if( ((y > 56 && y < 118) && (x >= 287 && x < 349)) ){
-                fprintf(fp_over, "%f ", *(resp + x + y*cols));
-                fprintf(fp_org, "%f ", *(org + x + y*cols));
-            }
-#endif
         }
-#ifndef NDEBUG
-        if( (y > 56 && y < 118) ){
-            fprintf(fp_over, "\n");
-            fprintf(fp_org, "\n");
-        }
-#endif
     }
-#ifndef NDEBUG
-    fclose(fp_over);
-    fclose(fp_org);
-#endif
+
     for( int k = 0; k < K; k++){
         delete [] templates[k];
     }
@@ -756,8 +641,6 @@ void FILTROS::respGabor(INDIV *test, double *resp){
         }
     }
     free( HPF );
-
-    DEB_MSG("IMG_FFT: " << *(*(Img_fft_HPF + (cols/2 + 1))));
 
     // 'Img_filter' is the temporal filtered image in the frequencies domain:
     fftw_complex *Img_filter = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
@@ -999,6 +882,9 @@ double FILTROS::calcROC( double *resp ){
     free(negative_array);
 
     GETTIME_FIN;
+
+    DEB_MSG("Az: " << Az << " en " << DIFTIME << " s.");
+
     return Az;
 }
 
@@ -1515,7 +1401,7 @@ void FILTROS::BUMDA(){
     INDIV *poblacion = new INDIV [n_pob + 1];
     // Poner los valores del elite por defecto:
     for( int i = 0; i < n_pob; i++){
-        memcpy( (poblacion + i)->vars, mi_elite->vars, 4*sizeof(double));
+        memcpy( poblacion + i, mi_elite, sizeof(INDIV));
     }
 
     double medias[4] = {0.0, 0.0, 0.0, 0.0};
@@ -1656,7 +1542,7 @@ void FILTROS::UMDA(){
     INDIV *poblacion = new INDIV [n_pob + 1];
     // Poner los valores del elite por defecto:
     for( int i = 0; i < n_pob; i++){
-        memcpy( (poblacion + i)->vars, mi_elite->vars, 4*sizeof(double));
+        memcpy( poblacion + i, mi_elite, sizeof(INDIV));
     }
 
     // Se cuentan los parametros activos:
@@ -1796,7 +1682,10 @@ void FILTROS::selecPob(INDIV* sel_grp, const INDIV* poblacion, double *fitness_a
                 break;
             }
         }
-        memcpy( sel_grp + i, poblacion + sel_pos, sizeof(INDIV) );
+
+        DEB_MSG("sel_pos: " << i << "/" << seleccion << " :: " << sel_pos << "/" << n_pob << " indiv: " << (poblacion + sel_pos)->eval);
+        memcpy( sel_grp + i, poblacion + sel_pos, sizeof(INDIV) );        
+        DEB_MSG("sel: " << (sel_grp + i)->eval);
     }
 }
 
@@ -1806,7 +1695,7 @@ void FILTROS::selecPob(INDIV* sel_grp, const INDIV* poblacion, double *fitness_a
     Metodo:     cruzaPob
     Funcion:    Calcula la siguiente generacion a partir de la cruza multipunto de los padres seleccionados, ademas se realiza una mutacion sobre un porcentage de los individuos.
 */
-void FILTROS::cruzaPob(INDIV* cruza, const INDIV* poblacion, const unsigned int n_bits){
+void FILTROS::cruzaPob(INDIV* cruza, const INDIV* sel_grp, const unsigned int n_bits){
 
     // Generar dos nuevos individuos a partir de dos padres, el proceso se repite hasta completar la fraccion 'seleccion'.
     for(int i = 0; i < seleccion; i+=2){
@@ -1818,8 +1707,8 @@ void FILTROS::cruzaPob(INDIV* cruza, const INDIV* poblacion, const unsigned int 
         // Realizar cortes hasta terminar con la secuencia de los individuos:
         while(bits_ini < n_bits){
             const unsigned int n_bits_cpy = (unsigned int)HybTaus(1.0, (double)(n_bits - bits_ini));
-            memcpy( (cruza + 2*i  )->cadena + bits_ini, (poblacion + padre_1)->cadena + bits_ini, n_bits_cpy*sizeof(unsigned char));
-            memcpy( (cruza + 2*i+1)->cadena + bits_ini, (poblacion + padre_2)->cadena + bits_ini, n_bits_cpy*sizeof(unsigned char));
+            memcpy( (cruza + 2*i  )->cadena + bits_ini, (sel_grp + padre_1)->cadena + bits_ini, n_bits_cpy*sizeof(unsigned char));
+            memcpy( (cruza + 2*i+1)->cadena + bits_ini, (sel_grp + padre_2)->cadena + bits_ini, n_bits_cpy*sizeof(unsigned char));
 
             int padre_swap = padre_1;
             padre_1 = padre_2;
@@ -1872,9 +1761,12 @@ double FILTROS::generarPob(INDIV *poblacion, const INDIV *cruza, const INDIV *se
             (poblacion + i)->vars[ k ] = *(deltas_var + k) * cadena_val + lim_inf[k];
         }
         switch( fitness_elegido ){
-            case ROC:
-                (poblacion + i)->eval = fitnessROC( poblacion + i, resp );
-                break;
+        case ROC:
+            (poblacion + i)->eval = fitnessROC( poblacion + i, resp );
+            break;
+        case CORCON:
+            (poblacion + i)->eval = fitnessCorCon( poblacion + i, resp );
+            break;
         }
         suma_fitness += (poblacion + i)->eval;
     }
@@ -1896,9 +1788,8 @@ double FILTROS::generarPob(INDIV *poblacion, const INDIV *cruza, const INDIV *se
     Funcion:    Utiliza el algoritmo genetico para encotnrar los parametros automaticamente.
 */
 void FILTROS::GA(){
-    const int seleccion = (int)( (double)n_pob * 0.6);
-
     INDIV *poblacion = new INDIV [n_pob + 1];
+    DEB_MSG(COLOR_BACK_GREEN "seleccion: " COLOR_RED << seleccion << COLOR_NORMAL);
     INDIV *sel_grp = new INDIV [seleccion];
     INDIV *cruza = new INDIV [seleccion];
 
@@ -1950,7 +1841,7 @@ void FILTROS::GA(){
     GETTIME_INI;
     do{
         selecPob(sel_grp, poblacion, fitness_acum, suma_fitness);
-        cruzaPob(cruza, poblacion, n_bits);
+        cruzaPob(cruza, sel_grp, n_bits);
         suma_fitness = generarPob(poblacion, cruza, sel_grp, deltas_var);
 
         // Guardar el elite como el mejor de los individuos en la posicion 'n_pob' del arreglo:

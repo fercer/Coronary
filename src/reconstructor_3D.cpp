@@ -19,11 +19,7 @@
     Funcion: Escribe un mensaje en el log.
 */
 void RECONS3D::escribirLog( const char *mensaje ){
-    if( mi_log ){
-        mi_log->appendPlainText( mensaje );
-    }else{
-        std:cout << mensaje;
-    }
+    std:cout << mensaje;
 }
 
 
@@ -35,28 +31,21 @@ void RECONS3D::escribirLog( const char *mensaje ){
     Funcion: Actualiza la barra de progreso.
 */
 void RECONS3D::barraProgreso( const int avance, const int milestones ){
-
-    if( mi_pbar ){
-        mi_pbar->setMinimum( 1 );
-        mi_pbar->setMaximum( milestones );
-        mi_pbar->setValue( avance );
-    }else{
-        /// Limpiar el resto de la linea:
-        int max_ancho = 100;
-        for( int i = 0; i < max_ancho; i++){
-            printf("\r");
-        }
-        printf(COLOR_BACK_RED "[");
-        int avance_milestones = (int)((double)max_ancho * (double)avance / (double)milestones);
-        for( int i = 0; i < avance_milestones; i++){
-            printf(COLOR_BACK_GREEN " ");
-        }
-        for( int i = avance_milestones; i < max_ancho; i++){
-            printf(COLOR_BACK_CYAN " ");
-        }
-        printf(COLOR_BACK_RED "]" COLOR_NORMAL);
-        fflush(stdout);
+    /// Limpiar el resto de la linea:
+    int max_ancho = 100;
+    for( int i = 0; i < max_ancho; i++){
+        printf("\r");
     }
+    printf(COLOR_BACK_RED "[");
+    int avance_milestones = (int)((double)max_ancho * (double)avance / (double)milestones);
+    for( int i = 0; i < avance_milestones; i++){
+        printf(COLOR_BACK_GREEN " ");
+    }
+    for( int i = avance_milestones; i < max_ancho; i++){
+        printf(COLOR_BACK_CYAN " ");
+    }
+    printf(COLOR_BACK_RED "]" COLOR_NORMAL);
+    fflush(stdout);
 }
 
 
@@ -689,7 +678,6 @@ DEB_MSG("Ruta ground: " << rutaground_input);
         n_angios++;
 
         imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
-        imgs_base[n_angios].setLog( mi_log );
         existe_ground.push_back( false );
 
         mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
@@ -724,7 +712,6 @@ void RECONS3D::agregarInput( const char *rutabase_input ){
     NORCEN norcen_temp;
 
     imgs_base.push_back(IMGVTK(rutabase_input, true, 0));
-    imgs_base[n_angios].setLog( mi_log );
     existe_ground.push_back( false );
 
     mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
@@ -754,7 +741,6 @@ void RECONS3D::agregarInput( char **rutasbase_input, const int n_imgs){
     NORCEN norcen_temp;
 
     imgs_base.push_back(IMGVTK(rutasbase_input, n_imgs, true));
-    imgs_base[n_angios].setLog( mi_log );
     existe_ground.push_back( false );
 
     // Mostrar la imagen en un renderizador
@@ -806,6 +792,158 @@ void RECONS3D::agregarGroundtruth(char **rutasground_input, const int n_imgs, co
         imgs_base[ angio_ID ].Cargar(IMGVTK::GROUNDTRUTH, rutasground_input, n_imgs, false);
         existe_ground[ angio_ID ] = true;
     }
+}
+
+
+
+
+/*  Metodo: agregarGroundtruth
+
+    Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
+*/
+void RECONS3D::leerConfiguracion(const char *ruta_conf){
+    FILE *fp_config = fopen(ruta_conf, "r");
+
+    if( !fp_config ){
+        char mensaje_err[513] = "\n<< Error: Cannot open file:\'%s\'\n\n";
+        sprintf(mensaje_err, "\n<< Error: Cannot open file:\'%s\'\n\n", ruta_conf);
+        escribirLog( mensaje_err );
+        return;
+    }
+
+    char tmp = fgetc( fp_config );
+    char tmp_par[128] = "", tmp_val[128] = "";
+    char *tmp_str_ptr = tmp_par;
+
+    bool fixed[4] = {false, false, false, false};
+
+    do{
+        tmp = fgetc( fp_config );
+        if( tmp == '\n' || tmp == EOF ){
+            *(tmp_str_ptr) = '\0';
+            if( strcmp( tmp_par, "GMF" ) == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setFiltro( FILTROS::GMF );
+                }
+            }else if( strcmp( tmp_par, "SSG") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setFiltro( FILTROS::SS_GABOR );
+                }
+            }else if( strcmp( tmp_par, "T") == 0 ){
+                if( tmp_val[0] != 'o' ){
+                    const double par_t = atof(tmp_val);
+                    filtro.setPar( FILTROS::PAR_T, par_t );
+                    fixed[0] = true;
+                }
+            }else if( strcmp( tmp_par, "L") == 0 ){
+                if( tmp_val[0] != 'o' ){
+                    const double par_l = atof(tmp_val);
+                    filtro.setPar( FILTROS::PAR_L, par_l );
+                    fixed[1] = true;
+                }
+            }else if( strcmp( tmp_par, "K") == 0 ){
+                if( tmp_val[0] != 'o' ){
+                    const double par_k = atof(tmp_val);
+                    filtro.setPar( FILTROS::PAR_K, par_k);
+                    fixed[2] = true;
+                }
+            }else if( strcmp( tmp_par, "sig") == 0 ){
+                if( tmp_val[0] != 'o' ){
+                    const double par_s = atof(tmp_val);
+                    filtro.setPar( FILTROS::PAR_SIGMA, par_s);
+                    fixed[3] = true;
+                }
+            }else if( strcmp( tmp_par, "Tinf") == 0 && !fixed[0] ){
+                const double inf_t = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_T, FILTROS::INFERIOR, inf_t );
+            }else if( strcmp( tmp_par, "Tsup") == 0 && !fixed[0] ){
+                const double sup_t = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_T, FILTROS::SUPERIOR, sup_t );
+            }else if( strcmp( tmp_par, "Tdel") == 0 && !fixed[0] ){
+                const double del_t = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_T, FILTROS::DELTA, del_t );
+            }else if( strcmp( tmp_par, "Linf") == 0 && !fixed[1] ){
+                const double inf_l = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_L, FILTROS::INFERIOR, inf_l );
+            }else if( strcmp( tmp_par, "Lsup") == 0 && !fixed[1] ){
+                const double sup_l = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_L, FILTROS::SUPERIOR, sup_l );
+            }else if( strcmp( tmp_par, "Ldel") == 0 && !fixed[1] ){
+                const double del_l = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_L, FILTROS::DELTA, del_l );
+            }else if( strcmp( tmp_par, "Kinf") == 0 && !fixed[2] ){
+                const double inf_k = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_K, FILTROS::INFERIOR, inf_k );
+            }else if( strcmp( tmp_par, "Ksup") == 0 && !fixed[2] ){
+                const double sup_k = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_K, FILTROS::SUPERIOR, sup_k );
+            }else if( strcmp( tmp_par, "Kdel") == 0 && !fixed[2] ){
+                const double del_k = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_K, FILTROS::DELTA, del_k );
+            }else if( strcmp( tmp_par, "Sinf") == 0 && !fixed[3] ){
+                const double inf_s = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_SIGMA, FILTROS::INFERIOR, inf_s );
+            }else if( strcmp( tmp_par, "Ssup") == 0 && !fixed[3] ){
+                const double sup_s = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_SIGMA, FILTROS::SUPERIOR, sup_s );
+            }else if( strcmp( tmp_par, "Sdel") == 0 && !fixed[3] ){
+                const double del_s = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_SIGMA, FILTROS::DELTA, del_s );
+            }else if( strcmp( tmp_par, "ROC") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setFitness( FILTROS::ROC );
+                }
+            }else if( strcmp( tmp_par, "CC") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setFitness( FILTROS::CORCON );
+                }
+            }else if( strcmp( tmp_par, "Unset") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setEvoMet( FILTROS::EVO_UNSET );
+                }
+            }else if( strcmp( tmp_par, "Exh") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setEvoMet( FILTROS::EXHAUSTIVA );
+                }
+            }else if( strcmp( tmp_par, "GA") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setEvoMet( FILTROS::EA_GA );
+                }
+            }else if( strcmp( tmp_par, "UMDA") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setEvoMet( FILTROS::EDA_UMDA );
+                }
+            }else if( strcmp( tmp_par, "BUMDA") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setEvoMet( FILTROS::EDA_BUMDA );
+                }
+            }else if( strcmp( tmp_par, "pop_size") == 0 ){
+                const int pop_size = atoi(tmp_val);
+                filtro.setEvoMetPar( FILTROS::POPSIZE, (double)pop_size);
+            }else if( strcmp( tmp_par, "max_gen") == 0 ){
+                const int max_gen = atoi(tmp_val);
+                filtro.setEvoMetPar( FILTROS::MAXGEN, (double)max_gen);
+            }else if( strcmp( tmp_par, "CR") == 0 ){
+                const double cr = atof(tmp_val);
+                DEB_MSG("CR: " << cr << " / " << tmp_val);
+                filtro.setEvoMetPar( FILTROS::CR, cr);
+            }else if( strcmp( tmp_par, "MR") == 0 ){
+                const double mr = atof(tmp_val);
+                filtro.setEvoMetPar( FILTROS::MR, mr);
+            }
+
+            tmp_str_ptr = tmp_par;
+
+        }else if( tmp == '\t'){
+            *(tmp_str_ptr) = '\0';
+            tmp_str_ptr = tmp_val;
+        }else{
+            *(tmp_str_ptr) = tmp;
+            tmp_str_ptr++;
+        }
+    }while ( tmp != EOF);
+
+    fclose( fp_config );
 }
 
 
@@ -1379,33 +1517,6 @@ vtkSmartPointer< vtkRenderer > RECONS3D::getRenderer( const int angio_ID ){
 
 
 
-/*  Metodo: setLog
-
-    Funcion: Define el editor donde se escribiran todos los logs del sistema
-*/
-void RECONS3D::setLog(QPlainTextEdit *log ){
-    mi_log = log;
-
-    for( std::vector< IMGVTK >::iterator it = imgs_base.begin(); it != imgs_base.end(); it++){
-        it->setLog( mi_log );
-    }
-
-    escribirLog( "Reconstructor 3D" );
-    escribirLog( "by: Fernando Cervantes-Sanchez\n" );
-}
-
-
-
-/*  Metodo: setFiltroLog
-
-    Funcion: Define el editor donde se escribiran todos los logs del filtrado
-*/
-void RECONS3D::setFiltroLog(QPlainTextEdit *log ){
-    filtro.setLog( log );
-}
-
-
-
 /*  Metodo: setFiltroLog
 
     Funcion: Define el editor donde se escribiran todos los logs del filtrado
@@ -1416,15 +1527,13 @@ void RECONS3D::setFiltroLog( FILE *fplog ){
 
 
 
-/*  Metodo: setProgressBar
+/*  Metodo: setFiltroLog
 
-    Funcion: Define la barra para mostrar el progreso de los procesos del reconstructor
+    Funcion: Define el editor donde se escribiran todos los logs del filtrado
 */
-void RECONS3D::setProgressBar( QProgressBar *pbar ){
-    mi_pbar = pbar;
-    filtro.setProgressBar( mi_pbar );
+void RECONS3D::setFiltroLog( const char *ruta_log ){
+    filtro.setLog( ruta_log );
 }
-
 
 
 
@@ -1433,8 +1542,6 @@ void RECONS3D::setProgressBar( QProgressBar *pbar ){
     Funcion: Constructor por default.
 */
 RECONS3D::RECONS3D(){
-    mi_log = NULL;
-    mi_pbar = NULL;
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
 
     detalle = 180;
