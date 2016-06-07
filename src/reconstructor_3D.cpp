@@ -652,9 +652,8 @@ void RECONS3D::umbralizar( const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbr
 
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
-void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input){
-
-DEB_MSG("Ruta ground: " << rutaground_input);
+void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar){
+    DEB_MSG("Ruta ground: " << rutaground_input);
     NORCEN norcen_temp;
 
     if( nivel_u > nivel_l ){ // Si hay varios niveles:
@@ -662,7 +661,7 @@ DEB_MSG("Ruta ground: " << rutaground_input);
         for( int i = nivel_l; i <= nivel_u; i++){
             n_angios++;
 
-            imgs_base.push_back(IMGVTK(rutabase_input, true, i));
+            imgs_base.push_back(IMGVTK(rutabase_input, enmascarar, i));
             mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
             puntos.push_back(vtkSmartPointer<vtkPoints>::New());
             pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
@@ -677,7 +676,7 @@ DEB_MSG("Ruta ground: " << rutaground_input);
     }else{
         n_angios++;
 
-        imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
+        imgs_base.push_back(IMGVTK(rutabase_input, enmascarar, nivel_l));
         existe_ground.push_back( false );
 
         mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
@@ -705,13 +704,13 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
-void RECONS3D::agregarInput( const char *rutabase_input ){
+void RECONS3D::agregarInput( const char *rutabase_input, bool enmascarar ){
 
     n_angios++;
 
     NORCEN norcen_temp;
 
-    imgs_base.push_back(IMGVTK(rutabase_input, true, 0));
+    imgs_base.push_back(IMGVTK(rutabase_input, enmascarar, 0));
     existe_ground.push_back( false );
 
     mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
@@ -733,14 +732,14 @@ void RECONS3D::agregarInput( const char *rutabase_input ){
 
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
-void RECONS3D::agregarInput( char **rutasbase_input, const int n_imgs){
+void RECONS3D::agregarInput( char **rutasbase_input, const int n_imgs, bool enmascarar){
 
 
     n_angios++;
 
     NORCEN norcen_temp;
 
-    imgs_base.push_back(IMGVTK(rutasbase_input, n_imgs, true));
+    imgs_base.push_back(IMGVTK(rutasbase_input, n_imgs, enmascarar));
     existe_ground.push_back( false );
 
     // Mostrar la imagen en un renderizador
@@ -1015,6 +1014,20 @@ void RECONS3D::setFiltroParametros(const FILTROS::PARAMETRO par, const double va
 */
 void RECONS3D::setFiltroParametros(){
     filtro.setPar();
+}
+
+
+
+
+
+
+
+/*  Metodo: Guardar
+
+    Funcion: Almacena una imagen del reconstructor a la ruta especificada.
+*/
+void RECONS3D::Guardar(const char *ruta, IMGVTK::IMG_IDX img_idx, IMGVTK::TIPO_IMG tipo_img, const int angio_ID){
+    imgs_base[angio_ID].Guardar( img_idx, ruta, tipo_img );
 }
 
 

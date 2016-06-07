@@ -399,6 +399,9 @@ void FILTROS::setLog(FILE *fplog){
 void FILTROS::setLog( const char *ruta_log){
     mi_ruta_log = new char [(int)strlen(ruta_log) + 1];
     sprintf(mi_ruta_log, "%s", ruta_log);
+    if(mi_fplog){
+        fclose( mi_fplog );
+    }
     mi_fplog = fopen( mi_ruta_log, "w" );
 }
 
@@ -552,11 +555,14 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 void FILTROS::fftImgOrigen(){
     TIMERS;
     GETTIME_INI;
-    if(!transformada && rows_cols){
-        transformada = true;
+    if(rows_cols){
+        if(!transformada){
+            Img_fft = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
+            Img_fft_HPF = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
+            transformada = true;
+        }
+
         double *Img_org = (double*) malloc(rows_cols * sizeof(double));
-        Img_fft = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
-        Img_fft_HPF = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
         for(int xy = 0; xy < rows_cols; xy++){
             *(Img_org + xy) = 1.0 - *(org + xy);
         }

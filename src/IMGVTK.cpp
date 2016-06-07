@@ -2405,11 +2405,11 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
 
             int intensidad;
             for( int xy = 0; xy < rows_cols; xy++){
-                intensidad = (int) 255.0 * (*(img_ptr + xy) - min )/ (max - min);
+                intensidad = (int) 255.0 * *(img_ptr + xy);
                 fprintf(fp_out, "%i\n", intensidad);
             }
 
-            flcose( fp_out );
+            fclose( fp_out );
             break;
         }
 
