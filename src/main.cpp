@@ -8,16 +8,6 @@
 
 #include <iostream>
 
-#include "gdcmReader.h"
-#include "gdcmWriter.h"
-#include "gdcmAttribute.h"
-#include "gdcmImage.h"
-#include "gdcmImageWriter.h"
-#include "gdcmFileDerivation.h"
-#include "gdcmUIDGenerator.h"
-
-#include <iostream>
-
 /*  Funcion: definirParametros
     Descripcion: Define los parametros de entrada del programa (Hard-coded).
 */
@@ -171,99 +161,6 @@ void definirParametros(PARS_ENTRADA *parametros){
     parametros[17].opcional = 1;
 }
 
-
-
-/*  Funcion: genDICOM
-    Descripcion: Genera un archivo DICOM en base a una imagen Phantom.
-*/
-void genDICOM(const char *ruta_origen, const char *ruta_img_phantom, const char *ruta_salida){
-    // Abrir archivo DICOM base:
-    gdcm::ImageReader DICOMreader;
-    DICOMreader.SetFileName( ruta_origen );
-    DICOMreader.Read();
-
-    gdcm::File &file = DICOMreader.GetFile();
-    gdcm::DataSet &ds = file.GetDataSet();
-
-
-    // Abrir la imagen:
-    IMGVTK img_phantom( ruta_img_phantom, false, 0);
-    const int mis_cols = img_phantom.cols;
-    const int mis_rows = img_phantom.rows;
-    const int mis_rows_cols = img_phantom.rows_cols;
-
-    // Alojar memoria para la imagen dentro del archivo DICOM:
-    gdcm::SmartPointer<gdcm::Image> im = new gdcm::Image;
-
-    char * buffer = new char[mis_rows_cols];
-
-    im->SetNumberOfDimensions( 2 );
-    im->SetDimension(0, mis_cols );
-    im->SetDimension(1, mis_rows);
-
-    // Definir el espaciado entre pixeles
-    double pixX = 1.0, pixY = 1.0;
-
-    const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1164) );
-    const gdcm::ByteValue *bv = de.GetByteValue();
-    if( bv ){
-        std::string strm(bv->GetPointer(), bv->GetLength());
-DEB_MSG("pixXY: " << strm);
-        char *pixXYstr = new char [bv->GetLength()];
-        memcpy(pixXYstr, strm.c_str(), bv->GetLength() * sizeof(char ));
-        char *tmp = strchr(pixXYstr,'\\');
-        pixXYstr[ tmp - pixXYstr ] = '\0';
-        pixY = atof(pixXYstr);// / Magnification;
-        pixX = atof(tmp+1);// / Magnification;
-DEB_MSG("pixY: " << pixY << ", pixX: " << pixX);
-        delete [] pixXYstr;
-    }
-    im->SetSpacing(0, pixY);
-    im->SetSpacing(1, pixX);
-
-    // Almacenar la imagen phantom al archivo DICOM:
-    for( int y = 0; y < mis_rows; y++ ){
-        for( int x = 0; x < mis_cols; x++ ){
-            *(buffer + x + y*mis_cols) = (char) (255.0 * *(img_phantom.base_ptr + x + (mis_rows - y - 1)*mis_cols));
-        }
-    }
-
-    im->GetPixelFormat().SetSamplesPerPixel(1);
-    im->SetPhotometricInterpretation( gdcm::PhotometricInterpretation::MONOCHROME2 );
-
-    unsigned long l = im->GetBufferLength();
-
-    if( l != mis_rows_cols ){
-        std::cout << "\33[44m" << "<<Error al generar la imagen para el archivo DICOM>>" << "\33[0m" << std::endl;
-        delete[] buffer;
-        return;
-    }
-
-    gdcm::DataElement pixeldata( gdcm::Tag(0x7fe0,0x0010) );
-    pixeldata.SetByteValue( buffer, (uint32_t)l );
-    im->SetDataElement( pixeldata );
-
-    gdcm::Attribute<0x0020,0x4000> imagecomments;
-    imagecomments.SetValue( "Phantom" );
-    ds.Replace( imagecomments.GetAsDataElement() );
-
-    // Incluir los datos al archivo DICOM
-    gdcm::ImageWriter w;
-    w.CheckFileMetaInformationOff();
-    w.SetImage( *im );
-    w.SetFile( file );
-
-    // Set the filename:
-    w.SetFileName( ruta_salida );
-    if( !w.Write() ){
-        std::cout << "\33[14m" << "<<Error al guardar el archivo DICOM>>" << "\33[0m" << std::endl;
-        return;
-    }
-
-    return;
-}
-
-
 int main(int argc, char** argv ){
     // Definir los parametros de entrada:
     PARS_ENTRADA *parametros = new PARS_ENTRADA [18];
@@ -280,7 +177,7 @@ int main(int argc, char** argv ){
     // Si se va a generar un archivo DICOM par aun phantom, no se genera el reconstructor 3D:
     if( strcmp( parametros[12].mi_valor.par_s , "NULL" ) && strcmp( parametros[13].mi_valor.par_s , "NULL" )){
         /// Generar archivo DICOM
-        genDICOM( parametros[0].mi_valor.par_s, parametros[12].mi_valor.par_s, parametros[13].mi_valor.par_s);
+        return 0;
     }else if( strcmp(parametros[0].mi_valor.par_s, "NULL") && strcmp(parametros[16].mi_valor.par_s, "NULL") ){
         /// Reconstruir arteria:
         RECONS3D reconstructor;
@@ -300,32 +197,14 @@ int main(int argc, char** argv ){
 
         char tmp;
         char tmp_str[512] = "";
-        char *tmp_ptr = tmp_str;
-        do{
-            tmp = fgetc(fp_dataset);
-            if( tmp == '\n' || tmp == EOF ){
-                break;
-            }
-            *(tmp_ptr) = tmp;
-            tmp_ptr++;
-        }while( 1 );
-        *(tmp_ptr) = '\0';
-        tmp_ptr = tmp_str;
-        const int n_imgs = atoi(tmp_str);
+
+        int n_imgs;
+        fscanf(fp_dataset, "%i", &n_imgs);
 
         char **rutas = new char* [ n_imgs ];
         for( int i = 0; i < n_imgs; i++){
-            do{
-                tmp = fgetc(fp_dataset);
-                if(tmp == EOF || tmp == '\n'){
-                    break;
-                }
-                *(tmp_ptr) = tmp;
-                tmp_ptr++;
-            }while( 1 );
 
-            *(tmp_ptr) = '\0';
-            tmp_ptr = tmp_str;
+            fscanf(fp_dataset, "%s", tmp_str);
 
             rutas[i] = new char [(int)strlen(tmp_str)+1];
             sprintf(rutas[i], "%s", tmp_str);
@@ -337,30 +216,13 @@ int main(int argc, char** argv ){
         /// Leer el ground truth del dataset:
         fp_dataset = fopen( parametros[15].mi_valor.par_s, "r" );
 
-        do{
-            tmp = fgetc(fp_dataset);
-            if( tmp == '\n' || tmp == EOF ){
-                break;
-            }
-            *(tmp_ptr) = tmp;
-            tmp_ptr++;
-        }while( 1 );
-        *(tmp_ptr) = '\0';
-        tmp_ptr = tmp_str;
-
         char **rutas_gt = new char* [ n_imgs ];
-        for( int i = 0; i < n_imgs; i++){
-            do{
-                tmp = fgetc(fp_dataset);
-                if(tmp == EOF || tmp == '\n'){
-                    break;
-                }
-                *(tmp_ptr) = tmp;
-                tmp_ptr++;
-            }while( 1 );
 
-            *(tmp_ptr) = '\0';
-            tmp_ptr = tmp_str;
+        fscanf( fp_dataset, "%i", &n_imgs);
+
+        for( int i = 0; i < n_imgs; i++){
+
+            fscanf(fp_dataset, "%s", tmp_str);
 
             rutas_gt[i] = new char [(int)strlen(tmp_str)+1];
             sprintf(rutas_gt[i], "%s", tmp_str);
@@ -389,5 +251,5 @@ int main(int argc, char** argv ){
     }
 
     delete [] parametros;
-    return EXIT_SUCCESS;
+    return 0;
 }

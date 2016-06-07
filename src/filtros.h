@@ -27,8 +27,8 @@
 
 #include <iostream>
 
-#include <vtkSmartPointer.h>
-#include <vtkImageData.h>
+//#include <vtkSmartPointer.h>
+//#include <vtkImageData.h>
 
 #include "IMGVTK.h"
 
