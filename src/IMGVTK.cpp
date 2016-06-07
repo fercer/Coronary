@@ -2395,6 +2395,21 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
 
     switch(tipo_salida){
         case PGM:{
+            FILE *fp_out = fopen( ruta, "w");
+
+            fprintf(fp_out, "P2\n");
+            fprintf(fp_out, "# by FerCer\n");
+
+            fprintf(fp_out, "%i %i\n", cols, rows);
+            fprintf(fp_out, "255\n");
+
+            int intensidad;
+            for( int xy = 0; xy < rows_cols; xy++){
+                intensidad = (int) 255.0 * (*(img_ptr + xy) - min )/ (max - min);
+                fprintf(fp_out, "%i\n", intensidad);
+            }
+
+            flcose( fp_out );
             break;
         }
 
