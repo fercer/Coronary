@@ -1378,13 +1378,16 @@ void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, doubl
 int FILTROS::seleccionarPob(double *theta_t, const INDIV *poblacion){
     int truncamiento;
 
-    for( truncamiento = (n_pob-1); truncamiento >= (n_pob/2); truncamiento--){
+    for( truncamiento = (n_pob-1); truncamiento >= 0; truncamiento--){
         // Se trunca hasta el individuo con evaluacion en la funcion objetivo encima del theta anterior.
         if((poblacion + truncamiento)->eval > (*theta_t)){
             break;
         }
     }
 
+    if( truncamiento == (n_pob-1) ){
+        truncamiento = n_pob / 2;
+    }
     //Se asigna el nuevo theta como la evaluacion del individuo en la posicion 'truncamiento'
     *theta_t = (poblacion + truncamiento)->eval;
 
