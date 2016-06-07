@@ -30,7 +30,7 @@ void FILTROS::escribirLog( const char *mensaje ){
 void FILTROS::barraProgreso( const int avance, const int milestones ){
     /// Limpiar el resto de la linea:
     int max_ancho = 100;
-    for( int i = 0; i < max_ancho; i++){
+    for( int i = 0; i <= max_ancho; i++){
         printf("\r");
     }
     printf(COLOR_BACK_RED "[");
@@ -41,7 +41,7 @@ void FILTROS::barraProgreso( const int avance, const int milestones ){
     for( int i = avance_milestones; i < max_ancho; i++){
         printf(COLOR_BACK_CYAN " ");
     }
-    printf(COLOR_BACK_RED "]" COLOR_NORMAL);
+    printf(COLOR_BACK_RED "]" COLOR_NORMAL "\n");
     fflush(stdout);
 }
 
@@ -1325,13 +1325,7 @@ void FILTROS::generarPob(double medias[4], double varianzas[4], INDIV *poblacion
 void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, double *medias, double *varianzas){
 
     double sum_evals = 0.0;
-
-    DEB_MSG("truncamiento: " << truncamiento);
-
     const double gx_sel = (poblacion + truncamiento)->eval - 1e-6;
-
-    DEB_MSG("gx_sel: " << gx_sel << " best: " << poblacion->eval << ", worst: " << (poblacion + truncamiento)->eval);
-
         //Se calculan las medias primero:
         memset(medias, 0, 4*sizeof(double));
 
@@ -1344,16 +1338,19 @@ void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, doubl
             }
         }
 
+        std::cout << "medias: (";
         for( int j = 0; j < n_pars; j++){
             *( medias + idx_pars[j] ) = *( medias + idx_pars[j] ) / sum_evals;
+            std::cout << *(medias + idx_pars[j]) << ", ";
         }
+        std::cout << ")" << std::endl;
 
         //Se calculan las varianzas:
         double tmp;
         memset(varianzas, 0, 4*sizeof(double));
         for( int i = 0; i < truncamiento; i++){
 
-            DEB_MSG("[" << i << "/" << (truncamiento-1) << " (" <<  (poblacion+i)->vars[0] << ", " << (poblacion+i)->vars[1] << ", " << (poblacion+i)->vars[2] << ", " << (poblacion+i)->vars[3] << ") = " << (poblacion+i)->eval );
+            std::cout << "[" << i << "/" << (truncamiento-1) << " (" <<  (poblacion+i)->vars[0] << ", " << (poblacion+i)->vars[1] << ", " << (poblacion+i)->vars[2] << ", " << (poblacion+i)->vars[3] << ") = " << (poblacion+i)->eval << std::endl;
 
             const double g_bar = (poblacion + i)->eval - gx_sel;
             for( int j = 0; j < n_pars; j++){
@@ -1364,9 +1361,12 @@ void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, doubl
             }
         }
 
+        std::cout << "varianzas: (";
         for( int j = 0; j < n_pars; j++){
             *(varianzas + idx_pars[j] ) = *(varianzas + idx_pars[j] ) / (1.0 + sum_evals);
+            std::cout << *(varianzas + idx_pars[j]) << ", ";
         }
+        std::cout << ")" << std::endl;
 }
 
 
@@ -1378,7 +1378,7 @@ void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, doubl
 int FILTROS::seleccionarPob(double *theta_t, const INDIV *poblacion){
     int truncamiento;
 
-    for( truncamiento = n_pob-1; truncamiento >= (n_pob/2); truncamiento--){
+    for( truncamiento = (n_pob-1); truncamiento >= (n_pob/2); truncamiento--){
         // Se trunca hasta el individuo con evaluacion en la funcion objetivo encima del theta anterior.
         if((poblacion + truncamiento)->eval > (*theta_t)){
             break;
@@ -1422,7 +1422,7 @@ void FILTROS::BUMDA(){
     semilla = ini_semilla(0);
 
     // Inicia el algoritmo BUMDA
-    int k = 1, truncamiento = n_pob;
+    int k = 1, truncamiento = n_pob-1;
     bool procesar = true;
 
     //// Generar la primer poblacion:
