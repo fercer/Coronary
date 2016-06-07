@@ -194,8 +194,6 @@ int main(int argc, char** argv ){
     }else if( strcmp(parametros[14].mi_valor.par_s, "NULL") && strcmp(parametros[15].mi_valor.par_s, "NULL") && strcmp(parametros[16].mi_valor.par_s, "NULL") ){
 
         FILE *fp_dataset = fopen(parametros[14].mi_valor.par_s, "r");
-
-        char tmp;
         char tmp_str[512] = "";
 
         int n_imgs;

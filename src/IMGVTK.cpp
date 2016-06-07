@@ -1449,9 +1449,6 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
     }while( n_borrado > 0 );
 
     delete [] skl_mark;
-
-
-
     extraerCaract( img_idx );
 }
 
