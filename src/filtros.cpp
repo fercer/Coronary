@@ -1365,7 +1365,7 @@ void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, doubl
         }
 
         for( int j = 0; j < n_pars; j++){
-            *(varianzas + idx_pars[j] ) = *(varianzas + idx_pars[j] ) / (1e-5 + sum_evals);
+            *(varianzas + idx_pars[j] ) = *(varianzas + idx_pars[j] ) / (1.0 + sum_evals);
         }
 }
 
@@ -1700,15 +1700,17 @@ void FILTROS::cruzaPob(INDIV* cruza, const INDIV* sel_grp, const unsigned int n_
     // Generar dos nuevos individuos a partir de dos padres, el proceso se repite hasta completar la fraccion 'seleccion'.
     for(int i = 0; i < seleccion; i+=2){
 
-        int padre_1 = 2*i;
-        int padre_2 = 2*i + 1;
+        int padre_1 = i;
+        int padre_2 = i + 1;
         int bits_ini = 0;
+
+        DEB_MSG("padres: 1 = " << padre_1 << ", 2 = " << padre_2);
 
         // Realizar cortes hasta terminar con la secuencia de los individuos:
         while(bits_ini < n_bits){
             const unsigned int n_bits_cpy = (unsigned int)HybTaus(1.0, (double)(n_bits - bits_ini));
-            memcpy( (cruza + 2*i  )->cadena + bits_ini, (sel_grp + padre_1)->cadena + bits_ini, n_bits_cpy*sizeof(unsigned char));
-            memcpy( (cruza + 2*i+1)->cadena + bits_ini, (sel_grp + padre_2)->cadena + bits_ini, n_bits_cpy*sizeof(unsigned char));
+            memcpy( (cruza + i  )->cadena + bits_ini, (sel_grp + padre_1)->cadena + bits_ini, n_bits_cpy*sizeof(unsigned char));
+            memcpy( (cruza + i+1)->cadena + bits_ini, (sel_grp + padre_2)->cadena + bits_ini, n_bits_cpy*sizeof(unsigned char));
 
             int padre_swap = padre_1;
             padre_1 = padre_2;
@@ -1722,14 +1724,14 @@ void FILTROS::cruzaPob(INDIV* cruza, const INDIV* sel_grp, const unsigned int n_
         if( HybTaus(0.0, 1.0) <= prob_mutacion ){
             // Seleccionar un gen a mutar:
             const unsigned int gen = (unsigned int)(HybTaus(0.0, (double)n_bits - 1e-8));
-            (cruza + 2*i)->cadena[gen] = 1 - (cruza + 2*i)->cadena[gen];
+            (cruza + i)->cadena[gen] = 1 - (cruza + i)->cadena[gen];
         }
 
         // Mutar el hijo 2:
         if( HybTaus(0.0, 1.0) <= prob_mutacion ){
             // Seleccionar un gen a mutar:
             const unsigned int gen = (unsigned int)(HybTaus(0.0, (double)n_bits - 1e-8));
-            (cruza + 2*i + 1)->cadena[gen] = 1 - (cruza + 2*i + 1)->cadena[gen];
+            (cruza + i + 1)->cadena[gen] = 1 - (cruza + i + 1)->cadena[gen];
         }
     }
 }
