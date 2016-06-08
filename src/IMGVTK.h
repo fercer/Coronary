@@ -230,7 +230,7 @@ class IMGVTK{
         char* setRuta( const char *ruta_input );
 
         // M I E M B R O S      P R I V A D O S
-        QPlainTextEdit *mi_log;
+        //QPlainTextEdit *mi_log;
         int max_dist;
 };
 // C L A S E: IMGVTK  ---------------------------------------------------------------------------------------------- ^

@@ -1633,21 +1633,25 @@ int* IMGVTK::Cargar(const char *ruta_origen, double **img_src, double **mask_src
 DEB_MSG("Archivo de entrada: " << ruta_origen);
     if( ruta_l <= 0 ){
         escribirLog( "\n<<Error: Hay un problema con la ruta de entrada, tiene longitud 0 >>\n\n" );
-        return;
+        return NULL;
     }  
 
     //// Cargar imagen formato PGM
-    FILE *fp_img = fopen( ruta_origen );
+    FILE *fp_img = fopen( ruta_origen, "r" );
 
-    char mensaje[512];
-    fscanf(fp_img, "%s", mensaje);  // Leer 'Magic number'
-    fscanf(fp_img, "%s", mensaje);  // Leer 'Comentarios'
+    char mensaje[512] = "";
+    fgets(mensaje, 512, fp_img);  // Leer 'Magic number'
+DEB_MSG("Magic number: " << mensaje);
+    fgets(mensaje, 512, fp_img);  // Leer Comentario
+DEB_MSG("Comentarios: " << mensaje);
 
     int mis_cols, mis_rows;
 
     fscanf(fp_img, "%i", &mis_cols);    // Leer ancho
+DEB_MSG("columnas: " << mis_cols);
     fscanf(fp_img, "%i", &mis_rows);    // Leer alto
-    int mis_rows_cols = cols * rows;
+DEB_MSG("renglones: " << mis_rows);
+    int mis_rows_cols = mis_cols * mis_rows;
 
     double max_intensidad;
     fscanf(fp_img, "%lf", &max_intensidad);  // Leer la escala de intensidad maxima
@@ -1662,19 +1666,22 @@ DEB_MSG("Archivo de entrada: " << ruta_origen);
         *(*img_src + xy) = intensidad / max_intensidad;
     }
 
-    sprintf( mensaje, "\nImagen " COLOR_GREEN "'%s'" COLOR_NORMAL " cargada exitosamente.\n", ruta_origen );
-    escribirLog( mensaje );
 
     if(enmascarar){
         if( !*mask_src ){
+            DEB_MSG("Alojando memoria para la mascara...");
             *(mask_src) = new double [mis_rows_cols];
         }
+        DEB_MSG("Definiendo la mascara [" << (*mask_src) << "]");
         definirMask(*img_src, *mask_src, mis_rows, mis_cols);
     }
 
     int *mis_dims = new int [2];
-    mis_dims[0] = cols;
-    mis_dims[1] = rows;
+    mis_dims[0] = mis_cols;
+    mis_dims[1] = mis_rows;
+
+    sprintf( mensaje, "\nImagen " COLOR_GREEN "'%s'" COLOR_NORMAL " de dimensiones [%ix%i] cargada exitosamente, enmascarar? %i.\n", ruta_origen, mis_dims[0], mis_dims[1], (int)enmascarar );
+    escribirLog( mensaje );
 
     return mis_dims;
 }
@@ -1740,27 +1747,29 @@ void IMGVTK::Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool e
 
     DEB_MSG("Cargando imagen desde: " COLOR_GREEN << ruta_origen << COLOR_NORMAL);
 
-    double *img_temp = NULL;
+    double **img_temp = NULL;
 
     switch( img_idx){
     case BASE:
-        img_temp = base_ptr;
+        img_temp = &base_ptr;
         break;
 
     case GROUNDTRUTH:
-        img_temp = gt_ptr;
+        img_temp = &gt_ptr;
         break;
     }
 
-    int *dims = Cargar(ruta_origen, &img_temp, &mask, nivel, enmascarar);
+    int *dims = Cargar(ruta_origen, img_temp, &mask_ptr, enmascarar);
 
     cols = dims[0];
     rows = dims[1];
     rows_cols = cols * rows;
 
+    DEB_MSG("Imagen cargada de dimensiones: [" << cols << "x" << rows << "]");
+
     delete [] dims;
 
-    if( !segment ){
+    if( !segment_ptr ){
         segment_ptr = new double [ rows_cols ];
     }
 
@@ -1773,28 +1782,30 @@ void IMGVTK::Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool e
 */
 void IMGVTK::Cargar(const IMG_IDX img_idx, char **rutas_origen, const int n_imgs, const bool enmascarar){
 
-    double *img_temp = NULL;
+    double **img_temp = NULL;
 
     switch( img_idx){
     case BASE:
-        img_temp = base_ptr;
+        img_temp = &base_ptr;
         break;
 
     case GROUNDTRUTH:
-        img_temp = gt_ptr;
+        img_temp = &gt_ptr;
         break;
     }
 
-    int *dims = Cargar( &img_temp, &mask, rutas_origen, n_imgs, enmascarar );
+    int *dims = Cargar( img_temp, &mask_ptr, rutas_origen, n_imgs, enmascarar );
 
     cols = dims[0];
     rows = dims[1];
     rows_cols = rows*cols;
 
+    DEB_MSG("Imagenes cargadas de dimensiones: [" << cols << "x" << rows << "]");
+
     delete [] dims;
 
-    if( !segment ){
-        segment_ptr = new double [rows_cosl];
+    if( !segment_ptr ){
+        segment_ptr = new double [ rows_cols ];
     }
 
 }
@@ -1871,11 +1882,11 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
 
             int intensidad;
             for( int xy = 0; xy < rows_cols; xy++){
-                intensidad = (int) 255.0 * (*(img_ptr + xy) - min )/ (max - min);
+                intensidad = (int) 255.0 * *(img_ptr + xy);
                 fprintf(fp_out, "%i\n", intensidad);
             }
 
-            flcose( fp_out );
+            fclose( fp_out );
             break;
         }
 

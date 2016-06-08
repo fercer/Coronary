@@ -17,7 +17,7 @@ void FILTROS::escribirLog( const char *mensaje ){
     if(mi_fplog){
         fprintf(mi_fplog, "%s", mensaje);
     }else{
-        std:cout << mensaje << std::endl;
+        std::cout << mensaje << std::endl;
         fflush(stdout);
     }
 }
@@ -246,6 +246,7 @@ FILTROS::~FILTROS(){
 */
 void FILTROS::setInput(IMGVTK &img_org){
     org = img_org.base_ptr;
+    DEB_MSG("ORG ptr: " << img_org.base_ptr);
     mask = img_org.mask_ptr;
     dest = img_org.segment_ptr;
     ground_truth = img_org.gt_ptr;
@@ -399,6 +400,9 @@ void FILTROS::setLog(FILE *fplog){
 void FILTROS::setLog( const char *ruta_log){
     mi_ruta_log = new char [(int)strlen(ruta_log) + 1];
     sprintf(mi_ruta_log, "%s", ruta_log);
+    if(mi_fplog){
+        fclose( mi_fplog );
+    }
     mi_fplog = fopen( mi_ruta_log, "w" );
 }
 
@@ -550,13 +554,13 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     Funcion: Obtiene la transformada de Fourier de la imagen original.
 */
 void FILTROS::fftImgOrigen(){
-    TIMERS;
-    GETTIME_INI;
-    if(!transformada && rows_cols){
-        transformada = true;
+    if( rows_cols ){
+        if(!transformada){
+            Img_fft = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
+            Img_fft_HPF = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
+            transformada = true;
+        }
         double *Img_org = (double*) malloc(rows_cols * sizeof(double));
-        Img_fft = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
-        Img_fft_HPF = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
         for(int xy = 0; xy < rows_cols; xy++){
             *(Img_org + xy) = 1.0 - *(org + xy);
         }
@@ -565,8 +569,6 @@ void FILTROS::fftImgOrigen(){
         fftw_destroy_plan(p_r2c);
         free(Img_org);
     }
-    GETTIME_FIN;
-    std::cout << COLOR_BACK_GREEN COLOR_BLACK << "Tiempo para obtener la FFT de la imagen de entrada: " << DIFTIME << " s." COLOR_NORMAL << std::endl;
 }
 
 
@@ -576,11 +578,6 @@ void FILTROS::fftImgOrigen(){
     Funcion: Obtiene la respuesta del filtro de escala simple de Gabor, largo del template: L, ancho del template: T, y numero de rotaciones que se hacen al filtro entre 0 y 180°: K.
 */
 void FILTROS::respGabor(INDIV *test, double *resp){
-
-    TIMERS;
-
-    GETTIME_INI;
-
     const double L = test->vars[0];
     const int T = round(test->vars[1]);
     const int K = round(test->vars[2]);
@@ -725,10 +722,6 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     free(max_resp);
     free(max_resp_angles);
 
-    GETTIME_FIN;
-    char mensaje_Gabor[] = "COLOR_BACK_GREEN COLOR_BLACK Tiempo de filtrado: XXX.XXXX s. COLOR_NORMAL\n";
-    sprintf( mensaje_Gabor, COLOR_BACK_GREEN COLOR_BLACK "Tiempo de filtrado: %3.4f s." COLOR_NORMAL "\n" , DIFTIME);
-    escribirLog( mensaje_Gabor );
 }
 
 
@@ -1419,6 +1412,8 @@ void FILTROS::BUMDA(){
     bool procesar = true;
 
     //// Generar la primer poblacion:
+    TIMERS;
+    GETTIME_INI;
     generarPobInicial(poblacion);
     qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv); // El mejor fitness queda en la posicion 0
 
@@ -1427,8 +1422,6 @@ void FILTROS::BUMDA(){
     char mensaje_iter[] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
     escribirLog( "iteration\tbest_fit\tT\tL\tSigma\tK\telapsed_time\n" );
 
-    TIMERS;
-    GETTIME_INI;
     do{
         // Guardar el elite como el mejor de los individuos en la posicion 'n_pob' del arreglo:
         memcpy(poblacion + n_pob, poblacion, sizeof(INDIV));
@@ -1824,6 +1817,8 @@ void FILTROS::GA(){
     bool procesar = true;
 
     //// Generar la primer poblacion:
+    TIMERS;
+    GETTIME_INI;
     double suma_fitness = generarPobInicial(poblacion, deltas_var);
     qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv);
 
@@ -1832,8 +1827,6 @@ void FILTROS::GA(){
     char mensaje_iter[] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
     escribirLog( "iteration\tbest_fit\tT\tL\tSigma\tK\telapsed_time\n" );
 
-    TIMERS;
-    GETTIME_INI;
     do{
         selecPob(sel_grp, poblacion, fitness_acum, suma_fitness);
         cruzaPob(cruza, sel_grp, n_bits);

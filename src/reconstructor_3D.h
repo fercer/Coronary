@@ -178,9 +178,9 @@ class RECONS3D{
     // M E T O D O S        P U B L I C O S
         void umbralizar(const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbral, const double umbral );
 
-        void agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input);
-        void agregarInput(const char *rutabase_input);
-        void agregarInput(char **rutasbase_input, const int n_imgs);
+        void agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar);
+        void agregarInput(const char *rutabase_input, bool enmascarar);
+        void agregarInput(char **rutasbase_input, const int n_imgs, bool enmascarar);
 
         void agregarGroundtruth(const char *rutaground_input, const int angio_ID);
         void agregarGroundtruth(char **rutasground_input, const int n_imgs, const int angio_ID );
@@ -204,6 +204,8 @@ class RECONS3D{
         void setFiltroParametros( const FILTROS::PARAMETRO par, const FILTROS::LIMITES lim, const double val);
         void setFiltroParametros( const FILTROS::PARAMETRO par, const double val );
         void setFiltroParametros();
+
+        void Guardar(const char *ruta, IMGVTK::IMG_IDX img_idx, IMGVTK::TIPO_IMG tipo_img, const int angio_ID);
 
         int getRows( const int angio_ID );
         int getCols( const int angio_ID );

@@ -159,20 +159,36 @@ void definirParametros(PARS_ENTRADA *parametros){
     sprintf(parametros[17].mi_default.par_s, "NULL");
     sprintf(parametros[17].pregunta, "[ENTRENAR PARAMETROS] Ruta donde se guarda el log del proceso de filtrado");
     parametros[17].opcional = 1;
+
+    // Parametro output.pgm
+    parametros[18].mi_tipo = CHAR;
+    sprintf(parametros[18].short_tag, "-pgm");
+    sprintf(parametros[18].long_tag, "--rutaPGM");
+    sprintf(parametros[18].mi_default.par_s, "NULL");
+    sprintf(parametros[18].pregunta, "[EXPORTAR COMO PGM] Ruta donde se guarda la imagen PGM para la ejecucion del No-GUI (si se considera como )");
+    parametros[18].opcional = 1;
+
+    // Parametro dataset as single image
+    parametros[19].mi_tipo = CHAR;
+    sprintf(parametros[19].short_tag, "-con");
+    sprintf(parametros[19].long_tag, "--concatenar");
+    sprintf(parametros[19].mi_default.par_s, "yes");
+    sprintf(parametros[19].pregunta, "[ENTRENAR PARAMETROS] Concatenar el dataseten una sola imagen");
+    parametros[19].opcional = 1;
 }
 
 int main(int argc, char** argv ){
     // Definir los parametros de entrada:
-    PARS_ENTRADA *parametros = new PARS_ENTRADA [18];
+    PARS_ENTRADA *parametros = new PARS_ENTRADA [20];
     definirParametros( parametros );
 
     if( argc < 2 ){
-        mostrar_ayuda(parametros, 18, "Coronary");
+        mostrar_ayuda(parametros, 20, "Coronary");
         delete [] parametros;
         return EXIT_FAILURE;
     }
     // Revisar los parametros de entrada:
-    revisar_pars(parametros, 18, &argc, argv);
+    revisar_pars(parametros, 20, &argc, argv);
 
     // Si se va a generar un archivo DICOM par aun phantom, no se genera el reconstructor 3D:
     if( strcmp( parametros[12].mi_valor.par_s , "NULL" ) && strcmp( parametros[13].mi_valor.par_s , "NULL" )){
@@ -182,7 +198,7 @@ int main(int argc, char** argv ){
         /// Reconstruir arteria:
         RECONS3D reconstructor;
 
-        reconstructor.agregarInput(parametros[0].mi_valor.par_s, parametros[1].mi_valor.par_i, parametros[2].mi_valor.par_i, parametros[9].mi_valor.par_s);
+        reconstructor.agregarInput(parametros[0].mi_valor.par_s, parametros[1].mi_valor.par_i, parametros[2].mi_valor.par_i, parametros[9].mi_valor.par_s, true);
         reconstructor.leerConfiguracion( parametros[16].mi_valor.par_s );
 
         if( strcmp( parametros[17].mi_valor.par_s, "NULL") ){
@@ -230,15 +246,34 @@ int main(int argc, char** argv ){
         fclose( fp_dataset );
 
         RECONS3D reconstructor;
-        reconstructor.agregarInput( rutas, n_imgs );
-        reconstructor.agregarGroundtruth(rutas_gt, n_imgs, 0);
         reconstructor.leerConfiguracion( parametros[16].mi_valor.par_s );
 
-        if( strcmp( parametros[17].mi_valor.par_s, "NULL") ){
-            reconstructor.setFiltroLog( parametros[17].mi_valor.par_s );
-        }
+        if( parametros[ 19 ].mi_valor.par_s[0] == 'y' ){
+            if( strcmp( parametros[17].mi_valor.par_s, "NULL") ){
+                reconstructor.setFiltroLog( parametros[17].mi_valor.par_s );
+            }
+            reconstructor.agregarInput( rutas, n_imgs, true );
+            reconstructor.agregarGroundtruth( rutas_gt, n_imgs, 0);
 
-        reconstructor.segmentarImagenBase( 0 );
+            reconstructor.segmentarImagenBase( 0 );
+        }else{
+            char ruta_log[512] = "";
+            int tam_ruta_log = strlen(parametros[17].mi_valor.par_s);
+
+            for(int i = 0; i < n_imgs; i++){
+                if( strcmp( parametros[17].mi_valor.par_s, "NULL") ){
+                    memset( ruta_log, 0, 512*sizeof(char));
+                    memcpy(ruta_log, parametros[17].mi_valor.par_s, (tam_ruta_log - 4)*sizeof(char));
+                    sprintf(ruta_log, "%s_%i.log", ruta_log, i);
+                    reconstructor.setFiltroLog( ruta_log );
+                }
+
+                reconstructor.agregarInput( rutas[i], true );
+                reconstructor.agregarGroundtruth( rutas_gt[i], i);
+
+                reconstructor.segmentarImagenBase( i );
+            }
+        }
 
         for( int i = 0; i < n_imgs; i++){
             delete [] rutas[i];
@@ -246,6 +281,48 @@ int main(int argc, char** argv ){
         }
         delete [] rutas;
         delete [] rutas_gt;
+
+    }else if( strcmp(parametros[14].mi_valor.par_s, "NULL") && strcmp(parametros[18].mi_valor.par_s, "NULL") ){
+
+        FILE *fp_dataset = fopen(parametros[14].mi_valor.par_s, "r");
+
+        int n_imgs;
+        fscanf(fp_dataset, "%i" , &n_imgs);
+
+        char tmp_str[512];
+        char **rutas = new char* [ n_imgs ];
+        for( int i = 0; i < n_imgs; i++){
+            fscanf(fp_dataset, "%s", tmp_str);
+
+            rutas[i] = new char [(int)strlen(tmp_str)+1];
+            sprintf(rutas[i], "%s", tmp_str);
+            DEB_MSG("[" << i << "]: '" << rutas[i]);
+        }
+
+        fclose( fp_dataset );
+
+        RECONS3D reconstructor;
+
+        if( parametros[19].mi_valor.par_s[0] == 'y' ){
+            reconstructor.agregarInput( rutas, n_imgs, false );
+            reconstructor.Guardar( parametros[18].mi_valor.par_s, IMGVTK::BASE, IMGVTK::PGM, 0);
+        }else{
+            fp_dataset = fopen(parametros[18].mi_valor.par_s, "r");
+            fscanf(fp_dataset, "%i" , &n_imgs);
+            char ruta_salida[512] = "";
+            for( int i = 0; i < n_imgs; i++){
+                fscanf(fp_dataset, "%s", ruta_salida);
+
+                reconstructor.agregarInput( rutas[i], false );
+                reconstructor.Guardar( ruta_salida, IMGVTK::BASE, IMGVTK::PGM, i);
+            }
+            fclose( fp_dataset );
+        }
+
+        for( int i = 0; i < n_imgs; i++){
+            delete [] rutas[i];
+        }
+        delete [] rutas;
     }
 
     delete [] parametros;
