@@ -1525,7 +1525,7 @@ void FILTROS::calcularPars(const INDIV *poblacion, const int n_bits, const int t
 */
 void FILTROS::UMDA(){
 
-    INDIV *poblacion = new INDIV [n_pob + 1];
+    INDIV *poblacion = new INDIV [n_pob];
     // Poner los valores del elite por defecto:
     for( int i = 0; i < n_pob; i++){
         memcpy( poblacion + i, mi_elite, sizeof(INDIV));
@@ -1572,27 +1572,27 @@ void FILTROS::UMDA(){
     TIMERS;
     GETTIME_INI;
 
+    mi_elite->eval = 0.0;
+
     do{
         generarPob(poblacion, probs, deltas_vars);
         qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv);
         calcularPars(poblacion, n_bits, truncamiento, probs);
 
         // Guardar el elite como el mejor de los individuos en la posicion 'n_pob' del arreglo:
-        memcpy(poblacion + n_pob, poblacion, sizeof(INDIV));
-
+        if( mi_elite->eval < poblacion->eval ){
+            memcpy(mi_elite, poblacion, sizeof(INDIV));
+        }
         k++;
 
         //// Verificar condiciones de paro:
         procesar = (k < max_iters);
 
         GETTIME_FIN;
-        sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, poblacion->eval, poblacion->vars[PAR_T], poblacion->vars[PAR_L], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K], DIFTIME);
+        sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
         escribirLog( mensaje_iter );
         barraProgreso( k, max_iters);
     }while(procesar);
-
-
-    memcpy(mi_elite, poblacion + n_pob, sizeof(INDIV));
 
     GETTIME_FIN;
     sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
@@ -1776,8 +1776,7 @@ double FILTROS::generarPob(INDIV *poblacion, const INDIV *cruza, const INDIV *se
     Funcion:    Utiliza el algoritmo genetico para encotnrar los parametros automaticamente.
 */
 void FILTROS::GA(){
-    INDIV *poblacion = new INDIV [n_pob + 1];
-    DEB_MSG(COLOR_BACK_GREEN "seleccion: " COLOR_RED << seleccion << COLOR_NORMAL);
+    INDIV *poblacion = new INDIV [n_pob];
     INDIV *sel_grp = new INDIV [seleccion];
     INDIV *cruza = new INDIV [seleccion];
 
@@ -1826,6 +1825,7 @@ void FILTROS::GA(){
 
     char mensaje_iter[] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
     escribirLog( "iteration\tbest_fit\tT\tL\tSigma\tK\telapsed_time\n" );
+    mi_elite->eval = 0.0;
 
     do{
         selecPob(sel_grp, poblacion, fitness_acum, suma_fitness);
@@ -1833,21 +1833,21 @@ void FILTROS::GA(){
         suma_fitness = generarPob(poblacion, cruza, sel_grp, deltas_var);
 
         // Guardar el elite como el mejor de los individuos en la posicion 'n_pob' del arreglo:
-        memcpy(poblacion + n_pob, poblacion, sizeof(INDIV));
+        if( mi_elite->eval < poblacion->eval ){
+            memcpy(mi_elite, poblacion + n_pob, sizeof(INDIV));
+        }
 
+        GETTIME_FIN;
+        sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+        escribirLog( mensaje_iter );
+        barraProgreso( k, max_iters);
         k++;
 
         //// Verificar condiciones de paro:
         procesar = (k < max_iters);
 
-        GETTIME_FIN;
-        sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, poblacion->eval, poblacion->vars[PAR_T], poblacion->vars[PAR_L], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K], DIFTIME);
-        escribirLog( mensaje_iter );
-        barraProgreso( k, max_iters);
 
     }while(procesar);
-
-    memcpy(mi_elite, poblacion + n_pob, sizeof(INDIV));
 
     GETTIME_FIN;
     sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
