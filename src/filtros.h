@@ -27,8 +27,8 @@
 
 #include <iostream>
 
-#include <vtkSmartPointer.h>
-#include <vtkImageData.h>
+//#include <vtkSmartPointer.h>
+//#include <vtkImageData.h>
 
 #include "IMGVTK.h"
 
@@ -37,36 +37,45 @@
 class FILTROS{
     public: //----------------------------------------------------------------------------- PUBLIC ------- v
         // T I P O S        D E     D A T O S      P U B L I C O S
-        typedef enum SEG_FILTRO { GMF, SS_GABOR } SEG_FILTRO;
-        typedef enum EVO_MET { EXHAUSTIVA, EDA_BUMDA, EDA_UMDA, EA_GA } EVO_MET;
-        typedef enum FITNESS { ROC, ENTROPIA } FITNESS;
-        typedef enum PARAMETRO { PAR_L, PAR_T, PAR_K, PAR_SIGMA, PAR_DELTA} PARAMETRO;
+        typedef enum LIMITES { INFERIOR, SUPERIOR, DELTA } LIMITES;
+        typedef enum SEG_FILTRO { SEG_UNSET, GMF, SS_GABOR } SEG_FILTRO;
+        typedef enum EVO_MET { EVO_UNSET, EXHAUSTIVA, EDA_BUMDA, EDA_UMDA, EA_GA } EVO_MET;
+        typedef enum EVO_MET_PAR { POPSIZE, MAXGEN, CR, MR} EVO_MET_PAR;
+        typedef enum FITNESS { FIT_UNSET, ROC, CORCON } FITNESS;
+        typedef enum PARAMETRO { PAR_L, PAR_T, PAR_K, PAR_SIGMA } PARAMETRO;
 
         /** INDIV:	Define la estructura que contiene los atributos del individuo, y el valor de la funcion para este.  **/
-        typedef struct IDIV {
+        typedef struct INDIV {
             double eval;
-            double vars[5]; // 1: L, 2: T, 3: K, 4: sigma, 5: delta.
-            bool cadena[64];
+            double vars[4]; // 1: L, 2: T, 3: K, 4: sigma
+            unsigned char cadena[64];
         } INDIV;
+
+        typedef double (*FITNESS_PTR)( FILTROS::INDIV *test );
 
         // M E T O D O S      P U B L I C O S
         FILTROS();
         ~FILTROS();
 
-        void setEvoMet( const EVO_MET evo_met, const int m_iters, const int pob);
+        void setEvoMet( const EVO_MET evo_met);
+        void setEvoMetPar( const EVO_MET_PAR evo_par, const double val);
+
         void setFiltro( const SEG_FILTRO seg_fil);
         void setFitness( const FITNESS fit_fun);
 
         void setInput(IMGVTK &img_org);
-        void setInputGround(IMGVTK &img_ground);
 
         void setPar();
         void setPar( const PARAMETRO par, const double val);
         INDIV getPars();
-        void setLim( const PARAMETRO par, const double inf, const double sup, const double min_var);
-        void setLim( const PARAMETRO par, const double inf, const double sup, const unsigned char bits);
+        int getParametrosOptimizar();
+
+        void setLim(const PARAMETRO par, const LIMITES lim, const double val);
 
         void filtrar();
+
+        void setLog( FILE *fplog );
+        void setLog(const char *ruta_log);
 
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
         // T I P O S        D E     D A T O S      P R I V A D O S
@@ -79,6 +88,10 @@ class FILTROS{
         typedef double (*GEN_PNT) (const double par1, const double par2);
 
         // M E T O D O S      P R I V A D O S
+
+        void escribirLog( const char *mensaje );
+        void barraProgreso( const int avance, const int milestones );
+
         inline double interpolacion(const double *pix, const int j, const int i, const double x, const double y, const int mis_rens, const int mis_cols);
         void rotarImg(const double *org, double *rot, const double ctheta, const double stheta, const int mis_rens, const int mis_cols, const int org_rens, const int org_cols);
 
@@ -103,37 +116,41 @@ class FILTROS{
 
         //================================================================================== ALGORITMOS EVOLUTIVOS:
         //// FUNCIONES DE FITNESS:
-        double fitnessROC(INDIV *test);
+        double fitnessROC(INDIV *test , double *mi_resp);
+        double fitnessCorCon(INDIV *test , double *resp);
+
         void generarPobInicial(INDIV *poblacion);
-        void generarPobInicial(INDIV *poblacion, double **tabla);
+        double generarPobInicial(INDIV *poblacion, const double *deltas_var);
 
         //// ALGORITMOS:
         //--------------------------------------------------------------------------------------------------------------------------------- BUMDA:
-        void generarPob(INDIV *poblacion, const int n_gen, double medias[5], double varianzas[5]);
-        void calcularPars(INDIV *poblacion, const int truncamiento, double *medias, double *varianzas);
-        int seleccionarPob(double *tetha_t, INDIV *poblacion);
+        void generarPob(double medias[], double varianzas[], INDIV *poblacion);
+        void calcularPars(const INDIV *poblacion, const int truncamiento, double *medias, double *varianzas);
+        int seleccionarPob(double *theta_t, const INDIV *poblacion);
         void BUMDA();
 
 
         //--------------------------------------------------------------------------------------------------------------------------------- UMDA:
-        void generarPob(INDIV *poblacion, const int n_gen, double *probs, double **tabla);
-        void calcularPars(INDIV *poblacion, const int truncamiento, double *probs);
+        void generarPob(INDIV *poblacion, const double *probs, const double *deltas_var);
+        void calcularPars(const INDIV *poblacion, const int n_bits, const int truncamiento, double *probs);
         void UMDA();
 
 
         //--------------------------------------------------------------------------------------------------------------------------------- GA:
-        void seleccionarPob(INDIV *poblacion, INDIV *probs, INDIV *pob_tmp, int *seleccion);
-        void generarPob(INDIV *poblacion, const double prob_mutacion, double **tabla);
+        void selecPob(INDIV *sel_grp, const INDIV* poblacion, double *fitness_acum, const double suma_fitness);
+        void cruzaPob(INDIV *cruza, const INDIV *sel_grp, const unsigned int n_bits);
+        double generarPob(INDIV *poblacion, const INDIV *cruza, const INDIV *sel_grp, const double *deltas_var);
         void GA();
 
-
+        //--------------------------------------------------------------------------------------------------------------------------------- GA:
+        void busquedaExhaustiva();
 
         // M I E M B R O S      P R I V A D O S
         STAUS *semilla;
         unsigned int semilla_g;
 
-        bool pars_optim[5]; // Indica cuales parametros se van a optimizar: 1: L, 2: T, 3: K, 4: sigma(GMF), 5: delta del umbralizado(Gabor).
-        int idx_pars[5], n_pars;
+        bool pars_optim[4]; // Indica cuales parametros se van a optimizar: 1: L, 2: T, 3: K, 4: sigma(GMF), 5: delta del umbralizado(Gabor).
+        unsigned int idx_pars[4], n_pars;
         SEG_FILTRO filtro_elegido;
         EVO_MET metodo_elegido;
         FITNESS fitness_elegido;
@@ -142,22 +159,29 @@ class FILTROS{
         INDIV *mi_elite;
 
         // Entradas comunes:
+        double *resp;
         double *org, *dest;
         double *ground_truth, *mask;
-        int rens, cols, rens_cols, n_pob, max_iters;
+        int rows, cols, rows_cols;
+        int n_pob, max_iters, seleccion;
+        double prob_mutacion;
 
-        double min_vars[5], lim_inf[5], lim_sup[5];
-        unsigned char bits_var[5], max_bits[5];
-        int n_bits;
+        double min_vars[4], lim_inf[4], lim_sup[4];
+
+        char *mi_ruta_log;
+        FILE *mi_fplog;
 
         //================================================================================== FILTROS:
         void respGMF(INDIV *test, double *resp);
         bool transformada;
-        double *Img_org;
         fftw_complex *Img_fft;
+        fftw_complex *Img_fft_HPF;
         void fftImgOrigen();
         void respGabor(INDIV *test, double *resp);
-        double calcROC(INDIV *test, double *resp);
+
+
+        double calcROC( double *resp );
+        double calcCorCon( double *resp );
 };
 // C L A S E: FILTROS  ----------------------------------------------------------------------------------------- ^
 
