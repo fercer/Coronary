@@ -638,6 +638,9 @@ DEB_MSG("Mostrando detector para: " << angio_ID << ", LAORAO: " << imgs_base[ang
 
 // M I E M B R O S      P U B L I C O S
 
+void RECONS3D::Guardar(IMGVTK::IMG_IDX img_idx, const char *ruta, const IMGVTK::TIPO_IMG tipo_salida, const int angio_ID ){
+    imgs_base[angio_ID].Guardar(img_idx, ruta, tipo_salida );
+}
 
 /*  Metodo: umbralizar
 

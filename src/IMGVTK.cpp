@@ -19,12 +19,12 @@
     Funcion: Escribe un mensaje en el log.
 */
 void IMGVTK::escribirLog( const char *mensaje ){
-    DEB_MSG( mi_log );
-    if( mi_log ){
-        mi_log->appendPlainText( mensaje );
-    }else{
+    //DEB_MSG( mi_log );
+    //if( mi_log ){
+    //    mi_log->appendPlainText( mensaje );
+    //}else{
         std::cout << mensaje;
-    }
+    //}
 }
 
 
@@ -2405,11 +2405,11 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
 
             int intensidad;
             for( int xy = 0; xy < rows_cols; xy++){
-                intensidad = (int) 255.0 * (*(img_ptr + xy) - min )/ (max - min);
+                intensidad = (int) (255.0 * *(img_ptr + xy));
                 fprintf(fp_out, "%i\n", intensidad);
             }
 
-            flcose( fp_out );
+            fclose( fp_out );
             break;
         }
 
@@ -2425,20 +2425,20 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
 
 
 
-/*  Metodo: setLog
+///*  Metodo: setLog
 
-    Funcion: Define el editor donde se escribiran todos los logs del sistema
-*/
-void IMGVTK::setLog( QPlainTextEdit *log ){
-    DEB_MSG( "Agregando log: " << log );
-    mi_log = log;
-}
+//    Funcion: Define el editor donde se escribiran todos los logs del sistema
+//*/
+//void IMGVTK::setLog( QPlainTextEdit *log ){
+//    DEB_MSG( "Agregando log: " << log );
+//    mi_log = log;
+//}
 
 
 
 /* CONSTRUCTORES */
 IMGVTK::IMGVTK(){
-    mi_log = NULL;
+//    mi_log = NULL;
 
     cols = 0;
     rows = 0;
@@ -2470,7 +2470,7 @@ IMGVTK::IMGVTK(){
 
 
 IMGVTK::IMGVTK( const IMGVTK &origen ){
-    mi_log = origen.mi_log;
+//    mi_log = origen.mi_log;
     max_dist = origen.max_dist;
 
     base_ptr = NULL;
@@ -2582,7 +2582,7 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
 
 
 IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
-    mi_log = NULL;
+//    mi_log = NULL;
     max_dist = 0;
 
     base_ptr = NULL;
@@ -2617,7 +2617,7 @@ IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
 
 
 IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel){
-    mi_log = NULL;
+//    mi_log = NULL;
     max_dist = 0;
 
     base_ptr = NULL;
@@ -2669,7 +2669,7 @@ IMGVTK::~IMGVTK(){
 // O P E R A D O R E S  S O B R E C A R G A D O S
 // El operador de copia extrae unicamente el contenido de la imagen original
 IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
-    mi_log = origen.mi_log;
+//    mi_log = origen.mi_log;
     max_dist = origen.max_dist;
 
     base_ptr = NULL;

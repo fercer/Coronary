@@ -370,15 +370,16 @@ int main(int argc, char** argv ){
         fclose( fp_dataset );
 
         RECONS3D reconstructor;
-        reconstructor.agregarInput( rutas, n_imgs );
-        reconstructor.agregarGroundtruth(rutas_gt, n_imgs, 0);
-        reconstructor.leerConfiguracion( parametros[16].mi_valor.par_s );
+        for(int i = 0; i < n_imgs; i++){
+            reconstructor.agregarInput( rutas[i] );
+            reconstructor.Guardar(IMGVTK::BASE, rutas_gt[i], IMGVTK::PGM, i );
+        }
 
         if( strcmp( parametros[17].mi_valor.par_s, "NULL") ){
             reconstructor.setFiltroLog( parametros[17].mi_valor.par_s );
         }
 
-        reconstructor.segmentarImagenBase( 0 );
+        //reconstructor.segmentarImagenBase( 0 );
 
         for( int i = 0; i < n_imgs; i++){
             delete [] rutas[i];

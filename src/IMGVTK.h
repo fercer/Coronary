@@ -10,7 +10,7 @@
 #define IMGVTK_H_INCLUDED
 
 // Librerias de uso comun con QT:
-#include <QPlainTextEdit>
+//#include <QPlainTextEdit>
 
 // Librerias de uso comun:
 #include <vtkVersion.h>
@@ -147,7 +147,7 @@ class IMGVTK{
         void Guardar( IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida );
 
 
-        void setLog( QPlainTextEdit *log );
+//        void setLog( QPlainTextEdit *log );
 
 
         IMGVTK();
@@ -232,7 +232,7 @@ class IMGVTK{
         char* setRuta( const char *ruta_input );
 
         // M I E M B R O S      P R I V A D O S
-        QPlainTextEdit *mi_log;
+        //QPlainTextEdit *mi_log;
         int max_dist;
 };
 // C L A S E: IMGVTK  ---------------------------------------------------------------------------------------------- ^
