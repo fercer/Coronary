@@ -193,6 +193,7 @@ FILTROS::FILTROS(){
     mi_elite = new INDIV;
     mi_elite->eval = 0.0;
     memset( mi_elite->vars, 0, 4*sizeof(double) );
+	memset( mi_elite->cadena, 0, 128 * sizeof(unsigned char));
 
     semilla = NULL;
 
@@ -555,19 +556,31 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 */
 void FILTROS::fftImgOrigen(){
     if( rows_cols ){
+
+		TIMERS;
+
+		GETTIME_INI;
+
         if(!transformada){
             Img_fft = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
             Img_fft_HPF = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
             transformada = true;
         }
+
         double *Img_org = (double*) malloc(rows_cols * sizeof(double));
         for(int xy = 0; xy < rows_cols; xy++){
             *(Img_org + xy) = 1.0 - *(org + xy);
         }
+
         fftw_plan p_r2c = fftw_plan_dft_r2c_2d(rows, cols, Img_org, Img_fft, FFTW_ESTIMATE);
         fftw_execute(p_r2c);
         fftw_destroy_plan(p_r2c);
         free(Img_org);
+
+		GETTIME_FIN;
+
+		DEB_MSG("Tiempo obtener DFT: " << DIFTIME << " s.");
+
     }
 }
 
@@ -632,7 +645,7 @@ void FILTROS::respGabor(INDIV *test, double *resp){
 
     //// Apply the high-pass filter to the image in the frequencies domain:
     for(int y = 0; y < rows; y++){
-        for( int x = 0; x <= cols/2; x++){
+		for( int x = 0; x <= cols/2; x++){
             *(*(Img_fft_HPF + x+y*(cols/2+1))  ) = *(*(Img_fft + x+y*(cols/2+1))  ) * *(HPF + x+y*(cols/2 + 1));
             *(*(Img_fft_HPF + x+y*(cols/2+1))+1) = *(*(Img_fft + x+y*(cols/2+1))+1) * *(HPF + x+y*(cols/2 + 1));
         }
@@ -1348,7 +1361,7 @@ void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, doubl
         }
 
         for( int j = 0; j < n_pars; j++){
-            *(varianzas + idx_pars[j] ) = *(varianzas + idx_pars[j] ) / (1.0 + sum_evals);
+            *(varianzas + idx_pars[j] ) = *(varianzas + idx_pars[j] ) / (sum_evals);
         }
 }
 
@@ -1476,13 +1489,14 @@ void FILTROS::generarPob(INDIV *poblacion, const double *probs, const double *de
         for( int j = 0; j < n_pars; j++){
             const unsigned int k = idx_pars[j];
             double cadena_val = 0;
-            unsigned char pow_2 = 1;
-            for( int b = 0; b < (int)min_vars[k]; b++, bits_recorridos++, pow_2<<1){
+            double pow_2 = 1.0;
+            for( int b = 0; b < (int)min_vars[k]; b++, bits_recorridos++, pow_2*=2.0){
                 (poblacion + i)->cadena[ bits_recorridos ] = (HybTaus(0.0, 1.0) <= *(probs + bits_recorridos)) ? 1 : 0;
                 cadena_val += ((poblacion + i)->cadena[ bits_recorridos ] ? 1.0 : 0.0) * (double)pow_2;
             }
             // Asignar el valor segun la cadena formada para el atributo 'k':
             (poblacion + i)->vars[k] = *(deltas_var + k) * cadena_val + lim_inf[k];
+			DEB_MSG(COLOR_GREEN "[" COLOR_BLUE << k << COLOR_GREEN "] cadena: " COLOR_BACK_WHITE COLOR_BLACK << cadena_val << "/" << (poblacion + i)->vars[k] << " :: " COLOR_BACK_BLACK COLOR_BLUE << "delta: " << *(deltas_var + k) << " :: lim_inf: " << lim_inf[k] << " :: lim_sup: " << lim_sup[k] << COLOR_NORMAL);
         }
 
         switch( fitness_elegido ){
@@ -1543,6 +1557,9 @@ void FILTROS::UMDA(){
             // Calcular el tamano de paso
             const double max_bit_val = pow(2, min_vars[p]) - 1;
             deltas_vars[ p ] = (lim_sup[ p ] - lim_inf[ p ]) / max_bit_val;
+
+			DEB_MSG("[" << p << "] delta: " << deltas_vars[p]);
+
 
             n_bits += (unsigned int)min_vars[ p ];
 
@@ -1618,20 +1635,17 @@ double FILTROS::generarPobInicial(INDIV *poblacion, const double *deltas_var){
         // Se genera cada bit con la misma probabilidad de ser 0 o 1:
 
         unsigned int bits_recorridos = 0;
-        for( int j = 0; j < n_pars; j++){
-            const unsigned int k = idx_pars[j];
-            unsigned int pow_2 = 1;
-            double cadena_val = 0.0;
-            for( int b = 0; b < (int)min_vars[k]; b++, bits_recorridos++, pow_2<<1){
-                (poblacion + i)->cadena[bits_recorridos] = (HybTaus(0.0, 1.0) <= 0.5) ? 0 : 1;
-                cadena_val += ((poblacion + i)->cadena[bits_recorridos] ? 1.0 : 0.0) * (double)pow_2;
-            }
+		for (int j = 0; j < n_pars; j++) {
+			const unsigned int k = idx_pars[j];
+			double pow_2 = 1.0;
+			double cadena_val = 0.0;
+			for (int b = 0; b < (int)min_vars[k]; b++, bits_recorridos++, pow_2*=2.0) {
+				(poblacion + i)->cadena[bits_recorridos] = (HybTaus(0.0, 1.0) <= 0.5) ? 0 : 1;
+				cadena_val += ((poblacion + i)->cadena[bits_recorridos] ? 1.0 : 0.0) * pow_2;
+			}
 
-            // Asignar el valor segun la cadena formada para el atributo 'k':
-            (poblacion + i)->vars[ k ] = *(deltas_var + k) * cadena_val + lim_inf[k];
-
-
-            DEB_MSG(COLOR_GREEN "[" COLOR_BLUE << k << COLOR_GREEN "] cadena: " COLOR_BACK_WHITE COLOR_BLACK << cadena_val << "/" << (poblacion + i)->vars[ k ] << " :: " COLOR_BACK_BLACK COLOR_BLUE << "delta: " << *(deltas_var + k) << " :: lim_inf: " << lim_inf[k] << COLOR_NORMAL );
+			// Asignar el valor segun la cadena formada para el atributo 'k':
+			(poblacion + i)->vars[k] = *(deltas_var + k) * cadena_val + lim_inf[k];
         }
 
         switch( fitness_elegido ){
@@ -1668,10 +1682,7 @@ void FILTROS::selecPob(INDIV* sel_grp, const INDIV* poblacion, double *fitness_a
                 break;
             }
         }
-
-        DEB_MSG("sel_pos: " << i << "/" << seleccion << " :: " << sel_pos << "/" << n_pob << " indiv: " << (poblacion + sel_pos)->eval);
-        memcpy( sel_grp + i, poblacion + sel_pos, sizeof(INDIV) );        
-        DEB_MSG("sel: " << (sel_grp + i)->eval);
+		memcpy( sel_grp + i, poblacion + sel_pos, sizeof(INDIV) );
     }
 }
 
@@ -1689,9 +1700,7 @@ void FILTROS::cruzaPob(INDIV* cruza, const INDIV* sel_grp, const unsigned int n_
         int padre_1 = i;
         int padre_2 = i + 1;
         int bits_ini = 0;
-
-        DEB_MSG("padres: 1 = " << padre_1 << ", 2 = " << padre_2);
-
+		
         // Realizar cortes hasta terminar con la secuencia de los individuos:
         while(bits_ini < n_bits){
             const unsigned int n_bits_cpy = (unsigned int)HybTaus(1.0, (double)(n_bits - bits_ini));
@@ -1739,14 +1748,15 @@ double FILTROS::generarPob(INDIV *poblacion, const INDIV *cruza, const INDIV *se
         unsigned int bits_recorridos = 0;
         for( int j = 0; j < n_pars; j++){
             const unsigned int k = idx_pars[j];
-            unsigned int pow_2 = 1;
+            double pow_2 = 1.0;
             double cadena_val = 0.0;
-            for( int b = 0; b < (int)min_vars[k]; b++, bits_recorridos++, pow_2<<1){
+            for( int b = 0; b < (int)min_vars[k]; b++, bits_recorridos++, pow_2*=2.0){
                 (poblacion + i)->cadena[bits_recorridos] = (HybTaus(0.0, 1.0) <= 0.5) ? 0 : 1;
                 cadena_val += ((poblacion + i)->cadena[bits_recorridos] ? 1.0 : 0.0) * (double)pow_2;
             }
             // Asignar el valor segun la cadena formada para el atributo 'k':
             (poblacion + i)->vars[ k ] = *(deltas_var + k) * cadena_val + lim_inf[k];
+			DEB_MSG(COLOR_GREEN "[" COLOR_BLUE << k << COLOR_GREEN "] cadena: " COLOR_BACK_WHITE COLOR_BLACK << cadena_val << "/" << (poblacion + i)->vars[k] << " :: " COLOR_BACK_BLACK COLOR_BLUE << "delta: " << *(deltas_var + k) << " :: lim_inf: " << lim_inf[k] << " :: lim_sup: " << lim_sup[k] << COLOR_NORMAL);
         }
         switch( fitness_elegido ){
         case ROC:
@@ -1832,9 +1842,10 @@ void FILTROS::GA(){
         cruzaPob(cruza, sel_grp, n_bits);
         suma_fitness = generarPob(poblacion, cruza, sel_grp, deltas_var);
 
+		qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv);
         // Guardar el elite como el mejor de los individuos en la posicion 'n_pob' del arreglo:
         if( mi_elite->eval < poblacion->eval ){
-            memcpy(mi_elite, poblacion + n_pob, sizeof(INDIV));
+            memcpy(mi_elite, poblacion, sizeof(INDIV));
         }
 
         GETTIME_FIN;

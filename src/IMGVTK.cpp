@@ -1644,7 +1644,6 @@ DEB_MSG("Archivo de entrada: " << ruta_origen);
 DEB_MSG("Magic number: " << mensaje);
     fgets(mensaje, 512, fp_img);  // Leer Comentario
 DEB_MSG("Comentarios: " << mensaje);
-
     int mis_cols, mis_rows;
 
     fscanf(fp_img, "%i", &mis_cols);    // Leer ancho
@@ -1655,24 +1654,25 @@ DEB_MSG("renglones: " << mis_rows);
 
     double max_intensidad;
     fscanf(fp_img, "%lf", &max_intensidad);  // Leer la escala de intensidad maxima
-
-    if( !*(img_src) ){
+DEB_MSG("max intensidad: " << max_intensidad);
+	if( !*(img_src) ){
         *(img_src) = new double [mis_rows_cols];
     }
 
-    double intensidad;
+    int intensidad;
     for( int xy = 0; xy < mis_rows_cols; xy++){
-        fscanf( fp_img, "%lf", &intensidad );
-        *(*img_src + xy) = intensidad / max_intensidad;
+        fscanf( fp_img, "%i", &intensidad );
+        *(*img_src + xy) = (double)intensidad / max_intensidad;
+		if (enmascarar && (xy % 1000) == 0 ) {
+			DEB_MSG( "[" << xy << "]: " << *(*img_src + xy) << " :: " << (double)intensidad);
+		}
     }
 
 
     if(enmascarar){
         if( !*mask_src ){
-            DEB_MSG("Alojando memoria para la mascara...");
             *(mask_src) = new double [mis_rows_cols];
         }
-        DEB_MSG("Definiendo la mascara [" << (*mask_src) << "]");
         definirMask(*img_src, *mask_src, mis_rows, mis_cols);
     }
 
