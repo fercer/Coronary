@@ -367,20 +367,21 @@ void FILTROS::filtrar(){
 
     double fitness = 0.0;
 
+    char mensaje[] = COLOR_GREEN "Filtrado exitoso, el area bajo la curva de ROC es de X.XXXXXXX " COLOR_NORMAL "\n";
     switch( fitness_elegido ){
         case ROC:
             fitness = fitnessROC(mi_elite, resp);
-            DEB_MSG("Fitnes ROC: " << fitness << " :: L: " << mi_elite->vars[PAR_L] <<  ", T: " << mi_elite->vars[PAR_T] << ", K: " << mi_elite->vars[PAR_K] << ", sigma: " << mi_elite->vars[PAR_SIGMA]);
+            sprintf(mensaje, COLOR_GREEN "Filtrado exitoso, el area bajo la curva de ROC es de %1.7f " COLOR_NORMAL "\n", fitness);
             break;
         case CORCON:
-            fitness = fitnessCorCon(mi_elite, resp);
-            DEB_MSG("Fitnes Cor Con: " << fitness << " :: L: " << mi_elite->vars[PAR_L] <<  ", T: " << mi_elite->vars[PAR_T] << ", K: " << mi_elite->vars[PAR_K] << ", sigma: " << mi_elite->vars[PAR_SIGMA]);
+            fitness = fitnessCorCon(mi_elite, resp);            
+            sprintf(mensaje, COLOR_GREEN "Filtrado exitoso, la correlacion y contraste son de %2.7f " COLOR_NORMAL "\n", fitness);
             break;
         default: /* FIT_UNSET */
             char mensaje_error[] = COLOR_BACK_BLACK COLOR_RED "<<ERROR: " COLOR_YELLOW "No se ha definido la funcion de evaluacion (fitness)" COLOR_NORMAL "\n";
             escribirLog( mensaje_error);
     }
-
+    escribirLog( mensaje );
     memcpy(dest, resp, rows_cols*sizeof(double));
 }
 
