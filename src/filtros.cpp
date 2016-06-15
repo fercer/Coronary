@@ -494,7 +494,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     const int mis_rens = rows;
     const double *mi_org = org;
 
-    //#pragma omp parallel for shared(resp_tmp, mi_org, templates) firstprivate(mis_rens, mis_cols, temp_dims, K)
+    #pragma omp parallel for shared(resp_tmp, mi_org, templates) firstprivate(mis_rens, mis_cols, temp_dims, K)
     for( int k = 0; k < K; k++ ){
         for( int yR = 0; yR < (mis_rens + temp_dims - 1); yR++){
 			// Definir los limites en el eje y que pueden recorrerse del template:
