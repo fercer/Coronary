@@ -386,12 +386,14 @@ int main(int argc, char** argv ){
         fclose( fp_dataset );
 
         RECONS3D reconstructor;
-
+        for(int i = 0; i < n_imgs; i++){
+            reconstructor.agregarInput( rutas[i] );
+            reconstructor.Guardar(IMGVTK::BASE, rutas_gt[i], IMGVTK::PGM, i );
+        }
         if( parametros[ 19 ].mi_valor.par_s[0] == 'y' ){
             if( strcmp( parametros[17].mi_valor.par_s, "NULL") ){
                 reconstructor.setFiltroLog( parametros[17].mi_valor.par_s );
             }
-
             reconstructor.agregarInput( rutas, n_imgs, true );
             reconstructor.agregarGroundtruth( rutas_gt, n_imgs, 0);
             reconstructor.leerConfiguracion( parametros[16].mi_valor.par_s );

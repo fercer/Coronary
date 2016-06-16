@@ -165,6 +165,8 @@ class RECONS3D{
         ~RECONS3D();
 
     // M E T O D O S        P U B L I C O S
+        void Guardar(IMGVTK::IMG_IDX img_idx, const char *ruta, const IMGVTK::TIPO_IMG tipo_salida, const int angio_ID );
+
         void umbralizar(const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbral, const double umbral );
 
         void agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar);
