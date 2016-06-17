@@ -650,6 +650,11 @@ void RECONS3D::umbralizar( const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbr
     imgs_base[ angio_ID ].umbralizar( IMGVTK::SEGMENT, mi_umbral, umbral );
 }
 
+void RECONS3D::lengthFilter(const int angio_ID, IMGVTK::IMG_IDX img_idx, const int min_length)
+{
+    imgs_base[angio_ID].lengthFilter( img_idx, min_length );
+}
+
 
 /*  Metodo: agregarInput
 

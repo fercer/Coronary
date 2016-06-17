@@ -1585,17 +1585,20 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
 
         double m_abajo = 0.0;
         double m_arriba = 0.0;
+        int n_abajo = 0, n_arriba = 0;
 
         for( int xy = 0; xy < rows_cols; xy++){
             if( *(img_ptr + xy) <= umbral ){
                 m_abajo += *(img_ptr + xy);
+                n_abajo++;
             }else{
                 m_arriba += *(img_ptr + xy);
+                n_arriba++;
             }
         }
 
-        m_abajo *= fraccion;
-        m_arriba *= fraccion;
+        m_abajo /= (double)n_abajo;
+        m_arriba /= (double)n_arriba;
 
         umbral_nuevo = (m_arriba + m_abajo) / 2.0;
 

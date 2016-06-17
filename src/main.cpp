@@ -309,7 +309,9 @@ int main(int argc, char** argv ){
         }
 
         reconstructor.segmentarImagenBase( 0 );
-        //reconstructor.skeletonize( 0 );
+        reconstructor.umbralizar(0, IMGVTK::OTSU, 0);
+        reconstructor.lengthFilter(0, IMGVTK::THRESHOLD, 1000);
+        reconstructor.skeletonize( 0 );
     }else if( strcmp(parametros[14].mi_valor.par_s, "NULL") && strcmp(parametros[15].mi_valor.par_s, "NULL") && strcmp(parametros[16].mi_valor.par_s, "NULL") ){
 
         FILE *fp_dataset = fopen(parametros[14].mi_valor.par_s, "r");
@@ -386,10 +388,6 @@ int main(int argc, char** argv ){
         fclose( fp_dataset );
 
         RECONS3D reconstructor;
-        for(int i = 0; i < n_imgs; i++){
-            reconstructor.agregarInput( rutas[i] );
-            reconstructor.Guardar(IMGVTK::BASE, rutas_gt[i], IMGVTK::PGM, i );
-        }
         if( parametros[ 19 ].mi_valor.par_s[0] == 'y' ){
             if( strcmp( parametros[17].mi_valor.par_s, "NULL") ){
                 reconstructor.setFiltroLog( parametros[17].mi_valor.par_s );

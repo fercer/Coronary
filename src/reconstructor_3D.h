@@ -168,6 +168,8 @@ class RECONS3D{
         void Guardar(IMGVTK::IMG_IDX img_idx, const char *ruta, const IMGVTK::TIPO_IMG tipo_salida, const int angio_ID );
 
         void umbralizar(const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbral, const double umbral );
+        void lengthFilter(const int angio_ID, IMGVTK::IMG_IDX img_idx, const int min_length);
+
 
         void agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar);
         void agregarInput(const char *rutabase_input, bool enmascarar);
