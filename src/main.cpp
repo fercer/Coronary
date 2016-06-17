@@ -177,6 +177,8 @@ void definirParametros(PARS_ENTRADA *parametros){
     parametros[19].opcional = 1;
 }
 
+
+
 int main(int argc, char** argv ){
     // Definir los parametros de entrada:
     PARS_ENTRADA *parametros = new PARS_ENTRADA [20];
@@ -261,8 +263,8 @@ int main(int argc, char** argv ){
             int tam_ruta_log = strlen(parametros[17].mi_valor.par_s);
 
             for(int i = 0; i < n_imgs; i++){
-                if( strcmp( parametros[17].mi_valor.par_s, "NULL") ){
-                    memset( ruta_log, 0, 512*sizeof(char));
+                if( strcmp(parametros[17].mi_valor.par_s, "NULL") ){
+                    memset(ruta_log, 0, 512*sizeof(char));
                     memcpy(ruta_log, parametros[17].mi_valor.par_s, (tam_ruta_log - 4)*sizeof(char));
                     sprintf(ruta_log, "%s_%i.log", ruta_log, i);
                     reconstructor.setFiltroLog( ruta_log );
@@ -272,6 +274,8 @@ int main(int argc, char** argv ){
                 reconstructor.agregarGroundtruth( rutas_gt[i], i);
 
                 reconstructor.segmentarImagenBase( i );
+                reconstructor.umbralizar(i, IMGVTK::OTSU, 0.0);
+                reconstructor
             }
         }
 

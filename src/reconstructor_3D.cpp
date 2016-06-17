@@ -616,7 +616,7 @@ DEB_MSG("Mostrando detector para: " << angio_ID << ", LAORAO: " << imgs_base[ang
 
 /*  Metodo: umbralizar
 
-    Funcion:
+    Funcion: Utiliza la funcion de umbralizacion programada en IMGVTK.
 */
 void RECONS3D::umbralizar( const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbral, const double umbral ){
     imgs_base[ angio_ID ].umbralizar( IMGVTK::SEGMENT, mi_umbral, umbral );
@@ -994,12 +994,9 @@ void RECONS3D::setFiltroParametros(){
 
 
 
-
-
-
 /*  Metodo: Guardar
 
-    Funcion: Almacena una imagen del reconstructor a la ruta especificada.
+    Funcion: Almacena una imagen del reconstructor a la ruta especificada, en formato PNG o PGM.
 */
 void RECONS3D::Guardar(const char *ruta, IMGVTK::IMG_IDX img_idx, IMGVTK::TIPO_IMG tipo_img, const int angio_ID){
     imgs_base[angio_ID].Guardar( img_idx, ruta, tipo_img );
@@ -1068,7 +1065,7 @@ double* RECONS3D::get_pixelData(const int angio_ID, IMGVTK::IMG_IDX img_idx){
 }
 
 
-/*  Metodo: segmentarImagen
+/*  Metodo: segmentarImagenBase
 
     Funcion: Aplica el filtro con los parametros definidos
 */
@@ -1082,6 +1079,17 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
     filtro.filtrar();
     escribirLog( "\nEl filtrado de la imagen base termino con exito\n" );
+}
+
+
+
+
+/*  Metodo: lengthFilter
+
+    Funcion: Filtra la imagen img_idx segun el numero de pixeles dentro de los conuntos conexos.
+*/
+void RECONS3D::lengthFilter(const int angio_ID, IMGVTK::IMG_IDX img_idx, const int min_length){
+    imgs_base[angio_ID].lengthFilter(img_idx, min_length);
 }
 
 

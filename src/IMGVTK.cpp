@@ -160,6 +160,30 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
 	Funcion: Detecta los bordes de la imagen en base a la transformada de la distancia.
 */
 void IMGVTK::detectarBorde( IMG_IDX img_idx ){
+    double *img_ptr = NULL;
+
+    switch( img_idx ){
+    case BASE:
+        img_ptr = base_ptr;
+        break;
+    case GROUNDTRUTH:
+        img_ptr = gt_ptr;
+        break;
+    case MASK:
+        img_ptr = mask_ptr;
+        break;
+    case SKELETON:
+        img_ptr = skl_ptr;
+        break;
+    case SEGMENT:
+        img_ptr = segment_ptr;
+        break;
+    case THRESHOLD:
+        img_ptr = threshold_ptr;
+        break;
+    }
+
+
     if (!map_ptr) {
         mapaDistancias( img_idx );
 	}
@@ -171,7 +195,7 @@ void IMGVTK::detectarBorde( IMG_IDX img_idx ){
     memset(borders_ptr, 0, rows_cols*sizeof(double));
 
 	for (int xy = 0; xy < rows_cols; xy++) {
-		if ( (*(base_ptr + xy) > 0.5) && (*(map_ptr + xy) < 2.0) ) {
+        if ( (*(img_ptr + xy) > 0.5) && (*(map_ptr + xy) < 2.0) ) {
 			*(borders_ptr + xy) = 1.0;
 		}
 	}
@@ -1541,17 +1565,20 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
 
         double m_abajo = 0.0;
         double m_arriba = 0.0;
+        int n_abajo = 0, n_arriba = 0;
 
         for( int xy = 0; xy < rows_cols; xy++){
             if( *(img_ptr + xy) <= umbral ){
                 m_abajo += *(img_ptr + xy);
+                n_abajo++;
             }else{
                 m_arriba += *(img_ptr + xy);
+                n_arriba++;
             }
         }
 
-        m_abajo *= fraccion;
-        m_arriba *= fraccion;
+        m_abajo /= (double)n_abajo;
+        m_arriba /= (double)n_arriba;
 
         umbral_nuevo = (m_arriba + m_abajo) / 2.0;
 
@@ -1559,8 +1586,6 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
             break;
         }
     }
-
-    DEB_MSG("Umbral: " << umbral);
 
     return umbral;
 }
@@ -1620,6 +1645,44 @@ void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const doubl
     for( int xy = 0; xy < rows_cols; xy++){
         *(threshold_ptr + xy) = ( ((*(img_ptr + xy) - min) / (max - min)) >= umbral) ? 1.0 : 0.0;
     }
+}
+
+
+
+
+
+/*  Metodo: Cargar
+    Funcion: Retorna la exactitud del clasificador resultante contra el ground-truth
+*/
+double IMGVTK::medirExactitud(){
+
+    if( !ground_truth ){
+        char mensaje_error[] = COLOR_BACK_BLACK COLOR_RED "<<ERROR: " COLOR_YELLOW "No se cargo la imagen ground-truth" COLOR_NORMAL "\n";
+        escribirLog( mensaje_error);
+        return 0.0;
+    }
+
+    int FP = 0, FN = 0, TP = 0, TN = 0;
+
+    for( int xy = 0; xy < rows_cols; xy++){
+        if( *(mask + xy) > 0.5 ){
+            if( *(gt_ptr + xy) > 0.5 ){
+                if( *(threshold_ptr + xy) > 0.5 ){
+                    TP++;
+                }else{
+                    FN++;
+                }
+            }else{
+                if( *(threshold_ptr + xy) < 0.5 ){
+                    TN++;
+                }else{
+                    FP++;
+                }
+            }
+        }
+    }
+
+    return (double)(TP + TN) / (double)(TP + TN + FP + FN);
 }
 
 

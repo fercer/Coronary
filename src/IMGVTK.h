@@ -139,6 +139,7 @@ class IMGVTK{
         void definirMask(double *img_src, double *mask_src , const int mis_rens, const int mis_cols);
         void skeletonization(IMG_IDX img_idx);
         void umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const double nivel);
+        double medirExactitud();
         void lengthFilter(IMG_IDX img_idx, const int min_length);
         void regionFill(IMG_IDX img_idx);
         void mapaDistancias(IMG_IDX img_idx);
