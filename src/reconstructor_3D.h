@@ -181,7 +181,7 @@ class RECONS3D{
         void leerConfiguracion( const char *ruta_conf);
 
         void segmentarImagenBase(const int angio_ID );
-        void skeletonize(const int angio_ID);
+        void skeletonize(const int angio_ID, const int nivel_detalle);
 
         void mostrarBase( const int angio_ID );
         void mostrarGroundtruth(  const int angio_ID  );

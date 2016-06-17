@@ -310,8 +310,16 @@ int main(int argc, char** argv ){
 
         reconstructor.segmentarImagenBase( 0 );
         reconstructor.umbralizar(0, IMGVTK::OTSU, 0);
-        reconstructor.lengthFilter(0, IMGVTK::THRESHOLD, 1000);
-        reconstructor.skeletonize( 0 );
+        reconstructor.lengthFilter(0, IMGVTK::THRESHOLD, 2000);
+        reconstructor.Guardar("otsu.png", IMGVTK::THRESHOLD, IMGVTK::PNG, 0);
+        reconstructor.skeletonize( 0, 1);
+
+        reconstructor.Guardar("skel.png", IMGVTK::SKELETON, IMGVTK::PNG, 0);
+        reconstructor.Guardar("boundaries.png", IMGVTK::BORDERS, IMGVTK::PNG, 0);
+
+        reconstructor.skeletonize( 0, 4);
+        reconstructor.skeletonize( 0, 20);
+        reconstructor.skeletonize( 0, 100);
     }else if( strcmp(parametros[14].mi_valor.par_s, "NULL") && strcmp(parametros[15].mi_valor.par_s, "NULL") && strcmp(parametros[16].mi_valor.par_s, "NULL") ){
 
         FILE *fp_dataset = fopen(parametros[14].mi_valor.par_s, "r");
@@ -395,7 +403,6 @@ int main(int argc, char** argv ){
             reconstructor.agregarInput( rutas, n_imgs, true );
             reconstructor.agregarGroundtruth( rutas_gt, n_imgs, 0);
             reconstructor.leerConfiguracion( parametros[16].mi_valor.par_s );
-
             reconstructor.segmentarImagenBase( 0 );
         }else{
             char ruta_log[512] = "";

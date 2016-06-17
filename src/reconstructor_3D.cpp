@@ -1403,13 +1403,11 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
 
     Funcion: Obtiene el esqueleto de la imagen y muestra los puntos de interes.
 */
-void RECONS3D::skeletonize(const int angio_ID){
+void RECONS3D::skeletonize(const int angio_ID, const int nivel_detalle){
 
     DEB_MSG("Extrayendo esquelto a " << angio_ID);
-    imgs_base[angio_ID].skeletonization(IMGVTK::GROUNDTRUTH);
+    imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
 
-
-    //if( !imgs_base[angio_ID].pix_caract ){
     if( !imgs_base[angio_ID].pix_caract ){
         DEB_MSG("No existe grafo alguno...");
         return;
@@ -1434,11 +1432,11 @@ void RECONS3D::skeletonize(const int angio_ID){
         vtkSmartPointer< vtkCellArray > cilindros = vtkSmartPointer< vtkCellArray >::New();
         int n_pix = 0;
 
-        char nom_cilindros[] = "cilindros_XXX.dat";
-        sprintf( nom_cilindros, "cilindros_%i.dat", angio_ID);
+        char nom_cilindros[] = "cilindros_XXX_YYY.dat";
+        sprintf( nom_cilindros, "cilindros_%i_%i.dat", angio_ID, nivel_detalle);
         FILE *fp_cilindros = fopen(nom_cilindros, "w");
         fprintf( fp_cilindros, "X1 Y1 Z1 RADIO X2 Y2 Z2\n");
-        mostrarRadios(puntos, cilindros, &n_pix, imgs_base[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, 100, fp_cilindros);
+        mostrarRadios(puntos, cilindros, &n_pix, imgs_base[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, nivel_detalle, fp_cilindros);
 
         fclose( fp_cilindros );
 

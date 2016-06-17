@@ -150,8 +150,8 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
             }
             map_ptr[y*cols + x] = sqrt( ((x-vw[k])*(x-vw[k])) + f[vw[k]] );
 
-            if( (int)(*(map_ptr + y*cols + x) + 1) > max_dist){
-                max_dist = (int)(*(map_ptr + y*cols + x) + 1);
+            if( ((int)*(map_ptr + y*cols + x) + 1) > max_dist){
+                max_dist = (int)*(map_ptr + y*cols + x) + 1;
             }
         }
     }
@@ -175,6 +175,30 @@ void IMGVTK::detectarBorde( IMG_IDX img_idx ){
         mapaDistancias( img_idx );
 	}
 
+    double *img_ptr = NULL;
+
+    switch( img_idx ){
+    case BASE:
+        img_ptr = base_ptr;
+        break;
+    case GROUNDTRUTH:
+        img_ptr = gt_ptr;
+        break;
+    case MASK:
+        img_ptr = mask_ptr;
+        break;
+    case SKELETON:
+        img_ptr = skl_ptr;
+        break;
+    case SEGMENT:
+        img_ptr = segment_ptr;
+        break;
+    case THRESHOLD:
+        img_ptr = threshold_ptr;
+        break;
+    }
+
+
 	if (!borders) {
 		borders = vtkSmartPointer<vtkImageData>::New();
 
@@ -189,7 +213,7 @@ void IMGVTK::detectarBorde( IMG_IDX img_idx ){
     memset(borders_ptr, 0, rows_cols*sizeof(double));
 
 	for (int xy = 0; xy < rows_cols; xy++) {
-		if ( (*(base_ptr + xy) > 0.5) && (*(map_ptr + xy) < 2.0) ) {
+        if ( (*(img_ptr + xy) > 0.5) && (*(map_ptr + xy) < 2.0) ) {
 			*(borders_ptr + xy) = 1.0;
 		}
 	}
@@ -1152,21 +1176,29 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
 
     /// Calcular el radio de la arteria en el pixel actual:
     const int min_x = ((x - max_dist - 1) < 0) ? 0 : (x - max_dist - 1);
-    const int max_x = ((x + max_dist - 1) >= cols) ? cols : (x + max_dist - 1);
+    const int max_x = ((x + max_dist - 1) > cols) ? cols : (x + max_dist - 1);
     const int min_y = ((y - max_dist - 1) < 0) ? 0 : (y - max_dist - 1);
-    const int max_y = ((y + max_dist - 1) >= rows) ? rows : (y + max_dist - 1);
+    const int max_y = ((y + max_dist - 1) > rows) ? rows : (y + max_dist - 1);
 
-    double dist, radio = (max_dist + 0.5) * (max_dist + 0.5);
+    double dist, radio = INF;
+    bool visitado = false;
     double x_r, y_r;
     for( int yy = min_y; yy < max_y; yy++){
         for( int xx = min_x; xx < max_x; xx++){
-            dist = (yy - y + 1.5)*(yy - y + 1.5) + (xx - x + 1.5)*(xx - x + 1.5);
+            dist = (double)(yy - y + 0.5)*(double)(yy - y + 0.5) + (double)(xx - x + 0.5)*(double)(xx - x + 0.5);
             if( (borders_ptr[xx + yy*cols] > 0.0) && (dist < radio) ){
                 radio = dist;
                 x_r = (double)xx;
                 y_r = (double)yy;
+                visitado = true;
             }
         }
+    }
+
+    if( !visitado ){
+        char mensaje[] = "\n" COLOR_BACK_RED  COLOR_YELLOW "El pixel [XXX, YYY] no tiene vecinos en la imagen de bordes a: DDD pixeles a la redonda" COLOR_NORMAL "\n";
+        sprintf( mensaje, "\n" COLOR_BACK_RED  COLOR_YELLOW "El pixel [%i, %i] no tiene vecinos en la imagen de bordes a: %i pixeles a la redonda" COLOR_NORMAL "\n", x, y, max_dist);
+        escribirLog(mensaje);
     }
 
     temp->radio = sqrt(radio) * pixX;
@@ -2462,12 +2494,12 @@ IMGVTK::IMGVTK(){
     threshold_ptr = NULL;
 
     // Defaults:
-    SID = 1100.0;
-    SOD = 400.0;
+    SID = 0.0;
+    SOD = 0.0;
     DDP = SID - SOD;
     DISO = SID / 2;
-    LAORAO = 20.0;
-    CRACAU = 20.0;
+    LAORAO = 0.0;
+    CRACAU = 0.0;
     pixX = 0.308;
     pixY = 0.308;
     WCenter = 127.5;
@@ -2603,12 +2635,12 @@ IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
     threshold_ptr = NULL;
 
     // Defaults:
-    SID = 1100.0;
-    SOD = 400.0;
+    SID = 0.0;
+    SOD = 0.0;
     DDP = SID - SOD;
     DISO = SID / 2;
-    LAORAO = 20.0;
-    CRACAU = 20.0;
+    LAORAO = 0.0;
+    CRACAU = 0.0;
     pixX = 0.308;
     pixY = 0.308;
     WCenter = 127.5;
@@ -2638,12 +2670,12 @@ IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel)
     threshold_ptr = NULL;
 
     // Defaults:
-    SID = 1100.0;
-    SOD = 400.0;
+    SID = 0.0;
+    SOD = 0.0;
     DDP = SID - SOD;
     DISO = SID / 2;
-    LAORAO = 20.0;
-    CRACAU = 20.0;
+    LAORAO = 0.0;
+    CRACAU = 0.0;
     pixX = 0.308;
     pixY = 0.308;
     WCenter = 127.5;
