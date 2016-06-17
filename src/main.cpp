@@ -175,22 +175,38 @@ void definirParametros(PARS_ENTRADA *parametros){
     sprintf(parametros[19].mi_default.par_s, "yes");
     sprintf(parametros[19].pregunta, "[ENTRENAR PARAMETROS] Concatenar el dataseten una sola imagen");
     parametros[19].opcional = 1;
+
+    // Parametro input reconstructor.log
+    parametros[20].mi_tipo = CHAR;
+    sprintf(parametros[20].short_tag, "-lr");
+    sprintf(parametros[20].long_tag, "--logreconstruccion");
+    sprintf(parametros[20].mi_default.par_s, "NULL");
+    sprintf(parametros[20].pregunta, "[ENTRENAR PARAMETROS] Ruta donde se guarda el log del proceso de reconstruccion");
+    parametros[20].opcional = 1;
+
+    // Parametro input dir_threshold
+    parametros[21].mi_tipo = CHAR;
+    sprintf(parametros[21].short_tag, "-dt");
+    sprintf(parametros[21].long_tag, "--directoriothreshold");
+    sprintf(parametros[21].mi_default.par_s, "NULL");
+    sprintf(parametros[21].pregunta, "[ENTRENAR PARAMETROS] Ruta donde se guardan las imagenes resultantes del proceso de umbralizado");
+    parametros[21].opcional = 1;
 }
 
 
 
 int main(int argc, char** argv ){
     // Definir los parametros de entrada:
-    PARS_ENTRADA *parametros = new PARS_ENTRADA [20];
+    PARS_ENTRADA *parametros = new PARS_ENTRADA [22];
     definirParametros( parametros );
 
     if( argc < 2 ){
-        mostrar_ayuda(parametros, 20, "Coronary");
+        mostrar_ayuda(parametros, 22, "Coronary");
         delete [] parametros;
         return EXIT_FAILURE;
     }
     // Revisar los parametros de entrada:
-    revisar_pars(parametros, 20, &argc, argv);
+    revisar_pars(parametros, 22, &argc, argv);
 
     // Si se va a generar un archivo DICOM par aun phantom, no se genera el reconstructor 3D:
     if( strcmp( parametros[12].mi_valor.par_s , "NULL" ) && strcmp( parametros[13].mi_valor.par_s , "NULL" )){
@@ -260,7 +276,9 @@ int main(int argc, char** argv ){
             reconstructor.segmentarImagenBase( 0 );
         }else{
             char ruta_log[512] = "";
+            char ruta_logrec[512] = "";
             int tam_ruta_log = strlen(parametros[17].mi_valor.par_s);
+            int tam_ruta_logrec = strlen(parametros[20].mi_valor.par_s);
 
             for(int i = 0; i < n_imgs; i++){
                 if( strcmp(parametros[17].mi_valor.par_s, "NULL") ){
@@ -270,12 +288,35 @@ int main(int argc, char** argv ){
                     reconstructor.setFiltroLog( ruta_log );
                 }
 
+                if( strcmp(parametros[20].mi_valor.par_s, "NULL") ){
+                    memset(ruta_logrec, 0, 512*sizeof(char));
+                    memcpy(ruta_logrec, parametros[20].mi_valor.par_s, (tam_ruta_logrec - 4)*sizeof(char));
+                    sprintf(ruta_log, "%s_%i.log", ruta_logrec, i);
+                    reconstructor.setLog( ruta_logrec );
+                }
+
                 reconstructor.agregarInput( rutas[i], true );
                 reconstructor.agregarGroundtruth( rutas_gt[i], i);
 
                 reconstructor.segmentarImagenBase( i );
-                reconstructor.umbralizar(i, IMGVTK::OTSU, 0.0);
-                reconstructor
+
+                if( strcmp(parametros[21].mi_valor.par_s, "NULL") ){
+                    char ruta_thresholds[512];
+                    double accuracy;
+
+                    sprintf(ruta_thresholds, "%s/tout_otsu_%i.pgm", parametros[21].mi_valor.par_s, i );
+                    reconstructor.umbralizar(i, IMGVTK::OTSU, 0.0);
+                    reconstructor.Guardar(ruta_thresholds, IMGVTK::THRESHOLD, IMGVTK::PGM, i);
+                    reconstructor.lengthFilter(i, IMGVTK::THRESHOLD, 500);
+                    accuracy = reconstructor.medirExactitud(i);
+
+
+                    sprintf(ruta_thresholds, "%s/tout_rc_%i.pgm", parametros[21].mi_valor.par_s, i );
+                    reconstructor.umbralizar(i, IMGVTK::RIDLER_CALVARD, 0.0);
+                    reconstructor.Guardar(ruta_thresholds, IMGVTK::THRESHOLD, IMGVTK::PGM, i);
+                    reconstructor.lengthFilter(i, IMGVTK::THRESHOLD, 500);
+                    accuracy = reconstructor.medirExactitud(i);
+                }
             }
         }
 

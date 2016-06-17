@@ -138,6 +138,7 @@ class RECONS3D{
         */
 
         FILTROS filtro;
+        FILE *fp_log;
 
     // M E T O D O S       P R I V A D O S
         void escribirLog( const char *mensaje );
@@ -189,7 +190,8 @@ class RECONS3D{
 
         void segmentarImagenBase(const int angio_ID );
         void lengthFilter(const int angio_ID, IMGVTK::IMG_IDX img_idx, const int min_length);
-        //void skeletonize(const int angio_ID);
+        double medirExactitud(const int angio_ID);
+        void skeletonize(const int angio_ID);
 
         /*
         void mostrarBase( const int angio_ID );
@@ -219,6 +221,7 @@ class RECONS3D{
         */
 
 
+        void setLog( const char* ruta_log );
         void setFiltroLog( FILE *fplog );
         void setFiltroLog( const char* ruta_log );
     // O P E R A D O R E S  S O B R E C A R G A D O S

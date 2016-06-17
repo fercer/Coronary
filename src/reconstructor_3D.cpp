@@ -19,7 +19,11 @@
     Funcion: Escribe un mensaje en el log.
 */
 void RECONS3D::escribirLog( const char *mensaje ){
-    std::cout << mensaje;
+    if(fp_log){
+        fprintf(fp_log, "%s", mensaje);
+    }else{
+        std::cout << mensaje;
+    }
 }
 
 
@@ -1065,6 +1069,21 @@ double* RECONS3D::get_pixelData(const int angio_ID, IMGVTK::IMG_IDX img_idx){
 }
 
 
+
+/*  Metodo: setLog
+
+    Funcion: Define la ruta donde se guarda el log del proceso de reconstruccion.
+*/
+void RECONS3D::setLog(const char *ruta_log){
+    if(fp_log){
+        fclose(fp_log);
+        fp_log = NULL;
+    }
+
+    fp_log = fopen(ruta_log, "w");
+}
+
+
 /*  Metodo: segmentarImagenBase
 
     Funcion: Aplica el filtro con los parametros definidos
@@ -1090,6 +1109,20 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 */
 void RECONS3D::lengthFilter(const int angio_ID, IMGVTK::IMG_IDX img_idx, const int min_length){
     imgs_base[angio_ID].lengthFilter(img_idx, min_length);
+}
+
+
+
+
+/*  Metodo: medirExactitud
+
+    Funcion: Mide la exactitud del clasificador entre la imagen umbralizada y el ground-truth
+*/
+double RECONS3D::medirExactitud(const int angio_ID){
+    double accuracy = imgs_base[angio_ID].medirExactitud();
+    char mensaje[] = "\n" COLOR_GREEN "La imagen umbralizada tiene una exactitud de X.XXXXXX con respecto del ground-truth." COLOR_NORMAL "\n";
+    sprintf(mensaje, "\n" COLOR_GREEN "La imagen umbralizada tiene una exactitud de %1.6f con respecto del ground-truth." COLOR_NORMAL "\n", accuracy );
+    escribirLog(mensaje);
 }
 
 
@@ -1538,7 +1571,7 @@ void RECONS3D::setFiltroLog( const char *ruta_log ){
 */
 RECONS3D::RECONS3D(){
     //renderer_global = vtkSmartPointer<vtkRenderer>::New();
-
+    fp_log = NULL;
     detalle = 180;
 
     double color[] = {1.0, 1.0, 1.0};
@@ -1554,7 +1587,10 @@ RECONS3D::RECONS3D(){
     Funcion: Libera la memoria utilizada para almacenar las imagenes.
 */
 RECONS3D::~RECONS3D(){
-
+    if(fp_log){
+        fclose(fp_log);
+        fp_log = NULL;
+    }
 }
 
 //-------------------------------------------------------------------------------------------------- PUBLIC----- ^

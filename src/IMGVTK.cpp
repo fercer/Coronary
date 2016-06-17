@@ -1536,7 +1536,6 @@ double IMGVTK::umbralizarOTSU( const double *img_ptr, const double min, const do
     }
 
     free( histograma_frecuencias );
-    DEB_MSG("Umbral: " << umbral);
 
     return umbral;
 }
@@ -1553,8 +1552,9 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
     // Obtener la media de la intensidad de la imagen como primera aproximacion del umbral
     const double rango = 1.0 / (max - min);
     const double fraccion = 1.0 / (double)rows_cols;
+
     for( int xy = 0; xy < rows_cols; xy ++){
-        umbral_nuevo += *(img_ptr + xy) * rango;
+        umbral_nuevo += (*(img_ptr + xy) - min) * rango;
     }
     umbral_nuevo *= fraccion;
 
@@ -1568,11 +1568,11 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
         int n_abajo = 0, n_arriba = 0;
 
         for( int xy = 0; xy < rows_cols; xy++){
-            if( *(img_ptr + xy) <= umbral ){
-                m_abajo += *(img_ptr + xy);
+            if( ((*(img_ptr + xy ) - min) * rango) <= umbral ){
+                m_abajo += (*(img_ptr + xy ) - min) * rango;
                 n_abajo++;
             }else{
-                m_arriba += *(img_ptr + xy);
+                m_arriba += (*(img_ptr + xy) - min) * rango;
                 n_arriba++;
             }
         }
@@ -1641,6 +1641,8 @@ void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const doubl
             break;
     }
 
+    DEB_MSG("Umbral: " << umbral);
+
     // Se umbraliza la imagen con el valor optimo encontrado:
     for( int xy = 0; xy < rows_cols; xy++){
         *(threshold_ptr + xy) = ( ((*(img_ptr + xy) - min) / (max - min)) >= umbral) ? 1.0 : 0.0;
@@ -1656,7 +1658,7 @@ void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const doubl
 */
 double IMGVTK::medirExactitud(){
 
-    if( !ground_truth ){
+    if( !gt_ptr ){
         char mensaje_error[] = COLOR_BACK_BLACK COLOR_RED "<<ERROR: " COLOR_YELLOW "No se cargo la imagen ground-truth" COLOR_NORMAL "\n";
         escribirLog( mensaje_error);
         return 0.0;
@@ -1665,7 +1667,7 @@ double IMGVTK::medirExactitud(){
     int FP = 0, FN = 0, TP = 0, TN = 0;
 
     for( int xy = 0; xy < rows_cols; xy++){
-        if( *(mask + xy) > 0.5 ){
+        if( *(mask_ptr + xy) > 0.5 ){
             if( *(gt_ptr + xy) > 0.5 ){
                 if( *(threshold_ptr + xy) > 0.5 ){
                     TP++;
