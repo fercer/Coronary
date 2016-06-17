@@ -2390,14 +2390,13 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
 
     DEB_MSG(COLOR_BACK_GREEN COLOR_BACK_BLACK "GUARDAR" COLOR_NORMAL " min: " << min << ", " << max);
 
-    for( int y = 0; y < rows; y++ ){
-        for( int x = 0; x < cols; x++ ){
-            *(img_out_ptr + x + y*cols) = (unsigned char)(255.0 * (*(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) - min) / (max - min));
-        }
-    }
-
     switch(tipo_salida){
         case PGM:{
+            for( int y = 0; y < rows; y++ ){
+                for( int x = 0; x < cols; x++ ){
+                    *(img_out_ptr + x + y*cols) = (unsigned char)(255.0 * (*(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) - min) / (max - min));
+                }
+            }
             FILE *fp_out = fopen( ruta, "w");
 
             fprintf(fp_out, "P2\n");
@@ -2417,6 +2416,11 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
         }
 
         case PNG:{
+            for( int y = 0; y < rows; y++ ){
+                for( int x = 0; x < cols; x++ ){
+                    *(img_out_ptr + x + (rows - y - 1)*cols) = (unsigned char)(255.0 * (*(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) - min) / (max - min));
+                }
+            }
             vtkSmartPointer<vtkPNGWriter> png_output = vtkSmartPointer<vtkPNGWriter>::New();
             png_output->SetFileName( ruta );
             png_output->SetInputData( img_out );
