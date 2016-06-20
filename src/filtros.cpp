@@ -224,20 +224,20 @@ FILTROS::~FILTROS(){
         delete [] resp;
     }
 
-    if( mi_ruta_log ){
+    if( mi_fplog ){
         fclose( mi_fplog );
+        mi_fplog = NULL;
+    }
+
+    if( mi_ruta_log ){
         delete [] mi_ruta_log;
         mi_ruta_log = NULL;
     }
 
-    TIMERS;
-    GETTIME_INI;
     if(transformada){
         fftw_free(Img_fft);
         fftw_free(Img_fft_HPF);
     }
-    GETTIME_FIN;
-    std::cout << COLOR_BACK_GREEN COLOR_BLACK "Tiempo para liberar memoria del FFT: " << DIFTIME << " s." COLOR_NORMAL << std::endl;
 }
 
 
@@ -1105,7 +1105,7 @@ double FILTROS::calcCorCon(double *resp){
 
     DEB_MSG( "Correlation: " << correlation_1 << ", " << correlation_2 << ", " << correlation_3 << ", " << correlation_4 << ", mean: " << (correlation_1 + correlation_2 + correlation_3 + correlation_4)/ 4.0);
 
-    return (correlation_1 + correlation_2 + correlation_3 + correlation_4) / 4.0 + (double)((levels-1)*(levels-1)) - (contrast_1 + contrast_2 + contrast_3 + contrast_4)/4.0;
+    return (correlation_1 + correlation_2 + correlation_3 + correlation_4) / 4.0 + ((double)((levels-1)*(levels-1)) - (contrast_1 + contrast_2 + contrast_3 + contrast_4)/4.0);
 }
 
 

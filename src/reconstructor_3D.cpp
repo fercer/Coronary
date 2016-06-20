@@ -799,6 +799,9 @@ void RECONS3D::leerConfiguracion(const char *ruta_conf){
         tmp = fgetc( fp_config );
         if( tmp == '\n' || tmp == EOF ){
             *(tmp_str_ptr) = '\0';
+
+            DEB_MSG( tmp_par << ":" << tmp_val);
+
             if( strcmp( tmp_par, "GMF" ) == 0 ){
                 if( atoi(tmp_val) ){
                     filtro.setFiltro( FILTROS::GMF );
@@ -1120,8 +1123,8 @@ void RECONS3D::lengthFilter(const int angio_ID, IMGVTK::IMG_IDX img_idx, const i
 */
 double RECONS3D::medirExactitud(const int angio_ID){
     double accuracy = imgs_base[angio_ID].medirExactitud();
-    char mensaje[] = "\n" COLOR_GREEN "La imagen umbralizada tiene una exactitud de X.XXXXXX con respecto del ground-truth." COLOR_NORMAL "\n";
-    sprintf(mensaje, "\n" COLOR_GREEN "La imagen umbralizada tiene una exactitud de %1.6f con respecto del ground-truth." COLOR_NORMAL "\n", accuracy );
+    char mensaje[] = "\n" COLOR_GREEN "La imagen XXX tiene una exactitud de X.XXXXXX con respecto del ground-truth." COLOR_NORMAL "\n";
+    sprintf(mensaje, "\n" COLOR_GREEN "La imagen %i tiene una exactitud de %1.6f con respecto del ground-truth." COLOR_NORMAL "\n", angio_ID, accuracy );
     escribirLog(mensaje);
 }
 

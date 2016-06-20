@@ -605,7 +605,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
 
     const int mis_rens_cols = mis_cols*mis_rens;
 
-    int max_etiquetas = mis_rens;
+    int max_etiquetas = mis_rens_cols;
     int **val_etiquetas = new int* [max_etiquetas];
 
     for( int i = 0; i < max_etiquetas; i++){
