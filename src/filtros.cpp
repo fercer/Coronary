@@ -853,7 +853,7 @@ double FILTROS::calcROC( double *resp ){
         }
 
         while( i_negative > 0){
-            if( negative_array[i_negative] > threshold){
+            if( negative_array[i_negative] >= threshold){
                 TN -= 1.0;
                 i_negative--;
             }else{

@@ -226,6 +226,7 @@ class IMGVTK{
         unsigned int *conjuntosConexosDinamico(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens);
 
         inline void ampliarConjunto(int **etiquetas, const int equiv_A, const int equiv_B);
+        void equivalenciaRec(const int equiv, const int base, int **etiquetas);
         unsigned int *conjuntosConexos(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens);
         void lengthFilter(double *ptr, const int min_length , const int mis_cols, const int mis_rens);
 

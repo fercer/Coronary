@@ -616,22 +616,37 @@ inline void IMGVTK::ampliarConjunto( int **etiquetas, const int equiv_A, const i
 
 
 
+/*  Metodo: equivalenciaRec
+    Funcion: Realiza las equivalencias de manera recursiva.
+*/
+void IMGVTK::equivalenciaRec(const int equiv, const int base, int **etiquetas){
+    DEB_MSG("Cambiando " << equiv << " por " << base << " [" << *(*(etiquetas + equiv)) << "]");
+    for( int k = 1; k < *(*(etiquetas + equiv)); k++){
+        equivalenciaRec( *(*(etiquetas + equiv) + k + 2), base, etiquetas );
+    }
+    *(*(etiquetas + equiv) + 2) = base;
+}
+
+
+
 
 /*  Metodo: conjuntosConexos
     Funcion: Obtiene los conjuntos conexos de la imagen.
 */
 unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens){
 
+    static int veces = 0;
+
     const int mis_rens_cols = mis_cols*mis_rens;
 
-    int max_etiquetas = mis_rens;
+    int max_etiquetas = mis_rens*10;
     int **val_etiquetas = new int* [max_etiquetas];
 
     for( int i = 0; i < max_etiquetas; i++){
         *(val_etiquetas + i) = new int [2 + mis_cols];
-        *(*(val_etiquetas + i)) = 1;
+        *(*(val_etiquetas + i)    ) = 1;
         *(*(val_etiquetas + i) + 1) = mis_cols;
-        *(*(val_etiquetas + i) + 2) = -1;
+        *(*(val_etiquetas + i) + 2) =-1;
     }
 
     int *pix_etq = new int [(mis_rens+2)*(mis_cols+2)];
@@ -644,14 +659,13 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
             if( *(ptr + (y-1)*mis_cols + (x-1)) > 0.0 ){
 
                 const int NO = *(pix_etq + (y-1)*(mis_cols+2) + (x-1));
-                const int N  = *(pix_etq + (y-1)*(mis_cols+2) + x);
+                const int N  = *(pix_etq + (y-1)*(mis_cols+2) +   x  );
                 const int NE = *(pix_etq + (y-1)*(mis_cols+2) + (x+1));
-                const int E  = *(pix_etq + y*(mis_cols+2) + (x+1));
+                const int E  = *(pix_etq +   y  *(mis_cols+2) + (x+1));
                 const int SE = *(pix_etq + (y+1)*(mis_cols+2) + (x+1));
-                const int S  = *(pix_etq + (y+1)*(mis_cols+2) + x);
+                const int S  = *(pix_etq + (y+1)*(mis_cols+2) +   x  );
                 const int SO = *(pix_etq + (y+1)*(mis_cols+2) + (x-1));
-                const int O  = *(pix_etq + y*(mis_cols+2) + (x-1));
-
+                const int O  = *(pix_etq +   y  *(mis_cols+2) + (x-1));
 
                 int base = -1;
 
@@ -722,6 +736,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                         base = O;
                     }
                 }
+
                 if( base >= 0 ){
                     *(pix_etq + y*(mis_cols+2) + x) = base;
                 }else{
@@ -747,8 +762,46 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
         }
     }
 
+    char nombre_etq[] = "etiquetas_antes_XXX.fcs";
+    sprintf( nombre_etq, "etiquetas_antes_%i.fcs", ++veces);
+    FILE *fp_etiquetas = fopen(nombre_etq, "w");
+    for( int y = 0; y < (mis_rens+2); y++){
+        for(int x = 0; x < (mis_cols+2); x++){
+            fprintf(fp_etiquetas, "%i ", *(pix_etq + y*(mis_cols+2) + x));
+        }
+        fprintf(fp_etiquetas, "\n ");
+    }
+    fclose( fp_etiquetas );
+
+    sprintf( nombre_etq, "equiv_antes_%i.fcs", veces);
+    FILE *fp_equivs = fopen(nombre_etq, "w");
+    for( int i = 0; i < max_etiquetas; i++){
+        for( int j = 0; j < *(*(val_etiquetas + i)) + 2; j++){
+            fprintf(fp_equivs, "%i ", *(*(val_etiquetas + i) + j));
+        }
+        fprintf(fp_equivs, "\n");
+    }
+    fclose( fp_equivs );
+
     DEB_MSG("Quedaron " << n_conjunto << " activados");
 
+    for( int i = 0; i <= n_conjunto; i++){
+        equivalenciaRec( i, *(*(val_etiquetas + i) + 2), val_etiquetas );
+    }
+
+    DEB_MSG("Cambiadas " << n_conjunto << " etiquetas");
+
+    sprintf( nombre_etq, "equiv_despues_%i.fcs", veces);
+    fp_equivs = fopen(nombre_etq, "w");
+    for( int i = 0; i < max_etiquetas; i++){
+        for( int j = 0; j < *(*(val_etiquetas + i)) + 2; j++){
+            fprintf(fp_equivs, "%i ", *(*(val_etiquetas + i) + j));
+        }
+        fprintf(fp_equivs, "\n");
+    }
+    fclose( fp_equivs );
+
+/*
     /// Determinar cuantos conjuntos diferentes hay y encontrar las etiquetas equivalentes:
     int etq_activas = n_conjunto+1;
     n_conjunto = 0;
@@ -792,8 +845,12 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
     }
 
     memset( conjuntos, -1, mis_rens_cols*sizeof(int) );
+    delete [] diferentes;
+*/
 
+    n_conjunto++;
     // Indicar a que conjunto pertenece cada pixel:
+    memset( conjuntos, -1, mis_rens_cols*sizeof(int));
     for( int y = 0; y < mis_rens; y++){
         for( int x = 0; x < mis_cols; x++){
             const int etiqueta = *(pix_etq + (y+1)*(mis_cols+2) + (x+1));
@@ -802,6 +859,16 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
             }
         }
     }
+
+    sprintf( nombre_etq, "etiquetas_despues_%i.fcs", veces);
+    fp_etiquetas = fopen(nombre_etq, "w");
+    for( int y = 0; y < (mis_rens); y++){
+        for(int x = 0; x < (mis_cols); x++){
+            fprintf(fp_etiquetas, "%i ", *(conjuntos + y*(mis_cols) + x));
+        }
+        fprintf(fp_etiquetas, "\n ");
+    }
+    fclose( fp_etiquetas );
 
     /// Contar cuantos elementos hay en cada grupo:
     unsigned int *n_etiquetados = new unsigned int [n_conjunto+1];
@@ -819,7 +886,6 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
         delete [] *(val_etiquetas + i);
     }
 
-    delete [] diferentes;
     delete [] val_etiquetas;
     delete [] pix_etq;
 
@@ -1606,7 +1672,7 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
     const double rango = 1.0 / (max - min);
     const double fraccion = 1.0 / (double)rows_cols;
     for( int xy = 0; xy < rows_cols; xy ++){
-        umbral_nuevo += *(img_ptr + xy) * rango;
+        umbral_nuevo += (*(img_ptr + xy) - min) * rango;
     }
     umbral_nuevo *= fraccion;
 
@@ -1620,11 +1686,11 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
         int n_abajo = 0, n_arriba = 0;
 
         for( int xy = 0; xy < rows_cols; xy++){
-            if( *(img_ptr + xy) <= umbral ){
-                m_abajo += *(img_ptr + xy);
+            if( (*(img_ptr + xy) - min) * rango <= umbral ){
+                m_abajo += (*(img_ptr + xy) - min) * rango;
                 n_abajo++;
             }else{
-                m_arriba += *(img_ptr + xy);
+                m_arriba += (*(img_ptr + xy) - min) * rango;
                 n_arriba++;
             }
         }
