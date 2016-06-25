@@ -629,6 +629,10 @@ void RECONS3D::umbralizar( const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbr
     imgs_base[ angio_ID ].umbralizar( IMGVTK::SEGMENT, mi_umbral, umbral );
 }
 
+
+
+
+
 void RECONS3D::lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angio_ID)
 {
     imgs_base[angio_ID].lengthFilter(img_idx, min_length, IMGVTK::DINAMICO);
@@ -655,9 +659,6 @@ double RECONS3D::medirExactitud(const int angios_ID)
     return acc;
 }
 
-
-
->>>>>>> features_NoVTK
 
 /*  Metodo: agregarInput
 
@@ -1148,22 +1149,9 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     Funcion: Filtra la imagen img_idx segun el numero de pixeles dentro de los conuntos conexos.
 */
 void RECONS3D::lengthFilter(const int angio_ID, IMGVTK::IMG_IDX img_idx, const int min_length){
-    imgs_base[angio_ID].lengthFilter(img_idx, min_length);
+    imgs_base[angio_ID].lengthFilter(img_idx, min_length, IMGVTK::DINAMICO);
 }
 
-
-
-
-/*  Metodo: medirExactitud
-
-    Funcion: Mide la exactitud del clasificador entre la imagen umbralizada y el ground-truth
-*/
-double RECONS3D::medirExactitud(const int angio_ID){
-    double accuracy = imgs_base[angio_ID].medirExactitud();
-    char mensaje[] = "\n" COLOR_GREEN "La imagen XXX tiene una exactitud de X.XXXXXX con respecto del ground-truth." COLOR_NORMAL "\n";
-    sprintf(mensaje, "\n" COLOR_GREEN "La imagen %i tiene una exactitud de %1.6f con respecto del ground-truth." COLOR_NORMAL "\n", angio_ID, accuracy );
-    escribirLog(mensaje);
-}
 
 
 
@@ -1508,7 +1496,7 @@ void RECONS3D::skeletonize(const int angio_ID, const int nivel_detalle){
         renderer_global->AddActor( actor );
     }
 }
-*/
+
 
 
 

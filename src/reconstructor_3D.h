@@ -11,7 +11,7 @@
 
 
 // Librerias de uso comun:
-/*
+
 #include <vtkVersion.h>
 #include <vtkSmartPointer.h>
 #include <vtkTransform.h>
@@ -82,7 +82,7 @@
 #include <gdcmReader.h>
 #include <gdcmTag.h>
 #include <gdcmPrivateTag.h>
-*/
+
 
 #include <assert.h>
 
@@ -180,7 +180,6 @@ class RECONS3D{
         void Guardar(IMGVTK::IMG_IDX img_idx, const char *ruta, const IMGVTK::TIPO_IMG tipo_salida, const int angio_ID );
 
         void umbralizar(const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbral, const double umbral );
-        void lengthFilter(const int angio_ID, IMGVTK::IMG_IDX img_idx, const int min_length);
 
 
         void agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar);
@@ -195,7 +194,7 @@ class RECONS3D{
         void segmentarImagenBase(const int angio_ID );
         void lengthFilter(const int angio_ID, IMGVTK::IMG_IDX img_idx, const int min_length);
         double medirExactitud(const int angio_ID);
-        void skeletonize(const int angio_ID);
+        void skeletonize(const int angio_ID, const int nivel_detalle);
 
         /*
         void mostrarBase( const int angio_ID );
@@ -230,7 +229,7 @@ class RECONS3D{
 
         void umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angio_ID);
         void lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angio_ID);
-        double medirExactitud(const int angios_ID);
+
     // O P E R A D O R E S  S O B R E C A R G A D O S
     //--------------------------------------------------------------------------------------- PUBLIC ----- ^
 };
