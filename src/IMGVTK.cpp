@@ -1457,7 +1457,6 @@ double IMGVTK::umbralizarOTSU( const double *img_ptr, const double min, const do
     }
 
     free( histograma_frecuencias );
-    DEB_MSG("Umbral: " << umbral);
 
     return umbral;
 }
@@ -1474,6 +1473,7 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
     // Obtener la media de la intensidad de la imagen como primera aproximacion del umbral
     const double rango = 1.0 / (max - min);
     const double fraccion = 1.0 / (double)rows_cols;
+
     for( int xy = 0; xy < rows_cols; xy ++){
         umbral_nuevo += (*(img_ptr + xy) - min) * rango;
     }
@@ -1486,11 +1486,11 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
 
         double m_abajo = 0.0;
         double m_arriba = 0.0;
-        int n_arriba = 0, n_abajo = 0;
+        int n_abajo = 0, n_arriba = 0;
 
         for( int xy = 0; xy < rows_cols; xy++){
-            if( (*(img_ptr + xy) - min) * rango <= umbral ){
-                m_abajo += (*(img_ptr + xy) - min) * rango;
+            if( ((*(img_ptr + xy ) - min) * rango) <= umbral ){
+                m_abajo += (*(img_ptr + xy ) - min) * rango;
                 n_abajo++;
             }else{
                 m_arriba += (*(img_ptr + xy) - min) * rango;
@@ -1507,8 +1507,6 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
             break;
         }
     }
-
-    DEB_MSG("Umbral: " << umbral);
 
     return umbral;
 }
@@ -1564,6 +1562,8 @@ void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const doubl
             break;
     }
 
+    DEB_MSG("Umbral: " << umbral);
+
     // Se umbraliza la imagen con el valor optimo encontrado:
     for( int xy = 0; xy < rows_cols; xy++){
         *(threshold_ptr + xy) = ( ((*(img_ptr + xy) - min) / (max - min)) >= umbral) ? 1.0 : 0.0;
@@ -1574,19 +1574,21 @@ void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const doubl
 
 
 
-
-
-/*  Metodo: medirExactitud
-    Funcion: Calcula la exactitud de la segmentacion respecto al ground-truth.
+/*  Metodo: Cargar
+    Funcion: Retorna la exactitud del clasificador resultante contra el ground-truth
 */
 double IMGVTK::medirExactitud(){
 
-    int TP = 0, TN = 0, FP = 0, FN = 0;
+    if( !gt_ptr ){
+        char mensaje_error[] = COLOR_BACK_BLACK COLOR_RED "<<ERROR: " COLOR_YELLOW "No se cargo la imagen ground-truth" COLOR_NORMAL "\n";
+        escribirLog( mensaje_error);
+        return 0.0;
+    }
 
+    int FP = 0, FN = 0, TP = 0, TN = 0;
 
     for( int xy = 0; xy < rows_cols; xy++){
-        if( *(mask_ptr + xy)  > 0.5 ){
-            // Medir Coinsidencias con Verdaderos:
+        if( *(mask_ptr + xy) > 0.5 ){
             if( *(gt_ptr + xy) > 0.5 ){
                 if( *(threshold_ptr + xy) > 0.5 ){
                     TP++;
@@ -1603,12 +1605,8 @@ double IMGVTK::medirExactitud(){
         }
     }
 
-
-    return (double)(TP + TN) / (double)( TP + TN + FP + FN);
-
+    return (double)(TP + TN) / (double)(TP + TN + FP + FN);
 }
-
-
 
 
 /*  Metodo: Cargar
@@ -1631,7 +1629,6 @@ DEB_MSG("Archivo de entrada: " << ruta_origen);
 DEB_MSG("Magic number: " << mensaje);
     fgets(mensaje, 512, fp_img);  // Leer Comentario
 DEB_MSG("Comentarios: " << mensaje);
-
     int mis_cols, mis_rows;
 
     fscanf(fp_img, "%i", &mis_cols);    // Leer ancho
@@ -1642,24 +1639,25 @@ DEB_MSG("renglones: " << mis_rows);
 
     double max_intensidad;
     fscanf(fp_img, "%lf", &max_intensidad);  // Leer la escala de intensidad maxima
-
-    if( !*(img_src) ){
+DEB_MSG("max intensidad: " << max_intensidad);
+	if( !*(img_src) ){
         *(img_src) = new double [mis_rows_cols];
     }
 
-    double intensidad;
+    int intensidad;
     for( int xy = 0; xy < mis_rows_cols; xy++){
-        fscanf( fp_img, "%lf", &intensidad );
-        *(*img_src + xy) = intensidad / max_intensidad;
+        fscanf( fp_img, "%i", &intensidad );
+        *(*img_src + xy) = (double)intensidad / max_intensidad;
+		if (enmascarar && (xy % 1000) == 0 ) {
+			DEB_MSG( "[" << xy << "]: " << *(*img_src + xy) << " :: " << (double)intensidad);
+		}
     }
 
 
     if(enmascarar){
         if( !*mask_src ){
-            DEB_MSG("Alojando memoria para la mascara...");
             *(mask_src) = new double [mis_rows_cols];
         }
-        DEB_MSG("Definiendo la mascara [" << (*mask_src) << "]");
         definirMask(*img_src, *mask_src, mis_rows, mis_cols);
     }
 

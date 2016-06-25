@@ -189,7 +189,9 @@ class RECONS3D{
         void leerConfiguracion( const char *ruta_conf);
 
         void segmentarImagenBase(const int angio_ID );
-        //void skeletonize(const int angio_ID);
+        void lengthFilter(const int angio_ID, IMGVTK::IMG_IDX img_idx, const int min_length);
+        double medirExactitud(const int angio_ID);
+        void skeletonize(const int angio_ID);
 
         /*
         void mostrarBase( const int angio_ID );

@@ -19,7 +19,7 @@
     Funcion: Escribe un mensaje en el log.
 */
 void RECONS3D::escribirLog( const char *mensaje ){
-    if( fp_log ){
+    if(fp_log){
         fprintf(fp_log, "%s", mensaje);
     }else{
         std::cout << mensaje;
@@ -620,7 +620,7 @@ DEB_MSG("Mostrando detector para: " << angio_ID << ", LAORAO: " << imgs_base[ang
 
 /*  Metodo: umbralizar
 
-    Funcion:
+    Funcion: Utiliza la funcion de umbralizacion programada en IMGVTK.
 */
 void RECONS3D::umbralizar( const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbral, const double umbral ){
     imgs_base[ angio_ID ].umbralizar( IMGVTK::SEGMENT, mi_umbral, umbral );
@@ -827,6 +827,9 @@ void RECONS3D::leerConfiguracion(const char *ruta_conf){
         tmp = fgetc( fp_config );
         if( tmp == '\n' || tmp == EOF ){
             *(tmp_str_ptr) = '\0';
+
+            DEB_MSG( tmp_par << ":" << tmp_val);
+
             if( strcmp( tmp_par, "GMF" ) == 0 ){
                 if( atoi(tmp_val) ){
                     filtro.setFiltro( FILTROS::GMF );
@@ -1026,12 +1029,9 @@ void RECONS3D::setFiltroParametros(){
 
 
 
-
-
-
 /*  Metodo: Guardar
 
-    Funcion: Almacena una imagen del reconstructor a la ruta especificada.
+    Funcion: Almacena una imagen del reconstructor a la ruta especificada, en formato PNG o PGM.
 */
 void RECONS3D::Guardar(const char *ruta, IMGVTK::IMG_IDX img_idx, IMGVTK::TIPO_IMG tipo_img, const int angio_ID){
     imgs_base[angio_ID].Guardar( img_idx, ruta, tipo_img );
@@ -1100,7 +1100,22 @@ double* RECONS3D::get_pixelData(const int angio_ID, IMGVTK::IMG_IDX img_idx){
 }
 
 
-/*  Metodo: segmentarImagen
+
+/*  Metodo: setLog
+
+    Funcion: Define la ruta donde se guarda el log del proceso de reconstruccion.
+*/
+void RECONS3D::setLog(const char *ruta_log){
+    if(fp_log){
+        fclose(fp_log);
+        fp_log = NULL;
+    }
+
+    fp_log = fopen(ruta_log, "w");
+}
+
+
+/*  Metodo: segmentarImagenBase
 
     Funcion: Aplica el filtro con los parametros definidos
 */
@@ -1119,6 +1134,31 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     char mensaje[] = "XXX.XXXXXXXX\n";
     sprintf(mensaje, "%3.8f\n", DIFTIME);
     escribirLog( mensaje );
+}
+
+
+
+
+/*  Metodo: lengthFilter
+
+    Funcion: Filtra la imagen img_idx segun el numero de pixeles dentro de los conuntos conexos.
+*/
+void RECONS3D::lengthFilter(const int angio_ID, IMGVTK::IMG_IDX img_idx, const int min_length){
+    imgs_base[angio_ID].lengthFilter(img_idx, min_length);
+}
+
+
+
+
+/*  Metodo: medirExactitud
+
+    Funcion: Mide la exactitud del clasificador entre la imagen umbralizada y el ground-truth
+*/
+double RECONS3D::medirExactitud(const int angio_ID){
+    double accuracy = imgs_base[angio_ID].medirExactitud();
+    char mensaje[] = "\n" COLOR_GREEN "La imagen XXX tiene una exactitud de X.XXXXXX con respecto del ground-truth." COLOR_NORMAL "\n";
+    sprintf(mensaje, "\n" COLOR_GREEN "La imagen %i tiene una exactitud de %1.6f con respecto del ground-truth." COLOR_NORMAL "\n", angio_ID, accuracy );
+    escribirLog(mensaje);
 }
 
 
@@ -1585,7 +1625,7 @@ void RECONS3D::setLog( const char *ruta_log ){
 */
 RECONS3D::RECONS3D(){
     //renderer_global = vtkSmartPointer<vtkRenderer>::New();
-
+    fp_log = NULL;
     detalle = 180;
     fp_log = NULL;
 
@@ -1602,8 +1642,9 @@ RECONS3D::RECONS3D(){
     Funcion: Libera la memoria utilizada para almacenar las imagenes.
 */
 RECONS3D::~RECONS3D(){
-    if( fp_log ){
+    if(fp_log){
         fclose(fp_log);
+        fp_log = NULL;
     }
 }
 

@@ -44,8 +44,6 @@
 
 #include <omp.h>
 
-
-
 #define COLOR_NORMAL        "\33[0m"
 #define COLOR_BOLD          "\33[1m"
 #define COLOR_UNDER         "\33[4m"
@@ -69,6 +67,9 @@
 #define COLOR_BACK_WHITE    "\33[47m"
 
 
+#ifdef _WIN32
+	#include <time.h>
+#endif
 #ifdef _OPENMP
     #define TIMERS double t_ini, t_fin
     #define GETTIME_INI t_ini = omp_get_wtime()
@@ -77,7 +78,6 @@
     #define OMP_ENABLED true
 #else
 	#ifdef _WIN32
-		#include <time.h>
 		#define TIMERS time_t t_ini, t_fin
 		#define GETTIME_INI time (&t_ini)
 		#define GETTIME_FIN time (&t_fin)
@@ -142,6 +142,7 @@ class IMGVTK{
         void definirMask(double *img_src, double *mask_src , const int mis_rens, const int mis_cols);
         void skeletonization(IMG_IDX img_idx);
         void umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const double nivel);
+
         void lengthFilter(IMG_IDX img_idx, const int min_length, ALG_CONJUNTOS mi_alg);
         void regionFill(IMG_IDX img_idx);
         void mapaDistancias(IMG_IDX img_idx);
