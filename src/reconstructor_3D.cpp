@@ -19,7 +19,11 @@
     Funcion: Escribe un mensaje en el log.
 */
 void RECONS3D::escribirLog( const char *mensaje ){
-    std::cout << mensaje;
+    if( fp_log ){
+        fprintf(fp_log, "%s", mensaje);
+    }else{
+        std::cout << mensaje;
+    }
 }
 
 
@@ -622,6 +626,34 @@ void RECONS3D::umbralizar( const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbr
     imgs_base[ angio_ID ].umbralizar( IMGVTK::SEGMENT, mi_umbral, umbral );
 }
 
+void RECONS3D::lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angio_ID)
+{
+    imgs_base[angio_ID].lengthFilter(img_idx, min_length, IMGVTK::DINAMICO);
+}
+
+
+
+
+
+/*  Metodo: medirExactitud
+
+    Funcion: Mide la exactitud entre la imagen segmentada y el ground-truth
+*/
+double RECONS3D::medirExactitud(const int angios_ID)
+{
+    DEB_MSG("midiendo exactitud ...");
+
+    double acc = imgs_base[angios_ID].medirExactitud();
+
+    char mensaje[] = "X.XXXXXXXXXXXXXXXX \n";
+    sprintf(mensaje, "%1.16f\n", acc);
+    escribirLog(mensaje);
+
+    return acc;
+}
+
+
+
 
 /*  Metodo: agregarInput
 
@@ -1080,8 +1112,13 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
         filtro.setPar();
     }
 
+    TIMERS;
+    GETTIME_INI;
     filtro.filtrar();
-    escribirLog( "\nEl filtrado de la imagen base termino con exito\n" );
+    GETTIME_FIN;
+    char mensaje[] = "XXX.XXXXXXXX\n";
+    sprintf(mensaje, "%3.8f\n", DIFTIME);
+    escribirLog( mensaje );
 }
 
 
@@ -1522,6 +1559,24 @@ void RECONS3D::setFiltroLog( const char *ruta_log ){
     filtro.setLog( ruta_log );
 }
 
+void RECONS3D::umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angio_ID)
+{
+    imgs_base[angio_ID].umbralizar(img_idx, tipo_umb, nivel);
+}
+
+
+
+
+/*  Metodo: setoLog
+
+    Funcion: Define el editor donde se escribiran todos los logs de la reconstruccion
+*/
+void RECONS3D::setLog( const char *ruta_log ){
+    if( fp_log ){
+        fclose( fp_log );
+    }
+    fp_log = fopen(ruta_log, "a");
+}
 
 
 // C O N S T R U C T O R E S    /   D E S T R U C T O R E S
@@ -1532,6 +1587,7 @@ RECONS3D::RECONS3D(){
     //renderer_global = vtkSmartPointer<vtkRenderer>::New();
 
     detalle = 180;
+    fp_log = NULL;
 
     double color[] = {1.0, 1.0, 1.0};
 //    agregarEsfera(0.0, 0.0, 0.0, 10.0, color, renderer_global);
@@ -1546,7 +1602,9 @@ RECONS3D::RECONS3D(){
     Funcion: Libera la memoria utilizada para almacenar las imagenes.
 */
 RECONS3D::~RECONS3D(){
-
+    if( fp_log ){
+        fclose(fp_log);
+    }
 }
 
 //-------------------------------------------------------------------------------------------------- PUBLIC----- ^

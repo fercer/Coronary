@@ -124,6 +124,9 @@ class IMGVTK{
         /** TIPO_UMBRAL:    **/
         typedef enum TIPO_UMBRAL { NIVEL, OTSU, RIDLER_CALVARD} TIPO_UMBRAL;
 
+        /** ALG_CONJUNTOS:    **/
+        typedef enum ALG_CONJUNTOS { DINAMICO, ITERATIVO} ALG_CONJUNTOS;
+
         /** PIX_PAR:   **/
         typedef struct PIX_PAR {
             double x, y, x_r, y_r;
@@ -139,10 +142,11 @@ class IMGVTK{
         void definirMask(double *img_src, double *mask_src , const int mis_rens, const int mis_cols);
         void skeletonization(IMG_IDX img_idx);
         void umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const double nivel);
-        void lengthFilter(IMG_IDX img_idx, const int min_length);
+        void lengthFilter(IMG_IDX img_idx, const int min_length, ALG_CONJUNTOS mi_alg);
         void regionFill(IMG_IDX img_idx);
         void mapaDistancias(IMG_IDX img_idx);
         void detectarBorde(IMG_IDX img_idx);
+        double medirExactitud();
 
         void Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool enmascarar, const int nivel);
         void Cargar(const IMG_IDX img_idx, char **rutas_origen , const int n_imgs, const bool enmascarar);
@@ -223,9 +227,9 @@ class IMGVTK{
         void conexo(const double *ptr, const int x, const int y, int *conjuntos, unsigned int* n_etiquetados, bool* visitados, const int num_etiquetas, const int mis_cols, const int mis_rens);
         unsigned int *conjuntosConexosDinamico(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens);
 
-        inline void ampliarConjunto(int **etiquetas, const int equiv_A, const int equiv_B);
+        inline void ampliarConjunto(int *etiquetas, const int equiv_A, const int equiv_B, const int max_etiquetas);
         unsigned int *conjuntosConexos(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens);
-        void lengthFilter(double *ptr, const int min_length , const int mis_cols, const int mis_rens);
+        void lengthFilter(double *ptr, const int min_length , const int mis_cols, const int mis_rens, ALG_CONJUNTOS mi_alg);
 
         char* setRuta( const char *ruta_input );
 

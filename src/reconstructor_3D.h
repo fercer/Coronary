@@ -138,6 +138,7 @@ class RECONS3D{
         */
 
         FILTROS filtro;
+        FILE *fp_log;
 
     // M E T O D O S       P R I V A D O S
         void escribirLog( const char *mensaje );
@@ -217,9 +218,13 @@ class RECONS3D{
         vtkSmartPointer< vtkRenderer > getRenderer( const int angio_ID );
         */
 
-
+        void setLog( const char *ruta_log );
         void setFiltroLog( FILE *fplog );
         void setFiltroLog( const char* ruta_log );
+
+        void umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angio_ID);
+        void lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angio_ID);
+        double medirExactitud(const int angios_ID);
     // O P E R A D O R E S  S O B R E C A R G A D O S
     //--------------------------------------------------------------------------------------- PUBLIC ----- ^
 };

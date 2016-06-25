@@ -367,13 +367,12 @@ void FILTROS::filtrar(){
     double fitness = 0.0;
 
     switch( fitness_elegido ){
-        case ROC:
-            fitness = fitnessROC(mi_elite, resp);
-            DEB_MSG("Fitnes ROC: " << fitness << " :: L: " << mi_elite->vars[PAR_L] <<  ", T: " << mi_elite->vars[PAR_T] << ", K: " << mi_elite->vars[PAR_K] << ", sigma: " << mi_elite->vars[PAR_SIGMA]);
-            break;
         case CORCON:
             fitness = fitnessCorCon(mi_elite, resp);
             DEB_MSG("Fitnes Cor Con: " << fitness << " :: L: " << mi_elite->vars[PAR_L] <<  ", T: " << mi_elite->vars[PAR_T] << ", K: " << mi_elite->vars[PAR_K] << ", sigma: " << mi_elite->vars[PAR_SIGMA]);
+        case ROC:
+            fitness = fitnessROC(mi_elite, resp);
+            DEB_MSG("Fitnes ROC: " << fitness << " :: L: " << mi_elite->vars[PAR_L] <<  ", T: " << mi_elite->vars[PAR_T] << ", K: " << mi_elite->vars[PAR_K] << ", sigma: " << mi_elite->vars[PAR_SIGMA]);
             break;
         default: /* FIT_UNSET */
             char mensaje_error[] = COLOR_BACK_BLACK COLOR_RED "<<ERROR: " COLOR_YELLOW "No se ha definido la funcion de evaluacion (fitness)" COLOR_NORMAL "\n";
@@ -403,7 +402,7 @@ void FILTROS::setLog( const char *ruta_log){
     if(mi_fplog){
         fclose( mi_fplog );
     }
-    mi_fplog = fopen( mi_ruta_log, "w" );
+    mi_fplog = fopen( mi_ruta_log, "a" );
 }
 
 
@@ -478,6 +477,20 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         templates[k] = new double [temp_dims * temp_dims];
         memset(templates[k], 0, temp_dims*temp_dims*sizeof(double));
         rotarImg( templates[0], templates[k], ctheta, stheta, temp_dims, temp_dims, temp_dims, temp_dims);
+
+#ifndef NDEBUG
+        char temp_nom[] = "template_XXX.fcs";
+        sprintf(temp_nom, "template_%3i.fcs", k);
+        FILE *fp_temp = fp_temp = fopen(temp_nom, "w");
+
+        for( int y = 0; y < temp_dims; y++){
+            for( int x = 0; x < temp_dims; x++){
+                fprintf(fp_temp, "%1.12f ", *(templates[k] + x + y*temp_dims));
+            }
+            fprintf(fp_temp, "\n");
+        }
+        fclose(fp_temp);
+#endif
     }
 
 	delete[] gauss_0;
@@ -822,13 +835,17 @@ double FILTROS::calcROC( double *resp ){
     double TPF_new, FPF_new;
     double Az = 0.0;
 
-#ifndef NDEBUG
     FILE *fp_ROC = fopen("ROC_curve.fcs", "w");
-#endif
+
+    DEB_MSG("n pos: " << i_positive << ", n neg " << n_negative );
 
     min_resp -= delta;
     while( threshold > min_resp ){
         //// Count the positive and negative individuals at this threshold:
+
+        if( i_negative == 0 & i_positive == 0){
+            break;
+        }
 
         while( i_positive > 0 ){
             if(positive_array[i_positive] >= threshold){
@@ -862,21 +879,20 @@ double FILTROS::calcROC( double *resp ){
         // Mover los valores de la curva:
         TPF_old = TPF_new;
         FPF_old = FPF_new;
-
-#ifndef NDEBUG
-        fprintf( fp_ROC , "%i %f %f %f %f\n", i_threshold, threshold, TPF_old, FPF_old, Az);
-#endif
+        fprintf( fp_ROC , "%1.12f %1.12f\n", TPF_old, FPF_old);
     }
 
-#ifndef NDEBUG
+
     fclose(fp_ROC);
-#endif
+
     free(positive_array);
     free(negative_array);
 
     GETTIME_FIN;
 
-    DEB_MSG("Az: " << Az << " en " << DIFTIME << " s.");
+    char mensaje[] = "X.XXXXXXXXXXXXXXXX XXX.XXXXXXXXXXXX \n";
+    sprintf(mensaje, "%1.16f %3.12f\n", Az, DIFTIME);
+    escribirLog( mensaje );
 
     return Az;
 }
@@ -912,6 +928,10 @@ double FILTROS::fitnessROC( INDIV *test, double *mi_resp ){
     Funcion: Calculates the correlation and contrast of the filtered response.
 */
 double FILTROS::calcCorCon(double *resp){
+
+    TIMERS;
+
+    GETTIME_INI;
 
     //// Scale the response to 8 levels:
     const int levels = 8;
@@ -1089,9 +1109,18 @@ double FILTROS::calcCorCon(double *resp){
     }
     free(GLCM_mat);
 
+    double corcon = (correlation_1 + correlation_2 + correlation_3 + correlation_4) / 4.0 + (double)((levels-1)*(levels-1)) - (contrast_1 + contrast_2 + contrast_3 + contrast_4)/4.0;
+
+    GETTIME_FIN;
+
     DEB_MSG( "Correlation: " << correlation_1 << ", " << correlation_2 << ", " << correlation_3 << ", " << correlation_4 << ", mean: " << (correlation_1 + correlation_2 + correlation_3 + correlation_4)/ 4.0);
 
-    return (correlation_1 + correlation_2 + correlation_3 + correlation_4) / 4.0 + (double)((levels-1)*(levels-1)) - (contrast_1 + contrast_2 + contrast_3 + contrast_4)/4.0;
+
+    char mensaje[] = "X.XXXXXXXXXXXXXXXX XXX.XXXXXXXXXXXX \n";
+    sprintf(mensaje, "%1.16f %3.12f\n", corcon, DIFTIME);
+    escribirLog(mensaje);
+
+    return corcon;
 }
 
 

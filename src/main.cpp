@@ -155,7 +155,7 @@ void definirParametros(PARS_ENTRADA *parametros){
     // Parametro input filtrado.log
     parametros[17].mi_tipo = CHAR;
     sprintf(parametros[17].short_tag, "-lf");
-    sprintf(parametros[17].long_tag, "--logfiltrado");
+    sprintf(parametros[17].long_tag, "--log-filtrado");
     sprintf(parametros[17].mi_default.par_s, "NULL");
     sprintf(parametros[17].pregunta, "[ENTRENAR PARAMETROS] Ruta donde se guarda el log del proceso de filtrado");
     parametros[17].opcional = 1;
@@ -175,20 +175,45 @@ void definirParametros(PARS_ENTRADA *parametros){
     sprintf(parametros[19].mi_default.par_s, "yes");
     sprintf(parametros[19].pregunta, "[ENTRENAR PARAMETROS] Concatenar el dataseten una sola imagen");
     parametros[19].opcional = 1;
+
+
+    // Parametro log de reconstruccion
+    parametros[20].mi_tipo = CHAR;
+    sprintf(parametros[20].short_tag, "-lr");
+    sprintf(parametros[20].long_tag, "--log-reconstruccion");
+    sprintf(parametros[20].mi_default.par_s, "NULL");
+    sprintf(parametros[20].pregunta, "[ENTRENAR PARAMETROS] Ruta donde se guarda el log del proceso de reconstruccion");
+    parametros[20].opcional = 1;
+
+    // Parametro umbralizar
+    parametros[21].mi_tipo = CHAR;
+    sprintf(parametros[21].short_tag, "-umb");
+    sprintf(parametros[21].long_tag, "--umbralizar");
+    sprintf(parametros[21].mi_default.par_s, "no");
+    sprintf(parametros[21].pregunta, "[ENTRENAR PARAMETROS] Se umbraliza la respuesta");
+    parametros[21].opcional = 1;
+
+    // Parametro umbralizar
+    parametros[21].mi_tipo = CHAR;
+    sprintf(parametros[21].short_tag, "-umb");
+    sprintf(parametros[21].long_tag, "--umbralizar");
+    sprintf(parametros[21].mi_default.par_s, "no");
+    sprintf(parametros[21].pregunta, "[ENTRENAR PARAMETROS] Se umbraliza la respuesta");
+    parametros[21].opcional = 1;
 }
 
 int main(int argc, char** argv ){
     // Definir los parametros de entrada:
-    PARS_ENTRADA *parametros = new PARS_ENTRADA [20];
+    PARS_ENTRADA *parametros = new PARS_ENTRADA [22];
     definirParametros( parametros );
 
     if( argc < 2 ){
-        mostrar_ayuda(parametros, 20, "Coronary");
+        mostrar_ayuda(parametros, 22, "Coronary");
         delete [] parametros;
         return EXIT_FAILURE;
     }
     // Revisar los parametros de entrada:
-    revisar_pars(parametros, 20, &argc, argv);
+    revisar_pars(parametros, 22, &argc, argv);
 
     // Si se va a generar un archivo DICOM par aun phantom, no se genera el reconstructor 3D:
     if( strcmp( parametros[12].mi_valor.par_s , "NULL" ) && strcmp( parametros[13].mi_valor.par_s , "NULL" )){
@@ -197,15 +222,233 @@ int main(int argc, char** argv ){
     }else if( strcmp(parametros[0].mi_valor.par_s, "NULL") && strcmp(parametros[16].mi_valor.par_s, "NULL") ){
         /// Reconstruir arteria:
         RECONS3D reconstructor;
-
-        reconstructor.agregarInput(parametros[0].mi_valor.par_s, parametros[1].mi_valor.par_i, parametros[2].mi_valor.par_i, parametros[9].mi_valor.par_s, true);
         reconstructor.leerConfiguracion( parametros[16].mi_valor.par_s );
+
+        reconstructor.agregarInput( parametros[0].mi_valor.par_s, true );
+        reconstructor.agregarGroundtruth( parametros[9].mi_valor.par_s, 0);
 
         if( strcmp( parametros[17].mi_valor.par_s, "NULL") ){
             reconstructor.setFiltroLog( parametros[17].mi_valor.par_s );
         }
 
+        if( strcmp( parametros[20].mi_valor.par_s, "NULL") ){
+            reconstructor.setLog( parametros[20].mi_valor.par_s );
+        }
+
         reconstructor.segmentarImagenBase( 0 );
+//        reconstructor.Guardar( "deteccion.pgm", IMGVTK::SEGMENT, IMGVTK::PGM, 0 );
+
+        if( parametros[21].mi_valor.par_s[0] == 'y' ){
+
+            double acc;
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.Guardar( "otsu.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+            acc = reconstructor.medirExactitud( 0 );
+
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 100, 0);
+            acc = reconstructor.medirExactitud( 0 );
+            reconstructor.Guardar( "otsu_0100.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 200, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_0200.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 300, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_0300.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 400, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_0400.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 500, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_0500.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 600, 0);
+            acc = reconstructor.medirExactitud( 0 );
+            //reconstructor.Guardar( "otsu_0600.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 700, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_0700.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 800, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_0800.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 900, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_0900.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1000, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_1000.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1100, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_1100.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1200, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_1200.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1300, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_1300.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1400, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_1400.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1500, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_1500.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1600, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_1600.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1700, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_1700.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1800, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_1800.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1900, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_1900.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 2000, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "otsu_2000.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+//            reconstructor.Guardar( "ryc.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+            acc = reconstructor.medirExactitud( 0 );
+
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 100, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_0100.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 200, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_0200.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 300, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_0300.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 400, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_0400.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 500, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_0500.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 600, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_0600.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 700, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_0700.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 800, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_0800.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 900, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_0900.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1000, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_1000.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1100, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_1100.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1200, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_1200.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1300, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_1300.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1400, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_1400.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1500, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_1500.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1600, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_1600.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1700, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_1700.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1800, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_1800.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1900, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_1900.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+
+            reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+            reconstructor.lengthFilter(IMGVTK::THRESHOLD, 2000, 0);
+            acc = reconstructor.medirExactitud( 0 );
+//            reconstructor.Guardar( "ryc_2000.pgm", IMGVTK::THRESHOLD, IMGVTK::PGM, 0 );
+        }
+
         //reconstructor.skeletonize( 0 );
     }else if( strcmp(parametros[14].mi_valor.par_s, "NULL") && strcmp(parametros[15].mi_valor.par_s, "NULL") && strcmp(parametros[16].mi_valor.par_s, "NULL") ){
 
@@ -249,6 +492,7 @@ int main(int argc, char** argv ){
         reconstructor.leerConfiguracion( parametros[16].mi_valor.par_s );
 
         if( parametros[ 19 ].mi_valor.par_s[0] == 'y' ){
+            DEB_MSG("Concatenando");
             if( strcmp( parametros[17].mi_valor.par_s, "NULL") ){
                 reconstructor.setFiltroLog( parametros[17].mi_valor.par_s );
             }
@@ -257,10 +501,22 @@ int main(int argc, char** argv ){
 
             reconstructor.segmentarImagenBase( 0 );
         }else{
+            DEB_MSG("No Concatenado");
             char ruta_log[512] = "";
+            char ruta_logrec[512] = "";
             int tam_ruta_log = strlen(parametros[17].mi_valor.par_s);
+            int tam_ruta_logrec = strlen(parametros[20].mi_valor.par_s);
+
+
+//            if( strcmp( parametros[17].mi_valor.par_s, "NULL") ){
+//                reconstructor.setFiltroLog( parametros[17].mi_valor.par_s );
+//            }
+//            if( strcmp( parametros[20].mi_valor.par_s, "NULL") ){
+//                reconstructor.setLog( parametros[20].mi_valor.par_s );
+//            }
 
             for(int i = 0; i < n_imgs; i++){
+
                 if( strcmp( parametros[17].mi_valor.par_s, "NULL") ){
                     memset( ruta_log, 0, 512*sizeof(char));
                     memcpy(ruta_log, parametros[17].mi_valor.par_s, (tam_ruta_log - 4)*sizeof(char));
@@ -271,7 +527,183 @@ int main(int argc, char** argv ){
                 reconstructor.agregarInput( rutas[i], true );
                 reconstructor.agregarGroundtruth( rutas_gt[i], i);
 
+                if( strcmp( parametros[20].mi_valor.par_s, "NULL") ){
+                    memset( ruta_logrec, 0, 512*sizeof(char));
+                    memcpy(ruta_logrec, parametros[20].mi_valor.par_s, (tam_ruta_logrec - 4)*sizeof(char));
+                    sprintf(ruta_logrec, "%s_%i.log", ruta_logrec, i);
+                    reconstructor.setLog( ruta_logrec );
+                }
+
                 reconstructor.segmentarImagenBase( i );
+
+                if( parametros[21].mi_valor.par_s[0] == 'y' ){
+
+                    double acc;
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 100, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 200, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 300, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 400, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 500, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 600, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 700, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 800, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 900, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1000, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1100, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1200, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1300, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1400, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1500, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1600, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1700, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1800, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1900, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 2000, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 100, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 200, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 300, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 400, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 500, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 600, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 700, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 800, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 900, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1000, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1100, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1200, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1300, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1400, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1500, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1600, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1700, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1800, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1900, i);
+                    acc = reconstructor.medirExactitud( i );
+
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 2000, i);
+                    acc = reconstructor.medirExactitud( i );
+                }
             }
         }
 

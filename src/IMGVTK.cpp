@@ -160,6 +160,30 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
 	Funcion: Detecta los bordes de la imagen en base a la transformada de la distancia.
 */
 void IMGVTK::detectarBorde( IMG_IDX img_idx ){
+    double *img_ptr = NULL;
+
+    switch( img_idx ){
+    case BASE:
+        img_ptr = base_ptr;
+        break;
+    case GROUNDTRUTH:
+        img_ptr = gt_ptr;
+        break;
+    case MASK:
+        img_ptr = mask_ptr;
+        break;
+    case SKELETON:
+        img_ptr = skl_ptr;
+        break;
+    case SEGMENT:
+        img_ptr = segment_ptr;
+        break;
+    case THRESHOLD:
+        img_ptr = threshold_ptr;
+        break;
+    }
+
+
     if (!map_ptr) {
         mapaDistancias( img_idx );
 	}
@@ -171,7 +195,7 @@ void IMGVTK::detectarBorde( IMG_IDX img_idx ){
     memset(borders_ptr, 0, rows_cols*sizeof(double));
 
 	for (int xy = 0; xy < rows_cols; xy++) {
-		if ( (*(base_ptr + xy) > 0.5) && (*(map_ptr + xy) < 2.0) ) {
+        if ( (*(img_ptr + xy) > 0.5) && (*(map_ptr + xy) < 2.0) ) {
 			*(borders_ptr + xy) = 1.0;
 		}
 	}
@@ -530,44 +554,23 @@ unsigned int* IMGVTK::conjuntosConexosDinamico(const double *ptr, int *conjuntos
 /*  Metodo: ampliarConjunto
     Funcion: Amplia la memoria requerida para las etiqeutas de conjuntos equivalentes.
 */
-inline void IMGVTK::ampliarConjunto( int **etiquetas, const int equiv_A, const int equiv_B){
-    int base, nueva_eq;
+inline void IMGVTK::ampliarConjunto( int *etiquetas, const int equiv_A, const int equiv_B, const int max_etiquetas){
+    int base, base_ant;
 
-    if( equiv_A < equiv_B ){
+    if( equiv_A > equiv_B ){
         base = equiv_A;
-        nueva_eq = equiv_B;
+        base_ant = equiv_B;
     }else{
         base = equiv_B;
-        nueva_eq = equiv_A;
+        base_ant = equiv_A;
     }
 
-
-    int n_elementos = *(*(etiquetas + base));
-    int n_espacios = *(*(etiquetas + base) + 1);
-
-    if( (n_elementos + 1) > n_espacios ){
-
-        int *swap = *(etiquetas + base);
-        *(etiquetas + base) = new int [ 2 + n_espacios + 50 ];
-        memcpy( *(etiquetas + base) + 2, swap + 2, n_espacios*sizeof(int));
-        delete [] swap;
-
-        *(*(etiquetas + base)) = n_elementos;
-        *(*(etiquetas + base) + 1) = n_espacios + 50;
-    }
-
-    bool encontrado = false;
-
-    for( int i = 1; i < n_elementos; i++){
-        encontrado = ( *(*(etiquetas + base) + 2 + i) == nueva_eq );
-        if( encontrado ){
+    for(int i = 0; i < max_etiquetas; i++){
+        if(*(etiquetas + i) == -1){
             break;
+        }else if( *(etiquetas + i) == base_ant ){
+            *(etiquetas + i) = base;
         }
-    }
-
-    if( !encontrado ){
-        *(*(etiquetas + base)) = n_elementos + 1;
-        *(*(etiquetas + base) + 2 + n_elementos) = nueva_eq;
     }
 }
 
@@ -581,15 +584,9 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
 
     const int mis_rens_cols = mis_cols*mis_rens;
 
-    int max_etiquetas = mis_rens;
-    int **val_etiquetas = new int* [max_etiquetas];
-
-    for( int i = 0; i < max_etiquetas; i++){
-        *(val_etiquetas + i) = new int [2 + mis_cols];
-        *(*(val_etiquetas + i)) = 1;
-        *(*(val_etiquetas + i) + 1) = mis_cols;
-        *(*(val_etiquetas + i) + 2) = -1;
-    }
+    int max_etiquetas = mis_rens_cols;
+    int *val_etiquetas = new int [max_etiquetas];
+    memset( val_etiquetas, -1, max_etiquetas * sizeof(int));
 
     int *pix_etq = new int [(mis_rens+2)*(mis_cols+2)];
     memset( pix_etq, -1, (mis_rens+2)*(mis_cols+2) * sizeof(int));
@@ -601,14 +598,13 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
             if( *(ptr + (y-1)*mis_cols + (x-1)) > 0.0 ){
 
                 const int NO = *(pix_etq + (y-1)*(mis_cols+2) + (x-1));
-                const int N  = *(pix_etq + (y-1)*(mis_cols+2) + x);
+                const int N  = *(pix_etq + (y-1)*(mis_cols+2) +   x  );
                 const int NE = *(pix_etq + (y-1)*(mis_cols+2) + (x+1));
-                const int E  = *(pix_etq + y*(mis_cols+2) + (x+1));
+                const int E  = *(pix_etq +   y  *(mis_cols+2) + (x+1));
                 const int SE = *(pix_etq + (y+1)*(mis_cols+2) + (x+1));
-                const int S  = *(pix_etq + (y+1)*(mis_cols+2) + x);
+                const int S  = *(pix_etq + (y+1)*(mis_cols+2) +   x  );
                 const int SO = *(pix_etq + (y+1)*(mis_cols+2) + (x-1));
-                const int O  = *(pix_etq + y*(mis_cols+2) + (x-1));
-
+                const int O  = *(pix_etq +   y  *(mis_cols+2) + (x-1));
 
                 int base = -1;
 
@@ -620,7 +616,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                 /// N
                 if( N >= 0 ){
                     if( (base >= 0) && (base != N) ){
-                        ampliarConjunto( val_etiquetas, base, N);
+                        ampliarConjunto( val_etiquetas, base, N, max_etiquetas);
                     }else{
                         base = N;
                     }
@@ -629,7 +625,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                 /// NE
                 if( NE >= 0 ){
                     if( (base >= 0) && (base != NE) ){
-                        ampliarConjunto( val_etiquetas, base, NE);
+                        ampliarConjunto( val_etiquetas, base, NE, max_etiquetas);
                     }else{
                         base = NE;
                     }
@@ -638,7 +634,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                 /// E
                 if( E >= 0){
                     if( (base >= 0) && (base != E) ){
-                        ampliarConjunto( val_etiquetas, base, E);
+                        ampliarConjunto( val_etiquetas, base, E, max_etiquetas);
                     }else{
                         base = E;
                     }
@@ -647,7 +643,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                 /// SE
                 if( SE >= 0 ){
                     if( (base >= 0) && (base != SE) ){
-                        ampliarConjunto( val_etiquetas, base, SE);
+                        ampliarConjunto( val_etiquetas, base, SE, max_etiquetas);
                     }else{
                         base = SE;
                     }
@@ -656,7 +652,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                 /// S
                 if( S >= 0 ){
                     if( (base >= 0) && (base != S) ){
-                        ampliarConjunto( val_etiquetas, base, S);
+                        ampliarConjunto( val_etiquetas, base, S, max_etiquetas);
                     }else{
                         base = S;
                     }
@@ -665,7 +661,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                 /// SO
                 if( SO >= 0 ){
                     if( (base >= 0) && (base != SO) ){
-                        ampliarConjunto( val_etiquetas, base, SO);
+                        ampliarConjunto( val_etiquetas, base, SO, max_etiquetas);
                     }else{
                         base = SO;
                     }
@@ -674,30 +670,17 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                 /// O
                 if( O >= 0 ){
                     if( (base >= 0) && (base != O) ){
-                        ampliarConjunto( val_etiquetas, base, O);
+                        ampliarConjunto( val_etiquetas, base, O, max_etiquetas);
                     }else{
                         base = O;
                     }
                 }
+
                 if( base >= 0 ){
                     *(pix_etq + y*(mis_cols+2) + x) = base;
                 }else{
-                    if( (++n_conjunto) > max_etiquetas ){
-                        int **swap = val_etiquetas;
-                        val_etiquetas = new int* [max_etiquetas + mis_cols];
-                        memcpy( val_etiquetas, swap, max_etiquetas*sizeof(int*) );
-                        delete [] swap;
-
-                        for( int i = max_etiquetas; i < (max_etiquetas + mis_cols); i++){
-                            *(val_etiquetas + i) = new int [mis_cols + 2];
-                            *(*(val_etiquetas + i)) = 1;
-                            *(*(val_etiquetas + i) + 1) = mis_cols;
-                            *(*(val_etiquetas + i) + 2) = -1;
-                        }
-
-                        max_etiquetas += mis_cols;
-                    }
-                    *(*(val_etiquetas + n_conjunto) + 2) = n_conjunto;
+                    n_conjunto++;
+                    *(val_etiquetas + n_conjunto) = n_conjunto;
                     *(pix_etq + y*(mis_cols+2) + x) = n_conjunto;
                 }
             }
@@ -705,48 +688,9 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
     }
 
     DEB_MSG("Quedaron " << n_conjunto << " activados");
+    n_conjunto++;
 
     /// Determinar cuantos conjuntos diferentes hay y encontrar las etiquetas equivalentes:
-    int etq_activas = n_conjunto+1;
-    n_conjunto = 0;
-
-    int *diferentes = new int [etq_activas];
-    memset(diferentes, -1, etq_activas*sizeof(int) );
-
-    for( int i = 0; i < etq_activas; i++){
-        bool encontrado = false;
-        const int base = *(*(val_etiquetas + i) + 2);
-
-        for( int j = 0; j < n_conjunto; j++){
-            if( base == *(diferentes + j) ){
-                encontrado = true;
-                break;
-            }
-        }
-
-        if( !encontrado ){
-            *(diferentes + n_conjunto) = base;
-            n_conjunto++;
-        }
-
-        for( int j = 0; j < *(*(val_etiquetas + i)); j++){
-            const int equivalente = *(*(val_etiquetas + i) + 2 + j);
-            *(*(val_etiquetas + equivalente) + 2) = base;
-        }
-    }
-
-    for( int i = 0; i < etq_activas; i++){
-        const int base = *(*(val_etiquetas + i) + 2);
-
-        int nueva_base;
-        for( int j = 0; j < n_conjunto; j++){
-            if( base == *(diferentes + j) ){
-                nueva_base = j;
-                break;
-            }
-        }
-        *(*(val_etiquetas + i) + 2) = nueva_base;
-    }
 
     memset( conjuntos, -1, mis_rens_cols*sizeof(int) );
 
@@ -755,31 +699,24 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
         for( int x = 0; x < mis_cols; x++){
             const int etiqueta = *(pix_etq + (y+1)*(mis_cols+2) + (x+1));
             if( etiqueta >= 0 ){
-                *(conjuntos + x + y*mis_cols) = *(*(val_etiquetas + etiqueta) + 2);
+                *(conjuntos + x + y*mis_cols) = *(val_etiquetas + etiqueta);
             }
         }
     }
+    delete [] val_etiquetas;
+    delete [] pix_etq;
+
 
     /// Contar cuantos elementos hay en cada grupo:
     unsigned int *n_etiquetados = new unsigned int [n_conjunto+1];
     memset(n_etiquetados + 1, 0, n_conjunto*sizeof(unsigned int));
     n_etiquetados[0] = n_conjunto;
 
-
     for( int xy = 0; xy < mis_rens_cols; xy++){
         if( *(conjuntos + xy) >= 0 ){
             *(n_etiquetados + 1 + *(conjuntos + xy)) = *(n_etiquetados + 1 + *(conjuntos + xy)) + 1;
         }
     }
-
-    for( int i = 0; i < max_etiquetas; i++){
-        delete [] *(val_etiquetas + i);
-    }
-
-    delete [] diferentes;
-    delete [] val_etiquetas;
-    delete [] pix_etq;
-
     return n_etiquetados;
 
 }
@@ -807,14 +744,22 @@ inline unsigned char IMGVTK::sklMask( const double *skl_ptr, const int x, const 
 /*  Metodo: lengthFiltering
     Funcion: Filtra los conjuntos con numero de pixeles menor a 'min_length'
 */
-void IMGVTK::lengthFilter(double *ptr, const int min_length, const int mis_cols, const int mis_rens ){
+void IMGVTK::lengthFilter(double *ptr, const int min_length, const int mis_cols, const int mis_rens , ALG_CONJUNTOS mi_alg){
 
     const int mis_rens_cols = mis_cols*mis_rens;
 
     int *mis_conjuntos = new int [mis_rens_cols];
 
-    unsigned int *mis_n_etiquetados = conjuntosConexos(ptr, mis_conjuntos, mis_cols, mis_rens);
-DEB_MSG("n etiquetas: " << mis_n_etiquetados[0] );
+    unsigned int *mis_n_etiquetados = NULL;
+
+    switch (mi_alg) {
+    case DINAMICO:
+        mis_n_etiquetados = conjuntosConexosDinamico(ptr, mis_conjuntos, mis_cols, mis_rens);
+        break;
+    case ITERATIVO:
+        mis_n_etiquetados = conjuntosConexos(ptr, mis_conjuntos, mis_cols, mis_rens);
+        break;
+    }
 
     for( int xy = 0; xy < mis_rens_cols; xy++){
         if( (mis_conjuntos[ xy ] >= 0) && (mis_n_etiquetados[ mis_conjuntos[ xy ]+1 ] < min_length)){
@@ -831,7 +776,7 @@ DEB_MSG("n etiquetas: " << mis_n_etiquetados[0] );
 /*  Metodo: lengthFiltering (Publica)
     Funcion: Filtra los conjuntos con numero de pixeles menor a 'min_length'
 */
-void IMGVTK::lengthFilter(IMG_IDX img_idx, const int min_length){
+void IMGVTK::lengthFilter(IMG_IDX img_idx, const int min_length, ALG_CONJUNTOS mi_alg){
 
     double *img_ptr = NULL;
     switch( img_idx ){
@@ -849,7 +794,7 @@ void IMGVTK::lengthFilter(IMG_IDX img_idx, const int min_length){
             break;
     }
 
-    lengthFilter(img_ptr, min_length, cols, rows);
+    lengthFilter(img_ptr, min_length, cols, rows, mi_alg);
 }
 
 
@@ -992,7 +937,7 @@ void IMGVTK::maskFOV( double * img_tmp, double *mask_tmp, const int mis_cols, co
     }
 
     // Se eliminan los conjuntos pequeños
-    lengthFilter(mask_tmp, 1000, mis_cols, mis_rens);
+    lengthFilter(mask_tmp, 1000, mis_cols, mis_rens, ITERATIVO);
 
     // Se erosiona la mascara:
     erosionar(mask_tmp, mis_cols, mis_rens);
@@ -1481,7 +1426,7 @@ double IMGVTK::umbralizarOTSU( const double *img_ptr, const double min, const do
     const double fraccion = 1.0 / (double)rows_cols;
 
     for( int xy = 0; xy < rows_cols; xy ++){
-        const int clase_i = (int)((clases-1) * (*(img_ptr + xy) - min)/(max - min));
+        const int clase_i = (int)((clases-1) * (*(img_ptr + xy) - min)/(max - min + 1e-12));
         histograma_frecuencias[ clase_i ] += fraccion;
         suma += (double)(clase_i+1);
     }
@@ -1530,7 +1475,7 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
     const double rango = 1.0 / (max - min);
     const double fraccion = 1.0 / (double)rows_cols;
     for( int xy = 0; xy < rows_cols; xy ++){
-        umbral_nuevo += *(img_ptr + xy) * rango;
+        umbral_nuevo += (*(img_ptr + xy) - min) * rango;
     }
     umbral_nuevo *= fraccion;
 
@@ -1541,17 +1486,20 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
 
         double m_abajo = 0.0;
         double m_arriba = 0.0;
+        int n_arriba = 0, n_abajo = 0;
 
         for( int xy = 0; xy < rows_cols; xy++){
-            if( *(img_ptr + xy) <= umbral ){
-                m_abajo += *(img_ptr + xy);
+            if( (*(img_ptr + xy) - min) * rango <= umbral ){
+                m_abajo += (*(img_ptr + xy) - min) * rango;
+                n_abajo++;
             }else{
-                m_arriba += *(img_ptr + xy);
+                m_arriba += (*(img_ptr + xy) - min) * rango;
+                n_arriba++;
             }
         }
 
-        m_abajo *= fraccion;
-        m_arriba *= fraccion;
+        m_abajo /= (double)n_abajo;
+        m_arriba /= (double)n_arriba;
 
         umbral_nuevo = (m_arriba + m_abajo) / 2.0;
 
@@ -1621,6 +1569,45 @@ void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const doubl
         *(threshold_ptr + xy) = ( ((*(img_ptr + xy) - min) / (max - min)) >= umbral) ? 1.0 : 0.0;
     }
 }
+
+
+
+
+
+
+
+/*  Metodo: medirExactitud
+    Funcion: Calcula la exactitud de la segmentacion respecto al ground-truth.
+*/
+double IMGVTK::medirExactitud(){
+
+    int TP = 0, TN = 0, FP = 0, FN = 0;
+
+
+    for( int xy = 0; xy < rows_cols; xy++){
+        if( *(mask_ptr + xy)  > 0.5 ){
+            // Medir Coinsidencias con Verdaderos:
+            if( *(gt_ptr + xy) > 0.5 ){
+                if( *(threshold_ptr + xy) > 0.5 ){
+                    TP++;
+                }else{
+                    FN++;
+                }
+            }else{
+                if( *(threshold_ptr + xy) < 0.5 ){
+                    TN++;
+                }else{
+                    FP++;
+                }
+            }
+        }
+    }
+
+
+    return (double)(TP + TN) / (double)( TP + TN + FP + FN);
+
+}
+
 
 
 
@@ -1882,7 +1869,7 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
 
             int intensidad;
             for( int xy = 0; xy < rows_cols; xy++){
-                intensidad = (int) 255.0 * *(img_ptr + xy);
+                intensidad = (int) 255.0 * (*(img_ptr + xy) - min) / (max - min);
                 fprintf(fp_out, "%i\n", intensidad);
             }
 
@@ -1915,12 +1902,12 @@ IMGVTK::IMGVTK(){
     threshold_ptr = NULL;
 
     // Defaults:
-    SID = 1100.0;
-    SOD = 400.0;
+    SID = 0.0;
+    SOD = 0.0;
     DDP = SID - SOD;
     DISO = SID / 2;
-    LAORAO = 20.0;
-    CRACAU = 20.0;
+    LAORAO = 0.0;
+    CRACAU = 0.0;
     pixX = 0.308;
     pixY = 0.308;
     WCenter = 127.5;
@@ -2011,12 +1998,12 @@ IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
     threshold_ptr = NULL;
 
     // Defaults:
-    SID = 1100.0;
-    SOD = 400.0;
+    SID = 0.0;
+    SOD = 0.0;
     DDP = SID - SOD;
     DISO = SID / 2;
-    LAORAO = 20.0;
-    CRACAU = 20.0;
+    LAORAO = 0.0;
+    CRACAU = 0.0;
     pixX = 0.308;
     pixY = 0.308;
     WCenter = 127.5;
@@ -2045,12 +2032,12 @@ IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel)
     threshold_ptr = NULL;
 
     // Defaults:
-    SID = 1100.0;
-    SOD = 400.0;
+    SID = 0.0;
+    SOD = 0.0;
     DDP = SID - SOD;
     DISO = SID / 2;
-    LAORAO = 20.0;
-    CRACAU = 20.0;
+    LAORAO = 0.0;
+    CRACAU = 0.0;
     pixX = 0.308;
     pixY = 0.308;
     WCenter = 127.5;
