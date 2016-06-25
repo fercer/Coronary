@@ -19,12 +19,7 @@
     Funcion: Escribe un mensaje en el log.
 */
 void IMGVTK::escribirLog( const char *mensaje ){
-    //DEB_MSG( mi_log );
-    //if( mi_log ){
-    //    mi_log->appendPlainText( mensaje );
-    //}else{
-        std::cout << mensaje;
-    //}
+    std::cout << mensaje;
 }
 
 
@@ -61,13 +56,7 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
 
 
     if( !map_ptr ){
-        mapa_dist = vtkSmartPointer<vtkImageData>::New();
-        mapa_dist->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-        mapa_dist->AllocateScalars( VTK_DOUBLE, 1);
-        mapa_dist->SetOrigin(0.0, 0.0, 0.0);
-        mapa_dist->SetSpacing(1.0, 1.0, 1.0);
-
-        map_ptr = static_cast<double*>(mapa_dist->GetScalarPointer(0,0,0));
+        map_ptr = new double[ rows_cols ];
     }
 
     for( int xy = 0 ; xy < rows_cols; xy++ ){
@@ -171,6 +160,7 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
 	Funcion: Detecta los bordes de la imagen en base a la transformada de la distancia.
 */
 void IMGVTK::detectarBorde( IMG_IDX img_idx ){
+
     if (!map_ptr) {
         mapaDistancias( img_idx );
 	}
@@ -209,7 +199,6 @@ void IMGVTK::detectarBorde( IMG_IDX img_idx ){
 
         borders_ptr = static_cast<double*>(borders->GetScalarPointer(0, 0, 0));
     }
-
     memset(borders_ptr, 0, rows_cols*sizeof(double));
 
 	for (int xy = 0; xy < rows_cols; xy++) {
@@ -540,7 +529,6 @@ unsigned int* IMGVTK::conjuntosConexosDinamico(const double *ptr, int *conjuntos
     unsigned int *tmp = new unsigned int [mis_rens_cols];
     memset(tmp, 0, sizeof(unsigned int)*mis_rens_cols);
 
-
     memset(conjuntos, -1, sizeof(int) * mis_rens_cols);
 
     for( int y = 0; y< mis_rens; y++){
@@ -573,44 +561,23 @@ unsigned int* IMGVTK::conjuntosConexosDinamico(const double *ptr, int *conjuntos
 /*  Metodo: ampliarConjunto
     Funcion: Amplia la memoria requerida para las etiqeutas de conjuntos equivalentes.
 */
-inline void IMGVTK::ampliarConjunto( int **etiquetas, const int equiv_A, const int equiv_B){
-    int base, nueva_eq;
+inline void IMGVTK::ampliarConjunto( int *etiquetas, const int equiv_A, const int equiv_B, const int max_etiquetas){
+    int base, base_ant;
 
-    if( equiv_A < equiv_B ){
+    if( equiv_A > equiv_B ){
         base = equiv_A;
-        nueva_eq = equiv_B;
+        base_ant = equiv_B;
     }else{
         base = equiv_B;
-        nueva_eq = equiv_A;
+        base_ant = equiv_A;
     }
 
-
-    int n_elementos = *(*(etiquetas + base));
-    int n_espacios = *(*(etiquetas + base) + 1);
-
-    if( (n_elementos + 1) > n_espacios ){
-
-        int *swap = *(etiquetas + base);
-        *(etiquetas + base) = new int [ 2 + n_espacios + 50 ];
-        memcpy( *(etiquetas + base) + 2, swap + 2, n_espacios*sizeof(int));
-        delete [] swap;
-
-        *(*(etiquetas + base)) = n_elementos;
-        *(*(etiquetas + base) + 1) = n_espacios + 50;
-    }
-
-    bool encontrado = false;
-
-    for( int i = 1; i < n_elementos; i++){
-        encontrado = ( *(*(etiquetas + base) + 2 + i) == nueva_eq );
-        if( encontrado ){
+    for(int i = 0; i < max_etiquetas; i++){
+        if(*(etiquetas + i) == -1){
             break;
+        }else if( *(etiquetas + i) == base_ant ){
+            *(etiquetas + i) = base;
         }
-    }
-
-    if( !encontrado ){
-        *(*(etiquetas + base)) = n_elementos + 1;
-        *(*(etiquetas + base) + 2 + n_elementos) = nueva_eq;
     }
 }
 
@@ -639,15 +606,9 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
 
     const int mis_rens_cols = mis_cols*mis_rens;
 
-    int max_etiquetas = mis_rens*10;
-    int **val_etiquetas = new int* [max_etiquetas];
-
-    for( int i = 0; i < max_etiquetas; i++){
-        *(val_etiquetas + i) = new int [2 + mis_cols];
-        *(*(val_etiquetas + i)    ) = 1;
-        *(*(val_etiquetas + i) + 1) = mis_cols;
-        *(*(val_etiquetas + i) + 2) =-1;
-    }
+    int max_etiquetas = mis_rens_cols;
+    int *val_etiquetas = new int [max_etiquetas];
+    memset( val_etiquetas, -1, max_etiquetas * sizeof(int));
 
     int *pix_etq = new int [(mis_rens+2)*(mis_cols+2)];
     memset( pix_etq, -1, (mis_rens+2)*(mis_cols+2) * sizeof(int));
@@ -677,7 +638,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                 /// N
                 if( N >= 0 ){
                     if( (base >= 0) && (base != N) ){
-                        ampliarConjunto( val_etiquetas, base, N);
+                        ampliarConjunto( val_etiquetas, base, N, max_etiquetas);
                     }else{
                         base = N;
                     }
@@ -686,7 +647,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                 /// NE
                 if( NE >= 0 ){
                     if( (base >= 0) && (base != NE) ){
-                        ampliarConjunto( val_etiquetas, base, NE);
+                        ampliarConjunto( val_etiquetas, base, NE, max_etiquetas);
                     }else{
                         base = NE;
                     }
@@ -695,7 +656,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                 /// E
                 if( E >= 0){
                     if( (base >= 0) && (base != E) ){
-                        ampliarConjunto( val_etiquetas, base, E);
+                        ampliarConjunto( val_etiquetas, base, E, max_etiquetas);
                     }else{
                         base = E;
                     }
@@ -704,7 +665,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                 /// SE
                 if( SE >= 0 ){
                     if( (base >= 0) && (base != SE) ){
-                        ampliarConjunto( val_etiquetas, base, SE);
+                        ampliarConjunto( val_etiquetas, base, SE, max_etiquetas);
                     }else{
                         base = SE;
                     }
@@ -713,7 +674,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                 /// S
                 if( S >= 0 ){
                     if( (base >= 0) && (base != S) ){
-                        ampliarConjunto( val_etiquetas, base, S);
+                        ampliarConjunto( val_etiquetas, base, S, max_etiquetas);
                     }else{
                         base = S;
                     }
@@ -722,7 +683,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                 /// SO
                 if( SO >= 0 ){
                     if( (base >= 0) && (base != SO) ){
-                        ampliarConjunto( val_etiquetas, base, SO);
+                        ampliarConjunto( val_etiquetas, base, SO, max_etiquetas);
                     }else{
                         base = SO;
                     }
@@ -731,7 +692,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                 /// O
                 if( O >= 0 ){
                     if( (base >= 0) && (base != O) ){
-                        ampliarConjunto( val_etiquetas, base, O);
+                        ampliarConjunto( val_etiquetas, base, O, max_etiquetas);
                     }else{
                         base = O;
                     }
@@ -740,22 +701,8 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                 if( base >= 0 ){
                     *(pix_etq + y*(mis_cols+2) + x) = base;
                 }else{
-                    if( (++n_conjunto) > max_etiquetas ){
-                        int **swap = val_etiquetas;
-                        val_etiquetas = new int* [max_etiquetas + mis_cols];
-                        memcpy( val_etiquetas, swap, max_etiquetas*sizeof(int*) );
-                        delete [] swap;
-
-                        for( int i = max_etiquetas; i < (max_etiquetas + mis_cols); i++){
-                            *(val_etiquetas + i) = new int [mis_cols + 2];
-                            *(*(val_etiquetas + i)) = 1;
-                            *(*(val_etiquetas + i) + 1) = mis_cols;
-                            *(*(val_etiquetas + i) + 2) = -1;
-                        }
-
-                        max_etiquetas += mis_cols;
-                    }
-                    *(*(val_etiquetas + n_conjunto) + 2) = n_conjunto;
+                    n_conjunto++;
+                    *(val_etiquetas + n_conjunto) = n_conjunto;
                     *(pix_etq + y*(mis_cols+2) + x) = n_conjunto;
                 }
             }
@@ -784,6 +731,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
     fclose( fp_equivs );
 
     DEB_MSG("Quedaron " << n_conjunto << " activados");
+    n_conjunto++;
 
     for( int i = 0; i <= n_conjunto; i++){
         equivalenciaRec( i, *(*(val_etiquetas + i) + 2), val_etiquetas );
@@ -803,46 +751,6 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
 
 /*
     /// Determinar cuantos conjuntos diferentes hay y encontrar las etiquetas equivalentes:
-    int etq_activas = n_conjunto+1;
-    n_conjunto = 0;
-
-    int *diferentes = new int [etq_activas];
-    memset(diferentes, -1, etq_activas*sizeof(int) );
-
-    for( int i = 0; i < etq_activas; i++){
-        bool encontrado = false;
-        const int base = *(*(val_etiquetas + i) + 2);
-
-        for( int j = 0; j < n_conjunto; j++){
-            if( base == *(diferentes + j) ){
-                encontrado = true;
-                break;
-            }
-        }
-
-        if( !encontrado ){
-            *(diferentes + n_conjunto) = base;
-            n_conjunto++;
-        }
-
-        for( int j = 0; j < *(*(val_etiquetas + i)); j++){
-            const int equivalente = *(*(val_etiquetas + i) + 2 + j);
-            *(*(val_etiquetas + equivalente) + 2) = base;
-        }
-    }
-
-    for( int i = 0; i < etq_activas; i++){
-        const int base = *(*(val_etiquetas + i) + 2);
-
-        int nueva_base;
-        for( int j = 0; j < n_conjunto; j++){
-            if( base == *(diferentes + j) ){
-                nueva_base = j;
-                break;
-            }
-        }
-        *(*(val_etiquetas + i) + 2) = nueva_base;
-    }
 
     memset( conjuntos, -1, mis_rens_cols*sizeof(int) );
     delete [] diferentes;
@@ -855,10 +763,13 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
         for( int x = 0; x < mis_cols; x++){
             const int etiqueta = *(pix_etq + (y+1)*(mis_cols+2) + (x+1));
             if( etiqueta >= 0 ){
-                *(conjuntos + x + y*mis_cols) = *(*(val_etiquetas + etiqueta) + 2);
+                *(conjuntos + x + y*mis_cols) = *(val_etiquetas + etiqueta);
             }
         }
     }
+    delete [] val_etiquetas;
+    delete [] pix_etq;
+
 
     sprintf( nombre_etq, "etiquetas_despues_%i.fcs", veces);
     fp_etiquetas = fopen(nombre_etq, "w");
@@ -875,19 +786,12 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
     memset(n_etiquetados + 1, 0, n_conjunto*sizeof(unsigned int));
     n_etiquetados[0] = n_conjunto;
 
-
     for( int xy = 0; xy < mis_rens_cols; xy++){
         if( *(conjuntos + xy) >= 0 ){
             *(n_etiquetados + 1 + *(conjuntos + xy)) = *(n_etiquetados + 1 + *(conjuntos + xy)) + 1;
         }
     }
 
-    for( int i = 0; i < max_etiquetas; i++){
-        delete [] *(val_etiquetas + i);
-    }
-
-    delete [] val_etiquetas;
-    delete [] pix_etq;
 
     return n_etiquetados;
 
@@ -916,14 +820,22 @@ inline unsigned char IMGVTK::sklMask( const double *skl_ptr, const int x, const 
 /*  Metodo: lengthFiltering
     Funcion: Filtra los conjuntos con numero de pixeles menor a 'min_length'
 */
-void IMGVTK::lengthFilter(double *ptr, const int min_length, const int mis_cols, const int mis_rens ){
+void IMGVTK::lengthFilter(double *ptr, const int min_length, const int mis_cols, const int mis_rens , ALG_CONJUNTOS mi_alg){
 
     const int mis_rens_cols = mis_cols*mis_rens;
 
     int *mis_conjuntos = new int [mis_rens_cols];
 
-    unsigned int *mis_n_etiquetados = conjuntosConexos(ptr, mis_conjuntos, mis_cols, mis_rens);
-DEB_MSG("n etiquetas: " << mis_n_etiquetados[0] );
+    unsigned int *mis_n_etiquetados = NULL;
+
+    switch (mi_alg) {
+    case DINAMICO:
+        mis_n_etiquetados = conjuntosConexosDinamico(ptr, mis_conjuntos, mis_cols, mis_rens);
+        break;
+    case ITERATIVO:
+        mis_n_etiquetados = conjuntosConexos(ptr, mis_conjuntos, mis_cols, mis_rens);
+        break;
+    }
 
     for( int xy = 0; xy < mis_rens_cols; xy++){
         if( (mis_conjuntos[ xy ] >= 0) && (mis_n_etiquetados[ mis_conjuntos[ xy ]+1 ] < min_length)){
@@ -940,7 +852,7 @@ DEB_MSG("n etiquetas: " << mis_n_etiquetados[0] );
 /*  Metodo: lengthFiltering (Publica)
     Funcion: Filtra los conjuntos con numero de pixeles menor a 'min_length'
 */
-void IMGVTK::lengthFilter(IMG_IDX img_idx, const int min_length){
+void IMGVTK::lengthFilter(IMG_IDX img_idx, const int min_length, ALG_CONJUNTOS mi_alg){
 
     double *img_ptr = NULL;
     switch( img_idx ){
@@ -958,7 +870,7 @@ void IMGVTK::lengthFilter(IMG_IDX img_idx, const int min_length){
             break;
     }
 
-    lengthFilter(img_ptr, min_length, cols, rows);
+    lengthFilter(img_ptr, min_length, cols, rows, mi_alg);
 }
 
 
@@ -1101,7 +1013,7 @@ void IMGVTK::maskFOV( double * img_tmp, double *mask_tmp, const int mis_cols, co
     }
 
     // Se eliminan los conjuntos pequeños
-    lengthFilter(mask_tmp, 1000, mis_cols, mis_rens);
+    lengthFilter(mask_tmp, 1000, mis_cols, mis_rens, ITERATIVO);
 
     // Se erosiona la mascara:
     erosionar(mask_tmp, mis_cols, mis_rens);
@@ -1506,14 +1418,7 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
     }
 
     if( !skl_ptr ){
-        skeleton = vtkSmartPointer<vtkImageData>::New();
-
-        skeleton->SetExtent(0, cols+1, 0, rows+1, 0, 0);
-        skeleton->AllocateScalars( VTK_DOUBLE, 1);
-        skeleton->SetOrigin(0.0, 0.0, 0.0);
-        skeleton->SetSpacing(1.0, 1.0, 1.0);
-
-        skl_ptr = static_cast<double*>(skeleton->GetScalarPointer(0,0,0));
+        skl_ptr = new double [(cols+2)*(rows+2)];
     }
 
     memset(skl_ptr, 0, (rows+2)*(cols+2)*sizeof(double));
@@ -1573,9 +1478,6 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
     }while( n_borrado > 0 );
 
     delete [] skl_mark;
-
-
-
     extraerCaract( img_idx );
 }
 
@@ -1584,27 +1486,12 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
 /*  Metodo: definirMask
     Funcion: Define una mascara para normalizar los pixeles de la imagen.
 */
-void IMGVTK::definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src ){
+void IMGVTK::definirMask( double *img_src, double *mask_src, const int mis_rens, const int mis_cols ){
 
-    double *img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
+    maskFOV( img_src, mask_src, mis_cols, mis_rens );
+    fillMask( img_src, mask_src, mis_cols, mis_rens );
 
-    int dims[3];
-
-    img_src->GetDimensions( dims );
-
-    const int mis_cols = dims[0];
-    const int mis_rens = dims[1];
-    mask_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, 0);
-    mask_src->AllocateScalars( VTK_DOUBLE, 1);
-    mask_src->SetOrigin(0.0, 0.0, 0.0);
-    mask_src->SetSpacing(1.0, 1.0, 1.0);
-
-    double *mask_tmp = static_cast<double*>(mask_src->GetScalarPointer(0,0,0));
-    maskFOV( img_tmp, mask_tmp, mis_cols, mis_rens );
-    fillMask( img_tmp, mask_tmp, mis_cols, mis_rens );
-
-    char mensaje[] = "Mascara generada exitosamente.\n";
-    escribirLog( mensaje );
+    escribirLog( "Mascara generada exitosamente.\n" );
 }
 
 
@@ -1623,7 +1510,7 @@ double IMGVTK::umbralizarOTSU( const double *img_ptr, const double min, const do
     const double fraccion = 1.0 / (double)rows_cols;
 
     for( int xy = 0; xy < rows_cols; xy ++){
-        const int clase_i = (int)((clases-1) * (*(img_ptr + xy) - min)/(max - min));
+        const int clase_i = (int)((clases-1) * (*(img_ptr + xy) - min)/(max - min + 1e-12));
         histograma_frecuencias[ clase_i ] += fraccion;
         suma += (double)(clase_i+1);
     }
@@ -1654,7 +1541,6 @@ double IMGVTK::umbralizarOTSU( const double *img_ptr, const double min, const do
     }
 
     free( histograma_frecuencias );
-    DEB_MSG("Umbral: " << umbral);
 
     return umbral;
 }
@@ -1671,6 +1557,7 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
     // Obtener la media de la intensidad de la imagen como primera aproximacion del umbral
     const double rango = 1.0 / (max - min);
     const double fraccion = 1.0 / (double)rows_cols;
+
     for( int xy = 0; xy < rows_cols; xy ++){
         umbral_nuevo += (*(img_ptr + xy) - min) * rango;
     }
@@ -1686,6 +1573,7 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
         int n_abajo = 0, n_arriba = 0;
 
         for( int xy = 0; xy < rows_cols; xy++){
+
             if( (*(img_ptr + xy) - min) * rango <= umbral ){
                 m_abajo += (*(img_ptr + xy) - min) * rango;
                 n_abajo++;
@@ -1705,8 +1593,6 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
         }
     }
 
-    DEB_MSG("Umbral: " << umbral);
-
     return umbral;
 }
 
@@ -1719,14 +1605,7 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
 void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const double nivel){
 
     if( !threshold_ptr ){
-        threshold = vtkSmartPointer<vtkImageData>::New();
-
-        threshold->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-        threshold->AllocateScalars( VTK_DOUBLE, 1);
-        threshold->SetOrigin(0.0, 0.0, 0.0);
-        threshold->SetSpacing(1.0, 1.0, 1.0);
-
-        threshold_ptr = static_cast<double*>(threshold->GetScalarPointer(0,0,0));
+        threshold_ptr = new double [rows_cols];
     }
 
     double *img_ptr = NULL;
@@ -1768,6 +1647,8 @@ void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const doubl
             break;
     }
 
+    DEB_MSG("Umbral: " << umbral);
+
     // Se umbraliza la imagen con el valor optimo encontrado:
     for( int xy = 0; xy < rows_cols; xy++){
         *(threshold_ptr + xy) = ( ((*(img_ptr + xy) - min) / (max - min)) >= umbral) ? 1.0 : 0.0;
@@ -1776,463 +1657,103 @@ void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const doubl
 
 
 
+
+
+/*  Metodo: Cargar
+    Funcion: Retorna la exactitud del clasificador resultante contra el ground-truth
+*/
+double IMGVTK::medirExactitud(){
+
+    if( !gt_ptr ){
+        char mensaje_error[] = COLOR_BACK_BLACK COLOR_RED "<<ERROR: " COLOR_YELLOW "No se cargo la imagen ground-truth" COLOR_NORMAL "\n";
+        escribirLog( mensaje_error);
+        return 0.0;
+    }
+
+    int FP = 0, FN = 0, TP = 0, TN = 0;
+
+    for( int xy = 0; xy < rows_cols; xy++){
+        if( *(mask_ptr + xy) > 0.5 ){
+            if( *(gt_ptr + xy) > 0.5 ){
+                if( *(threshold_ptr + xy) > 0.5 ){
+                    TP++;
+                }else{
+                    FN++;
+                }
+            }else{
+                if( *(threshold_ptr + xy) < 0.5 ){
+                    TN++;
+                }else{
+                    FP++;
+                }
+            }
+        }
+    }
+
+    return (double)(TP + TN) / (double)(TP + TN + FP + FN);
+}
+
+
 /*  Metodo: Cargar
     Funcion: Cargar desde un archivo DICOM/JPEG/PNG/BMP la imagen a formato VTK.
 */
-void IMGVTK::Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel, const bool enmascarar){
+int* IMGVTK::Cargar(const char *ruta_origen, double **img_src, double **mask_src, const bool enmascarar){
 
     const int ruta_l = strlen(ruta_origen);
 DEB_MSG("Archivo de entrada: " << ruta_origen);
     if( ruta_l <= 0 ){
         escribirLog( "\n<<Error: Hay un problema con la ruta de entrada, tiene longitud 0 >>\n\n" );
-        return;
+        return NULL;
+    }  
+
+    //// Cargar imagen formato PGM
+    FILE *fp_img = fopen( ruta_origen, "r" );
+
+    char mensaje[512] = "";
+    fgets(mensaje, 512, fp_img);  // Leer 'Magic number'
+DEB_MSG("Magic number: " << mensaje);
+    fgets(mensaje, 512, fp_img);  // Leer Comentario
+DEB_MSG("Comentarios: " << mensaje);
+    int mis_cols, mis_rows;
+
+    fscanf(fp_img, "%i", &mis_cols);    // Leer ancho
+DEB_MSG("columnas: " << mis_cols);
+    fscanf(fp_img, "%i", &mis_rows);    // Leer alto
+DEB_MSG("renglones: " << mis_rows);
+    int mis_rows_cols = mis_cols * mis_rows;
+
+    double max_intensidad;
+    fscanf(fp_img, "%lf", &max_intensidad);  // Leer la escala de intensidad maxima
+DEB_MSG("max intensidad: " << max_intensidad);
+	if( !*(img_src) ){
+        *(img_src) = new double [mis_rows_cols];
     }
 
-DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
-    esDICOM = true;
-    esDICOM *= strcmp(ruta_origen + ruta_l - 3, "png");
-    esDICOM *= strcmp(ruta_origen + ruta_l - 3, "jpg");
-    esDICOM *= strcmp(ruta_origen + ruta_l - 4, "jpeg");
-    esDICOM *= strcmp(ruta_origen + ruta_l - 3, "bmp");
-
-    if( esDICOM ){
-        gdcm::ImageReader DICOMreader;
-        DICOMreader.SetFileName( ruta_origen );
-
-        DICOMreader.Read();
-
-        gdcm::File &file = DICOMreader.GetFile();
-        gdcm::DataSet &ds = file.GetDataSet();
-
-////---------- Extraer SID (Distancia de la fuente al detector): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1110) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-                SID = atof( strm.c_str() );
-            }
-        }
-////---------- Extraer SOD (Distancia de la fuente al paciente): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1111) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-                SOD = atof( strm.c_str() );
-            }
-        }
-////---------- Calcular el DDP (Distancia del detector al paciente): ---------------------------------------------------------------------
-        DDP = SID - SOD;
-////---------- Calcular el Magnification Factor: -----------------------------------------
-        const double Magnification = SID / SOD;
-
-////---------- Extraer pixY\pixX (Distancia entre el centro de los pixeles en el eje Y\X): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1164) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-DEB_MSG("pixXY: " << strm);
-                char *pixXYstr = new char [bv->GetLength()];
-                memcpy(pixXYstr, strm.c_str(), bv->GetLength() * sizeof(char ));
-                char *tmp = strchr(pixXYstr,'\\');
-                pixXYstr[ tmp - pixXYstr ] = '\0';
-                pixY = atof(pixXYstr);// / Magnification;
-                pixX = atof(tmp+1);// / Magnification;
-DEB_MSG("pixY: " << pixY << ", pixX: " << pixX);
-                delete [] pixXYstr;
-            }
-        }
-////---------- Extraer LAO/RAO (Angulo del detector en direccion izquierda(-) a derecha(+)): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1510) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-                LAORAO = atof( strm.c_str() );
-DEB_MSG("LAO: " << LAORAO);
-            }
-        }
-////---------- Extraer CRA/CAU (Angulo del detector en direccion cranial(-) a caudal(+)): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1511) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-                CRACAU = atof( strm.c_str() );
-DEB_MSG("CRA: " << CRACAU);
-            }
-        }
-
-////---------- Extraer Window Width (Ancho de la ventana donde se encuentran los valores de interes): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x7030) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-DEB_MSG("Field of view origin: " << strm);
-            }
-        }
-
-////---------- Extraer Source to Isocenter (Distancia de la fuente al isocentro): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x21, 0x1017) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                gdcm::Element<gdcm::VR::SL, gdcm::VM::VM1_n> el;
-                el.Set( de.GetValue() );
-                const double SISO = el.GetValue();
-                // Restar de la distancia de la fuente al detector (SID) la distancia del detector al isocentro para obtener la distancia del detector al isocentro (DISO).
-                DISO = SID - SISO;
-            }
-        }
-////---------- Extraer Window Center (Centro de los vlaores de interes): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x28, 0x1050) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-                WCenter = atof( strm.c_str() );
-DEB_MSG("Window Center: " << WCenter);
-            }
-        }
-////---------- Extraer Window Width (Ancho de la ventana donde se encuentran los valores de interes): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x28, 0x1051) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-                WWidth = atof( strm.c_str() );
-DEB_MSG("Window Width: " << WWidth);
-            }
-        }
-////---------- Extraer el ECG: -----------------------------------------
-        int ecg_dim = 0, ecg_np = 0;
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x5000, 0x0005) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                gdcm::Element<gdcm::VR::US, gdcm::VM::VM1_n> el;
-                el.Set( de.GetValue() );
-                ecg_dim = el.GetValue();
-DEB_MSG("[ECG] Dimensiones: " << ecg_dim );
-            }
-        }
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x5000, 0x0010) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                gdcm::Element<gdcm::VR::US, gdcm::VM::VM1_n> el;
-                el.Set( de.GetValue() );
-                ecg_np = el.GetValue();
-DEB_MSG("[ECG] Numero de puntos: " << ecg_np );
-            }
-        }
-        int n_niveles = 1;
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x8, 0x2143) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-                n_niveles = atof( strm.c_str() );
-DEB_MSG("Numero de fotogramas: " << n_niveles);
-            }
-        }
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x5000, 0x3000) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                gdcm::Element<gdcm::VR::OW, gdcm::VM::VM1_n> el;
-                el.Set( de.GetValue() );
-                char *nombre_ecg = new char [18];
-                strcpy(nombre_ecg, ruta_origen + ruta_l - 7);
-                sprintf( nombre_ecg, "%s_%i.dat", nombre_ecg, n_niveles);
-                FILE *fp = fopen(nombre_ecg, "w");
-
-                for( int i = 0; i < ecg_np; i++){
-                    fprintf(fp, "%i %i\n", i, el.GetValue(i));
-                }
-                fclose( fp );
-                delete [] nombre_ecg;
-            }
-        }
-/*
-            std::string num_points_str = file.GetEntryString(0x5000,0x0010);
-            unsigned short num_points;
-            convert.clear();
-            convert.str(num_points_str);
-            convert >> num_points;
-DEB_MSG("Number of Points: " << num_points);
-
-            std::string data_type = file.GetEntryString(0x5000,0x0020);
-DEB_MSG("Type of Data: " << data_type);
-
-            std::string curve_desc = file.GetEntryString(0x5000,0x0022);
-DEB_MSG("Curve Description: " << curve_desc);
-
-            std::string data_rep_str = file.GetEntryString(0x5000,0x0103);
-            unsigned short data_rep;
-            convert.clear();
-            convert.str(data_rep_str);
-            convert >> data_rep;
-
-            gdcm::DocEntry *pCurveDataDoc = file.GetDocEntry(0x5000, 0x3000);
-            gdcm::DataEntry *pCurveData = dynamic_cast<gdcm::DataEntry *>(pCurveDataDoc);
-            uint8_t *curve_data = pCurveData->GetBinArea();
-
-            for(int i = 0; i < num_points; i++){
-DEB_MSG("Pt(" << i <<  ") = " << ((unsigned short*)curve_data)[i]);
-            }
-*/
-
-        ///----------------------------------------------------- Leer imagenes
-        DICOMreader.Read();
-        const gdcm::Image &gimage = DICOMreader.GetImage();
-DEB_MSG("Buffer length: " << gimage.GetBufferLength());
-        char *buffer = new char[gimage.GetBufferLength()];
-        gimage.GetBuffer(buffer);
-
-        const unsigned int* dimension = gimage.GetDimensions();
-        const int mis_cols = dimension[0];
-        const int mis_rens = dimension[1];
-        const int mis_niveles = dimension[2];
-        const int mis_rens_cols = mis_rens*mis_cols;
-
-DEB_MSG("Cols: " << mis_cols << ", rens: " << mis_rens  << ", niveles: " << mis_niveles);
-
-        // Alojar memoria para la imagen:
-        img_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, 0);
-        img_src->AllocateScalars( VTK_DOUBLE, 1);
-        img_src->SetOrigin(0.0, 0.0, 0.0);
-        img_src->SetSpacing(1.0, 1.0, 1.0);
-
-        double *img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
-
-        mask_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0,0);
-        mask_src->AllocateScalars( VTK_DOUBLE, 1);
-        mask_src->SetOrigin(0.0, 0.0, 0.0);
-        mask_src->SetSpacing(1.0, 1.0, 1.0);
-
-        gdcm::PhotometricInterpretation scl_comps = gimage.GetPhotometricInterpretation();
-        gdcm::PixelFormat pix_format = gimage.GetPixelFormat();
-
-        switch(scl_comps){
-            case gdcm::PhotometricInterpretation::RGB:{
-DEB_MSG("Imagen DICOM en RGB...");
-                    if( pix_format == gdcm::PixelFormat::UINT8 ){
-
-                        img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
-                        for( int y = 0; y < mis_rens; y++){
-                            for( int x = 0; x < mis_cols; x++){
-                                const double pixR = (double)(unsigned char)*(buffer + 3*x   + y*mis_cols*3 + nivel*mis_rens_cols*3) - WCenter + 0.5;
-                                const double pixG = (double)(unsigned char)*(buffer + 3*x+1 + y*mis_cols*3 + nivel*mis_rens_cols*3) - WCenter + 0.5;
-                                const double pixB = (double)(unsigned char)*(buffer + 3*x+2 + y*mis_cols*3 + nivel*mis_rens_cols*3) - WCenter + 0.5;
-                                double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
-                                if( pix <= -((WWidth-1) / 2)){
-                                    pix = 0.0;
-                                }else if(pix > ((WWidth-1) / 2)){
-                                    pix = 0.0;
-                                }else{
-                                    pix = pix / (WWidth -1) + 0.5;
-                                }
-                                *(img_tmp + (mis_rens-y-1)*mis_rens + x ) = pix; // 255.0;
-                            }
-                        }
-                    }else{
-                        escribirLog( COLOR_BACK_BLACK COLOR_RED "< ERROR AL LEER ARCHIVO DICOM: Formato de imagen RGB no soportado >\n" COLOR_NORMAL);
-                    }
-                    break;
-                }
-            case gdcm::PhotometricInterpretation::MONOCHROME1:
-            case gdcm::PhotometricInterpretation::MONOCHROME2:{
-DEB_MSG("Imagen DICOM en escala de grises...");
-                    if( pix_format == gdcm::PixelFormat::UINT8 ){
-DEB_MSG("Tipo UINT8");
-
-                        img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
-                        for( int y = 0; y < mis_rens; y++){
-                            for( int x = 0; x < mis_cols; x++){
-                                double pix = (double)(unsigned char)*(buffer + nivel*mis_rens_cols + x + y*mis_cols) - WCenter + 0.5;
-
-                                if( pix <= -((WWidth-1) / 2)){
-                                    pix = 0.0;
-                                }else if(pix > ((WWidth-1) / 2)){
-                                    pix = 1.0;
-                                }else{
-                                    pix = pix / (WWidth -1) + 0.5;
-                                }
-                                *(img_tmp + (mis_rens-y-1)*mis_rens + x) = pix; // 255.0;
-                            }
-                        }
-
-                    }else if( pix_format == gdcm::PixelFormat::UINT16 ){
-DEB_MSG("Tipo UINT16");
-                        unsigned short *buffer16 = (unsigned short*)buffer;
-
-                        img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
-                        for( int y = 0; y < mis_rens; y++){
-                            for( int x = 0; x < mis_cols; x++){
-                                const double pixR = (double)((unsigned char)*(buffer16 + 3*x   + y*mis_cols*3 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
-                                const double pixG = (double)((unsigned char)*(buffer16 + 3*x+1 + y*mis_cols*3 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
-                                const double pixB = (double)((unsigned char)*(buffer16 + 3*x+2 + y*mis_cols*3 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
-                                double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
-                                if( pix <= -((WWidth-1) / 2)){
-                                    pix = 0.0;
-                                }else if(pix > ((WWidth-1) / 2)){
-                                    pix = 0.0;
-                                }else{
-                                    pix = pix / (WWidth -1) + 0.5;
-                                }
-                                *(img_tmp + (mis_rens-y-1)*mis_rens + x) =  pix; // 255.0;
-                            }
-                        }
-
-                    }else{
-                        escribirLog( COLOR_BACK_BLACK COLOR_RED "< ERROR AL LEER ARCHIVO DICOM: Formato de imagen RGB no soportado >\n" COLOR_NORMAL);
-                    }
-                    break;
-                }
-        }
-        delete [] buffer;
-
-
-    }else{ ///------------------------------------------------------------------------------------------------
-
-
-
-        // Leer la imagen en RBG o Escala de Grises:
-        vtkSmartPointer<vtkImageReader2Factory> readerFactory = vtkSmartPointer<vtkImageReader2Factory>::New();
-        vtkSmartPointer<vtkImageReader2> imgReader = readerFactory->CreateImageReader2( ruta_origen );
-
-        imgReader->SetFileName( ruta_origen );
-        imgReader->Update();
-
-        // Pasar temporalmente la imagen de RGB a escala de grises en la imagen de entrada.
-        int dims[3];
-        imgReader->GetOutput()->GetDimensions( dims );
-
-        int scl_comps = imgReader->GetOutput()->GetNumberOfScalarComponents();
-
-        const int mis_cols = dims[0];
-        const int mis_rens = dims[1];
-        const int mis_rens_cols = mis_rens*mis_cols;
-
-        // Alojar memoria para la imagen:
-        img_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, 0);
-        img_src->AllocateScalars( VTK_DOUBLE, 1);
-        img_src->SetOrigin(0.0, 0.0, 0.0);
-        img_src->SetSpacing(1.0, 1.0, 1.0);
-
-        double *img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
-
-
-        switch(scl_comps){
-            // La imagen esta en escala de grises:
-            case 1:
-            case 2:{
-				DEB_MSG("La imagen esta en escala de grises");
-                vtkSmartPointer<vtkImageExtractComponents> extractGreyFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-                extractGreyFilter->SetInputConnection(imgReader->GetOutputPort());
-                extractGreyFilter->SetComponents(0);
-                extractGreyFilter->Update();
-
-                unsigned char *gris = static_cast<unsigned char*>(extractGreyFilter->GetOutput()->GetScalarPointer(0,0,0));
-
-                for( int y = 0; y < mis_rens; y++){
-                    for( int x = 0; x < mis_cols; x++){
-                        *(img_tmp + (mis_rens - 1 - y)*mis_cols + x ) = (double)*(gris + y*mis_cols + x) / 255.0;
-                    }
-                }
-                break;
-            }
-            // La imagen esta en RGB:
-            case 3:{
-				DEB_MSG("La imagen esta en RGB");
-                vtkSmartPointer<vtkImageExtractComponents> extractRedFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-                extractRedFilter->SetInputConnection(imgReader->GetOutputPort());
-                extractRedFilter->SetComponents(0);
-                extractRedFilter->Update();
-
-                vtkSmartPointer<vtkImageExtractComponents> extractGreenFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-                extractGreenFilter->SetInputConnection(imgReader->GetOutputPort());
-                extractGreenFilter->SetComponents(1);
-                extractGreenFilter->Update();
-
-                vtkSmartPointer<vtkImageExtractComponents> extractBlueFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-                extractBlueFilter->SetInputConnection(imgReader->GetOutputPort());
-                extractBlueFilter->SetComponents(2);
-                extractBlueFilter->Update();
-
-                vtkImageData *ptR = extractRedFilter->GetOutput();
-                vtkImageData *ptG = extractGreenFilter->GetOutput();
-                vtkImageData *ptB = extractBlueFilter->GetOutput();
-
-                double color;
-
-                for( int y = 0 ; y < mis_rens; y++){
-                    for( int x = 0; x < mis_cols; x++ ){
-                        color = ((0.297)*ptR->GetScalarComponentAsDouble(x,y,0,0) +
-                                 (0.589)*ptG->GetScalarComponentAsDouble(x,y,0,0) +
-                                 (0.114)*ptB->GetScalarComponentAsDouble(x,y,0,0));
-
-                        *(img_tmp + (mis_rens - 1 - y)*mis_cols + x) = color / 255.0;
-                    }
-                }
-                break;
-            }
-            // La imagen esta en RGBA:
-            case 4:{
-				DEB_MSG("La Imagen esta en RGB{A}");
-                vtkSmartPointer<vtkImageExtractComponents> extractRedFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-                extractRedFilter->SetInputConnection(imgReader->GetOutputPort());
-                extractRedFilter->SetComponents(0);
-                extractRedFilter->Update();
-
-                vtkSmartPointer<vtkImageExtractComponents> extractGreenFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-                extractGreenFilter->SetInputConnection(imgReader->GetOutputPort());
-                extractGreenFilter->SetComponents(1);
-                extractGreenFilter->Update();
-
-                vtkSmartPointer<vtkImageExtractComponents> extractBlueFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-                extractBlueFilter->SetInputConnection(imgReader->GetOutputPort());
-                extractBlueFilter->SetComponents(2);
-                extractBlueFilter->Update();
-
-                vtkSmartPointer<vtkImageExtractComponents> extractAlphaFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-                extractAlphaFilter->SetInputConnection(imgReader->GetOutputPort());
-                extractAlphaFilter->SetComponents(3);
-                extractAlphaFilter->Update();
-
-                vtkImageData *ptR = extractRedFilter->GetOutput();
-                vtkImageData *ptG = extractGreenFilter->GetOutput();
-                vtkImageData *ptB = extractBlueFilter->GetOutput();
-                //vtkImageData *ptA = extractAlphaFilter->GetOutput();
-                double color;
-
-                for( int y = 0 ; y < mis_rens; y++){
-                    for( int x = 0; x < mis_cols; x++ ){
-                        color = ((0.297)*ptR->GetScalarComponentAsDouble(x,y,0,0) +
-                                 (0.589)*ptG->GetScalarComponentAsDouble(x,y,0,0) +
-                                 (0.114)*ptB->GetScalarComponentAsDouble(x,y,0,0));
-
-                        *(img_tmp + (mis_rens - 1 - y)*mis_cols + x) = color / 255.0;
-                    }
-                }
-                break;
-            }
-        }
-
-        imgReader->Delete();
+    int intensidad;
+    for( int xy = 0; xy < mis_rows_cols; xy++){
+        fscanf( fp_img, "%i", &intensidad );
+        *(*img_src + xy) = (double)intensidad / max_intensidad;
+		if (enmascarar && (xy % 1000) == 0 ) {
+			DEB_MSG( "[" << xy << "]: " << *(*img_src + xy) << " :: " << (double)intensidad);
+		}
     }
 
-    char mensaje[512];
-    sprintf( mensaje, "Imagen " COLOR_GREEN "'%s'" COLOR_NORMAL " cargada exitosamente.\n", ruta_origen );
-    escribirLog( mensaje );
 
     if(enmascarar){
-        definirMask(img_src, mask_src);
+        if( !*mask_src ){
+            *(mask_src) = new double [mis_rows_cols];
+        }
+        definirMask(*img_src, *mask_src, mis_rows, mis_cols);
     }
+
+    int *mis_dims = new int [2];
+    mis_dims[0] = mis_cols;
+    mis_dims[1] = mis_rows;
+
+    sprintf( mensaje, "\nImagen " COLOR_GREEN "'%s'" COLOR_NORMAL " de dimensiones [%ix%i] cargada exitosamente, enmascarar? %i.\n", ruta_origen, mis_dims[0], mis_dims[1], (int)enmascarar );
+    escribirLog( mensaje );
+
+    return mis_dims;
 }
 
 
@@ -2240,55 +1761,51 @@ DEB_MSG("Tipo UINT16");
 /*  Metodo: Cargar
     Funcion: Cargar la imagen a formato VTK desde varios archivos (Solo para imagenes JPEG, BMP o PNG).
 */
-void IMGVTK::Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, char **rutas, const int n_imgs, const bool enmascarar){
-    vtkSmartPointer<vtkImageData> auxiliar = vtkSmartPointer<vtkImageData>::New();
-    vtkSmartPointer<vtkImageData> mask_auxiliar = vtkSmartPointer<vtkImageData>::New();
+int*  IMGVTK::Cargar(double **img_src, double **mask_src, char **rutas, const int n_imgs, const bool enmascarar){
+    double *auxiliar = NULL;
+    double *mask_auxiliar = NULL;
 
-    Cargar(rutas[0], auxiliar, mask_auxiliar, 0, enmascarar);
-
-    double *aux_tmp = static_cast<double*>(auxiliar->GetScalarPointer(0, 0, 0));
-    double *mskaux_tmp = static_cast<double*>(mask_auxiliar->GetScalarPointer(0, 0, 0));
-
-    int dims[3];
-    auxiliar->GetDimensions(dims);
-
+    int *dims = Cargar(rutas[0], &auxiliar, &mask_auxiliar, enmascarar);
     const int mis_cols = dims[0];
-    const int mis_rens = dims[1];
-
+    const int mis_rows = dims[1];
     const int n_cols = mis_cols * n_imgs;
 
     // Extract data:
-    img_src->SetExtent(0, n_cols-1, 0, mis_rens-1, 0, 0);
-    img_src->AllocateScalars( VTK_DOUBLE, 1);
-    img_src->SetOrigin(0.0, 0.0, 0.0);
-    img_src->SetSpacing(1.0, 1.0, 1.0);
+    *img_src = new double [mis_rows * mis_cols * n_imgs];
+    if( enmascarar ){
+        *mask_src = new double [mis_rows * mis_cols * n_imgs];
+    }
 
-    mask_src->SetExtent(0, n_cols-1, 0, mis_rens-1, 0, 0);
-    mask_src->AllocateScalars( VTK_DOUBLE, 1);
-    mask_src->SetOrigin(0.0, 0.0, 0.0);
-    mask_src->SetSpacing(1.0, 1.0, 1.0);
-
-    double *base_ptr_tmp = static_cast<double*>(img_src->GetScalarPointer(0, 0, 0));
-    double *mask_ptr_tmp = static_cast<double*>(mask_src->GetScalarPointer(0, 0, 0));
-    for( int y = 0; y < mis_rens; y++){
-        memcpy(base_ptr_tmp + y*n_cols, aux_tmp + y*mis_cols, mis_cols*sizeof(double));
+    for( int y = 0; y < mis_rows; y++){
+        memcpy(*img_src + y*n_cols, auxiliar + y*mis_cols, mis_cols*sizeof(double));
         if(enmascarar){
-            memcpy(mask_ptr_tmp + y*n_cols, mskaux_tmp + y*mis_cols, mis_cols*sizeof(double));
+            memcpy(*mask_src + y*n_cols, mask_auxiliar + y*mis_cols, mis_cols*sizeof(double));
+        }else{
+            for( int x = 0; x < n_cols; x++){
+                *(*mask_src + y*n_cols + x) = 1.0;
+            }
         }
     }
 
     for( int img_i = 1; img_i < n_imgs; img_i++){
-        Cargar(rutas[img_i], auxiliar, mask_auxiliar, 0, enmascarar);
-        aux_tmp = static_cast<double*>(auxiliar->GetScalarPointer(0, 0, 0));
-        mskaux_tmp = static_cast<double*>(mask_auxiliar->GetScalarPointer(0, 0, 0));
-
-        for( int y = 0; y < mis_rens; y++){
-            memcpy(base_ptr_tmp + y*n_cols + img_i*mis_cols, aux_tmp+ y*mis_cols, mis_cols*sizeof(double));
+        Cargar(rutas[img_i], &auxiliar, &mask_auxiliar, enmascarar);
+        for( int y = 0; y < mis_rows; y++){
+            memcpy(*img_src + y*n_cols + img_i*mis_cols, auxiliar + y*mis_cols, mis_cols*sizeof(double));
             if(enmascarar){
-                memcpy(mask_ptr_tmp + y*n_cols + img_i*mis_cols, mskaux_tmp + y*mis_cols, mis_cols*sizeof(double));
+                memcpy(*mask_src + y*n_cols + img_i*mis_cols, mask_auxiliar + y*mis_cols, mis_cols*sizeof(double));
             }
         }
     }
+
+    delete [] auxiliar;
+
+    if( mask_auxiliar ){
+        delete [] mask_auxiliar;
+    }
+
+    dims[0] = n_cols;
+
+    return dims;
 }
 
 
@@ -2300,60 +1817,32 @@ void IMGVTK::Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool e
 
     DEB_MSG("Cargando imagen desde: " COLOR_GREEN << ruta_origen << COLOR_NORMAL);
 
-    vtkSmartPointer<vtkImageData> img_temp = NULL;
+    double **img_temp = NULL;
 
     switch( img_idx){
     case BASE:
-        if( !base ){
-            base = vtkSmartPointer<vtkImageData>::New();
-        }
-        img_temp = base;
-
-        if( !mask ){
-            mask = vtkSmartPointer<vtkImageData>::New();
-        }
+        img_temp = &base_ptr;
         break;
 
     case GROUNDTRUTH:
-        if( !ground ){
-            ground = vtkSmartPointer<vtkImageData>::New();
-        }
-        img_temp = ground;
+        img_temp = &gt_ptr;
         break;
     }
 
+    int *dims = Cargar(ruta_origen, img_temp, &mask_ptr, enmascarar);
 
-    Cargar(ruta_origen, img_temp, mask, nivel, enmascarar);
+    cols = dims[0];
+    rows = dims[1];
+    rows_cols = cols * rows;
 
-    switch( img_idx ){
-    case BASE:
-        base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
-        mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
-        break;
+    DEB_MSG("Imagen cargada de dimensiones: [" << cols << "x" << rows << "]");
 
-    case GROUNDTRUTH:
-        gt_ptr = static_cast<double*>(ground->GetScalarPointer(0, 0, 0));
-        break;
+    delete [] dims;
+
+    if( !segment_ptr ){
+        segment_ptr = new double [ rows_cols ];
     }
 
-    if( !cols ){
-        int dims[3];
-        img_temp->GetDimensions( dims );
-
-        cols = dims[0];
-        rows = dims[1];
-        rows_cols = rows*cols;
-    }
-
-    if( !segment ){
-        segment = vtkSmartPointer<vtkImageData>::New();
-        segment->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-        segment->AllocateScalars( VTK_DOUBLE, 1);
-        segment->SetOrigin(0.0, 0.0, 0.0);
-        segment->SetSpacing(1.0, 1.0, 1.0);
-
-        segment_ptr = static_cast<double*>(segment->GetScalarPointer(0, 0, 0));
-    }
 }
 
 
@@ -2363,61 +1852,32 @@ void IMGVTK::Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool e
 */
 void IMGVTK::Cargar(const IMG_IDX img_idx, char **rutas_origen, const int n_imgs, const bool enmascarar){
 
-    DEB_MSG("Cargando imagen desde: " COLOR_GREEN << rutas_origen << COLOR_NORMAL);
-
-    vtkSmartPointer<vtkImageData> img_temp = NULL;
+    double **img_temp = NULL;
 
     switch( img_idx){
     case BASE:
-        if( !base ){
-            base = vtkSmartPointer<vtkImageData>::New();
-        }
-        img_temp = base;
-
-        if( !mask ){
-            mask = vtkSmartPointer<vtkImageData>::New();
-        }
+        img_temp = &base_ptr;
         break;
 
     case GROUNDTRUTH:
-        if( !ground ){
-            ground = vtkSmartPointer<vtkImageData>::New();
-        }
-        img_temp = ground;
+        img_temp = &gt_ptr;
         break;
     }
 
-    Cargar( img_temp, mask, rutas_origen, n_imgs, enmascarar );
+    int *dims = Cargar( img_temp, &mask_ptr, rutas_origen, n_imgs, enmascarar );
 
-    switch( img_idx ){
-    case BASE:
-        base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
-        mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
-        break;
+    cols = dims[0];
+    rows = dims[1];
+    rows_cols = rows*cols;
 
-    case GROUNDTRUTH:
-        gt_ptr = static_cast<double*>(ground->GetScalarPointer(0, 0, 0));
+    DEB_MSG("Imagenes cargadas de dimensiones: [" << cols << "x" << rows << "]");
+
+    delete [] dims;
+
+    if( !segment_ptr ){
+        segment_ptr = new double [ rows_cols ];
     }
 
-
-    if( !cols ){
-        int dims[3];
-        img_temp->GetDimensions( dims );
-
-        cols = dims[0];
-        rows = dims[1];
-        rows_cols = rows*cols;
-    }
-
-    if( !segment ){
-        segment = vtkSmartPointer<vtkImageData>::New();
-        segment->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-        segment->AllocateScalars( VTK_DOUBLE, 1);
-        segment->SetOrigin(0.0, 0.0, 0.0);
-        segment->SetSpacing(1.0, 1.0, 1.0);
-
-        segment_ptr = static_cast<double*>(segment->GetScalarPointer(0, 0, 0));
-    }
 }
 
 
@@ -2459,14 +1919,6 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
         break;
     }
 
-    // Alojar memoria para la imagen:
-    vtkSmartPointer<vtkImageData> img_out = vtkSmartPointer<vtkImageData>::New();
-    img_out->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-    img_out->AllocateScalars( VTK_UNSIGNED_CHAR, 1);
-    img_out->SetOrigin(0.0, 0.0, 0.0);
-    img_out->SetSpacing(1.0, 1.0, 1.0);
-    unsigned char *img_out_ptr = static_cast<unsigned char*>(img_out->GetScalarPointer(0,0,0));
-
     double min = INF;
     double max =-INF;
 
@@ -2505,7 +1957,7 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
 
             int intensidad;
             for( int xy = 0; xy < rows_cols; xy++){
-                intensidad = (int) 255.0 * *(img_ptr + xy);
+                intensidad = (int) 255.0 * (*(img_ptr + xy) - min) / (max - min);
                 fprintf(fp_out, "%i\n", intensidad);
             }
 
@@ -2528,23 +1980,8 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
     }
 }
 
-
-
-///*  Metodo: setLog
-
-//    Funcion: Define el editor donde se escribiran todos los logs del sistema
-//*/
-//void IMGVTK::setLog( QPlainTextEdit *log ){
-//    DEB_MSG( "Agregando log: " << log );
-//    mi_log = log;
-//}
-
-
-
 /* CONSTRUCTORES */
 IMGVTK::IMGVTK(){
-//    mi_log = NULL;
-
     cols = 0;
     rows = 0;
     max_dist = 0;
@@ -2575,7 +2012,7 @@ IMGVTK::IMGVTK(){
 
 
 IMGVTK::IMGVTK( const IMGVTK &origen ){
-//    mi_log = origen.mi_log;
+    mi_log = origen.mi_log;
     max_dist = origen.max_dist;
 
     base_ptr = NULL;
@@ -2606,79 +2043,36 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
     rows_cols = rows * cols;
 
     if(origen.base_ptr){
-
-        base = vtkSmartPointer<vtkImageData>::New();
-        base->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-        base->AllocateScalars( VTK_DOUBLE, 1);
-        base->SetOrigin(0.0, 0.0, 0.0);
-        base->SetSpacing(1.0, 1.0, 1.0);
-
-        base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
+        base_ptr = new double [rows_cols];
         memcpy(base_ptr, origen.base_ptr, rows_cols*sizeof(double));
 
         if(origen.gt_ptr){
-            ground = vtkSmartPointer<vtkImageData>::New();
-            ground->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-            ground->AllocateScalars( VTK_DOUBLE, 1);
-            ground->SetOrigin(0.0, 0.0, 0.0);
-            ground->SetSpacing(1.0, 1.0, 1.0);
-            gt_ptr = static_cast<double*>(ground->GetScalarPointer(0, 0, 0));
-
+            gt_ptr = new double [rows_cols];
             memcpy(gt_ptr, origen.gt_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.mask_ptr){
-            mask = vtkSmartPointer<vtkImageData>::New();
-            mask->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-            mask->AllocateScalars( VTK_DOUBLE, 1);
-            mask->SetOrigin(0.0, 0.0, 0.0);
-            mask->SetSpacing(1.0, 1.0, 1.0);
-            mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
-
+            mask_ptr = new double [rows_cols];
             memcpy(mask_ptr, origen.mask_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.segment_ptr){
-            segment = vtkSmartPointer<vtkImageData>::New();
-            segment->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-            segment->AllocateScalars( VTK_DOUBLE, 1);
-            segment->SetOrigin(0.0, 0.0, 0.0);
-            segment->SetSpacing(1.0, 1.0, 1.0);
-            segment_ptr = static_cast<double*>(segment->GetScalarPointer(0, 0, 0));
-
+            segment_ptr = new double [rows_cols];
             memcpy(segment_ptr, origen.segment_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.skl_ptr){
-            skeleton = vtkSmartPointer<vtkImageData>::New();
-            skeleton->SetExtent(0, cols+1, 0, rows+1, 0, 0);
-            skeleton->AllocateScalars( VTK_DOUBLE, 1);
-            skeleton->SetOrigin(0.0, 0.0, 0.0);
-            skeleton->SetSpacing(1.0, 1.0, 1.0);
-            skl_ptr = static_cast<double*>(skeleton->GetScalarPointer(0, 0, 0));
-
-            memcpy(skl_ptr, origen.skl_ptr, rows_cols*sizeof(double));
+            skl_ptr = new double [(cols+2)*(rows+2)];
+            memcpy(skl_ptr, origen.skl_ptr, (cols+2)*(rows+2)*sizeof(double));
         }
 
         if(origen.map_ptr){
-            mapa_dist = vtkSmartPointer<vtkImageData>::New();
-            mapa_dist->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-            mapa_dist->AllocateScalars( VTK_DOUBLE, 1);
-            mapa_dist->SetOrigin(0.0, 0.0, 0.0);
-            mapa_dist->SetSpacing(1.0, 1.0, 1.0);
-            map_ptr = static_cast<double*>(mapa_dist->GetScalarPointer(0, 0, 0));
-
+            map_ptr = new double [rows_cols];
             memcpy(map_ptr, origen.map_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.borders_ptr){
-            borders = vtkSmartPointer<vtkImageData>::New();
-            borders->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-            borders->AllocateScalars( VTK_DOUBLE, 1);
-            borders->SetOrigin(0.0, 0.0, 0.0);
-            borders->SetSpacing(1.0, 1.0, 1.0);
-            borders_ptr = static_cast<double*>(borders->GetScalarPointer(0, 0, 0));
-
+            borders_ptr = new double [rows_cols];
             memcpy(borders_ptr, origen.borders_ptr, rows_cols*sizeof(double));
         }
     }
@@ -2687,7 +2081,7 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
 
 
 IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
-//    mi_log = NULL;
+    mi_log = NULL;
     max_dist = 0;
 
     base_ptr = NULL;
@@ -2722,7 +2116,7 @@ IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
 
 
 IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel){
-//    mi_log = NULL;
+    mi_log = NULL;
     max_dist = 0;
 
     base_ptr = NULL;
@@ -2766,6 +2160,31 @@ IMGVTK::~IMGVTK(){
         borrarSkeleton( pix_caract );
         delete pix_caract;
     }
+
+    if( base_ptr ){
+        delete [] base_ptr;
+    }
+    if( gt_ptr ){
+        delete [] gt_ptr;
+    }
+    if( skl_ptr ){
+        delete [] skl_ptr;
+    }
+    if( mask_ptr ){
+        delete [] mask_ptr;
+    }
+    if( map_ptr ){
+        delete [] map_ptr;
+    }
+    if( borders_ptr ){
+        delete [] borders_ptr;
+    }
+    if( segment_ptr ){
+        delete [] segment_ptr;
+    }
+    if( threshold_ptr ){
+        delete [] threshold_ptr;
+    }
 }
 
 
@@ -2774,7 +2193,7 @@ IMGVTK::~IMGVTK(){
 // O P E R A D O R E S  S O B R E C A R G A D O S
 // El operador de copia extrae unicamente el contenido de la imagen original
 IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
-//    mi_log = origen.mi_log;
+    mi_log = origen.mi_log;
     max_dist = origen.max_dist;
 
     base_ptr = NULL;
@@ -2807,79 +2226,36 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
 
     if(origen.base_ptr){
 
-        base = vtkSmartPointer<vtkImageData>::New();
-        base->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-        base->AllocateScalars( VTK_DOUBLE, 1);
-        base->SetOrigin(0.0, 0.0, 0.0);
-        base->SetSpacing(1.0, 1.0, 1.0);
-
-        base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
+        base_ptr = new double [rows_cols];
         memcpy(base_ptr, origen.base_ptr, rows_cols*sizeof(double));
 
         if(origen.gt_ptr){
-            mask = vtkSmartPointer<vtkImageData>::New();
-            ground->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-            ground->AllocateScalars( VTK_DOUBLE, 1);
-            ground->SetOrigin(0.0, 0.0, 0.0);
-            ground->SetSpacing(1.0, 1.0, 1.0);
-            gt_ptr = static_cast<double*>(ground->GetScalarPointer(0, 0, 0));
-
+            gt_ptr = new double [rows_cols];
             memcpy(gt_ptr, origen.gt_ptr, rows_cols*sizeof(double));
         }
 
-
         if(origen.mask_ptr){
-            mask = vtkSmartPointer<vtkImageData>::New();
-            mask->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-            mask->AllocateScalars( VTK_DOUBLE, 1);
-            mask->SetOrigin(0.0, 0.0, 0.0);
-            mask->SetSpacing(1.0, 1.0, 1.0);
-            mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
-
+            mask_ptr = new double [rows_cols];
             memcpy(mask_ptr, origen.mask_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.segment_ptr){
-            segment = vtkSmartPointer<vtkImageData>::New();
-            segment->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-            segment->AllocateScalars( VTK_DOUBLE, 1);
-            segment->SetOrigin(0.0, 0.0, 0.0);
-            segment->SetSpacing(1.0, 1.0, 1.0);
-            segment_ptr = static_cast<double*>(segment->GetScalarPointer(0, 0, 0));
-
+            segment_ptr = new double [rows_cols];
             memcpy(segment_ptr, origen.segment_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.skl_ptr){
-            skeleton = vtkSmartPointer<vtkImageData>::New();
-            skeleton->SetExtent(0, cols+1, 0, rows+1, 0, 0);
-            skeleton->AllocateScalars( VTK_DOUBLE, 1);
-            skeleton->SetOrigin(0.0, 0.0, 0.0);
-            skeleton->SetSpacing(1.0, 1.0, 1.0);
-            skl_ptr = static_cast<double*>(skeleton->GetScalarPointer(0, 0, 0));
-
-            memcpy(skl_ptr, origen.skl_ptr, rows_cols*sizeof(double));
+            skl_ptr = new double [(cols+2)*(rows+2)];
+            memcpy(skl_ptr, origen.skl_ptr, (cols+2)*(rows+2)*sizeof(double));
         }
 
         if(origen.map_ptr){
-            mapa_dist = vtkSmartPointer<vtkImageData>::New();
-            mapa_dist->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-            mapa_dist->AllocateScalars( VTK_DOUBLE, 1);
-            mapa_dist->SetOrigin(0.0, 0.0, 0.0);
-            mapa_dist->SetSpacing(1.0, 1.0, 1.0);
-            map_ptr = static_cast<double*>(mapa_dist->GetScalarPointer(0, 0, 0));
-
+            map_ptr = new double [rows_cols];
             memcpy(map_ptr, origen.map_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.borders_ptr){
-            borders = vtkSmartPointer<vtkImageData>::New();
-            borders->SetExtent(0, cols-1, 0, rows-1, 0, 0);
-            borders->AllocateScalars( VTK_DOUBLE, 1);
-            borders->SetOrigin(0.0, 0.0, 0.0);
-            borders->SetSpacing(1.0, 1.0, 1.0);
-            borders_ptr = static_cast<double*>(borders->GetScalarPointer(0, 0, 0));
-
+            borders_ptr = new double [rows_cols];
             memcpy(borders_ptr, origen.borders_ptr, rows_cols*sizeof(double));
         }
     }

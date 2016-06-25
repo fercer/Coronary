@@ -27,8 +27,8 @@
 
 #include <iostream>
 
-#include <vtkSmartPointer.h>
-#include <vtkImageData.h>
+//#include <vtkSmartPointer.h>
+//#include <vtkImageData.h>
 
 #include "IMGVTK.h"
 
@@ -48,7 +48,7 @@ class FILTROS{
         typedef struct INDIV {
             double eval;
             double vars[4]; // 1: L, 2: T, 3: K, 4: sigma
-            unsigned char cadena[64];
+            unsigned char cadena[128];
         } INDIV;
 
         typedef double (*FITNESS_PTR)( FILTROS::INDIV *test );

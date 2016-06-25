@@ -11,7 +11,7 @@
 
 // Librerias de uso comun con QT:
 //#include <QPlainTextEdit>
-
+/*
 // Librerias de uso comun:
 #include <vtkVersion.h>
 #include <vtkSmartPointer.h>
@@ -27,6 +27,9 @@
 #include <gdcmImage.h>
 #include <gdcmReader.h>
 #include <gdcmTag.h>
+*/
+
+
 
 #include <string.h>
 #include <stdlib.h>
@@ -41,31 +44,32 @@
 
 #include <omp.h>
 
-
-
-#define COLOR_NORMAL		"\33[0m"
-#define COLOR_BOLD		"\33[1m"
-#define COLOR_UNDER		"\33[4m"
-#define COLOR_BLINK		"\33[5m"
+#define COLOR_NORMAL        "\33[0m"
+#define COLOR_BOLD          "\33[1m"
+#define COLOR_UNDER         "\33[4m"
+#define COLOR_BLINK         "\33[5m"
 #define COLOR_INVERSE		"\33[7m"
-#define COLOR_BLACK		"\33[30m"
-#define COLOR_RED		"\33[31m"
-#define COLOR_GREEN		"\33[32m"
+#define COLOR_BLACK         "\33[30m"
+#define COLOR_RED           "\33[31m"
+#define COLOR_GREEN         "\33[32m"
 #define COLOR_YELLOW		"\33[33m"
-#define COLOR_BLUE		"\33[34m"
+#define COLOR_BLUE          "\33[34m"
 #define COLOR_MAGENTA		"\33[35m"
-#define COLOR_CYAN		"\33[36m"
-#define COLOR_WHITE		"\33[37m"
-#define COLOR_BACK_BLACK        "\33[40m"
-#define COLOR_BACK_RED          "\33[41m"
-#define COLOR_BACK_GREEN        "\33[42m"
-#define COLOR_BACK_YELLOW       "\33[43m"
-#define COLOR_BACK_BLUE         "\33[44m"
-#define COLOR_BACK_MAGENTA      "\33[45m"
-#define COLOR_BACK_CYAN         "\33[46m"
-#define COLOR_BACK_WHITE        "\33[47m"
+#define COLOR_CYAN          "\33[36m"
+#define COLOR_WHITE         "\33[37m"
+#define COLOR_BACK_BLACK    "\33[40m"
+#define COLOR_BACK_RED      "\33[41m"
+#define COLOR_BACK_GREEN    "\33[42m"
+#define COLOR_BACK_YELLOW   "\33[43m"
+#define COLOR_BACK_BLUE     "\33[44m"
+#define COLOR_BACK_MAGENTA  "\33[45m"
+#define COLOR_BACK_CYAN     "\33[46m"
+#define COLOR_BACK_WHITE    "\33[47m"
 
 
+#ifdef _WIN32
+	#include <time.h>
+#endif
 #ifdef _OPENMP
     #define TIMERS double t_ini, t_fin
     #define GETTIME_INI t_ini = omp_get_wtime()
@@ -74,7 +78,6 @@
     #define OMP_ENABLED true
 #else
 	#ifdef _WIN32
-		#include <time.h>
 		#define TIMERS time_t t_ini, t_fin
 		#define GETTIME_INI time (&t_ini)
 		#define GETTIME_FIN time (&t_fin)
@@ -121,6 +124,9 @@ class IMGVTK{
         /** TIPO_UMBRAL:    **/
         typedef enum TIPO_UMBRAL { NIVEL, OTSU, RIDLER_CALVARD} TIPO_UMBRAL;
 
+        /** ALG_CONJUNTOS:    **/
+        typedef enum ALG_CONJUNTOS { DINAMICO, ITERATIVO} ALG_CONJUNTOS;
+
         /** PIX_PAR:   **/
         typedef struct PIX_PAR {
             double x, y, x_r, y_r;
@@ -133,22 +139,22 @@ class IMGVTK{
 
 
         // M E T O D O S      P U B L I C O S
-        void definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src );
+        void definirMask(double *img_src, double *mask_src , const int mis_rens, const int mis_cols);
         void skeletonization(IMG_IDX img_idx);
         void umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const double nivel);
-        void lengthFilter(IMG_IDX img_idx, const int min_length);
+
+        void lengthFilter(IMG_IDX img_idx, const int min_length, ALG_CONJUNTOS mi_alg);
         void regionFill(IMG_IDX img_idx);
         void mapaDistancias(IMG_IDX img_idx);
         void detectarBorde(IMG_IDX img_idx);
+        double medirExactitud();
 
         void Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool enmascarar, const int nivel);
         void Cargar(const IMG_IDX img_idx, char **rutas_origen , const int n_imgs, const bool enmascarar);
 
         void Guardar( IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida );
 
-
 //        void setLog( QPlainTextEdit *log );
-
 
         IMGVTK();
         IMGVTK(const IMGVTK &origen );
@@ -161,14 +167,14 @@ class IMGVTK{
         IMGVTK& operator= ( const IMGVTK &origen );
 
         // M I E M B R O S      P U B L I C O S
-        vtkSmartPointer<vtkImageData> base;
-        vtkSmartPointer<vtkImageData> ground;
-        vtkSmartPointer<vtkImageData> mask;
-        vtkSmartPointer<vtkImageData> skeleton;
-        vtkSmartPointer<vtkImageData> segment;
-        vtkSmartPointer<vtkImageData> threshold;
-        vtkSmartPointer<vtkImageData> mapa_dist;
-        vtkSmartPointer<vtkImageData> borders;
+//        vtkSmartPointer<vtkImageData> base;
+//        vtkSmartPointer<vtkImageData> ground;
+//        vtkSmartPointer<vtkImageData> mask;
+//        vtkSmartPointer<vtkImageData> skeleton;
+//        vtkSmartPointer<vtkImageData> segment;
+//        vtkSmartPointer<vtkImageData> threshold;
+//        vtkSmartPointer<vtkImageData> mapa_dist;
+//        vtkSmartPointer<vtkImageData> borders;
 
         int rows, cols, rows_cols;
         int n_niveles;
@@ -186,7 +192,6 @@ class IMGVTK{
         double LAORAO, CRACAU;
         double WCenter, WWidth;
         double pixX, pixY, cenX, cenY;
-        bool esDICOM;
 
         PIX_PAR *pix_caract;
 
@@ -196,8 +201,8 @@ class IMGVTK{
         // M E T O D O S      P R I V A D O S
         void escribirLog( const char *mensaje );
 
-        void Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel, const bool enmascarar);
-        void Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, char **rutas, const int n_imgs, const bool enmascarar);
+        int *Cargar(const char *ruta_origen, double **img_src, double **mask_src, const bool enmascarar);
+        int *Cargar(double **img_src, double **mask_src, char **rutas, const int n_imgs, const bool enmascarar);
 
         void maskFOV(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
         void fillMask(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
@@ -225,10 +230,9 @@ class IMGVTK{
         void conexo(const double *ptr, const int x, const int y, int *conjuntos, unsigned int* n_etiquetados, bool* visitados, const int num_etiquetas, const int mis_cols, const int mis_rens);
         unsigned int *conjuntosConexosDinamico(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens);
 
-        inline void ampliarConjunto(int **etiquetas, const int equiv_A, const int equiv_B);
-        void equivalenciaRec(const int equiv, const int base, int **etiquetas);
+        inline void ampliarConjunto(int *etiquetas, const int equiv_A, const int equiv_B, const int max_etiquetas);
         unsigned int *conjuntosConexos(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens);
-        void lengthFilter(double *ptr, const int min_length , const int mis_cols, const int mis_rens);
+        void lengthFilter(double *ptr, const int min_length , const int mis_cols, const int mis_rens, ALG_CONJUNTOS mi_alg);
 
         char* setRuta( const char *ruta_input );
 
