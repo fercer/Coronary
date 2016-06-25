@@ -29,8 +29,6 @@
 #include <gdcmTag.h>
 */
 
-
-
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -125,7 +123,7 @@ class IMGVTK{
         typedef enum TIPO_UMBRAL { NIVEL, OTSU, RIDLER_CALVARD} TIPO_UMBRAL;
 
         /** ALG_CONJUNTOS:    **/
-        typedef enum ALG_CONJUNTOS { DINAMICO, ITERATIVO} ALG_CONJUNTOS;
+        typedef enum ALG_CONJUNTOS { DINAMICO, ITERATIVO } ALG_CONJUNTOS;
 
         /** PIX_PAR:   **/
         typedef struct PIX_PAR {

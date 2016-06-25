@@ -1100,21 +1100,6 @@ double* RECONS3D::get_pixelData(const int angio_ID, IMGVTK::IMG_IDX img_idx){
 }
 
 
-
-/*  Metodo: setLog
-
-    Funcion: Define la ruta donde se guarda el log del proceso de reconstruccion.
-*/
-void RECONS3D::setLog(const char *ruta_log){
-    if(fp_log){
-        fclose(fp_log);
-        fp_log = NULL;
-    }
-
-    fp_log = fopen(ruta_log, "w");
-}
-
-
 /*  Metodo: segmentarImagenBase
 
     Funcion: Aplica el filtro con los parametros definidos
@@ -1139,33 +1124,84 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
 
 
-/*  Metodo: lengthFilter
+/* VERSION NO VTK */
+void RECONS3D::mostrarRadios(int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros){
 
-    Funcion: Filtra la imagen img_idx segun el numero de pixeles dentro de los conuntos conexos.
-*/
-void RECONS3D::lengthFilter(const int angio_ID, IMGVTK::IMG_IDX img_idx, const int min_length){
-    imgs_base[angio_ID].lengthFilter(img_idx, min_length);
+    const double theta_inc = 2 * PI / (double)detalle;
+
+    const double xx = grafo->x;
+    const double yy = grafo->y;
+
+    for( int h = 0; h < grafo->n_hijos; h++){
+
+        double radio = grafo->radio;
+
+        IMGVTK::PIX_PAR *sig_hijo = grafo->hijos[h];
+        int n_prof = 0;
+        while( 1 ){
+            radio += sig_hijo->radio;
+            n_prof++;
+
+            if( sig_hijo->pix_tipo != IMGVTK::PIX_SKL || n_prof >= nivel_detalle){
+                break;
+            }
+
+            sig_hijo = sig_hijo->hijos[0];
+        }
+
+        /// Promedio de los radios de esta seccion:
+        radio /= (double)n_prof;
+
+        double x_fin = sig_hijo->x;
+        double y_fin = sig_hijo->y;
+        double r_temp;
+
+        if( fp_cilindros ){
+            double xx_3D_ini = xx;
+            double yy_3D_ini = yy;
+            double zz_3D_ini = DDP;
+
+            //// Rotacion usando el eje 'x' como base:
+            r_temp = crl*yy_3D_ini - srl*zz_3D_ini;
+            zz_3D_ini = srl*yy_3D_ini + crl*zz_3D_ini;
+            yy_3D_ini = r_temp;
+
+
+            //// Rotacion usando el eje 'y' como base:
+            r_temp = ccc*xx_3D_ini - scc*zz_3D_ini;
+            zz_3D_ini = scc*xx_3D_ini + ccc*zz_3D_ini;
+            xx_3D_ini = r_temp;
+
+            double xx_3D_fin = x_fin;
+            double yy_3D_fin = y_fin;
+            double zz_3D_fin = DDP;
+
+            //// Rotacion usando el eje 'x' como base:
+            r_temp = crl*yy_3D_fin - srl*zz_3D_fin;
+            zz_3D_fin = srl*yy_3D_fin + crl*zz_3D_fin;
+            yy_3D_fin = r_temp;
+
+
+            //// Rotacion usando el eje 'y' como base:
+            r_temp = ccc*xx_3D_fin - scc*zz_3D_fin;
+            zz_3D_fin = scc*xx_3D_fin + ccc*zz_3D_fin;
+            xx_3D_fin = r_temp;
+
+            fprintf(fp_cilindros, "%f %f %f %f %f %f %f\n",xx_3D_ini, yy_3D_ini, zz_3D_ini, radio, xx_3D_fin, yy_3D_fin, zz_3D_fin);
+        }
+
+        *(n_pix) = *(n_pix) + (detalle+1)*2;
+        mostrarRadios(n_pix, sig_hijo, DDP, crl, srl, ccc, scc, nivel_detalle, fp_cilindros);
+    }
 }
 
 
-
-
-/*  Metodo: medirExactitud
-
-    Funcion: Mide la exactitud del clasificador entre la imagen umbralizada y el ground-truth
-*/
-double RECONS3D::medirExactitud(const int angio_ID){
-    double accuracy = imgs_base[angio_ID].medirExactitud();
-    char mensaje[] = "\n" COLOR_GREEN "La imagen XXX tiene una exactitud de X.XXXXXX con respecto del ground-truth." COLOR_NORMAL "\n";
-    sprintf(mensaje, "\n" COLOR_GREEN "La imagen %i tiene una exactitud de %1.6f con respecto del ground-truth." COLOR_NORMAL "\n", angio_ID, accuracy );
-    escribirLog(mensaje);
-}
 
 
 
 /*  Metodo: mostrarRadios
 
-    Funcion: Muestra el radio de cada pixel del esqueleto.
+    Funcion: Muestea el radio de cada pixel del esqueleto. (No VTK3D)
 *//*
 void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> cilindros, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros){
 
@@ -1357,7 +1393,6 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
 
 
 
-
 /*  Metodo: mostrarRadios
 
     Funcion: Muestra el radio de cada pixel del esqueleto.
@@ -1446,14 +1481,12 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
 /*  Metodo: skeletonize
 
     Funcion: Obtiene el esqueleto de la imagen y muestra los puntos de interes.
-*//*
-void RECONS3D::skeletonize(const int angio_ID){
+*/
+void RECONS3D::skeletonize(const int angio_ID, const int delta_detalle){
 
     DEB_MSG("Extrayendo esquelto a " << angio_ID);
-    imgs_base[angio_ID].skeletonization(IMGVTK::GROUNDTRUTH);
+    imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
 
-
-    //if( !imgs_base[angio_ID].pix_caract ){
     if( !imgs_base[angio_ID].pix_caract ){
         DEB_MSG("No existe grafo alguno...");
         return;
@@ -1465,7 +1498,7 @@ void RECONS3D::skeletonize(const int angio_ID){
     const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * PI);
     const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
 
-    const double DDP = 0.0;//imgs_base[angio_ID].DDP;
+    const double DDP = imgs_base[angio_ID].DDP;
     const int n_niveles = imgs_base[angio_ID].n_niveles;
 
     DEB_MSG("numero de niveles: " << n_niveles);
@@ -1473,41 +1506,39 @@ void RECONS3D::skeletonize(const int angio_ID){
     {
         // Recorrer el grafo y generar en 3D una burda reconstruccion.
 
-        DEB_MSG("Mostrando los radios de cada 100 pixeles del esqueleto...");
-        vtkSmartPointer< vtkPoints > puntos = vtkSmartPointer< vtkPoints >::New();
-        vtkSmartPointer< vtkCellArray > cilindros = vtkSmartPointer< vtkCellArray >::New();
+        DEB_MSG("Mostrando los radios de cada " << delta_detalle << " pixeles del esqueleto...");
+        //vtkSmartPointer< vtkPoints > puntos = vtkSmartPointer< vtkPoints >::New();
+        //vtkSmartPointer< vtkCellArray > cilindros = vtkSmartPointer< vtkCellArray >::New();
         int n_pix = 0;
 
-        char nom_cilindros[] = "cilindros_XXX.dat";
-        sprintf( nom_cilindros, "cilindros_%i.dat", angio_ID);
+        char nom_cilindros[] = "cilindros_XXX_DDD.dat";
+        sprintf( nom_cilindros, "cilindros_%i_%i.dat", angio_ID, delta_detalle);
         FILE *fp_cilindros = fopen(nom_cilindros, "w");
         fprintf( fp_cilindros, "X1 Y1 Z1 RADIO X2 Y2 Z2\n");
-        mostrarRadios(puntos, cilindros, &n_pix, imgs_base[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, 100, fp_cilindros);
+        mostrarRadios(&n_pix, imgs_base[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, delta_detalle, fp_cilindros);
 
         fclose( fp_cilindros );
 
         /// Generar los cilindros:
-        vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
-        polydata->SetPoints(puntos);
-        polydata->SetPolys(cilindros);
+//        vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+//        polydata->SetPoints(puntos);
+//        polydata->SetPolys(cilindros);
 
-        vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-        mapper->SetInputData(polydata);
-        DEB_MSG("Generando Mapper");
+//        vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+//        mapper->SetInputData(polydata);
+//        DEB_MSG("Generando Mapper");
 
-        vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-        actor->SetMapper(mapper);
-        DEB_MSG("Generando Actor");
+//        vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+//        actor->SetMapper(mapper);
+//        DEB_MSG("Generando Actor");
 
-        double color[] = {0.0, 1.0, 0.0};
-        actor->GetProperty()->SetColor(color);
+//        double color[] = {0.0, 1.0, 0.0};
+//        actor->GetProperty()->SetColor(color);
 
-        DEB_MSG("Agregando al renderizador");
-        renderer_global->AddActor( actor );
+//        DEB_MSG("Agregando al renderizador");
+//        renderer_global->AddActor( actor );
     }
 }
-*/
-
 
 
 
@@ -1588,7 +1619,6 @@ vtkSmartPointer< vtkRenderer > RECONS3D::getRenderer( const int angio_ID ){
 void RECONS3D::setFiltroLog( FILE *fplog ){
     filtro.setLog( fplog );
 }
-
 
 
 /*  Metodo: setFiltroLog

@@ -163,10 +163,10 @@ class RECONS3D{
         void mostrarDetector(const int angio_ID);
         */
 
-        /*
-        void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> cilindros, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros);
-        void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, vtkSmartPointer<vtkUnsignedCharArray> grafo_nivel, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int n_niveles);
-        */
+        /* VERSION NO VTK */
+        void mostrarRadios(int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros);
+        //void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> cilindros, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros);
+        //void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, vtkSmartPointer<vtkUnsignedCharArray> grafo_nivel, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int n_niveles);
     //-------------------------------------------------------------------------------------- PRIVATE ----- ^
 
     public: //------------------------------------------------------------------------------- PUBLIC----- v
@@ -189,9 +189,10 @@ class RECONS3D{
         void leerConfiguracion( const char *ruta_conf);
 
         void segmentarImagenBase(const int angio_ID );
-        void lengthFilter(const int angio_ID, IMGVTK::IMG_IDX img_idx, const int min_length);
+        void umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angio_ID);
+        void lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angio_ID);
         double medirExactitud(const int angio_ID);
-        void skeletonize(const int angio_ID);
+        void skeletonize(const int angio_ID, const int delta_detalle);
 
         /*
         void mostrarBase( const int angio_ID );
@@ -224,9 +225,6 @@ class RECONS3D{
         void setFiltroLog( FILE *fplog );
         void setFiltroLog( const char* ruta_log );
 
-        void umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angio_ID);
-        void lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angio_ID);
-        double medirExactitud(const int angios_ID);
     // O P E R A D O R E S  S O B R E C A R G A D O S
     //--------------------------------------------------------------------------------------- PUBLIC ----- ^
 };

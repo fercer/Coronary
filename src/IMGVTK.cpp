@@ -1082,11 +1082,11 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
     const int min_y = ((y - max_dist - 1) < 0) ? 0 : (y - max_dist - 1);
     const int max_y = ((y + max_dist - 1) >= rows) ? rows : (y + max_dist - 1);
 
-    double dist, radio = (max_dist + 0.5) * (max_dist + 0.5);
+    double dist, radio = (max_dist + 1.5) * (max_dist + 1.5);
     double x_r, y_r;
     for( int yy = min_y; yy < max_y; yy++){
         for( int xx = min_x; xx < max_x; xx++){
-            dist = (yy - y + 1.5)*(yy - y + 1.5) + (xx - x + 1.5)*(xx - x + 1.5);
+            dist = (yy - y + 0.5)*(yy - y + 0.5) + (xx - x + 0.5)*(xx - x + 0.5);
             if( (borders_ptr[xx + yy*cols] > 0.0) && (dist < radio) ){
                 radio = dist;
                 x_r = (double)xx;
@@ -1479,7 +1479,7 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
     }
     umbral_nuevo *= fraccion;
 
-    double umbral;
+    double umbral = umbral_nuevo;
     while( 1 ){
         const double umbral_previo = umbral_nuevo;
         umbral = umbral_previo;
@@ -1866,9 +1866,11 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
             fprintf(fp_out, "255\n");
 
             int intensidad;
-            for( int xy = 0; xy < rows_cols; xy++){
-                intensidad = (int) 255.0 * (*(img_ptr + xy) - min) / (max - min);
-                fprintf(fp_out, "%i\n", intensidad);
+            for( int y = 0; y < rows; y++){
+                for( int x = 0; x < cols; x++){
+                    intensidad = (int) 255.0 * (*(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) - min) / (max - min);
+                    fprintf(fp_out, "%i\n", intensidad);
+                }
             }
 
             fclose( fp_out );
