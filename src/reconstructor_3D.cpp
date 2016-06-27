@@ -1119,6 +1119,8 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     char mensaje[] = "XXX.XXXXXXXX\n";
     sprintf(mensaje, "%3.8f\n", DIFTIME);
     escribirLog( mensaje );
+
+    DEB_MSG(imgs_base[angio_ID].segment_ptr);
 }
 
 
