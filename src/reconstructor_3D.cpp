@@ -1647,7 +1647,7 @@ void RECONS3D::setLog( const char *ruta_log ){
     if( fp_log ){
         fclose( fp_log );
     }
-    fp_log = fopen(ruta_log, "a");
+    fp_log = fopen(ruta_log, "w");
 }
 
 

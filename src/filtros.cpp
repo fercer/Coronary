@@ -381,7 +381,6 @@ void FILTROS::filtrar(){
             char mensaje_error[] = COLOR_BACK_BLACK COLOR_RED "<<ERROR: " COLOR_YELLOW "No se ha definido la funcion de evaluacion (fitness)" COLOR_NORMAL "\n";
             escribirLog( mensaje_error);
     }
-    escribirLog( mensaje );
     memcpy(dest, resp, rows_cols*sizeof(double));
 }
 
@@ -405,7 +404,7 @@ void FILTROS::setLog( const char *ruta_log){
     if(mi_fplog){
         fclose( mi_fplog );
     }
-    mi_fplog = fopen( mi_ruta_log, "a" );
+    mi_fplog = fopen( mi_ruta_log, "w" );
 }
 
 
@@ -429,7 +428,8 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     const int T = round(test->vars[1]);
     const int K = round(test->vars[2]);
     const double sigma = test->vars[3];
-    const int temp_dims = 1.5 * ((T > L) ? T : L);
+    const int temp_dims_x = T + 3;
+    const int temp_dims_y = L + 6;
 
     double **templates = new double*[K];
 
@@ -458,13 +458,10 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
 
     //// Se termina de construir el template a 0°:
-    templates[0] = new double [temp_dims * temp_dims];
-    memset(templates[0], 0, temp_dims*temp_dims*sizeof(double));
+    templates[0] = new double [temp_dims_x * temp_dims_y];
+    memset(templates[0], 0, temp_dims_x*temp_dims_y*sizeof(double));
     for( int y = 0; y < L; y++ ){
-        memcpy( templates[0] + (temp_dims/2 - L/2 + y)*temp_dims + (temp_dims/2 - T/2), gauss_0, T*sizeof(double) );
-//        for( int x = 0; x < T; x++){
-//             templates[0][(temp_dims/2 - L/2 + y)*temp_dims + (temp_dims/2 - T/2+x)] = 1.0;
-//        }
+        memcpy( templates[0] + (temp_dims_y/2 - L/2 + y)*temp_dims_x + (temp_dims_x/2 - T/2), gauss_0, T*sizeof(double) );
     }
 
 
@@ -477,18 +474,18 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         const double ctheta = cos( -theta * PI/180.0 );
         const double stheta = sin( -theta * PI/180.0 );
 
-        templates[k] = new double [temp_dims * temp_dims];
-        memset(templates[k], 0, temp_dims*temp_dims*sizeof(double));
-        rotarImg( templates[0], templates[k], ctheta, stheta, temp_dims, temp_dims, temp_dims, temp_dims);
+        templates[k] = new double [temp_dims_x * temp_dims_y];
+        memset(templates[k], 0, temp_dims_x*temp_dims_y*sizeof(double));
+        rotarImg( templates[0], templates[k], ctheta, stheta, temp_dims_y, temp_dims_x, temp_dims_y, temp_dims_x);
 
 #ifndef NDEBUG
         char temp_nom[] = "template_XXX.fcs";
         sprintf(temp_nom, "template_%3i.fcs", k);
         FILE *fp_temp = fp_temp = fopen(temp_nom, "w");
 
-        for( int y = 0; y < temp_dims; y++){
-            for( int x = 0; x < temp_dims; x++){
-                fprintf(fp_temp, "%1.12f ", *(templates[k] + x + y*temp_dims));
+        for( int y = 0; y < temp_dims_y; y++){
+            for( int x = 0; x < temp_dims_x; x++){
+                fprintf(fp_temp, "%1.12f ", *(templates[k] + x + y*temp_dims_x));
             }
             fprintf(fp_temp, "\n");
         }
@@ -499,38 +496,39 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 	delete[] gauss_0;
     ////--------------------------------------------------------- Aplicacion del filtro:
 
-    double *resp_tmp = new double [ K * (cols + temp_dims - 1) * (rows + temp_dims - 1) ];
-    for( int xy = 0; xy < K * (cols + temp_dims - 1) * (rows + temp_dims - 1); xy++ ){
+    double *resp_tmp = new double [ K * (cols + temp_dims_x - 1) * (rows + temp_dims_y - 1) ];
+    for( int xy = 0; xy < K * (cols + temp_dims_x - 1) * (rows + temp_dims_y - 1); xy++ ){
         *(resp_tmp + xy) = -INF;
     }
 
-	const int offset = (int)(temp_dims/2);
+    const int offset_x = (int)(temp_dims_x/2);
+    const int offset_y = (int)(temp_dims_y/2);
     const int mis_cols = cols;
     const int mis_rens = rows;
     const double *mi_org = org;
 
-    #pragma omp parallel for shared(resp_tmp, mi_org, templates) firstprivate(mis_rens, mis_cols, temp_dims, K)
+    //#pragma omp parallel for shared(resp_tmp, mi_org, templates) firstprivate(mis_rens, mis_cols, temp_dims_x, temp_dims_y, K)
     for( int k = 0; k < K; k++ ){
-        for( int yR = 0; yR < (mis_rens + temp_dims - 1); yR++){
+        for( int yR = 0; yR < (mis_rens + temp_dims_y - 1); yR++){
 			// Definir los limites en el eje y que pueden recorrerse del template:
-			const int min_y = (yR > (temp_dims - 1)) ? (yR - temp_dims + 1) : 0;
+            const int min_y = (yR > (temp_dims_y - 1)) ? (yR - temp_dims_y + 1) : 0;
             const int max_y = (yR < mis_rens) ? (yR + 1) : mis_rens;
-            for( int xR = 0; xR < (mis_cols + temp_dims - 1); xR++){
+            for( int xR = 0; xR < (mis_cols + temp_dims_x - 1); xR++){
 
 				// Definir los limites en el eje x que pueden recorrerse del template:
-                const int min_x = (xR > (temp_dims - 1)) ? (xR - temp_dims + 1) : 0;
+                const int min_x = (xR > (temp_dims_x - 1)) ? (xR - temp_dims_x + 1) : 0;
                 const int max_x = (xR < mis_cols) ? (xR + 1) : mis_cols;
 
 				double resp_k = 0.0;
                 // Convolucionar el template con la vecindad de pixeles de la imagen:
                 for( int y = min_y; y < max_y; y++){
                     for( int x = min_x; x < max_x; x++){
-                        resp_k += *(templates[k] + (max_y - y - 1)*temp_dims + (max_x - x - 1)) * *(mi_org + y*mis_cols + x);
+                        resp_k += *(templates[k] + (max_y - y - 1)*temp_dims_x + (max_x - x - 1)) * *(mi_org + y*mis_cols + x);
                     }
                 }
 
-                if (resp_k > *(resp_tmp + yR*(mis_cols + temp_dims - 1) + xR)) {
-                    *(resp_tmp + yR*(mis_cols + temp_dims - 1) + xR + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1)) = resp_k;
+                if (resp_k > *(resp_tmp + yR*(mis_cols + temp_dims_x - 1) + xR)) {
+                    *(resp_tmp + yR*(mis_cols + temp_dims_x - 1) + xR + k*(mis_cols + temp_dims_x - 1) * (mis_rens + temp_dims_x - 1)) = resp_k;
                 }
             }
         }
@@ -544,8 +542,8 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     for (int y = 0; y < rows; y++) {
         for (int x = 0; x < cols; x++) {
             for( int k = 0; k < K; k++){
-                if( *(resp + x + y*cols) < *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1) + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1)) ){
-                    *(resp + x + y*cols) = *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1) + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1));
+                if( *(resp + x + y*cols) < *(resp_tmp + (x + offset_x) + (y + offset_y)*(cols + temp_dims_x - 1) + k*(mis_cols + temp_dims_x - 1) * (mis_rens + temp_dims_x - 1)) ){
+                    *(resp + x + y*cols) = *(resp_tmp + (x + offset_x) + (y + offset_y)*(cols + temp_dims_x - 1) + k*(mis_cols + temp_dims_x - 1) * (mis_rens + temp_dims_x - 1));
                 }
             }
         }
@@ -906,7 +904,7 @@ double FILTROS::calcROC( double *resp ){
     GETTIME_FIN;
 
     char mensaje[] = "X.XXXXXXXXXXXXXXXX XXX.XXXXXXXXXXXX \n";
-    sprintf(mensaje, "%1.16f %3.12f\n", Az, DIFTIME);
+    sprintf(mensaje, "%1.16f\n", Az);
     escribirLog( mensaje );
 
     return Az;
