@@ -54,7 +54,7 @@ void FILTROS::barraProgreso( const int avance, const int milestones ){
 inline double FILTROS::interpolacion(const double *pix, const int j, const int i, const double x, const double y, const int mis_rens, const int mis_cols){
     double intensidad = 0.0;
 
-    if( j >= 0 && j < mis_cols ){
+    if( j >= 0 && j <= mis_cols ){
         if( i >= 0 && i < mis_rens ){
             intensidad += *(pix +   i  *mis_cols +   j  ) * (1.0 - x) * (1.0 - y);
         }
@@ -89,8 +89,8 @@ void FILTROS::rotarImg( const double *org, double *rot, const double ctheta, con
 
 
     double x, y;
-    for(int i = 0; i < (mis_rens-1); i++){
-        for(int j = 0; j < (mis_cols-1); j++){
+    for(int i = 0; i <= (mis_rens-1); i++){
+        for(int j = 0; j <= (mis_cols-1); j++){
             x = ((double)j-mitad_x)*ctheta + ((double)i-mitad_y)*stheta + mitad_orgx;
             y =-((double)j-mitad_x)*stheta + ((double)i-mitad_y)*ctheta + mitad_orgy;
             const int flx = (int)x;
@@ -176,6 +176,8 @@ void FILTROS::setFitness( const FITNESS fit_fun){
     Funcion: Inicializa los parametros en valores por defecto.
 */
 FILTROS::FILTROS(){
+    mi_directorio = NULL;
+    mi_tag = 0;
     mi_ruta_log = NULL;
     mi_fplog = NULL;
     resp = NULL;
@@ -237,6 +239,11 @@ FILTROS::~FILTROS(){
     if(transformada){
         fftw_free(Img_fft);
         fftw_free(Img_fft_HPF);
+    }
+
+    if( mi_directorio ){
+        delete [] mi_directorio;
+        mi_directorio = NULL;
     }
 }
 
@@ -394,7 +401,6 @@ void FILTROS::setLog(FILE *fplog){
 
 
 
-
 /*  Metodo: setLog
     Funcion: Define el stream donde se imprimen los logs del sistema.
 */
@@ -407,6 +413,25 @@ void FILTROS::setLog( const char *ruta_log){
     mi_fplog = fopen( mi_ruta_log, "w" );
 }
 
+
+
+/*  Metodo: setTag
+    Funcion: Define el tag para nombrar los archivos de salida.
+*/
+void FILTROS::setTag(const int tag){
+    mi_tag = tag;
+}
+
+
+
+/*  Metodo: setDt
+    Funcion: Define el directorio para guardar logs de salida
+*/
+void FILTROS::setDt(const char *directorio){
+    int len_dt =  strlen(directorio) + 2;
+    mi_directorio = new char [len_dt*sizeof(char)];
+    sprintf(mi_directorio, "%s", directorio);
+}
 
 
 /*//        //      //      //      //      //      //        //      //      //      //      //      //        //      //      //      //      //      //        //      //      //      //      //      //
@@ -428,8 +453,11 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     const int T = round(test->vars[1]);
     const int K = round(test->vars[2]);
     const double sigma = test->vars[3];
-    const int temp_dims_x = T + 3;
-    const int temp_dims_y = L + 6;
+
+    DEB_MSG("L: " << L << ", T: " << T << ", K: " << K << ", sigma: " << sigma );
+
+    const int temp_dims_x = (T > L ? T : L) * 1.5;//T + T%2 +3;
+    const int temp_dims_y = (T > L ? T : L) * 1.5;//L + 6;
 
     double **templates = new double*[K];
 
@@ -469,6 +497,17 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     const double theta_inc = 180.0 / (double)K;
     double theta = 0.0;
 
+#ifndef NDEBUG
+        FILE *fp_temp = fp_temp = fopen("template_0.fcs", "w");
+        for( int y = 0; y < temp_dims_y; y++){
+            for( int x = 0; x < temp_dims_x; x++){
+                fprintf(fp_temp, "%1.12f ", *(templates[0] + x + y*temp_dims_x));
+            }
+            fprintf(fp_temp, "\n");
+        }
+        fclose(fp_temp);
+#endif
+
     for( int k = 1; k < K; k++){
         theta += theta_inc;
         const double ctheta = cos( -theta * PI/180.0 );
@@ -480,7 +519,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
 #ifndef NDEBUG
         char temp_nom[] = "template_XXX.fcs";
-        sprintf(temp_nom, "template_%3i.fcs", k);
+        sprintf(temp_nom, "template_%i.fcs", k);
         FILE *fp_temp = fp_temp = fopen(temp_nom, "w");
 
         for( int y = 0; y < temp_dims_y; y++){
@@ -496,55 +535,48 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 	delete[] gauss_0;
     ////--------------------------------------------------------- Aplicacion del filtro:
 
-    double *resp_tmp = new double [ K * (cols + temp_dims_x - 1) * (rows + temp_dims_y - 1) ];
-    for( int xy = 0; xy < K * (cols + temp_dims_x - 1) * (rows + temp_dims_y - 1); xy++ ){
+    double *resp_tmp = new double [ (cols + temp_dims_x - 1) * (rows + temp_dims_y - 1) ];
+    for( int xy = 0; xy < (cols + temp_dims_x - 1) * (rows + temp_dims_y - 1); xy++ ){
         *(resp_tmp + xy) = -INF;
     }
 
     const int offset_x = (int)(temp_dims_x/2);
     const int offset_y = (int)(temp_dims_y/2);
-    const int mis_cols = cols;
-    const int mis_rens = rows;
-    const double *mi_org = org;
 
     //#pragma omp parallel for shared(resp_tmp, mi_org, templates) firstprivate(mis_rens, mis_cols, temp_dims_x, temp_dims_y, K)
     for( int k = 0; k < K; k++ ){
-        for( int yR = 0; yR < (mis_rens + temp_dims_y - 1); yR++){
+        for( int yR = 0; yR < (rows + temp_dims_y - 1); yR++){
 			// Definir los limites en el eje y que pueden recorrerse del template:
             const int min_y = (yR > (temp_dims_y - 1)) ? (yR - temp_dims_y + 1) : 0;
-            const int max_y = (yR < mis_rens) ? (yR + 1) : mis_rens;
-            for( int xR = 0; xR < (mis_cols + temp_dims_x - 1); xR++){
+            const int max_y = (yR < rows) ? (yR + 1) : rows;
+
+            for( int xR = 0; xR < (cols + temp_dims_x - 1); xR++){
 
 				// Definir los limites en el eje x que pueden recorrerse del template:
                 const int min_x = (xR > (temp_dims_x - 1)) ? (xR - temp_dims_x + 1) : 0;
-                const int max_x = (xR < mis_cols) ? (xR + 1) : mis_cols;
+                const int max_x = (xR < cols) ? (xR + 1) : cols;
 
 				double resp_k = 0.0;
                 // Convolucionar el template con la vecindad de pixeles de la imagen:
                 for( int y = min_y; y < max_y; y++){
                     for( int x = min_x; x < max_x; x++){
-                        resp_k += *(templates[k] + (max_y - y - 1)*temp_dims_x + (max_x - x - 1)) * *(mi_org + y*mis_cols + x);
+                        resp_k += *(templates[k] + (max_y - y - 1)*temp_dims_x + (max_x - x - 1)) * *(org + y*cols + x);
                     }
                 }
 
-                if (resp_k > *(resp_tmp + yR*(mis_cols + temp_dims_x - 1) + xR)) {
-                    *(resp_tmp + yR*(mis_cols + temp_dims_x - 1) + xR + k*(mis_cols + temp_dims_x - 1) * (mis_rens + temp_dims_x - 1)) = resp_k;
+                if (resp_k > *(resp_tmp + yR*(cols + temp_dims_x - 1) + xR)) {
+                    *(resp_tmp + yR*(cols + temp_dims_x - 1) + xR) = resp_k;
                 }
             }
         }
     }
 
-    // Liberar la matriz de templates:
-    for( int xy = 0; xy < rows_cols; xy++){
-        *(resp +xy) =-INF;
-    }
-
+    double min_resp = INF;
     for (int y = 0; y < rows; y++) {
         for (int x = 0; x < cols; x++) {
-            for( int k = 0; k < K; k++){
-                if( *(resp + x + y*cols) < *(resp_tmp + (x + offset_x) + (y + offset_y)*(cols + temp_dims_x - 1) + k*(mis_cols + temp_dims_x - 1) * (mis_rens + temp_dims_x - 1)) ){
-                    *(resp + x + y*cols) = *(resp_tmp + (x + offset_x) + (y + offset_y)*(cols + temp_dims_x - 1) + k*(mis_cols + temp_dims_x - 1) * (mis_rens + temp_dims_x - 1));
-                }
+            *(resp + x + y*cols) = *(resp_tmp + (x + offset_x) + (y + offset_y)*(cols + temp_dims_x - 1));
+            if( min_resp > *(resp + x + y*cols) ){
+                min_resp = *(resp + x + y*cols);
             }
         }
     }
@@ -553,8 +585,22 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         delete [] templates[k];
     }
     delete [] templates;
-
     delete [] resp_tmp;
+
+    double max_resp =-INF;
+    for (int y = 0; y < rows; y++) {
+        for (int x = 0; x < cols; x++) {
+            *(resp + x + y*cols) += fabs(min_resp);
+            if( max_resp < *(resp + x + y*cols) ){
+                max_resp = *(resp + x + y*cols);
+            }
+        }
+    }
+
+    for(int xy = 0; xy < rows*cols; xy++) {
+        *(resp + xy) /= max_resp;
+    }
+
 
 	GETTIME_FIN;
 
@@ -674,7 +720,7 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     // 'max_resp' saves the highest response for every pixel of the input:
     double *max_resp = (double*) malloc(rows_cols * sizeof(double));
     for( int xy = 0; xy < rows_cols; xy++){
-        *(max_resp + xy) = -INF;
+        *(max_resp + xy) = 0.0;//-INF;
     }
 
     fftw_plan p_c2r;
@@ -848,7 +894,16 @@ double FILTROS::calcROC( double *resp ){
     double TPF_new, FPF_new;
     double Az = 0.0;
 
-    FILE *fp_ROC = fopen("ROC_curve.fcs", "w");
+
+    char  nombre_ROC[512];
+    sprintf(nombre_ROC, "%s/ROC_curve_%i.fcs", mi_directorio, mi_tag);
+
+
+
+    FILE *fp_ROC = fopen(nombre_ROC, "w");
+
+
+    DEB_MSG("fp:" << fp_ROC << " <<" << nombre_ROC << ">>");
 
     DEB_MSG("n pos: " << i_positive << ", n neg " << n_negative );
 
@@ -892,7 +947,7 @@ double FILTROS::calcROC( double *resp ){
         // Mover los valores de la curva:
         TPF_old = TPF_new;
         FPF_old = FPF_new;
-        fprintf( fp_ROC , "%1.12f %1.12f\n", TPF_old, FPF_old);
+        fprintf( fp_ROC , "%1.12f %1.12f\n", FPF_old, TPF_old);
     }
 
 
@@ -919,9 +974,11 @@ double FILTROS::fitnessROC( INDIV *test, double *mi_resp ){
     //// Generar la respuesta del filtro de establecido para los parametros dados:
     switch(filtro_elegido){
         case SS_GABOR:
+            DEB_MSG("Gabor!!");
             respGabor(test, mi_resp);
             break;
         case GMF:
+            DEB_MSG("GMF!!");
             respGMF(test, mi_resp);
             break;
     }
@@ -1898,7 +1955,6 @@ void FILTROS::GA(){
     delete [] fitness_acum;
     delete [] poblacion;
 }
-
 
 
 

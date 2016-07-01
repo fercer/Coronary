@@ -224,6 +224,8 @@ class RECONS3D{
         void setLog( const char *ruta_log );
         void setFiltroLog( FILE *fplog );
         void setFiltroLog( const char* ruta_log );
+        void setFiltroTag( const int tag );
+        void setFiltroDt(const char *directorio);
 
     // O P E R A D O R E S  S O B R E C A R G A D O S
     //--------------------------------------------------------------------------------------- PUBLIC ----- ^

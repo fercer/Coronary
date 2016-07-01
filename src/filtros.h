@@ -76,6 +76,8 @@ class FILTROS{
 
         void setLog( FILE *fplog );
         void setLog(const char *ruta_log);
+        void setTag(const int tag);
+        void setDt(const char *directorio);
 
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
         // T I P O S        D E     D A T O S      P R I V A D O S
@@ -170,6 +172,8 @@ class FILTROS{
 
         char *mi_ruta_log;
         FILE *mi_fplog;
+        int mi_tag;
+        char *mi_directorio;
 
         //================================================================================== FILTROS:
         void respGMF(INDIV *test, double *resp);

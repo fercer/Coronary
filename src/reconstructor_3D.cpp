@@ -1116,10 +1116,6 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     GETTIME_INI;
     filtro.filtrar();
     GETTIME_FIN;
-    char mensaje[] = "XXX.XXXXXXXX\n";
-    sprintf(mensaje, "%3.8f\n", DIFTIME);
-    escribirLog( mensaje );
-
     DEB_MSG(imgs_base[angio_ID].segment_ptr);
 }
 
@@ -1630,6 +1626,22 @@ void RECONS3D::setFiltroLog( FILE *fplog ){
 void RECONS3D::setFiltroLog( const char *ruta_log ){
     filtro.setLog( ruta_log );
 }
+
+
+
+/*  Metodo: setFiltroTag
+
+    Funcion: Define el tag para nombrar los archivos que se generan
+*/
+void RECONS3D::setFiltroTag( const int tag ){
+    filtro.setTag( tag );
+}
+
+void RECONS3D::setFiltroDt(const char *directorio)
+{
+    filtro.setDt(directorio);
+}
+
 
 void RECONS3D::umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angio_ID)
 {
