@@ -2130,51 +2130,55 @@ DEB_MSG("Tipo UINT16");
 /*  Metodo: Cargar
     Funcion: Cargar la imagen a formato VTK desde varios archivos (Solo para imagenes JPEG, BMP o PNG).
 */
-int*  IMGVTK::Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, char **rutas, const int n_imgs, const bool enmascarar){
-    double *auxiliar = NULL;
-    double *mask_auxiliar = NULL;
+void  IMGVTK::Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, char **rutas, const int n_imgs, const bool enmascarar){
+    vtkSmartPointer<vtkImageData> auxiliar = vtkSmartPointer<vtkImageData>::New();
+    vtkSmartPointer<vtkImageData> mask_auxiliar = vtkSmartPointer<vtkImageData>::New();
 
-    int *dims = Cargar(rutas[0], &auxiliar, &mask_auxiliar, enmascarar);
+    Cargar(rutas[0], auxiliar, mask_auxiliar, 0, enmascarar);
+
+    double *aux_tmp = static_cast<double*>(auxiliar->GetScalarPointer(0, 0, 0));
+    double *mskaux_tmp = static_cast<double*>(mask_auxiliar->GetScalarPointer(0, 0, 0));
+
+    int dims[3];
+    auxiliar->GetDimensions(dims);
+
     const int mis_cols = dims[0];
-    const int mis_rows = dims[1];
+    const int mis_rens = dims[1];
+
     const int n_cols = mis_cols * n_imgs;
 
     // Extract data:
-    *img_src = new double [mis_rows * mis_cols * n_imgs];
-    if( enmascarar ){
-        *mask_src = new double [mis_rows * mis_cols * n_imgs];
-    }
+    img_src->SetExtent(0, n_cols-1, 0, mis_rens-1, 0, 0);
+    img_src->AllocateScalars( VTK_DOUBLE, 1);
+    img_src->SetOrigin(0.0, 0.0, 0.0);
+    img_src->SetSpacing(1.0, 1.0, 1.0);
 
-    for( int y = 0; y < mis_rows; y++){
-        memcpy(*img_src + y*n_cols, auxiliar + y*mis_cols, mis_cols*sizeof(double));
+    mask_src->SetExtent(0, n_cols-1, 0, mis_rens-1, 0, 0);
+    mask_src->AllocateScalars( VTK_DOUBLE, 1);
+    mask_src->SetOrigin(0.0, 0.0, 0.0);
+    mask_src->SetSpacing(1.0, 1.0, 1.0);
+
+    double *base_ptr_tmp = static_cast<double*>(img_src->GetScalarPointer(0, 0, 0));
+    double *mask_ptr_tmp = static_cast<double*>(mask_src->GetScalarPointer(0, 0, 0));
+    for( int y = 0; y < mis_rens; y++){
+        memcpy(base_ptr_tmp + y*n_cols, aux_tmp + y*mis_cols, mis_cols*sizeof(double));
         if(enmascarar){
-            memcpy(*mask_src + y*n_cols, mask_auxiliar + y*mis_cols, mis_cols*sizeof(double));
-        }else{
-            for( int x = 0; x < n_cols; x++){
-                *(*mask_src + y*n_cols + x) = 1.0;
-            }
+            memcpy(mask_ptr_tmp + y*n_cols, mskaux_tmp + y*mis_cols, mis_cols*sizeof(double));
         }
     }
 
     for( int img_i = 1; img_i < n_imgs; img_i++){
-        Cargar(rutas[img_i], &auxiliar, &mask_auxiliar, enmascarar);
-        for( int y = 0; y < mis_rows; y++){
-            memcpy(*img_src + y*n_cols + img_i*mis_cols, auxiliar + y*mis_cols, mis_cols*sizeof(double));
+        Cargar(rutas[img_i], auxiliar, mask_auxiliar, 0, enmascarar);
+        aux_tmp = static_cast<double*>(auxiliar->GetScalarPointer(0, 0, 0));
+        mskaux_tmp = static_cast<double*>(mask_auxiliar->GetScalarPointer(0, 0, 0));
+
+        for( int y = 0; y < mis_rens; y++){
+            memcpy(base_ptr_tmp + y*n_cols + img_i*mis_cols, aux_tmp+ y*mis_cols, mis_cols*sizeof(double));
             if(enmascarar){
-                memcpy(*mask_src + y*n_cols + img_i*mis_cols, mask_auxiliar + y*mis_cols, mis_cols*sizeof(double));
+                memcpy(mask_ptr_tmp + y*n_cols + img_i*mis_cols, mskaux_tmp + y*mis_cols, mis_cols*sizeof(double));
             }
         }
     }
-
-    delete [] auxiliar;
-
-    if( mask_auxiliar ){
-        delete [] mask_auxiliar;
-    }
-
-    dims[0] = n_cols;
-
-    return dims;
 }
 
 
@@ -2183,33 +2187,33 @@ int*  IMGVTK::Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkI
     Funcion: Cargar la imagen a formato VTK desde un archivo.
 */
 void IMGVTK::Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool enmascarar, const int nivel){
-
-    DEB_MSG("Cargando imagen desde: " COLOR_GREEN << ruta_origen << COLOR_NORMAL);
-
-    double **img_temp = NULL;
-
-    switch( img_idx){
-    case BASE:
-        img_temp = &base_ptr;
-        break;
-
-    case GROUNDTRUTH:
-        img_temp = &gt_ptr;
-        break;
+    if( !base ){
+        base = vtkSmartPointer<vtkImageData>::New();
+    }
+    if( !mask ){
+        mask = vtkSmartPointer<vtkImageData>::New();
     }
 
-    int *dims = Cargar(ruta_origen, img_temp, &mask_ptr, enmascarar);
+    Cargar(ruta_origen, base, mask, nivel, enmascarar);
+
+    base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
+    mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
+
+    int dims[3];
+    base->GetDimensions( dims );
 
     cols = dims[0];
-    rows = dims[1];
-    rows_cols = cols * rows;
+    rens = dims[1];
+    rens_cols = rens*cols;
 
-    DEB_MSG("Imagen cargada de dimensiones: [" << cols << "x" << rows << "]");
+    if( !segment ){
+        segment = vtkSmartPointer<vtkImageData>::New();
+        segment->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+        segment->AllocateScalars( VTK_DOUBLE, 1);
+        segment->SetOrigin(0.0, 0.0, 0.0);
+        segment->SetSpacing(1.0, 1.0, 1.0);
 
-    delete [] dims;
-
-    if( !segment_ptr ){
-        segment_ptr = new double [ rows_cols ];
+        segment_ptr = static_cast<double*>(segment->GetScalarPointer(0, 0, 0));
     }
 
 }
@@ -2221,31 +2225,30 @@ void IMGVTK::Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool e
 */
 void IMGVTK::Cargar(const IMG_IDX img_idx, char **rutas_origen, const int n_imgs, const bool enmascarar){
 
-    double **img_temp = NULL;
 
-    switch( img_idx){
-    case BASE:
-        img_temp = &base_ptr;
-        break;
+    base = vtkSmartPointer<vtkImageData>::New();
+    mask = vtkSmartPointer<vtkImageData>::New();
 
-    case GROUNDTRUTH:
-        img_temp = &gt_ptr;
-        break;
-    }
+    Cargar( base, mask, rutas, n_imgs, enmascarar );
 
-    int *dims = Cargar( img_temp, &mask_ptr, rutas_origen, n_imgs, enmascarar );
+    base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
+    mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
+
+
+    int dims[3];
+    base->GetDimensions( dims );
 
     cols = dims[0];
-    rows = dims[1];
-    rows_cols = rows*cols;
+    rens = dims[1];
+    rens_cols = rens*cols;
 
-    DEB_MSG("Imagenes cargadas de dimensiones: [" << cols << "x" << rows << "]");
+    segment = vtkSmartPointer<vtkImageData>::New();
+    segment->SetExtent(0, cols-1, 0, rens-1, 0, 0);
+    segment->AllocateScalars( VTK_DOUBLE, 1);
+    segment->SetOrigin(0.0, 0.0, 0.0);
+    segment->SetSpacing(1.0, 1.0, 1.0);
 
-    delete [] dims;
-
-    if( !segment_ptr ){
-        segment_ptr = new double [ rows_cols ];
-    }
+    segment_ptr = static_cast<double*>(segment->GetScalarPointer(0, 0, 0));
 
 }
 
