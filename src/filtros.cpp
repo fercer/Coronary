@@ -474,8 +474,8 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
     for( int k = 1; k < K; k++){
         theta += theta_inc;
-        const double ctheta = cos( -theta * PI/180.0 );
-        const double stheta = sin( -theta * PI/180.0 );
+        const double ctheta = cos( -theta * Mi_PI/180.0 );
+        const double stheta = sin( -theta * Mi_PI/180.0 );
 
         templates[k] = new double [temp_dims * temp_dims];
         memset(templates[k], 0, temp_dims*temp_dims*sizeof(double));
@@ -624,10 +624,10 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     double *v = (double*) malloc( rows * sizeof(double));
 
     for( int x = 0; x < cols; x++){
-        *(u + x) = (x - (double)cols/2.0) * (2.0 * PI / (double)cols);
+        *(u + x) = (x - (double)cols/2.0) * (2.0 * Mi_PI / (double)cols);
     }
     for( int y = 0; y < rows; y++){
-        *(v + y) = (y - (double)rows/2.0) * (2.0 * PI / (double)rows);
+        *(v + y) = (y - (double)rows/2.0) * (2.0 * Mi_PI / (double)rows);
     }
 
     //// Generate the high-pass template HPF
@@ -687,8 +687,8 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     double *max_resp_angles = (double*) malloc( rows_cols * sizeof(double) );
 
     for( double theta = 0.0; theta < 180.0; theta+=theta_increment){
-        const double stheta = sin(theta*PI/180.0);
-        const double ctheta = cos(theta*PI/180.0);
+        const double stheta = sin(theta*Mi_PI/180.0);
+        const double ctheta = cos(theta*Mi_PI/180.0);
 
         //// The Gabor filter is calculated for the rotated base at 'theta' degrees:
         for( int y = 0; y < rows/2; y++){
@@ -696,13 +696,13 @@ void FILTROS::respGabor(INDIV *test, double *resp){
             for( int x = 0; x < cols/2; x++){
                 Ur = *(u + x+cols/2)*ctheta + v_y*stheta;
                 Vr =-*(u + x+cols/2)*stheta + v_y*ctheta;
-                Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*PI*fx*PI*fx) + sy2*(Vr*Vr + 4.0*PI*fy*PI*fy))) * cosh(2.0*PI*(sx2*fx*Ur + sy2*fy*Vr));
+                Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) * cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
                 *(*(Img_filter + y*(cols/2+1) + x)  ) = *(*(Img_fft_HPF + y*(cols/2+1) + x)  ) * Gabor_xy;
                 *(*(Img_filter + y*(cols/2+1) + x)+1) = *(*(Img_fft_HPF + y*(cols/2+1) + x)+1) * Gabor_xy;
             }
             Ur = *(u)*ctheta + v_y*stheta;
             Vr =-*(u)*stheta + v_y*ctheta;
-            Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*PI*fx*PI*fx) + sy2*(Vr*Vr + 4.0*PI*fy*PI*fy))) * cosh(2.0*PI*(sx2*fx*Ur + sy2*fy*Vr));
+            Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) * cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
             *(*(Img_filter + y*(cols/2+1) + cols/2)  ) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)  ) * Gabor_xy;
             *(*(Img_filter + y*(cols/2+1) + cols/2)+1) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)+1) * Gabor_xy;
         }
@@ -712,14 +712,14 @@ void FILTROS::respGabor(INDIV *test, double *resp){
             for( int x = 0; x < cols/2; x++){
                 Ur = *(u + x+cols/2)*ctheta + v_y*stheta;
                 Vr =-*(u + x+cols/2)*stheta + v_y*ctheta;
-                Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*PI*fx*PI*fx) + sy2*(Vr*Vr + 4.0*PI*fy*PI*fy))) * cosh(2.0*PI*(sx2*fx*Ur + sy2*fy*Vr));
+                Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) * cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
                 *(*(Img_filter + y*(cols/2+1) + x)  ) = *(*(Img_fft_HPF + y*(cols/2+1) + x)  ) * Gabor_xy;
                 *(*(Img_filter + y*(cols/2+1) + x)+1) = *(*(Img_fft_HPF + y*(cols/2+1) + x)+1) * Gabor_xy;
 
             }
             Ur = *(u)*ctheta + v_y*stheta;
             Vr =-*(u)*stheta + v_y*ctheta;
-            Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*PI*fx*PI*fx) + sy2*(Vr*Vr + 4.0*PI*fy*PI*fy))) * cosh(2.0*PI*(sx2*fx*Ur + sy2*fy*Vr));
+            Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) * cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
             *(*(Img_filter + y*(cols/2+1) + cols/2)  ) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)  ) * Gabor_xy;
             *(*(Img_filter + y*(cols/2+1) + cols/2)+1) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)+1) * Gabor_xy;
         }
@@ -733,7 +733,7 @@ void FILTROS::respGabor(INDIV *test, double *resp){
         for( int xy = 0; xy < rows_cols; xy++){
             if( *(max_resp + xy) < *(Img_resp + xy)){
                 *(max_resp + xy) = *(Img_resp + xy);
-                *(max_resp_angles + xy) = -theta * PI / 180.0 + PI/2.0;
+                *(max_resp_angles + xy) = -theta * Mi_PI / 180.0 + Mi_PI/2.0;
             }
         }
     }

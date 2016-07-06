@@ -583,19 +583,6 @@ inline void IMGVTK::ampliarConjunto( int *etiquetas, const int equiv_A, const in
 
 
 
-/*  Metodo: equivalenciaRec
-    Funcion: Realiza las equivalencias de manera recursiva.
-*/
-void IMGVTK::equivalenciaRec(const int equiv, const int base, int **etiquetas){
-    DEB_MSG("Cambiando " << equiv << " por " << base << " [" << *(*(etiquetas + equiv)) << "]");
-    for( int k = 1; k < *(*(etiquetas + equiv)); k++){
-        equivalenciaRec( *(*(etiquetas + equiv) + k + 2), base, etiquetas );
-    }
-    *(*(etiquetas + equiv) + 2) = base;
-}
-
-
-
 
 /*  Metodo: conjuntosConexos
     Funcion: Obtiene los conjuntos conexos de la imagen.
@@ -709,54 +696,9 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
         }
     }
 
-    char nombre_etq[] = "etiquetas_antes_XXX.fcs";
-    sprintf( nombre_etq, "etiquetas_antes_%i.fcs", ++veces);
-    FILE *fp_etiquetas = fopen(nombre_etq, "w");
-    for( int y = 0; y < (mis_rens+2); y++){
-        for(int x = 0; x < (mis_cols+2); x++){
-            fprintf(fp_etiquetas, "%i ", *(pix_etq + y*(mis_cols+2) + x));
-        }
-        fprintf(fp_etiquetas, "\n ");
-    }
-    fclose( fp_etiquetas );
-
-    sprintf( nombre_etq, "equiv_antes_%i.fcs", veces);
-    FILE *fp_equivs = fopen(nombre_etq, "w");
-    for( int i = 0; i < max_etiquetas; i++){
-        for( int j = 0; j < *(*(val_etiquetas + i)) + 2; j++){
-            fprintf(fp_equivs, "%i ", *(*(val_etiquetas + i) + j));
-        }
-        fprintf(fp_equivs, "\n");
-    }
-    fclose( fp_equivs );
-
     DEB_MSG("Quedaron " << n_conjunto << " activados");
     n_conjunto++;
 
-    for( int i = 0; i <= n_conjunto; i++){
-        equivalenciaRec( i, *(*(val_etiquetas + i) + 2), val_etiquetas );
-    }
-
-    DEB_MSG("Cambiadas " << n_conjunto << " etiquetas");
-
-    sprintf( nombre_etq, "equiv_despues_%i.fcs", veces);
-    fp_equivs = fopen(nombre_etq, "w");
-    for( int i = 0; i < max_etiquetas; i++){
-        for( int j = 0; j < *(*(val_etiquetas + i)) + 2; j++){
-            fprintf(fp_equivs, "%i ", *(*(val_etiquetas + i) + j));
-        }
-        fprintf(fp_equivs, "\n");
-    }
-    fclose( fp_equivs );
-
-/*
-    /// Determinar cuantos conjuntos diferentes hay y encontrar las etiquetas equivalentes:
-
-    memset( conjuntos, -1, mis_rens_cols*sizeof(int) );
-    delete [] diferentes;
-*/
-
-    n_conjunto++;
     // Indicar a que conjunto pertenece cada pixel:
     memset( conjuntos, -1, mis_rens_cols*sizeof(int));
     for( int y = 0; y < mis_rens; y++){
@@ -770,16 +712,6 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
     delete [] val_etiquetas;
     delete [] pix_etq;
 
-
-    sprintf( nombre_etq, "etiquetas_despues_%i.fcs", veces);
-    fp_etiquetas = fopen(nombre_etq, "w");
-    for( int y = 0; y < (mis_rens); y++){
-        for(int x = 0; x < (mis_cols); x++){
-            fprintf(fp_etiquetas, "%i ", *(conjuntos + y*(mis_cols) + x));
-        }
-        fprintf(fp_etiquetas, "\n ");
-    }
-    fclose( fp_etiquetas );
 
     /// Contar cuantos elementos hay en cada grupo:
     unsigned int *n_etiquetados = new unsigned int [n_conjunto+1];
@@ -1887,7 +1819,18 @@ void IMGVTK::Cargar(const IMG_IDX img_idx, char **rutas_origen, const int n_imgs
     Funcion: Guarda la imagen en la ruta especificada con la extension especificada.
 */
 void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida ){
+
     double *img_ptr = NULL;
+
+
+    vtkSmartPointer<vtkImageData> img_out = vtkSmartPointer<vtkImageData>::New();
+
+    img_out->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
+    img_out->AllocateScalars(VTK_DOUBLE, 1);
+    img_out->SetOrigin(0.0, 0.0, 0.0);
+    img_out->SetSpacing(1.0, 1.0, 1.0);
+
+    double *img_out_ptr = static_cast< double* >(img_out->GetScalarPointer(0, 0, 0));
     int offset_x = 0, offset_y = 0;
 
     switch( img_idx ){
@@ -2012,7 +1955,6 @@ IMGVTK::IMGVTK(){
 
 
 IMGVTK::IMGVTK( const IMGVTK &origen ){
-    mi_log = origen.mi_log;
     max_dist = origen.max_dist;
 
     base_ptr = NULL;
@@ -2043,36 +1985,72 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
     rows_cols = rows * cols;
 
     if(origen.base_ptr){
-        base_ptr = new double [rows_cols];
+
+        base->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
+        base->AllocateScalars(VTK_DOUBLE, 1);
+        base->SetOrigin(0.0, 0.0, 0.0);
+        base->SetSpacing(1.0, 1.0, 1.0);
+
+        base_ptr = static_cast< double* >(base->GetScalarPointer(0,0,0));
         memcpy(base_ptr, origen.base_ptr, rows_cols*sizeof(double));
 
         if(origen.gt_ptr){
-            gt_ptr = new double [rows_cols];
+            ground->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
+            ground->AllocateScalars(VTK_DOUBLE, 1);
+            ground->SetOrigin(0.0, 0.0, 0.0);
+            ground->SetSpacing(1.0, 1.0, 1.0);
+
+            gt_ptr = static_cast< double* >(ground->GetScalarPointer(0,0,0));
             memcpy(gt_ptr, origen.gt_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.mask_ptr){
-            mask_ptr = new double [rows_cols];
+            mask->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
+            mask->AllocateScalars(VTK_DOUBLE, 1);
+            mask->SetOrigin(0.0, 0.0, 0.0);
+            mask->SetSpacing(1.0, 1.0, 1.0);
+
+            mask_ptr = static_cast< double* >(mask->GetScalarPointer(0,0,0));
             memcpy(mask_ptr, origen.mask_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.segment_ptr){
-            segment_ptr = new double [rows_cols];
+            segment->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
+            segment->AllocateScalars(VTK_DOUBLE, 1);
+            segment->SetOrigin(0.0, 0.0, 0.0);
+            segment->SetSpacing(1.0, 1.0, 1.0);
+
+            segment_ptr = static_cast< double* >(segment->GetScalarPointer(0,0,0));
             memcpy(segment_ptr, origen.segment_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.skl_ptr){
-            skl_ptr = new double [(cols+2)*(rows+2)];
+            skeleton->SetExtent(0, cols + 1, 0, rows + 1, 0, 0);
+            skeleton->AllocateScalars(VTK_DOUBLE, 1);
+            skeleton->SetOrigin(0.0, 0.0, 0.0);
+            skeleton->SetSpacing(1.0, 1.0, 1.0);
+
+            skl_ptr = static_cast< double* >(skeleton->GetScalarPointer(0,0,0));
             memcpy(skl_ptr, origen.skl_ptr, (cols+2)*(rows+2)*sizeof(double));
         }
 
         if(origen.map_ptr){
-            map_ptr = new double [rows_cols];
+            mapa_dist->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
+            mapa_dist->AllocateScalars(VTK_DOUBLE, 1);
+            mapa_dist->SetOrigin(0.0, 0.0, 0.0);
+            mapa_dist->SetSpacing(1.0, 1.0, 1.0);
+
+            map_ptr = static_cast< double* >(mapa_dist->GetScalarPointer(0,0,0));
             memcpy(map_ptr, origen.map_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.borders_ptr){
-            borders_ptr = new double [rows_cols];
+            borders->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
+            borders->AllocateScalars(VTK_DOUBLE, 1);
+            borders->SetOrigin(0.0, 0.0, 0.0);
+            borders->SetSpacing(1.0, 1.0, 1.0);
+
+            borders_ptr = static_cast< double* >(borders->GetScalarPointer(0,0,0));
             memcpy(borders_ptr, origen.borders_ptr, rows_cols*sizeof(double));
         }
     }
@@ -2081,7 +2059,6 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
 
 
 IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
-    mi_log = NULL;
     max_dist = 0;
 
     base_ptr = NULL;
@@ -2116,7 +2093,6 @@ IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
 
 
 IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel){
-    mi_log = NULL;
     max_dist = 0;
 
     base_ptr = NULL;
@@ -2160,31 +2136,6 @@ IMGVTK::~IMGVTK(){
         borrarSkeleton( pix_caract );
         delete pix_caract;
     }
-
-    if( base_ptr ){
-        delete [] base_ptr;
-    }
-    if( gt_ptr ){
-        delete [] gt_ptr;
-    }
-    if( skl_ptr ){
-        delete [] skl_ptr;
-    }
-    if( mask_ptr ){
-        delete [] mask_ptr;
-    }
-    if( map_ptr ){
-        delete [] map_ptr;
-    }
-    if( borders_ptr ){
-        delete [] borders_ptr;
-    }
-    if( segment_ptr ){
-        delete [] segment_ptr;
-    }
-    if( threshold_ptr ){
-        delete [] threshold_ptr;
-    }
 }
 
 
@@ -2193,7 +2144,6 @@ IMGVTK::~IMGVTK(){
 // O P E R A D O R E S  S O B R E C A R G A D O S
 // El operador de copia extrae unicamente el contenido de la imagen original
 IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
-    mi_log = origen.mi_log;
     max_dist = origen.max_dist;
 
     base_ptr = NULL;
@@ -2226,36 +2176,71 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
 
     if(origen.base_ptr){
 
-        base_ptr = new double [rows_cols];
+        base->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
+        base->AllocateScalars(VTK_DOUBLE, 1);
+        base->SetOrigin(0.0, 0.0, 0.0);
+        base->SetSpacing(1.0, 1.0, 1.0);
+
+        base_ptr = static_cast< double* >(base->GetScalarPointer(0,0,0));
         memcpy(base_ptr, origen.base_ptr, rows_cols*sizeof(double));
 
         if(origen.gt_ptr){
-            gt_ptr = new double [rows_cols];
+            ground->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
+            ground->AllocateScalars(VTK_DOUBLE, 1);
+            ground->SetOrigin(0.0, 0.0, 0.0);
+            ground->SetSpacing(1.0, 1.0, 1.0);
+
+            gt_ptr = static_cast< double* >(ground->GetScalarPointer(0,0,0));
             memcpy(gt_ptr, origen.gt_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.mask_ptr){
-            mask_ptr = new double [rows_cols];
+            mask->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
+            mask->AllocateScalars(VTK_DOUBLE, 1);
+            mask->SetOrigin(0.0, 0.0, 0.0);
+            mask->SetSpacing(1.0, 1.0, 1.0);
+
+            mask_ptr = static_cast< double* >(mask->GetScalarPointer(0,0,0));
             memcpy(mask_ptr, origen.mask_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.segment_ptr){
-            segment_ptr = new double [rows_cols];
+            segment->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
+            segment->AllocateScalars(VTK_DOUBLE, 1);
+            segment->SetOrigin(0.0, 0.0, 0.0);
+            segment->SetSpacing(1.0, 1.0, 1.0);
+
+            segment_ptr = static_cast< double* >(segment->GetScalarPointer(0,0,0));
             memcpy(segment_ptr, origen.segment_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.skl_ptr){
-            skl_ptr = new double [(cols+2)*(rows+2)];
+            skeleton->SetExtent(0, cols + 1, 0, rows + 1, 0, 0);
+            skeleton->AllocateScalars(VTK_DOUBLE, 1);
+            skeleton->SetOrigin(0.0, 0.0, 0.0);
+            skeleton->SetSpacing(1.0, 1.0, 1.0);
+
+            skl_ptr = static_cast< double* >(skeleton->GetScalarPointer(0,0,0));
             memcpy(skl_ptr, origen.skl_ptr, (cols+2)*(rows+2)*sizeof(double));
         }
 
         if(origen.map_ptr){
-            map_ptr = new double [rows_cols];
+            mapa_dist->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
+            mapa_dist->AllocateScalars(VTK_DOUBLE, 1);
+            mapa_dist->SetOrigin(0.0, 0.0, 0.0);
+            mapa_dist->SetSpacing(1.0, 1.0, 1.0);
+
+            map_ptr = static_cast< double* >(mapa_dist->GetScalarPointer(0,0,0));
             memcpy(map_ptr, origen.map_ptr, rows_cols*sizeof(double));
         }
 
         if(origen.borders_ptr){
-            borders_ptr = new double [rows_cols];
+            borders->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
+            borders->AllocateScalars(VTK_DOUBLE, 1);
+            borders->SetOrigin(0.0, 0.0, 0.0);
+            borders->SetSpacing(1.0, 1.0, 1.0);
+
+            borders_ptr = static_cast< double* >(borders->GetScalarPointer(0,0,0));
             memcpy(borders_ptr, origen.borders_ptr, rows_cols*sizeof(double));
         }
     }

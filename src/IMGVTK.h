@@ -11,7 +11,7 @@
 
 // Librerias de uso comun con QT:
 //#include <QPlainTextEdit>
-/*
+
 // Librerias de uso comun:
 #include <vtkVersion.h>
 #include <vtkSmartPointer.h>
@@ -27,7 +27,6 @@
 #include <gdcmImage.h>
 #include <gdcmReader.h>
 #include <gdcmTag.h>
-*/
 
 
 
@@ -104,7 +103,7 @@
 #endif
 
 
-//#define PI 3.14159265
+#define Mi_PI 3.14159265
 #define INF 1e100;
 
 
@@ -167,14 +166,14 @@ class IMGVTK{
         IMGVTK& operator= ( const IMGVTK &origen );
 
         // M I E M B R O S      P U B L I C O S
-//        vtkSmartPointer<vtkImageData> base;
-//        vtkSmartPointer<vtkImageData> ground;
-//        vtkSmartPointer<vtkImageData> mask;
-//        vtkSmartPointer<vtkImageData> skeleton;
-//        vtkSmartPointer<vtkImageData> segment;
-//        vtkSmartPointer<vtkImageData> threshold;
-//        vtkSmartPointer<vtkImageData> mapa_dist;
-//        vtkSmartPointer<vtkImageData> borders;
+        vtkSmartPointer<vtkImageData> base;
+        vtkSmartPointer<vtkImageData> ground;
+        vtkSmartPointer<vtkImageData> mask;
+        vtkSmartPointer<vtkImageData> skeleton;
+        vtkSmartPointer<vtkImageData> segment;
+        vtkSmartPointer<vtkImageData> threshold;
+        vtkSmartPointer<vtkImageData> mapa_dist;
+        vtkSmartPointer<vtkImageData> borders;
 
         int rows, cols, rows_cols;
         int n_niveles;

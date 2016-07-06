@@ -128,14 +128,14 @@ class RECONS3D{
         int n_angios;
         int detalle;
 
-        /*
+
         // Miembros para visualizar la segmentacion 3D:
         std::vector< vtkSmartPointer<vtkRenderer> > mis_renderers;
         vtkSmartPointer<vtkRenderer> renderer_global;
         std::vector< vtkSmartPointer<vtkPoints> > puntos;
         std::vector< vtkSmartPointer<vtkCellArray> > pixeles;
         std::vector< NORCEN > normal_centros;
-        */
+
 
         FILTROS filtro;
         FILE *fp_log;
@@ -144,29 +144,24 @@ class RECONS3D{
         void escribirLog( const char *mensaje );
         void barraProgreso( const int avance, const int milestones );
 
-        /*
         void renderizar(vtkSmartPointer<vtkRenderer> mi_renderer);
         void mostrarImagen(IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer, const int angio_ID);
         void mostrarImagen(const int angio_ID, IMGVTK::IMG_IDX img_idx);
-        */
 
-        /*
         void agregarVector(NORCEN org_dir, const double t, double color[], vtkSmartPointer<vtkRenderer> &mi_renderer);
         void agregarEjes(vtkSmartPointer<vtkRenderer> &mi_renderer);
         void agregarEsfera(const double x, const double y, const double z, const double radio, double color[3], vtkSmartPointer<vtkRenderer> mi_renderer );
-        */
 
-        /*
         void isoCentro( const int angio_ID );
         void mallarPuntos(const int angio_ID);
         POS posicionDefecto(const double ancho, const double alto, const double punta);
         void mostrarDetector(const int angio_ID);
-        */
 
-        /*
+
+
         void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> cilindros, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros);
         void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, vtkSmartPointer<vtkUnsignedCharArray> grafo_nivel, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int n_niveles);
-        */
+
     //-------------------------------------------------------------------------------------- PRIVATE ----- ^
 
     public: //------------------------------------------------------------------------------- PUBLIC----- v
@@ -196,10 +191,10 @@ class RECONS3D{
         double medirExactitud(const int angio_ID);
         void skeletonize(const int angio_ID, const int nivel_detalle);
 
-        /*
+
         void mostrarBase( const int angio_ID );
         void mostrarGroundtruth(  const int angio_ID  );
-        */
+
 
 
         void setFiltroEntrenamiento(const FILTROS::EVO_MET evo_met);
@@ -218,10 +213,10 @@ class RECONS3D{
 
         double *get_pixelData( const int angio_ID, IMGVTK::IMG_IDX img_idx );
 
-        /*
+
         vtkSmartPointer< vtkRenderer > getRenderer();
         vtkSmartPointer< vtkRenderer > getRenderer( const int angio_ID );
-        */
+
 
         void setLog( const char *ruta_log );
         void setFiltroLog( FILE *fplog );
