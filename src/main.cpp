@@ -237,8 +237,7 @@ int main(int argc, char** argv ){
         }
 
         reconstructor.segmentarImagenBase( 0 );
-
-//        reconstructor.Guardar("resp.png", IMGVTK::SEGMENT, IMGVTK::PNG, 0);
+        reconstructor.Guardar("resp.png", IMGVTK::SEGMENT, IMGVTK::PNG, 0);
 
 //        reconstructor.umbralizar(0, IMGVTK::RIDLER_CALVARD, 0);
 //        reconstructor.Guardar("r_y_c.png", IMGVTK::THRESHOLD, IMGVTK::PNG, 0);

@@ -278,7 +278,6 @@ DEB_MSG("min: " << min << ", max: " << max);
 
     vtkSmartPointer<vtkActor2D> actor = vtkSmartPointer<vtkActor2D>::New();
     actor->SetMapper(mapper);
-    actor->SetPosition(25,0);
 
     // Agregar el actor de la imagen al renderizador.
     mi_renderer->Clear();
@@ -725,6 +724,8 @@ void RECONS3D::agregarInput( const char *rutabase_input, bool enmascarar ){
     mallarPuntos(n_angios);
     isoCentro(n_angios);
 
+    mostrarImagen(IMGVTK::BASE, mis_renderers[n_angios], n_angios);
+    renderizar(mis_renderers[n_angios]);
 }
 
 
@@ -1129,6 +1130,9 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     char mensaje[] = "XXX.XXXXXXXX\n";
     sprintf(mensaje, "%3.8f\n", DIFTIME);
     escribirLog( mensaje );
+
+    mostrarImagen(IMGVTK::SEGMENT, mis_renderers[angio_ID], angio_ID);
+    renderizar(mis_renderers[angio_ID]);
 }
 
 

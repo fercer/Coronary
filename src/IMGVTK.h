@@ -149,7 +149,7 @@ class IMGVTK{
         double medirExactitud();
 
         void Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool enmascarar, const int nivel);
-        void Cargar(const IMG_IDX img_idx, char **rutas_origen , const int n_imgs, const bool enmascarar);
+        void Cargar(const IMG_IDX img_idx, char **rutas , const int n_imgs, const bool enmascarar);
 
         void Guardar( IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida );
 
@@ -200,8 +200,9 @@ class IMGVTK{
         // M E T O D O S      P R I V A D O S
         void escribirLog( const char *mensaje );
 
-        void Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const bool enmascarar);
-        void Cargar(double **img_src, double **mask_src, char **rutas, const int n_imgs, const bool enmascarar);
+
+        void Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel, const bool enmascarar);
+        void Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, char **rutas, const int n_imgs, const bool enmascarar);
 
         void maskFOV(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
         void fillMask(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
