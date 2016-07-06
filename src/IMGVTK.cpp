@@ -1629,53 +1629,490 @@ double IMGVTK::medirExactitud(){
 /*  Metodo: Cargar
     Funcion: Cargar desde un archivo DICOM/JPEG/PNG/BMP la imagen a formato VTK.
 */
-int* IMGVTK::Cargar(const char *ruta_origen, double **img_src, double **mask_src, const bool enmascarar){
+int* IMGVTK::Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const bool enmascarar){
 
     const int ruta_l = strlen(ruta_origen);
-DEB_MSG("Archivo de entrada: " << ruta_origen);
-    if( ruta_l <= 0 ){
-        escribirLog( "\n<<Error: Hay un problema con la ruta de entrada, tiene longitud 0 >>\n\n" );
-        return NULL;
-    }  
+DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
+    bool esDICOM = true;
+    bool esPGM = true;
+    esDICOM *= strcmp(ruta_origen + ruta_l - 3, "png");
+    esPGM   *= strcmp(ruta_origen + ruta_l - 3, "png");
+    esDICOM *= strcmp(ruta_origen + ruta_l - 3, "jpg");
+    esPGM   *= strcmp(ruta_origen + ruta_l - 3, "jpg");
+    esDICOM *= strcmp(ruta_origen + ruta_l - 4, "jpeg");
+    esPGM   *= strcmp(ruta_origen + ruta_l - 4, "jpeg");
+    esDICOM *= strcmp(ruta_origen + ruta_l - 3, "bmp");
+    esPGM   *= strcmp(ruta_origen + ruta_l - 3, "bmp");
+    esDICOM *= strcmp(ruta_origen + ruta_l - 3, "pgm");
+    esPGM   *= !strcmp(ruta_origen + ruta_l - 3, "pgm");
 
-    //// Cargar imagen formato PGM
-    FILE *fp_img = fopen( ruta_origen, "r" );
+    if( esDICOM ){
+        gdcm::ImageReader DICOMreader;
+        DICOMreader.SetFileName( ruta_origen );
 
-    char mensaje[512] = "";
-    fgets(mensaje, 512, fp_img);  // Leer 'Magic number'
-DEB_MSG("Magic number: " << mensaje);
-    fgets(mensaje, 512, fp_img);  // Leer Comentario
-DEB_MSG("Comentarios: " << mensaje);
-    int mis_cols, mis_rows;
+        DICOMreader.Read();
 
-    fscanf(fp_img, "%i", &mis_cols);    // Leer ancho
-DEB_MSG("columnas: " << mis_cols);
-    fscanf(fp_img, "%i", &mis_rows);    // Leer alto
-DEB_MSG("renglones: " << mis_rows);
-    int mis_rows_cols = mis_cols * mis_rows;
+        gdcm::File &file = DICOMreader.GetFile();
+        gdcm::DataSet &ds = file.GetDataSet();
 
-    double max_intensidad;
-    fscanf(fp_img, "%lf", &max_intensidad);  // Leer la escala de intensidad maxima
-DEB_MSG("max intensidad: " << max_intensidad);
-	if( !*(img_src) ){
-        *(img_src) = new double [mis_rows_cols];
+////---------- Extraer SID (Distancia de la fuente al detector): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1110) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                SID = atof( strm.c_str() );
+            }
+        }
+////---------- Extraer SOD (Distancia de la fuente al paciente): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1111) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                SOD = atof( strm.c_str() );
+            }
+        }
+////---------- Calcular el DDP (Distancia del detector al paciente): ---------------------------------------------------------------------
+        DDP = SID - SOD;
+////---------- Calcular el Magnification Factor: -----------------------------------------
+        const double Magnification = SID / SOD;
+
+////---------- Extraer pixY\pixX (Distancia entre el centro de los pixeles en el eje Y\X): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1164) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+DEB_MSG("pixXY: " << strm);
+                char *pixXYstr = new char [bv->GetLength()];
+                memcpy(pixXYstr, strm.c_str(), bv->GetLength() * sizeof(char ));
+                char *tmp = strchr(pixXYstr,'\\');
+                pixXYstr[ tmp - pixXYstr ] = '\0';
+                pixY = atof(pixXYstr);// / Magnification;
+                pixX = atof(tmp+1);// / Magnification;
+DEB_MSG("pixY: " << pixY << ", pixX: " << pixX);
+                delete [] pixXYstr;
+            }
+        }
+////---------- Extraer LAO/RAO (Angulo del detector en direccion izquierda(-) a derecha(+)): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1510) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                LAORAO = atof( strm.c_str() );
+DEB_MSG("LAO: " << LAORAO);
+            }
+        }
+////---------- Extraer CRA/CAU (Angulo del detector en direccion cranial(-) a caudal(+)): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1511) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                CRACAU = atof( strm.c_str() );
+DEB_MSG("CRA: " << CRACAU);
+            }
+        }
+
+////---------- Extraer Window Width (Ancho de la ventana donde se encuentran los valores de interes): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x7030) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+DEB_MSG("Field of view origin: " << strm);
+            }
+        }
+
+////---------- Extraer Source to Isocenter (Distancia de la fuente al isocentro): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x21, 0x1017) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                gdcm::Element<gdcm::VR::SL, gdcm::VM::VM1_n> el;
+                el.Set( de.GetValue() );
+                const double SISO = el.GetValue();
+                // Restar de la distancia de la fuente al detector (SID) la distancia del detector al isocentro para obtener la distancia del detector al isocentro (DISO).
+                DISO = SID - SISO;
+            }
+        }
+////---------- Extraer Window Center (Centro de los vlaores de interes): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x28, 0x1050) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                WCenter = atof( strm.c_str() );
+DEB_MSG("Window Center: " << WCenter);
+            }
+        }
+////---------- Extraer Window Width (Ancho de la ventana donde se encuentran los valores de interes): -----------------------------------------
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x28, 0x1051) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                WWidth = atof( strm.c_str() );
+DEB_MSG("Window Width: " << WWidth);
+            }
+        }
+////---------- Extraer el ECG: -----------------------------------------
+        int ecg_dim = 0, ecg_np = 0;
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x5000, 0x0005) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                gdcm::Element<gdcm::VR::US, gdcm::VM::VM1_n> el;
+                el.Set( de.GetValue() );
+                ecg_dim = el.GetValue();
+DEB_MSG("[ECG] Dimensiones: " << ecg_dim );
+            }
+        }
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x5000, 0x0010) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                gdcm::Element<gdcm::VR::US, gdcm::VM::VM1_n> el;
+                el.Set( de.GetValue() );
+                ecg_np = el.GetValue();
+DEB_MSG("[ECG] Numero de puntos: " << ecg_np );
+            }
+        }
+        int n_niveles = 1;
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x8, 0x2143) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                std::string strm(bv->GetPointer(), bv->GetLength());
+                n_niveles = atof( strm.c_str() );
+DEB_MSG("Numero de fotogramas: " << n_niveles);
+            }
+        }
+        {
+            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x5000, 0x3000) );
+            const gdcm::ByteValue *bv = de.GetByteValue();
+            if( bv ){
+                gdcm::Element<gdcm::VR::OW, gdcm::VM::VM1_n> el;
+                el.Set( de.GetValue() );
+                char *nombre_ecg = new char [18];
+                strcpy(nombre_ecg, ruta_origen + ruta_l - 7);
+                sprintf( nombre_ecg, "%s_%i.dat", nombre_ecg, n_niveles);
+                FILE *fp = fopen(nombre_ecg, "w");
+
+
+
+                for( int i = 0; i < ecg_np; i++){
+                    fprintf(fp, "%i %i\n", i, el.GetValue(i));
+                }
+                fclose( fp );
+                delete [] nombre_ecg;
+            }
+        }
+/*
+            std::string num_points_str = file.GetEntryString(0x5000,0x0010);
+            unsigned short num_points;
+            convert.clear();
+            convert.str(num_points_str);
+            convert >> num_points;
+DEB_MSG("Number of Points: " << num_points);
+
+            std::string data_type = file.GetEntryString(0x5000,0x0020);
+DEB_MSG("Type of Data: " << data_type);
+
+            std::string curve_desc = file.GetEntryString(0x5000,0x0022);
+DEB_MSG("Curve Description: " << curve_desc);
+
+            std::string data_rep_str = file.GetEntryString(0x5000,0x0103);
+            unsigned short data_rep;
+            convert.clear();
+            convert.str(data_rep_str);
+            convert >> data_rep;
+
+            gdcm::DocEntry *pCurveDataDoc = file.GetDocEntry(0x5000, 0x3000);
+            gdcm::DataEntry *pCurveData = dynamic_cast<gdcm::DataEntry *>(pCurveDataDoc);
+            uint8_t *curve_data = pCurveData->GetBinArea();
+
+            for(int i = 0; i < num_points; i++){
+DEB_MSG("Pt(" << i <<  ") = " << ((unsigned short*)curve_data)[i]);
+            }
+*/
+
+        ///----------------------------------------------------- Leer imagenes
+        DICOMreader.Read();
+        const gdcm::Image &gimage = DICOMreader.GetImage();
+DEB_MSG("Buffer length: " << gimage.GetBufferLength());
+        char *buffer = new char[gimage.GetBufferLength()];
+        gimage.GetBuffer(buffer);
+
+        const unsigned int* dimension = gimage.GetDimensions();
+        const int mis_cols = dimension[0];
+        const int mis_rens = dimension[1];
+        const int mis_niveles = dimension[2];
+        const int mis_rens_cols = mis_rens*mis_cols;
+
+DEB_MSG("Cols: " << mis_cols << ", rens: " << mis_rens  << ", niveles: " << mis_niveles);
+
+        // Alojar memoria para la imagen:
+        img_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, 0);
+        img_src->AllocateScalars( VTK_DOUBLE, 1);
+        img_src->SetOrigin(0.0, 0.0, 0.0);
+        img_src->SetSpacing(1.0, 1.0, 1.0);
+
+        double *img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
+
+        mask_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0,0);
+        mask_src->AllocateScalars( VTK_DOUBLE, 1);
+        mask_src->SetOrigin(0.0, 0.0, 0.0);
+        mask_src->SetSpacing(1.0, 1.0, 1.0);
+
+        gdcm::PhotometricInterpretation scl_comps = gimage.GetPhotometricInterpretation();
+        gdcm::PixelFormat pix_format = gimage.GetPixelFormat();
+
+        switch(scl_comps){
+            case gdcm::PhotometricInterpretation::RGB:{
+DEB_MSG("Imagen DICOM en RGB...");
+                    if( pix_format == gdcm::PixelFormat::UINT8 ){
+
+                        img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
+                        for( int y = 0; y < mis_rens; y++){
+                            for( int x = 0; x < mis_cols; x++){
+                                const double pixR = (double)(unsigned char)*(buffer + 3*x   + y*mis_cols*3 + nivel*mis_rens_cols*3) - WCenter + 0.5;
+                                const double pixG = (double)(unsigned char)*(buffer + 3*x+1 + y*mis_cols*3 + nivel*mis_rens_cols*3) - WCenter + 0.5;
+                                const double pixB = (double)(unsigned char)*(buffer + 3*x+2 + y*mis_cols*3 + nivel*mis_rens_cols*3) - WCenter + 0.5;
+                                double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
+                                if( pix <= -((WWidth-1) / 2)){
+                                    pix = 0.0;
+                                }else if(pix > ((WWidth-1) / 2)){
+                                    pix = 0.0;
+                                }else{
+                                    pix = pix / (WWidth -1) + 0.5;
+                                }
+                                *(img_tmp + (mis_rens-y-1)*mis_rens + x ) = pix; // 255.0;
+                            }
+                        }
+                    }else{
+                        escribirLog( COLOR_BACK_BLACK COLOR_RED "< ERROR AL LEER ARCHIVO DICOM: Formato de imagen RGB no soportado >\n" COLOR_NORMAL);
+                    }
+                    break;
+                }
+            case gdcm::PhotometricInterpretation::MONOCHROME1:
+            case gdcm::PhotometricInterpretation::MONOCHROME2:{
+DEB_MSG("Imagen DICOM en escala de grises...");
+                    if( pix_format == gdcm::PixelFormat::UINT8 ){
+DEB_MSG("Tipo UINT8");
+
+                        img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
+                        for( int y = 0; y < mis_rens; y++){
+                            for( int x = 0; x < mis_cols; x++){
+                                double pix = (double)(unsigned char)*(buffer + nivel*mis_rens_cols + x + y*mis_cols) - WCenter + 0.5;
+
+                                if( pix <= -((WWidth-1) / 2)){
+                                    pix = 0.0;
+                                }else if(pix > ((WWidth-1) / 2)){
+                                    pix = 1.0;
+                                }else{
+                                    pix = pix / (WWidth -1) + 0.5;
+                                }
+                                *(img_tmp + (mis_rens-y-1)*mis_rens + x) = pix; // 255.0;
+                            }
+                        }
+
+                    }else if( pix_format == gdcm::PixelFormat::UINT16 ){
+DEB_MSG("Tipo UINT16");
+                        unsigned short *buffer16 = (unsigned short*)buffer;
+
+                        img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
+                        for( int y = 0; y < mis_rens; y++){
+                            for( int x = 0; x < mis_cols; x++){
+                                const double pixR = (double)((unsigned char)*(buffer16 + 3*x   + y*mis_cols*3 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
+                                const double pixG = (double)((unsigned char)*(buffer16 + 3*x+1 + y*mis_cols*3 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
+                                const double pixB = (double)((unsigned char)*(buffer16 + 3*x+2 + y*mis_cols*3 + nivel*mis_rens_cols*3) / 16)  - WCenter + 0.5;
+                                double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
+                                if( pix <= -((WWidth-1) / 2)){
+                                    pix = 0.0;
+                                }else if(pix > ((WWidth-1) / 2)){
+                                    pix = 0.0;
+                                }else{
+                                    pix = pix / (WWidth -1) + 0.5;
+                                }
+                                *(img_tmp + (mis_rens-y-1)*mis_rens + x) =  pix; // 255.0;
+                            }
+                        }
+
+                    }else{
+                        escribirLog( COLOR_BACK_BLACK COLOR_RED "< ERROR AL LEER ARCHIVO DICOM: Formato de imagen RGB no soportado >\n" COLOR_NORMAL);
+                    }
+                    break;
+                }
+        }
+        delete [] buffer;
+
+
+    }else if(esPGM){ ///------------------------------------------------------------------------------------------------
+        //// Cargar imagen formato PGM
+        FILE *fp_img = fopen( ruta_origen, "r" );
+
+        char temp_str[512] = "";
+        fgets(temp_str, 512, fp_img);  // Leer 'Magic number'
+    DEB_MSG("Magic number: " << temp_str);
+        fgets(temp_str, 512, fp_img);  // Leer Comentario
+    DEB_MSG("Comentarios: " << temp_str);
+        int mis_cols, mis_rows;
+
+        fscanf(fp_img, "%i", &mis_cols);    // Leer ancho
+    DEB_MSG("columnas: " << mis_cols);
+        fscanf(fp_img, "%i", &mis_rows);    // Leer alto
+    DEB_MSG("renglones: " << mis_rows);
+        int mis_rows_cols = mis_cols * mis_rows;
+
+        double max_intensidad;
+        fscanf(fp_img, "%lf", &max_intensidad);  // Leer la escala de intensidad maxima
+    DEB_MSG("max intensidad: " << max_intensidad);
+        if( !*(img_src) ){
+            *(img_src) = new double [mis_rows_cols];
+        }
+
+        int intensidad;
+        for( int xy = 0; xy < mis_rows_cols; xy++){
+            fscanf( fp_img, "%i", &intensidad );
+            *(*img_src + xy) = (double)intensidad / max_intensidad;
+            if (enmascarar && (xy % 1000) == 0 ) {
+                DEB_MSG( "[" << xy << "]: " << *(*img_src + xy) << " :: " << (double)intensidad);
+            }
+        }
+
+    }else{ ///------------------------------------------------------------------------------------------------
+        // Leer la imagen en RBG o Escala de Grises:
+        vtkSmartPointer<vtkImageReader2Factory> readerFactory = vtkSmartPointer<vtkImageReader2Factory>::New();
+        vtkSmartPointer<vtkImageReader2> imgReader = readerFactory->CreateImageReader2( ruta_origen );
+
+        imgReader->SetFileName( ruta_origen );
+        imgReader->Update();
+
+        // Pasar temporalmente la imagen de RGB a escala de grises en la imagen de entrada.
+        int dims[3];
+        imgReader->GetOutput()->GetDimensions( dims );
+
+        int scl_comps = imgReader->GetOutput()->GetNumberOfScalarComponents();
+
+        const int mis_cols = dims[0];
+        const int mis_rens = dims[1];
+        const int mis_rens_cols = mis_rens*mis_cols;
+
+        // Alojar memoria para la imagen:
+        img_src->SetExtent(0, mis_cols-1, 0, mis_rens-1, 0, 0);
+        img_src->AllocateScalars( VTK_DOUBLE, 1);
+        img_src->SetOrigin(0.0, 0.0, 0.0);
+        img_src->SetSpacing(1.0, 1.0, 1.0);
+
+        double *img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
+
+
+        switch(scl_comps){
+            // La imagen esta en escala de grises:
+            case 1:
+            case 2:{
+                DEB_MSG("La imagen esta en escala de grises");
+                vtkSmartPointer<vtkImageExtractComponents> extractGreyFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
+                extractGreyFilter->SetInputConnection(imgReader->GetOutputPort());
+                extractGreyFilter->SetComponents(0);
+                extractGreyFilter->Update();
+
+                unsigned char *gris = static_cast<unsigned char*>(extractGreyFilter->GetOutput()->GetScalarPointer(0,0,0));
+
+                for( int xy = 0; xy < mis_rens_cols; xy++){
+                    *(img_tmp + xy) = (double)*(gris+xy) / 255.0;
+                }
+                break;
+            }
+            // La imagen esta en RGB:
+            case 3:{
+                DEB_MSG("La imagen esta en RGB");
+                vtkSmartPointer<vtkImageExtractComponents> extractRedFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
+                extractRedFilter->SetInputConnection(imgReader->GetOutputPort());
+                extractRedFilter->SetComponents(0);
+                extractRedFilter->Update();
+
+                vtkSmartPointer<vtkImageExtractComponents> extractGreenFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
+                extractGreenFilter->SetInputConnection(imgReader->GetOutputPort());
+                extractGreenFilter->SetComponents(1);
+                extractGreenFilter->Update();
+
+                vtkSmartPointer<vtkImageExtractComponents> extractBlueFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
+                extractBlueFilter->SetInputConnection(imgReader->GetOutputPort());
+                extractBlueFilter->SetComponents(2);
+                extractBlueFilter->Update();
+
+                vtkImageData *ptR = extractRedFilter->GetOutput();
+                vtkImageData *ptG = extractGreenFilter->GetOutput();
+                vtkImageData *ptB = extractBlueFilter->GetOutput();
+
+                double color;
+
+                for( int i = 0 ; i < mis_rens; i++){
+                    for( int j = 0; j < mis_cols; j++ ){
+                        color = ((0.297)*ptR->GetScalarComponentAsDouble(j,i,0,0) +
+                                 (0.589)*ptG->GetScalarComponentAsDouble(j,i,0,0) +
+                                 (0.114)*ptB->GetScalarComponentAsDouble(j,i,0,0));
+
+                        *(img_tmp + j + i*mis_cols) = color / 255.0;
+                    }
+                }
+                break;
+            }
+            // La imagen esta en RGBA:
+            case 4:{
+                DEB_MSG("La Imagen esta en RGB{A}");
+                vtkSmartPointer<vtkImageExtractComponents> extractRedFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
+                extractRedFilter->SetInputConnection(imgReader->GetOutputPort());
+                extractRedFilter->SetComponents(0);
+                extractRedFilter->Update();
+
+                vtkSmartPointer<vtkImageExtractComponents> extractGreenFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
+                extractGreenFilter->SetInputConnection(imgReader->GetOutputPort());
+                extractGreenFilter->SetComponents(1);
+                extractGreenFilter->Update();
+
+                vtkSmartPointer<vtkImageExtractComponents> extractBlueFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
+                extractBlueFilter->SetInputConnection(imgReader->GetOutputPort());
+                extractBlueFilter->SetComponents(2);
+                extractBlueFilter->Update();
+
+                vtkSmartPointer<vtkImageExtractComponents> extractAlphaFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
+                extractAlphaFilter->SetInputConnection(imgReader->GetOutputPort());
+                extractAlphaFilter->SetComponents(3);
+                extractAlphaFilter->Update();
+
+                vtkImageData *ptR = extractRedFilter->GetOutput();
+                vtkImageData *ptG = extractGreenFilter->GetOutput();
+                vtkImageData *ptB = extractBlueFilter->GetOutput();
+                //vtkImageData *ptA = extractAlphaFilter->GetOutput();
+                double color;
+
+                for( int i = 0 ; i < mis_rens; i++){
+                    for( int j = 0; j < mis_cols; j++ ){
+                        color = ((0.297)*ptR->GetScalarComponentAsDouble(j,i,0,0) +
+                                 (0.589)*ptG->GetScalarComponentAsDouble(j,i,0,0) +
+                                 (0.114)*ptB->GetScalarComponentAsDouble(j,i,0,0));
+
+                        *(img_tmp + j + i*mis_cols) = color / 255.0;
+                    }
+                }
+                break;
+            }
+        }
+
+        imgReader->Delete();
     }
 
-    int intensidad;
-    for( int xy = 0; xy < mis_rows_cols; xy++){
-        fscanf( fp_img, "%i", &intensidad );
-        *(*img_src + xy) = (double)intensidad / max_intensidad;
-		if (enmascarar && (xy % 1000) == 0 ) {
-			DEB_MSG( "[" << xy << "]: " << *(*img_src + xy) << " :: " << (double)intensidad);
-		}
-    }
-
+    char mensaje[512];
+    sprintf( mensaje, "Imagen " COLOR_GREEN "'%s'" COLOR_NORMAL " cargada exitosamente.\n", ruta_origen );
+    escribirLog( mensaje );
 
     if(enmascarar){
-        if( !*mask_src ){
-            *(mask_src) = new double [mis_rows_cols];
-        }
-        definirMask(*img_src, *mask_src, mis_rows, mis_cols);
+        definirMask(img_src, mask_src);
     }
 
     int *mis_dims = new int [2];
@@ -1693,7 +2130,7 @@ DEB_MSG("max intensidad: " << max_intensidad);
 /*  Metodo: Cargar
     Funcion: Cargar la imagen a formato VTK desde varios archivos (Solo para imagenes JPEG, BMP o PNG).
 */
-int*  IMGVTK::Cargar(double **img_src, double **mask_src, char **rutas, const int n_imgs, const bool enmascarar){
+int*  IMGVTK::Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, char **rutas, const int n_imgs, const bool enmascarar){
     double *auxiliar = NULL;
     double *mask_auxiliar = NULL;
 
