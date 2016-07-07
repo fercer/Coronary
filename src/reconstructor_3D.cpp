@@ -1487,6 +1487,7 @@ void RECONS3D::skeletonize(const int angio_ID, const int nivel_detalle){
         DEB_MSG("Agregando al renderizador");
         renderer_global->AddActor( actor );
     }
+    renderizar( renderer_global );
 }
 
 
@@ -1597,7 +1598,7 @@ RECONS3D::RECONS3D(){
 
     double color[] = {1.0, 1.0, 1.0};
 //    agregarEsfera(0.0, 0.0, 0.0, 10.0, color, renderer_global);
-    agregarEjes(renderer_global);
+//    agregarEjes(renderer_global);
 
     n_angios = -1;
 }

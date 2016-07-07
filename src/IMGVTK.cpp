@@ -2436,16 +2436,14 @@ void IMGVTK::Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool e
 void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida ){
 
     double *img_ptr = NULL;
-
-
     vtkSmartPointer<vtkImageData> img_out = vtkSmartPointer<vtkImageData>::New();
 
     img_out->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-    img_out->AllocateScalars(VTK_DOUBLE, 1);
+    img_out->AllocateScalars(VTK_UNSIGNED_CHAR, 1);
     img_out->SetOrigin(0.0, 0.0, 0.0);
     img_out->SetSpacing(1.0, 1.0, 1.0);
 
-    double *img_out_ptr = static_cast< double* >(img_out->GetScalarPointer(0, 0, 0));
+    unsigned char *img_out_ptr = static_cast< unsigned char* >(img_out->GetScalarPointer(0, 0, 0));
     int offset_x = 0, offset_y = 0;
 
     switch( img_idx ){
@@ -2526,7 +2524,7 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
         case PNG:{
             for( int y = 0; y < rows; y++ ){
                 for( int x = 0; x < cols; x++ ){
-                    *(img_out_ptr + x + (rows - y - 1)*cols) = (unsigned char)(255.0 * (*(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) - min) / (max - min));
+                    *(img_out_ptr + x + y*cols) = (unsigned char)(255.0 * (*(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) - min) / (max - min));
                 }
             }
             vtkSmartPointer<vtkPNGWriter> png_output = vtkSmartPointer<vtkPNGWriter>::New();

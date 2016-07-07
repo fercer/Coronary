@@ -239,24 +239,16 @@ int main(int argc, char** argv ){
         reconstructor.segmentarImagenBase( 0 );
         reconstructor.Guardar("resp.png", IMGVTK::SEGMENT, IMGVTK::PNG, 0);
 
-//        reconstructor.umbralizar(0, IMGVTK::RIDLER_CALVARD, 0);
-//        reconstructor.Guardar("r_y_c.png", IMGVTK::THRESHOLD, IMGVTK::PNG, 0);
+        reconstructor.umbralizar(0, IMGVTK::RIDLER_CALVARD, 0);
+        reconstructor.Guardar("ryc.png", IMGVTK::THRESHOLD, IMGVTK::PNG, 0);
 
-//        reconstructor.umbralizar(0, IMGVTK::OTSU, 0);
-//        reconstructor.Guardar("otsu.png", IMGVTK::THRESHOLD, IMGVTK::PNG, 0);
+        reconstructor.lengthFilter(0, IMGVTK::THRESHOLD, 600);
+        reconstructor.Guardar("ryc_600.png", IMGVTK::THRESHOLD, IMGVTK::PNG, 0);
 
-//        reconstructor.lengthFilter(0, IMGVTK::THRESHOLD, 100);
-//        reconstructor.Guardar("otsu_100.png", IMGVTK::THRESHOLD, IMGVTK::PNG, 0);
-
-//        reconstructor.skeletonize( 0, 1);
-
-//        reconstructor.Guardar("skel.png", IMGVTK::SKELETON, IMGVTK::PNG, 0);
-//        reconstructor.Guardar("boundaries.png", IMGVTK::BORDERS, IMGVTK::PNG, 0);
-//        reconstructor.Guardar("mapadists.png", IMGVTK::MAPDIST, IMGVTK::PNG, 0);
-
-//        reconstructor.skeletonize( 0, 4);
-//        reconstructor.skeletonize( 0, 20);
-//        reconstructor.skeletonize( 0, 100);
+        reconstructor.skeletonize(0, 100);
+        reconstructor.skeletonize(0, 50);
+        reconstructor.skeletonize(0, 20);
+        reconstructor.skeletonize(0, 5);
 
         if( parametros[21].mi_valor.par_s[0] == 'y' ){
 
