@@ -5,7 +5,7 @@ if(POLICY CMP0020)
   cmake_policy(SET CMP0020 NEW)
 endif()
 
-SET(NOMBRE_PROYECTO coronary)
+SET(NOMBRE_PROYECTO Coronary)
 SET(HEADERS src/reconstructor_3D.h src/filtros.h src/IMGVTK.h src/pars_fercer.h)
 SET(SOURCES src/main.cpp src/reconstructor_3D.cpp src/filtros.cpp src/IMGVTK.cpp src/pars_fercer.c)
 
