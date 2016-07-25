@@ -1350,7 +1350,13 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
     }
 
     if( !skl_ptr ){
-        skl_ptr = new double [(cols+2)*(rows+2)];
+		skeleton = vtkSmartPointer< vtkImageData >::New();
+		skeleton->SetExtent(0, cols + 1, 0, rows + 1, 0, 0);
+		skeleton->AllocateScalars(VTK_DOUBLE, 1);
+		skeleton->SetOrigin(0.0, 0.0, 0.0);
+		skeleton->SetSpacing(1.0, 1.0, 1.0);
+
+		skl_ptr = static_cast< double* >(skeleton->GetScalarPointer(0, 0, 0));
     }
 
     memset(skl_ptr, 0, (rows+2)*(cols+2)*sizeof(double));
@@ -1537,7 +1543,13 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
 void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const double nivel){
 
     if( !threshold_ptr ){
-        threshold_ptr = new double [rows_cols];
+		threshold = vtkSmartPointer< vtkImageData >::New();
+		threshold->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
+		threshold->AllocateScalars(VTK_DOUBLE, 1);
+		threshold->SetOrigin(0.0, 0.0, 0.0);
+		threshold->SetSpacing(1.0, 1.0, 1.0);
+
+		threshold_ptr = static_cast< double* >(threshold->GetScalarPointer(0, 0, 0));
     }
 
     double *img_ptr = NULL;
@@ -2498,11 +2510,7 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
 
     switch(tipo_salida){
         case PGM:{
-            for( int y = 0; y < rows; y++ ){
-                for( int x = 0; x < cols; x++ ){
-                    *(img_out_ptr + x + y*cols) = (unsigned char)(255.0 * (*(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) - min) / (max - min));
-                }
-            }
+
             FILE *fp_out = fopen( ruta, "w");
 
             fprintf(fp_out, "P2\n");
@@ -2512,10 +2520,12 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
             fprintf(fp_out, "255\n");
 
             int intensidad;
-            for( int xy = 0; xy < rows_cols; xy++){
-                intensidad = (int) 255.0 * (*(img_ptr + xy) - min) / (max - min);
-                fprintf(fp_out, "%i\n", intensidad);
-            }
+			for (int y = 0; y < rows; y++) {
+				for (int x = 0; x < cols; x++) {
+					intensidad = (unsigned char)(255.0 * (*(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x * 2)) - min) / (max - min));
+					fprintf(fp_out, "%i\n", intensidad);
+				}
+			}
 
             fclose( fp_out );
             break;
@@ -2527,6 +2537,7 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
                     *(img_out_ptr + x + y*cols) = (unsigned char)(255.0 * (*(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) - min) / (max - min));
                 }
             }
+
             vtkSmartPointer<vtkPNGWriter> png_output = vtkSmartPointer<vtkPNGWriter>::New();
             png_output->SetFileName( ruta );
             png_output->SetInputData( img_out );
@@ -2672,6 +2683,19 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
             borders_ptr = static_cast< double* >(borders->GetScalarPointer(0,0,0));
             memcpy(borders_ptr, origen.borders_ptr, rows_cols*sizeof(double));
         }
+
+		if (origen.threshold_ptr) {
+			threshold = vtkSmartPointer< vtkImageData >::New();
+			threshold->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
+			threshold->AllocateScalars(VTK_DOUBLE, 1);
+			threshold->SetOrigin(0.0, 0.0, 0.0);
+			threshold->SetSpacing(1.0, 1.0, 1.0);
+
+			threshold_ptr = static_cast< double* >(threshold->GetScalarPointer(0, 0, 0));
+			memcpy(threshold_ptr, origen.threshold_ptr, rows_cols * sizeof(double));
+
+		}
+
     }
 }
 

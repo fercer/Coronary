@@ -18,7 +18,7 @@
 #include <stdio.h>
 
 #if _WIN32
-    #include "D:\Apps\FFTW\fftw3.h"
+    #include "D:\Apps\FFTW\include\fftw3.h"
 #else
     #include <fftw3.h>
 #endif

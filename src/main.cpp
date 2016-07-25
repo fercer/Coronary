@@ -239,10 +239,10 @@ int main(int argc, char** argv ){
         reconstructor.segmentarImagenBase( 0 );
         reconstructor.Guardar("resp.png", IMGVTK::SEGMENT, IMGVTK::PNG, 0);
 
-        reconstructor.umbralizar(0, IMGVTK::RIDLER_CALVARD, 0);
+        reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
         reconstructor.Guardar("ryc.png", IMGVTK::THRESHOLD, IMGVTK::PNG, 0);
 
-        reconstructor.lengthFilter(0, IMGVTK::THRESHOLD, 600);
+        reconstructor.lengthFilter(IMGVTK::THRESHOLD, 600, 0);
         reconstructor.Guardar("ryc_600.png", IMGVTK::THRESHOLD, IMGVTK::PNG, 0);
 
         reconstructor.skeletonize(0, 100);
@@ -548,50 +548,50 @@ int main(int argc, char** argv ){
                     double accuracy;
 
                     sprintf(ruta_thresholds, "%s/tout_otsu_100_%i.pgm", parametros[21].mi_valor.par_s, i );
-                    reconstructor.umbralizar(i, IMGVTK::OTSU, 0.0);
-                    reconstructor.lengthFilter(i, IMGVTK::THRESHOLD, 100);
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0.0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 100, i);
                     reconstructor.Guardar(ruta_thresholds, IMGVTK::THRESHOLD, IMGVTK::PGM, i);
                     accuracy = reconstructor.medirExactitud(i);
 
                     sprintf(ruta_thresholds, "%s/tout_otsu_500_%i.pgm", parametros[21].mi_valor.par_s, i );
-                    reconstructor.umbralizar(i, IMGVTK::OTSU, 0.0);
-                    reconstructor.lengthFilter(i, IMGVTK::THRESHOLD, 500);
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0.0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 500, i);
                     reconstructor.Guardar(ruta_thresholds, IMGVTK::THRESHOLD, IMGVTK::PGM, i);
                     accuracy = reconstructor.medirExactitud(i);
 
                     sprintf(ruta_thresholds, "%s/tout_otsu_1000_%i.pgm", parametros[21].mi_valor.par_s, i );
-                    reconstructor.umbralizar(i, IMGVTK::OTSU, 0.0);
-                    reconstructor.lengthFilter(i, IMGVTK::THRESHOLD, 1000);
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0.0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1000, i);
                     reconstructor.Guardar(ruta_thresholds, IMGVTK::THRESHOLD, IMGVTK::PGM, i);
                     accuracy = reconstructor.medirExactitud(i);
 
                     sprintf(ruta_thresholds, "%s/tout_otsu_2000_%i.pgm", parametros[21].mi_valor.par_s, i );
-                    reconstructor.umbralizar(i, IMGVTK::OTSU, 0.0);
-                    reconstructor.lengthFilter(i, IMGVTK::THRESHOLD, 2000);
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::OTSU, 0.0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 2000, i);
                     reconstructor.Guardar(ruta_thresholds, IMGVTK::THRESHOLD, IMGVTK::PGM, i);
                     accuracy = reconstructor.medirExactitud(i);
 
                     sprintf(ruta_thresholds, "%s/tout_rc_100_%i.pgm", parametros[21].mi_valor.par_s, i );
-                    reconstructor.umbralizar(i, IMGVTK::RIDLER_CALVARD, 0.0);
-                    reconstructor.lengthFilter(i, IMGVTK::THRESHOLD, 100);
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0.0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 100, i);
                     reconstructor.Guardar(ruta_thresholds, IMGVTK::THRESHOLD, IMGVTK::PGM, i);
                     accuracy = reconstructor.medirExactitud(i);
 
                     sprintf(ruta_thresholds, "%s/tout_rc_500_%i.pgm", parametros[21].mi_valor.par_s, i );
-                    reconstructor.umbralizar(i, IMGVTK::RIDLER_CALVARD, 0.0);
-                    reconstructor.lengthFilter(i, IMGVTK::THRESHOLD, 500);
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0.0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 500, i);
                     reconstructor.Guardar(ruta_thresholds, IMGVTK::THRESHOLD, IMGVTK::PGM, i);
                     accuracy = reconstructor.medirExactitud(i);
 
                     sprintf(ruta_thresholds, "%s/tout_rc_1000_%i.pgm", parametros[21].mi_valor.par_s, i );
-                    reconstructor.umbralizar(i, IMGVTK::RIDLER_CALVARD, 0.0);
-                    reconstructor.lengthFilter(i, IMGVTK::THRESHOLD, 1000);
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0.0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 1000, i);
                     reconstructor.Guardar(ruta_thresholds, IMGVTK::THRESHOLD, IMGVTK::PGM, i);
                     accuracy = reconstructor.medirExactitud(i);
 
                     sprintf(ruta_thresholds, "%s/tout_rc_2000_%i.pgm", parametros[21].mi_valor.par_s, i );
-                    reconstructor.umbralizar(i, IMGVTK::RIDLER_CALVARD, 0.0);
-                    reconstructor.lengthFilter(i, IMGVTK::THRESHOLD, 2000);
+                    reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0.0, i);
+                    reconstructor.lengthFilter(IMGVTK::THRESHOLD, 2000, i);
                     reconstructor.Guardar(ruta_thresholds, IMGVTK::THRESHOLD, IMGVTK::PGM, i);
                     accuracy = reconstructor.medirExactitud(i);
 

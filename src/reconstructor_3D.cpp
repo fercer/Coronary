@@ -606,25 +606,11 @@ DEB_MSG("Mostrando detector para: " << angio_ID << ", LAORAO: " << imgs_base[ang
 
 // M I E M B R O S      P U B L I C O S
 
-void RECONS3D::Guardar(IMGVTK::IMG_IDX img_idx, const char *ruta, const IMGVTK::TIPO_IMG tipo_salida, const int angio_ID ){
-    imgs_base[angio_ID].Guardar(img_idx, ruta, tipo_salida );
-}
-
-/*  Metodo: umbralizar
-
-    Funcion: Utiliza la funcion de umbralizacion programada en IMGVTK.
-*/
-void RECONS3D::umbralizar( const int angio_ID, const IMGVTK::TIPO_UMBRAL mi_umbral, const double umbral ){
-    imgs_base[ angio_ID ].umbralizar( IMGVTK::SEGMENT, mi_umbral, umbral );
-}
-
-
-
 
 
 void RECONS3D::lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angio_ID)
 {
-    imgs_base[angio_ID].lengthFilter(img_idx, min_length, IMGVTK::DINAMICO);
+    imgs_base[angio_ID].lengthFilter(img_idx, min_length, IMGVTK::ITERATIVO);
 }
 
 
@@ -1034,8 +1020,6 @@ void RECONS3D::Guardar(const char *ruta, IMGVTK::IMG_IDX img_idx, IMGVTK::TIPO_I
 }
 
 
-
-
 /*  Metodo: getRows
 
     Funcion:
@@ -1134,18 +1118,6 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     mostrarImagen(IMGVTK::SEGMENT, mis_renderers[angio_ID], angio_ID);
     renderizar(mis_renderers[angio_ID]);
 }
-
-
-
-
-/*  Metodo: lengthFilter
-
-    Funcion: Filtra la imagen img_idx segun el numero de pixeles dentro de los conuntos conexos.
-*/
-void RECONS3D::lengthFilter(const int angio_ID, IMGVTK::IMG_IDX img_idx, const int min_length){
-    imgs_base[angio_ID].lengthFilter(img_idx, min_length, IMGVTK::DINAMICO);
-}
-
 
 
 
@@ -1581,6 +1553,8 @@ void RECONS3D::setFiltroLog( const char *ruta_log ){
 void RECONS3D::umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angio_ID)
 {
     imgs_base[angio_ID].umbralizar(img_idx, tipo_umb, nivel);
+	mostrarImagen(IMGVTK::THRESHOLD, mis_renderers[angio_ID], angio_ID);
+	renderizar(mis_renderers[angio_ID]);
 }
 
 
