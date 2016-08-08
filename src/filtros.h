@@ -27,6 +27,9 @@
 
 #include <iostream>
 
+#include <QPlainTextEdit>
+#include <QProgressBar>
+
 //#include <vtkSmartPointer.h>
 //#include <vtkImageData.h>
 
@@ -74,8 +77,11 @@ class FILTROS{
 
         void filtrar();
 
+        void setLog( QPlainTextEdit *txtLog );
         void setLog( FILE *fplog );
         void setLog(const char *ruta_log);
+
+        void setProgressBar( QProgressBar *pBar );
 
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
         // T I P O S        D E     D A T O S      P R I V A D O S
@@ -170,6 +176,8 @@ class FILTROS{
 
         char *mi_ruta_log;
         FILE *mi_fplog;
+        QPlainTextEdit *mi_txtLog;
+        QProgressBar *mi_pBar;
 
         //================================================================================== FILTROS:
         void respGMF(INDIV *test, double *resp);

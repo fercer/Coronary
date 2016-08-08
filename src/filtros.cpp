@@ -16,6 +16,8 @@
 void FILTROS::escribirLog( const char *mensaje ){
     if(mi_fplog){
         fprintf(mi_fplog, "%s", mensaje);
+    }else if(mi_txtLog){
+        mi_txtLog->appendPlainText( mensaje );
     }else{
         std::cout << mensaje << std::endl;
         fflush(stdout);
@@ -28,6 +30,15 @@ void FILTROS::escribirLog( const char *mensaje ){
     Funcion: Actualiza la barra de progreso.
 */
 void FILTROS::barraProgreso( const int avance, const int milestones ){
+
+    if( mi_pBar ){
+        mi_pBar->setMaximum( milestones );
+        mi_pBar->setValue( avance );
+        return;
+    }
+
+    DEB_MSG("No se definio el pBar");
+
     /// Limpiar el resto de la linea:
     int max_ancho = 100;
     for( int i = 0; i <= max_ancho; i++){
@@ -176,6 +187,8 @@ void FILTROS::setFitness( const FITNESS fit_fun){
     Funcion: Inicializa los parametros en valores por defecto.
 */
 FILTROS::FILTROS(){
+    mi_pBar = NULL;
+    mi_txtLog = NULL;
     mi_ruta_log = NULL;
     mi_fplog = NULL;
     resp = NULL;
@@ -386,13 +399,23 @@ void FILTROS::filtrar(){
 }
 
 
+
+
+/*  Metodo: setLog
+    Funcion: Define el objeto tipo QPlainTextEdit donde se imprimen los logs del sistema.
+*/
+void FILTROS::setLog(QPlainTextEdit *txtLog)
+{
+    mi_txtLog = txtLog;
+}
+
+
 /*  Metodo: setLog
     Funcion: Define el stream donde se imprimen los logs del sistema.
 */
 void FILTROS::setLog(FILE *fplog){
     mi_fplog = fplog;
 }
-
 
 
 
@@ -406,6 +429,17 @@ void FILTROS::setLog( const char *ruta_log){
         fclose( mi_fplog );
     }
     mi_fplog = fopen( mi_ruta_log, "a" );
+}
+
+
+
+
+
+/*  Metodo: setProgressBar
+    Funcion: Define el objeto para mostrar el avance del proceso.
+*/
+void FILTROS::setProgressBar( QProgressBar *pBar ){
+    mi_pBar = pBar;
 }
 
 

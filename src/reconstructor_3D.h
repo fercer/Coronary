@@ -84,6 +84,9 @@
 #include <gdcmPrivateTag.h>
 
 
+#include <QPlainTextEdit>
+#include <QProgressBar>
+
 #include <assert.h>
 
 #include <string.h>
@@ -213,8 +216,11 @@ class RECONS3D{
 
 
         void setLog( const char *ruta_log );
+        void setFiltroLog( QPlainTextEdit *txtLog );
         void setFiltroLog( FILE *fplog );
         void setFiltroLog( const char* ruta_log );
+
+        void setFiltroProgressBar( QProgressBar *pBar );
 
         void umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angio_ID);
         void lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angio_ID);

@@ -639,7 +639,8 @@ double RECONS3D::medirExactitud(const int angios_ID)
 
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
-void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar){
+void RECONS3D::
+agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar){
     DEB_MSG("Ruta ground: " << rutaground_input);
     NORCEN norcen_temp;
 
@@ -709,9 +710,6 @@ void RECONS3D::agregarInput( const char *rutabase_input, bool enmascarar ){
     /// Mover el detector a su posicion definida por el archivo DICOM:
     mallarPuntos(n_angios);
     isoCentro(n_angios);
-
-    mostrarImagen(IMGVTK::BASE, mis_renderers[n_angios], n_angios);
-    renderizar(mis_renderers[n_angios]);
 }
 
 
@@ -1095,6 +1093,20 @@ void RECONS3D::setLog(const char *ruta_log){
 }
 
 
+
+
+
+
+/*  Metodo: setLog
+
+    Funcion: Define el objeto tipo QPlainTextEdit donde se guarda el log del proceso de reconstruccion.
+*/
+void RECONS3D::setFiltroLog(QPlainTextEdit *txtLog)
+{
+    filtro.setLog( txtLog );
+}
+
+
 /*  Metodo: segmentarImagenBase
 
     Funcion: Aplica el filtro con los parametros definidos
@@ -1114,9 +1126,6 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
     char mensaje[] = "XXX.XXXXXXXX\n";
     sprintf(mensaje, "%3.8f\n", DIFTIME);
     escribirLog( mensaje );
-
-    mostrarImagen(IMGVTK::SEGMENT, mis_renderers[angio_ID], angio_ID);
-    renderizar(mis_renderers[angio_ID]);
 }
 
 
@@ -1478,7 +1487,6 @@ void RECONS3D::mostrarBase( const int angio_ID ){
         escribirLog( mensaje_err );
     }else{
         mostrarImagen( IMGVTK::BASE, mis_renderers[ angio_ID ], angio_ID);
-        renderizar( mis_renderers[angio_ID] );
     }
 }
 
@@ -1550,12 +1558,25 @@ void RECONS3D::setFiltroLog( const char *ruta_log ){
     filtro.setLog( ruta_log );
 }
 
+
+
+/*  Metodo: setFiltroLog
+
+    Funcion: Define el objeto donde se visualiza el progreso del proceso de filtrado.
+*/
+void RECONS3D::setFiltroProgressBar(QProgressBar *pBar){
+    filtro.setProgressBar( pBar );
+}
+
+
+
 void RECONS3D::umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angio_ID)
 {
     imgs_base[angio_ID].umbralizar(img_idx, tipo_umb, nivel);
-	mostrarImagen(IMGVTK::THRESHOLD, mis_renderers[angio_ID], angio_ID);
-	renderizar(mis_renderers[angio_ID]);
 }
+
+
+
 
 
 
