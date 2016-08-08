@@ -10,11 +10,8 @@
 #define RECONSTRUCTOR_HPP_INCLUDED
 
 
-// Librerias de uso comun con QT:
-#include <QPlainTextEdit>
-
-
 // Librerias de uso comun:
+
 #include <vtkVersion.h>
 #include <vtkSmartPointer.h>
 #include <vtkTransform.h>
@@ -80,12 +77,12 @@
 #include <vtkContourFilter.h>
 #include <vtkReverseSense.h>
 
-
 #include <gdcmImageReader.h>
 #include <gdcmImage.h>
 #include <gdcmReader.h>
 #include <gdcmTag.h>
 #include <gdcmPrivateTag.h>
+
 
 #include <assert.h>
 
@@ -124,15 +121,13 @@ class RECONS3D{
         } NORCEN;
 
     // M I E M B R O S      P R I V A D O S
-        QPlainTextEdit *mi_log;
-
         // Miembros para cargar las imagenes:
         std::vector< IMGVTK > imgs_base;
-        std::vector< IMGVTK > imgs_delin;
         std::vector< bool > existe_ground;
 
         int n_angios;
         int detalle;
+
 
         // Miembros para visualizar la segmentacion 3D:
         std::vector< vtkSmartPointer<vtkRenderer> > mis_renderers;
@@ -141,15 +136,17 @@ class RECONS3D{
         std::vector< vtkSmartPointer<vtkCellArray> > pixeles;
         std::vector< NORCEN > normal_centros;
 
+
         FILTROS filtro;
+        FILE *fp_log;
 
     // M E T O D O S       P R I V A D O S
         void escribirLog( const char *mensaje );
+        void barraProgreso( const int avance, const int milestones );
 
         void renderizar(vtkSmartPointer<vtkRenderer> mi_renderer);
-        void mostrarImagen(IMGVTK &imagen, IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer );
+        void mostrarImagen(IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer, const int angio_ID);
         void mostrarImagen(const int angio_ID, IMGVTK::IMG_IDX img_idx);
-
 
         void agregarVector(NORCEN org_dir, const double t, double color[], vtkSmartPointer<vtkRenderer> &mi_renderer);
         void agregarEjes(vtkSmartPointer<vtkRenderer> &mi_renderer);
@@ -160,8 +157,11 @@ class RECONS3D{
         POS posicionDefecto(const double ancho, const double alto, const double punta);
         void mostrarDetector(const int angio_ID);
 
+
+
         void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> cilindros, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros);
         void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, vtkSmartPointer<vtkUnsignedCharArray> grafo_nivel, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int n_niveles);
+
     //-------------------------------------------------------------------------------------- PRIVATE ----- ^
 
     public: //------------------------------------------------------------------------------- PUBLIC----- v
@@ -172,32 +172,53 @@ class RECONS3D{
         ~RECONS3D();
 
     // M E T O D O S        P U B L I C O S
-        void agregarInput(char **rutasbase_input, char **rutasground_input, const int n_imgs);
-        void agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input);
-        void agregarInput(const char *rutabase_input);
+        void agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar);
+        void agregarInput(const char *rutabase_input, bool enmascarar);
+        void agregarInput(char **rutasbase_input, const int n_imgs, bool enmascarar);
 
         void agregarGroundtruth(const char *rutaground_input, const int angio_ID);
+        void agregarGroundtruth(char **rutasground_input, const int n_imgs, const int angio_ID );
 
-        void segmentarImagenBase();
+        void leerConfiguracion( const char *ruta_conf);
+
         void segmentarImagenBase(const int angio_ID );
-        void skeletonize();
-        void skeletonize(const int angio_ID);
+        double medirExactitud(const int angio_ID);
+        void skeletonize(const int angio_ID, const int nivel_detalle);
+
 
         void mostrarBase( const int angio_ID );
         void mostrarGroundtruth(  const int angio_ID  );
 
-        void setFiltroLimites(const FILTROS::PARAMETRO par, const double inf, const double sup, const double delta);
-        void setFiltroEntrenamiento( const FILTROS::EVO_MET evo_met, const int m_iters, const int pob);
+
+
+        void setFiltroEntrenamiento(const FILTROS::EVO_MET evo_met);
+        void setFiltroEntrenamientoPars(const FILTROS::EVO_MET_PAR evo_par, const double val);
         void setFiltroEval( const FILTROS::FITNESS fit_fun);
         void setFiltroMetodo( const FILTROS::SEG_FILTRO metodo_filtrado);
+
+        void setFiltroParametros( const FILTROS::PARAMETRO par, const FILTROS::LIMITES lim, const double val);
         void setFiltroParametros( const FILTROS::PARAMETRO par, const double val );
         void setFiltroParametros();
+
+        void Guardar(const char *ruta, IMGVTK::IMG_IDX img_idx, IMGVTK::TIPO_IMG tipo_img, const int angio_ID);
+
+        int getRows( const int angio_ID );
+        int getCols( const int angio_ID );
+
+        double *get_pixelData( const int angio_ID, IMGVTK::IMG_IDX img_idx );
+
 
         vtkSmartPointer< vtkRenderer > getRenderer();
         vtkSmartPointer< vtkRenderer > getRenderer( const int angio_ID );
 
 
-        void setLog( QPlainTextEdit *log );
+        void setLog( const char *ruta_log );
+        void setFiltroLog( FILE *fplog );
+        void setFiltroLog( const char* ruta_log );
+
+        void umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angio_ID);
+        void lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angio_ID);
+
     // O P E R A D O R E S  S O B R E C A R G A D O S
     //--------------------------------------------------------------------------------------- PUBLIC ----- ^
 };

@@ -10,7 +10,7 @@
 #define IMGVTK_H_INCLUDED
 
 // Librerias de uso comun con QT:
-#include <QPlainTextEdit>
+//#include <QPlainTextEdit>
 
 // Librerias de uso comun:
 #include <vtkVersion.h>
@@ -28,6 +28,8 @@
 #include <gdcmReader.h>
 #include <gdcmTag.h>
 
+
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -41,21 +43,19 @@
 
 #include <omp.h>
 
-
-
-#define COLOR_NORMAL		"\33[0m"
-#define COLOR_BOLD			"\33[1m"
-#define COLOR_UNDER			"\33[4m"
-#define COLOR_BLINK			"\33[5m"
+#define COLOR_NORMAL        "\33[0m"
+#define COLOR_BOLD          "\33[1m"
+#define COLOR_UNDER         "\33[4m"
+#define COLOR_BLINK         "\33[5m"
 #define COLOR_INVERSE		"\33[7m"
-#define COLOR_BLACK			"\33[30m"
-#define COLOR_RED			"\33[31m"
-#define COLOR_GREEN			"\33[32m"
+#define COLOR_BLACK         "\33[30m"
+#define COLOR_RED           "\33[31m"
+#define COLOR_GREEN         "\33[32m"
 #define COLOR_YELLOW		"\33[33m"
-#define COLOR_BLUE			"\33[34m"
+#define COLOR_BLUE          "\33[34m"
 #define COLOR_MAGENTA		"\33[35m"
-#define COLOR_CYAN			"\33[36m"
-#define COLOR_WHITE			"\33[37m"
+#define COLOR_CYAN          "\33[36m"
+#define COLOR_WHITE         "\33[37m"
 #define COLOR_BACK_BLACK    "\33[40m"
 #define COLOR_BACK_RED      "\33[41m"
 #define COLOR_BACK_GREEN    "\33[42m"
@@ -66,6 +66,9 @@
 #define COLOR_BACK_WHITE    "\33[47m"
 
 
+#ifdef _WIN32
+	#include <time.h>
+#endif
 #ifdef _OPENMP
     #define TIMERS double t_ini, t_fin
     #define GETTIME_INI t_ini = omp_get_wtime()
@@ -74,7 +77,6 @@
     #define OMP_ENABLED true
 #else
 	#ifdef _WIN32
-		#include <time.h>
 		#define TIMERS time_t t_ini, t_fin
 		#define GETTIME_INI time (&t_ini)
 		#define GETTIME_FIN time (&t_fin)
@@ -101,7 +103,7 @@
 #endif
 
 
-#define PI 3.14159265
+#define Mi_PI 3.14159265
 #define INF 1e100;
 
 
@@ -110,13 +112,19 @@ class IMGVTK{
     public: //----------------------------------------------------------------------------- PUBLIC ------- v
         // T I P O S        D E     D A T O S       Y       E S T R U C T U R A S      P U B L I C A S        // IMG_IDX
         /** IMG_IDX:   **/
-        typedef enum IMG_IDX { BASE, MASK, SKELETON, SEGMENT, THRESHOLD, MAPDIST, BORDERS } IMG_IDX;
+        typedef enum IMG_IDX { BASE, GROUNDTRUTH, MASK, SKELETON, SEGMENT, THRESHOLD, MAPDIST, BORDERS } IMG_IDX;
 
         /** TIPO_IMG:   **/
         typedef enum TIPO_IMG { PNG, PGM } TIPO_IMG;
 
         /** TIPO_CARACT:   **/
         typedef enum TIPO_CARACT { PIX_SKL, PIX_END, PIX_BRANCH, PIX_CROSS } TIPO_CARACT;
+
+        /** TIPO_UMBRAL:    **/
+        typedef enum TIPO_UMBRAL { NIVEL, OTSU, RIDLER_CALVARD} TIPO_UMBRAL;
+
+        /** ALG_CONJUNTOS:    **/
+        typedef enum ALG_CONJUNTOS { DINAMICO, ITERATIVO} ALG_CONJUNTOS;
 
         /** PIX_PAR:   **/
         typedef struct PIX_PAR {
@@ -130,23 +138,22 @@ class IMGVTK{
 
 
         // M E T O D O S      P U B L I C O S
-        void definirMask( vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src );
+        void definirMask(double *img_src, double *mask_src , const int mis_rens, const int mis_cols);
         void skeletonization(IMG_IDX img_idx);
-        void umbralizar(IMG_IDX img_idx, const double umbral);
-        void umbralizar(IMG_IDX img_idx);
-        void lengthFilter(IMG_IDX img_idx, const int min_length);
+        void umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const double nivel);
+
+        void lengthFilter(IMG_IDX img_idx, const int min_length, ALG_CONJUNTOS mi_alg);
         void regionFill(IMG_IDX img_idx);
         void mapaDistancias(IMG_IDX img_idx);
         void detectarBorde(IMG_IDX img_idx);
+        double medirExactitud();
 
-        void Cargar(const char *ruta_origen, const bool enmascarar, const int nivel);
-        void Cargar(char **rutas , const int n_imgs, const bool enmascarar);
+        void Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool enmascarar, const int nivel);
+        void Cargar(const IMG_IDX img_idx, char **rutas , const int n_imgs, const bool enmascarar);
 
         void Guardar( IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida );
 
-
-        void setLog( QPlainTextEdit *log );
-
+//        void setLog( QPlainTextEdit *log );
 
         IMGVTK();
         IMGVTK(const IMGVTK &origen );
@@ -160,29 +167,30 @@ class IMGVTK{
 
         // M I E M B R O S      P U B L I C O S
         vtkSmartPointer<vtkImageData> base;
+        vtkSmartPointer<vtkImageData> ground;
         vtkSmartPointer<vtkImageData> mask;
         vtkSmartPointer<vtkImageData> skeleton;
         vtkSmartPointer<vtkImageData> segment;
         vtkSmartPointer<vtkImageData> threshold;
         vtkSmartPointer<vtkImageData> mapa_dist;
-		vtkSmartPointer<vtkImageData> borders;
+        vtkSmartPointer<vtkImageData> borders;
 
-        int rens, cols, rens_cols;
+        int rows, cols, rows_cols;
         int n_niveles;
         double *base_ptr;
-        double *skl_ptr;
+        double *gt_ptr;
         double *mask_ptr;
+        double *skl_ptr;
         double *segment_ptr;
         double *threshold_ptr;
         double *map_ptr;
-		double *borders_ptr;
+        double *borders_ptr;
 
         //// Datos extraidos del archivo DICOM:
         double SID, SOD, DDP, DISO;
         double LAORAO, CRACAU;
         double WCenter, WWidth;
         double pixX, pixY, cenX, cenY;
-        bool esDICOM;
 
         PIX_PAR *pix_caract;
 
@@ -191,6 +199,7 @@ class IMGVTK{
         /** ####:   **/
         // M E T O D O S      P R I V A D O S
         void escribirLog( const char *mensaje );
+
 
         void Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel, const bool enmascarar);
         void Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, char **rutas, const int n_imgs, const bool enmascarar);
@@ -209,6 +218,9 @@ class IMGVTK{
         bool regionFilling3( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
         void regionFill( double *ptr, const int mis_cols, const int mis_rens);
 
+        double umbralizarOTSU(const double *img_ptr, const double min, const double max);
+        double umbralizarRIDCAL( const double *img_ptr, const double min, const double max);
+
         inline unsigned char sklMask(const double *skl_ptr, const int x, const int y, const int mis_cols, const int mis_rens);
 
         inline unsigned char dilMask(const double *mask_dil, const int x, const int y , const int mis_cols, const int mis_rens);
@@ -218,17 +230,15 @@ class IMGVTK{
         void conexo(const double *ptr, const int x, const int y, int *conjuntos, unsigned int* n_etiquetados, bool* visitados, const int num_etiquetas, const int mis_cols, const int mis_rens);
         unsigned int *conjuntosConexosDinamico(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens);
 
-        inline void ampliarConjunto(int **etiquetas, const int equiv_A, const int equiv_B);
+        inline void ampliarConjunto(int *etiquetas, const int equiv_A, const int equiv_B, const int max_etiquetas);
         unsigned int *conjuntosConexos(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens);
-        void lengthFilter(double *ptr, const int min_length , const int mis_cols, const int mis_rens);
+        void lengthFilter(double *ptr, const int min_length , const int mis_cols, const int mis_rens, ALG_CONJUNTOS mi_alg);
 
         char* setRuta( const char *ruta_input );
 
         // M I E M B R O S      P R I V A D O S
-        QPlainTextEdit *mi_log;
+        //QPlainTextEdit *mi_log;
         int max_dist;
-
-
 };
 // C L A S E: IMGVTK  ---------------------------------------------------------------------------------------------- ^
 

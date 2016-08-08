@@ -19,11 +19,37 @@
     Funcion: Escribe un mensaje en el log.
 */
 void RECONS3D::escribirLog( const char *mensaje ){
-    if( mi_log ){
-        mi_log->appendPlainText( mensaje );
+    if(fp_log){
+        fprintf(fp_log, "%s", mensaje);
     }else{
-        std:cout << mensaje;
+        std::cout << mensaje;
     }
+}
+
+
+
+
+
+/*  Metodo: barraProgreso
+
+    Funcion: Actualiza la barra de progreso.
+*/
+void RECONS3D::barraProgreso( const int avance, const int milestones ){
+    /// Limpiar el resto de la linea:
+    int max_ancho = 100;
+    for( int i = 0; i < max_ancho; i++){
+        printf("\r");
+    }
+    printf(COLOR_BACK_RED "[");
+    int avance_milestones = (int)((double)max_ancho * (double)avance / (double)milestones);
+    for( int i = 0; i < avance_milestones; i++){
+        printf(COLOR_BACK_GREEN " ");
+    }
+    for( int i = avance_milestones; i < max_ancho; i++){
+        printf(COLOR_BACK_CYAN " ");
+    }
+    printf(COLOR_BACK_RED "]" COLOR_NORMAL);
+    fflush(stdout);
 }
 
 
@@ -60,13 +86,13 @@ DEB_MSG("Retornando...");
 */
 void RECONS3D::isoCentro( const int angio_ID ){
     // Calcular la ecuacion del plano:
-    const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * PI);
-    const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * PI);
-    const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * PI);
-    const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
+    const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * Mi_PI);
+    const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * Mi_PI);
+    const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * Mi_PI);
+    const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * Mi_PI);
 
     const int mis_cols = imgs_base[angio_ID].cols;
-    const int mis_rens = imgs_base[angio_ID].rens;
+    const int mis_rens = imgs_base[angio_ID].rows;
 
     const double mi_DDP = imgs_base[angio_ID].DDP;
 
@@ -125,20 +151,19 @@ void RECONS3D::isoCentro( const int angio_ID ){
 
 
 
-
 /*  Metodo: mallaPuntos
 
     Funcion: Genera una malla de puntos para representar la imagen en un renderizador global.
 */
 void RECONS3D::mallarPuntos( const int angio_ID ){
     // Rotar los puntos segun LAO/RAO y CAU/CRA:
-    const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * PI);
-    const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * PI);
-    const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * PI);
-    const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
+    const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * Mi_PI);
+    const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * Mi_PI);
+    const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * Mi_PI);
+    const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * Mi_PI);
 
     const int mis_cols = imgs_base[angio_ID].cols;
-    const int mis_rens = imgs_base[angio_ID].rens;
+    const int mis_rens = imgs_base[angio_ID].rows;
     const double mi_pixX = imgs_base[angio_ID].pixX;
     const double mi_pixY = imgs_base[angio_ID].pixY;
 
@@ -172,47 +197,47 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
         }
         yy += mi_pixY;
     }
-
 }
-
 
 
 /*  Metodo: mostrarImagen
 
     Funcion: Muestra la imagen en una ventana VTK.
 */
-void RECONS3D::mostrarImagen( IMGVTK &img_src, IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer){
+void RECONS3D::mostrarImagen(IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer, const int angio_ID){
 
-
-    int mis_cols = img_src.cols;
-    int mis_rens = img_src.rens;
+    int mis_cols = imgs_base[angio_ID].cols;
+    int mis_rens = imgs_base[angio_ID].rows;
 
     vtkSmartPointer< vtkImageData> img_ptr = NULL;
 
     switch(img_idx){
-        case IMGVTK::BASE:
-            img_ptr = img_src.base;
-            break;
-        case IMGVTK::MASK:
-            img_ptr = img_src.mask;
-            break;
-        case IMGVTK::SKELETON:
-            img_ptr = img_src.skeleton;
-            mis_rens+=2;
-            mis_cols+=2;
-            break;
-        case IMGVTK::SEGMENT:
-            img_ptr = img_src.segment;
-            break;
-        case IMGVTK::THRESHOLD:
-            img_ptr = img_src.threshold;
-            break;
-        case IMGVTK::MAPDIST:
-            img_ptr = img_src.mapa_dist;
-            break;
-		case IMGVTK::BORDERS:
-			img_ptr = img_src.borders;
-			break;
+    case IMGVTK::BASE:
+        img_ptr = imgs_base[angio_ID].base;
+        break;
+    case IMGVTK::GROUNDTRUTH:
+        img_ptr = imgs_base[angio_ID].ground;
+        break;
+    case IMGVTK::MASK:
+        img_ptr = imgs_base[angio_ID].mask;
+        break;
+    case IMGVTK::SKELETON:
+        img_ptr = imgs_base[angio_ID].skeleton;
+        mis_rens+=2;
+        mis_cols+=2;
+        break;
+    case IMGVTK::SEGMENT:
+        img_ptr = imgs_base[angio_ID].segment;
+        break;
+    case IMGVTK::THRESHOLD:
+        img_ptr = imgs_base[angio_ID].threshold;
+        break;
+    case IMGVTK::MAPDIST:
+        img_ptr = imgs_base[angio_ID].mapa_dist;
+        break;
+    case IMGVTK::BORDERS:
+        img_ptr = imgs_base[angio_ID].borders;
+        break;
     }
 
     const int mis_rens_cols = mis_rens*mis_cols;
@@ -253,13 +278,11 @@ DEB_MSG("min: " << min << ", max: " << max);
 
     vtkSmartPointer<vtkActor2D> actor = vtkSmartPointer<vtkActor2D>::New();
     actor->SetMapper(mapper);
-    actor->SetPosition(25,0);
 
     // Agregar el actor de la imagen al renderizador.
     mi_renderer->Clear();
     mi_renderer->AddActor2D(actor);
 }
-
 
 
 
@@ -270,7 +293,7 @@ DEB_MSG("min: " << min << ", max: " << max);
 */
 void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
     const int mis_cols = imgs_base[angio_ID].cols;
-    const int mis_rens = imgs_base[angio_ID].rens;
+    const int mis_rens = imgs_base[angio_ID].rows;
 
     int offset_y = 0, offset_x = 0;
     double *img_ptr = NULL;
@@ -296,9 +319,9 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
         case IMGVTK::MAPDIST:
             img_ptr = imgs_base[angio_ID].map_ptr;
             break;
-		case IMGVTK::BORDERS:
-			img_ptr = imgs_base[angio_ID].borders_ptr;
-			break;
+        case IMGVTK::BORDERS:
+                img_ptr = imgs_base[angio_ID].borders_ptr;
+                break;
     }
 
     vtkSmartPointer<vtkUnsignedCharArray> intensidades = vtkSmartPointer<vtkUnsignedCharArray>::New();
@@ -354,7 +377,6 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
     agregarVector(mi_isocen, 1.0, color, renderer_global);
     agregarEsfera(mi_isocen.origen[0] + mi_isocen.direccion[0], mi_isocen.origen[1] + mi_isocen.direccion[1], mi_isocen.origen[2] + mi_isocen.direccion[2], 20.0, color, renderer_global);
 }
-
 
 
 /*  Metodo: agregarVector
@@ -425,7 +447,6 @@ DEB_MSG("length: " << length);
 
 
 
-
 /*  Metodo: agregarEjes
 
     Funcion: Muestra los ejes en que se encuentra la escena global respecto al paciente.
@@ -456,6 +477,7 @@ void RECONS3D::agregarEjes(vtkSmartPointer<vtkRenderer> &mi_renderer){
 
 
 
+
 /*  Metodo: agregarEsfera
 
     Funcion: Agrega una esfera al renderizador.
@@ -482,50 +504,20 @@ void RECONS3D::agregarEsfera(const double x, const double y, const double z, con
 
 
 
+
 /*  Metodo: posicionDefecto
 
     Funcion: Retorna la posicion por defecto del detector y fuente:
 */
 inline RECONS3D::POS RECONS3D::posicionDefecto( const double ancho, const double alto, const double punta){
     POS defecto;
-    /* Base 1
-     *      X-------0
-     *      |   0   |
-     *      0-------0
-    */
     defecto.puntos[0][0] = -ancho/2; defecto.puntos[0][1] =  alto/2; defecto.puntos[0][2] = 0.0;
-
-    /* Base 2
-     *      0-------X
-     *      |   0   |
-     *      0-------0
-    */
     defecto.puntos[1][0] =  ancho/2; defecto.puntos[1][1] =  alto/2; defecto.puntos[1][2] = 0.0;
-
-    /* Base 3
-     *      0-------0
-     *      |   0   |
-     *      0-------X
-    */
     defecto.puntos[2][0] =  ancho/2; defecto.puntos[2][1] = -alto/2; defecto.puntos[2][2] = 0.0;
-
-    /* Base 4
-     *      0-------0
-     *      |   0   |
-     *      X-------0
-    */
     defecto.puntos[3][0] = -ancho/2; defecto.puntos[3][1] = -alto/2; defecto.puntos[3][2] = 0.0;
-
-    /* Altura
-     *      0-------0
-     *      |   X   |
-     *      0-------0
-    */
     defecto.puntos[4][0] =  0.0; defecto.puntos[4][1] =  0.0; defecto.puntos[4][2] =  punta;
-
     return defecto;
 }
-
 
 
 
@@ -535,14 +527,14 @@ inline RECONS3D::POS RECONS3D::posicionDefecto( const double ancho, const double
 */
 void RECONS3D::mostrarDetector(const int angio_ID){
     // Rotar los puntos segun LAO/RAO y CAU/CRA:
-    const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * PI);
-    const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * PI);
-    const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * PI);
-    const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * PI);
+    const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * Mi_PI);
+    const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * Mi_PI);
+    const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * Mi_PI);
+    const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * Mi_PI);
 
 DEB_MSG("Mostrando detector para: " << angio_ID << ", LAORAO: " << imgs_base[angio_ID].LAORAO << ", CRACAU: " << imgs_base[angio_ID].CRACAU << ", SID: " << imgs_base[angio_ID].SID << ", SOD: " << imgs_base[angio_ID].SOD );
 
-    const int mis_rens = imgs_base[n_angios].rens;
+    const int mis_rens = imgs_base[n_angios].rows;
     const int mis_cols = imgs_base[n_angios].cols;
 
     const double mi_pixX = imgs_base[angio_ID].pixX;
@@ -613,33 +605,42 @@ DEB_MSG("Mostrando detector para: " << angio_ID << ", LAORAO: " << imgs_base[ang
 //-------------------------------------------------------------------------------------------------- PUBLIC----- v
 
 // M I E M B R O S      P U B L I C O S
-/*  Metodo: agregarInput
 
-    Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
-*/
-void RECONS3D::agregarInput(char **rutasbase_input, char **rutasground_input, const int n_imgs){
-    n_angios++;
 
-    imgs_base.push_back(IMGVTK(rutasbase_input, n_imgs, true));
-    imgs_base[n_angios].setLog( mi_log );
-    imgs_delin.push_back(IMGVTK(rutasground_input, n_imgs, false));
-    imgs_delin[n_angios].setLog( mi_log );
-    imgs_base.push_back(IMGVTK());
 
-    // Mostrar la imagen en un renderizador
-    mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
-
+void RECONS3D::lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angio_ID)
+{
+    imgs_base[angio_ID].lengthFilter(img_idx, min_length, IMGVTK::ITERATIVO);
 }
 
 
 
+
+
+/*  Metodo: medirExactitud
+
+    Funcion: Mide la exactitud entre la imagen segmentada y el ground-truth
+*/
+double RECONS3D::medirExactitud(const int angios_ID)
+{
+    DEB_MSG("midiendo exactitud ...");
+
+    double acc = imgs_base[angios_ID].medirExactitud();
+
+    char mensaje[] = "X.XXXXXXXXXXXXXXXX \n";
+    sprintf(mensaje, "%1.16f\n", acc);
+    escribirLog(mensaje);
+
+    return acc;
+}
+
+
 /*  Metodo: agregarInput
 
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
-void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input){
-
-DEB_MSG("Ruta ground: " << rutaground_input);
+void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar){
+    DEB_MSG("Ruta ground: " << rutaground_input);
     NORCEN norcen_temp;
 
     if( nivel_u > nivel_l ){ // Si hay varios niveles:
@@ -652,23 +653,16 @@ DEB_MSG("Ruta ground: " << rutaground_input);
             puntos.push_back(vtkSmartPointer<vtkPoints>::New());
             pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
             normal_centros.push_back( norcen_temp );
-
             /// Mover el detector a su posicion definida por el archivo DICOM:
             mallarPuntos(n_angios);
             isoCentro(n_angios);
-
-            imgs_delin.push_back(IMGVTK());
             existe_ground.push_back( false );
         }
 
     }else{
         n_angios++;
 
-        imgs_base.push_back(IMGVTK(rutabase_input, true, nivel_l));
-        imgs_base[n_angios].setLog( mi_log );
-
-        imgs_delin.push_back(IMGVTK());
-        imgs_delin[n_angios].setLog( mi_log );
+        imgs_base.push_back(IMGVTK(rutabase_input, enmascarar, nivel_l));
         existe_ground.push_back( false );
 
         mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
@@ -683,7 +677,7 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
         if( strcmp(rutaground_input, "NULL") ){
             DEB_MSG("Abriendo " << rutaground_input << " como ground truth");
-            imgs_delin[ n_angios ].Cargar(rutaground_input, false, 0);
+            imgs_base[ n_angios ].Cargar(IMGVTK::GROUNDTRUTH, rutaground_input, false, 0);
             existe_ground[ n_angios ] = true;
         }
 
@@ -696,19 +690,49 @@ DEB_MSG("Ruta ground: " << rutaground_input);
 
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
-void RECONS3D::agregarInput( const char *rutabase_input ){
+void RECONS3D::agregarInput( const char *rutabase_input, bool enmascarar ){
 
     n_angios++;
 
     NORCEN norcen_temp;
 
-    imgs_base.push_back(IMGVTK(rutabase_input, true, 0));
-    imgs_base[n_angios].setLog( mi_log );
-
-    imgs_delin.push_back(IMGVTK());
-    imgs_delin[n_angios].setLog( mi_log );
+    imgs_base.push_back(IMGVTK(rutabase_input, enmascarar, 0));
     existe_ground.push_back( false );
 
+    DEB_MSG("Dimensiones imagen: " << imgs_base[n_angios].cols << " x " << imgs_base[n_angios].rows);
+
+    mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
+    puntos.push_back(vtkSmartPointer<vtkPoints>::New());
+    pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
+    normal_centros.push_back( norcen_temp );
+
+    /// Mover el detector a su posicion definida por el archivo DICOM:
+    mallarPuntos(n_angios);
+    isoCentro(n_angios);
+
+    mostrarImagen(IMGVTK::BASE, mis_renderers[n_angios], n_angios);
+    renderizar(mis_renderers[n_angios]);
+}
+
+
+
+
+
+/*  Metodo: agregarInput
+
+    Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
+*/
+void RECONS3D::agregarInput( char **rutasbase_input, const int n_imgs, bool enmascarar){
+
+
+    n_angios++;
+
+    NORCEN norcen_temp;
+
+    imgs_base.push_back(IMGVTK(rutasbase_input, n_imgs, enmascarar));
+    existe_ground.push_back( false );
+
+    // Mostrar la imagen en un renderizador
     mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
     puntos.push_back(vtkSmartPointer<vtkPoints>::New());
     pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
@@ -723,23 +747,196 @@ void RECONS3D::agregarInput( const char *rutabase_input ){
 
 
 
+
 /*  Metodo: agregarGroundtruth
 
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
 void RECONS3D::agregarGroundtruth(const char *rutaground_input, const int angio_ID ){
-    imgs_delin[ angio_ID ].Cargar(rutaground_input, false, 0);
-    existe_ground[ angio_ID ] = true;
+    if( angio_ID > n_angios ){
+        char mensaje[] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
+        sprintf(mensaje, "\n<<Error: El angiograma %i no ha sido agregado al reconstructor>>\n\n", angio_ID);
+        escribirLog( mensaje );
+    }else{
+        imgs_base[ angio_ID ].Cargar(IMGVTK::GROUNDTRUTH, rutaground_input, false, 0);
+        existe_ground[ angio_ID ] = true;
+    }
 }
 
 
-/*  Metodo: setFiltroLimites
 
-    Funcion:
+
+
+/*  Metodo: agregarGroundtruth
+
+    Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
-void RECONS3D::setFiltroLimites(const FILTROS::PARAMETRO par, const double inf, const double sup, const double delta){
-    filtro.setLim( par, inf, sup, delta );
+void RECONS3D::agregarGroundtruth(char **rutasground_input, const int n_imgs, const int angio_ID ){
+    if( angio_ID > n_angios ){
+        char mensaje[] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
+        sprintf(mensaje, "\n<<Error: El angiograma %i no ha sido agregado al reconstructor>>\n\n", angio_ID);
+        escribirLog( mensaje );
+    }else{
+        imgs_base[ angio_ID ].Cargar(IMGVTK::GROUNDTRUTH, rutasground_input, n_imgs, false);
+        existe_ground[ angio_ID ] = true;
+    }
 }
+
+
+
+
+/*  Metodo: leerConfiguracion
+
+    Funcion: Carga una configuracion predefinida para el filtro de deteccion
+*/
+void RECONS3D::leerConfiguracion(const char *ruta_conf){
+    FILE *fp_config = fopen(ruta_conf, "r");
+
+    if( !fp_config ){
+        char mensaje_err[513] = "\n<< Error: Cannot open file:\'%s\'\n\n";
+        sprintf(mensaje_err, "\n<< Error: Cannot open file:\'%s\'\n\n", ruta_conf);
+        escribirLog( mensaje_err );
+        return;
+    }
+
+    char tmp = fgetc( fp_config );
+    char tmp_par[128] = "", tmp_val[128] = "";
+    char *tmp_str_ptr = tmp_par;
+
+    bool fixed[4] = {false, false, false, false};
+
+    do{
+        tmp = fgetc( fp_config );
+        if( tmp == '\n' || tmp == EOF ){
+            *(tmp_str_ptr) = '\0';
+
+            DEB_MSG( tmp_par << ":" << tmp_val);
+
+            if( strcmp( tmp_par, "GMF" ) == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setFiltro( FILTROS::GMF );
+                }
+            }else if( strcmp( tmp_par, "SSG") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setFiltro( FILTROS::SS_GABOR );
+                }
+            }else if( strcmp( tmp_par, "T") == 0 ){
+                if( tmp_val[0] != 'o' ){
+                    const double par_t = atof(tmp_val);
+                    filtro.setPar( FILTROS::PAR_T, par_t );
+                    fixed[0] = true;
+                }
+            }else if( strcmp( tmp_par, "L") == 0 ){
+                if( tmp_val[0] != 'o' ){
+                    const double par_l = atof(tmp_val);
+                    filtro.setPar( FILTROS::PAR_L, par_l );
+                    fixed[1] = true;
+                }
+            }else if( strcmp( tmp_par, "K") == 0 ){
+                if( tmp_val[0] != 'o' ){
+                    const double par_k = atof(tmp_val);
+                    filtro.setPar( FILTROS::PAR_K, par_k);
+                    fixed[2] = true;
+                }
+            }else if( strcmp( tmp_par, "sig") == 0 ){
+                if( tmp_val[0] != 'o' ){
+                    const double par_s = atof(tmp_val);
+                    filtro.setPar( FILTROS::PAR_SIGMA, par_s);
+                    fixed[3] = true;
+                }
+            }else if( strcmp( tmp_par, "Tinf") == 0 && !fixed[0] ){
+                const double inf_t = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_T, FILTROS::INFERIOR, inf_t );
+            }else if( strcmp( tmp_par, "Tsup") == 0 && !fixed[0] ){
+                const double sup_t = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_T, FILTROS::SUPERIOR, sup_t );
+            }else if( strcmp( tmp_par, "Tdel") == 0 && !fixed[0] ){
+                const double del_t = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_T, FILTROS::DELTA, del_t );
+            }else if( strcmp( tmp_par, "Linf") == 0 && !fixed[1] ){
+                const double inf_l = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_L, FILTROS::INFERIOR, inf_l );
+            }else if( strcmp( tmp_par, "Lsup") == 0 && !fixed[1] ){
+                const double sup_l = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_L, FILTROS::SUPERIOR, sup_l );
+            }else if( strcmp( tmp_par, "Ldel") == 0 && !fixed[1] ){
+                const double del_l = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_L, FILTROS::DELTA, del_l );
+            }else if( strcmp( tmp_par, "Kinf") == 0 && !fixed[2] ){
+                const double inf_k = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_K, FILTROS::INFERIOR, inf_k );
+            }else if( strcmp( tmp_par, "Ksup") == 0 && !fixed[2] ){
+                const double sup_k = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_K, FILTROS::SUPERIOR, sup_k );
+            }else if( strcmp( tmp_par, "Kdel") == 0 && !fixed[2] ){
+                const double del_k = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_K, FILTROS::DELTA, del_k );
+            }else if( strcmp( tmp_par, "Sinf") == 0 && !fixed[3] ){
+                const double inf_s = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_SIGMA, FILTROS::INFERIOR, inf_s );
+            }else if( strcmp( tmp_par, "Ssup") == 0 && !fixed[3] ){
+                const double sup_s = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_SIGMA, FILTROS::SUPERIOR, sup_s );
+            }else if( strcmp( tmp_par, "Sdel") == 0 && !fixed[3] ){
+                const double del_s = atof(tmp_val);
+                filtro.setLim( FILTROS::PAR_SIGMA, FILTROS::DELTA, del_s );
+            }else if( strcmp( tmp_par, "ROC") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setFitness( FILTROS::ROC );
+                }
+            }else if( strcmp( tmp_par, "CC") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setFitness( FILTROS::CORCON );
+                }
+            }else if( strcmp( tmp_par, "Unset") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setEvoMet( FILTROS::EVO_UNSET );
+                }
+            }else if( strcmp( tmp_par, "Exh") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setEvoMet( FILTROS::EXHAUSTIVA );
+                }
+            }else if( strcmp( tmp_par, "GA") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setEvoMet( FILTROS::EA_GA );
+                }
+            }else if( strcmp( tmp_par, "UMDA") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setEvoMet( FILTROS::EDA_UMDA );
+                }
+            }else if( strcmp( tmp_par, "BUMDA") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setEvoMet( FILTROS::EDA_BUMDA );
+                }
+            }else if( strcmp( tmp_par, "pop_size") == 0 ){
+                const int pop_size = atoi(tmp_val);
+                filtro.setEvoMetPar( FILTROS::POPSIZE, (double)pop_size);
+            }else if( strcmp( tmp_par, "max_gen") == 0 ){
+                const int max_gen = atoi(tmp_val);
+                filtro.setEvoMetPar( FILTROS::MAXGEN, (double)max_gen);
+            }else if( strcmp( tmp_par, "CR") == 0 ){
+                const double cr = atof(tmp_val);
+                DEB_MSG("CR: " << cr << " / " << tmp_val);
+                filtro.setEvoMetPar( FILTROS::CR, cr);
+            }else if( strcmp( tmp_par, "MR") == 0 ){
+                const double mr = atof(tmp_val);
+                filtro.setEvoMetPar( FILTROS::MR, mr);
+            }
+
+            tmp_str_ptr = tmp_par;
+
+        }else if( tmp == '\t'){
+            *(tmp_str_ptr) = '\0';
+            tmp_str_ptr = tmp_val;
+        }else{
+            *(tmp_str_ptr) = tmp;
+            tmp_str_ptr++;
+        }
+    }while ( tmp != EOF);
+
+    fclose( fp_config );
+}
+
 
 
 
@@ -747,8 +944,18 @@ void RECONS3D::setFiltroLimites(const FILTROS::PARAMETRO par, const double inf, 
 
     Funcion:
 */
-void RECONS3D::setFiltroEntrenamiento(const FILTROS::EVO_MET evo_met, const int m_iters, const int pob){
-    filtro.setEvoMet(evo_met, m_iters, pob);
+void RECONS3D::setFiltroEntrenamiento(const FILTROS::EVO_MET evo_met){
+    filtro.setEvoMet(evo_met);
+}
+
+
+
+/*  Metodo: setFiltroEntrenamientoPars
+
+    Funcion:
+*/
+void RECONS3D::setFiltroEntrenamientoPars(const FILTROS::EVO_MET_PAR evo_par, const double val){
+    filtro.setEvoMetPar(evo_par, val);
 }
 
 
@@ -772,6 +979,17 @@ void RECONS3D::setFiltroMetodo(const FILTROS::SEG_FILTRO metodo_filtrado){
 
 
 
+
+/*  Metodo: setFiltroParametros
+
+    Funcion:
+*/
+void RECONS3D::setFiltroParametros(const FILTROS::PARAMETRO par, const FILTROS::LIMITES lim, const double val){
+    filtro.setLim( par, lim, val );
+}
+
+
+
 /*  Metodo: setFiltroParametros
 
     Funcion:
@@ -791,55 +1009,115 @@ void RECONS3D::setFiltroParametros(){
 }
 
 
-/*  Metodo: segmentarImagen()
 
-    Funcion: Aplica el filtro a todas las imagenes.
+
+/*  Metodo: Guardar
+
+    Funcion: Almacena una imagen del reconstructor a la ruta especificada, en formato PNG o PGM.
 */
-void RECONS3D::segmentarImagenBase(){
-    for( int i = 0; i <= n_angios; i++){
-        segmentarImagenBase( i );
-    }
+void RECONS3D::Guardar(const char *ruta, IMGVTK::IMG_IDX img_idx, IMGVTK::TIPO_IMG tipo_img, const int angio_ID){
+    imgs_base[angio_ID].Guardar( img_idx, ruta, tipo_img );
+}
+
+
+/*  Metodo: getRows
+
+    Funcion:
+*/
+int RECONS3D::getRows( const int angio_ID ){
+    return imgs_base[angio_ID].rows;
+}
+
+
+
+/*  Metodo: getCols
+
+    Funcion:
+*/
+int RECONS3D::getCols( const int angio_ID ){
+    return imgs_base[angio_ID].cols;
 }
 
 
 
 
-/*  Metodo: segmentarImagen()
+/*  Metodo: get_pixelData
+
+    Funcion: Retorna el apuntador a la informacion de la imagen seleccionada con img_idx
+*/
+double* RECONS3D::get_pixelData(const int angio_ID, IMGVTK::IMG_IDX img_idx){
+
+    double *img_ptr = NULL;
+
+    switch(img_idx){
+    case IMGVTK::BASE:
+        img_ptr = imgs_base[angio_ID].base_ptr;
+        break;
+    case IMGVTK::GROUNDTRUTH:
+        img_ptr = imgs_base[angio_ID].gt_ptr;
+        break;
+    case IMGVTK::MASK:
+        img_ptr = imgs_base[angio_ID].mask_ptr;
+        break;
+    case IMGVTK::SKELETON:
+        img_ptr = imgs_base[angio_ID].skl_ptr;
+        break;
+    case IMGVTK::SEGMENT:
+        img_ptr = imgs_base[angio_ID].segment_ptr;
+        break;
+    case IMGVTK::THRESHOLD:
+        img_ptr = imgs_base[angio_ID].threshold_ptr;
+        break;
+    case IMGVTK::MAPDIST:
+        img_ptr = imgs_base[angio_ID].map_ptr;
+        break;
+    case IMGVTK::BORDERS:
+        img_ptr = imgs_base[angio_ID].borders_ptr;
+        break;
+    }
+
+    return img_ptr;
+}
+
+
+
+/*  Metodo: setLog
+
+    Funcion: Define la ruta donde se guarda el log del proceso de reconstruccion.
+*/
+void RECONS3D::setLog(const char *ruta_log){
+    if(fp_log){
+        fclose(fp_log);
+        fp_log = NULL;
+    }
+
+    fp_log = fopen(ruta_log, "w");
+}
+
+
+/*  Metodo: segmentarImagenBase
 
     Funcion: Aplica el filtro con los parametros definidos
 */
-void RECONS3D::segmentarImagenBase( const int angio_ID){
+void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
     filtro.setInput(imgs_base[angio_ID]);
-    if( existe_ground[angio_ID] ){
-        filtro.setInputGround(imgs_delin[angio_ID]);
-    }
 
-    if( filtro.getParametrosOptimizar() > 0 ){
+    if( filtro.getParametrosOptimizar() >= 1 ){
         filtro.setPar();
     }
 
+    TIMERS;
+    GETTIME_INI;
     filtro.filtrar();
-    escribirLog( "El filtrado de la imagen base termino con exito" );
+    GETTIME_FIN;
+    char mensaje[] = "XXX.XXXXXXXX\n";
+    sprintf(mensaje, "%3.8f\n", DIFTIME);
+    escribirLog( mensaje );
+
+    mostrarImagen(IMGVTK::SEGMENT, mis_renderers[angio_ID], angio_ID);
+    renderizar(mis_renderers[angio_ID]);
 }
-
-
-
-
-/*  Metodo: skeletonize
-
-    Funcion: Obtiene el esqueleto de todas las imagenes:
-*/
-void RECONS3D::skeletonize(){
-    for( int i = 0; i <= n_angios; i++){
-        skeletonize( i );
-    }
-    escribirLog( "Extraccion de los esqueletos lista" );
-}
-
-
-
-
 
 
 
@@ -849,7 +1127,7 @@ void RECONS3D::skeletonize(){
 */
 void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> cilindros, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros){
 
-    const double theta_inc = 2 * PI / (double)detalle;
+    const double theta_inc = 2 * Mi_PI / (double)detalle;
 
     const double xx = grafo->x;
     const double yy = grafo->y;
@@ -877,7 +1155,7 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
         double x_fin = sig_hijo->x;
         double y_fin = sig_hijo->y;
 
-        const double alpha = atan2(y_fin - yy, x_fin - xx) + PI / 2.0;
+        const double alpha = atan2(y_fin - yy, x_fin - xx) + Mi_PI / 2.0;
 
         const double cal = cos(alpha);
         const double sal = sin(alpha);
@@ -1037,7 +1315,6 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
 
 
 
-
 /*  Metodo: mostrarRadios
 
     Funcion: Muestra el radio de cada pixel del esqueleto.
@@ -1051,7 +1328,7 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
     nivel[2] = (unsigned char)(255.0 * (double)(grafo->nivel + 1) / (double)n_niveles);
 
     double theta = 0.0;
-    const double theta_inc = 2 * PI / (double)detalle;
+    const double theta_inc = 2 * Mi_PI / (double)detalle;
     const double xx = grafo->x;
     const double yy = grafo->y;
     const double radio = grafo->radio;
@@ -1118,9 +1395,7 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
     for( int i = 0; i < grafo->n_hijos; i++){
         mostrarRadios(puntos, vert_skl, grafo_nivel, n_pix, grafo->hijos[i], DDP, crl, srl, ccc, scc, n_niveles);
     }
-
 }
-
 
 
 
@@ -1128,43 +1403,40 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
 
     Funcion: Obtiene el esqueleto de la imagen y muestra los puntos de interes.
 */
-void RECONS3D::skeletonize(const int angio_ID){
+void RECONS3D::skeletonize(const int angio_ID, const int nivel_detalle){
 
     DEB_MSG("Extrayendo esquelto a " << angio_ID);
-    //imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
-    imgs_delin[angio_ID].skeletonization(IMGVTK::BASE);
+    imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
 
-
-    //if( !imgs_base[angio_ID].pix_caract ){
-    if( !imgs_delin[angio_ID].pix_caract ){
-        DEB_MSG("No existe grafo...");
+    if( !imgs_base[angio_ID].pix_caract ){
+        DEB_MSG("No existe grafo alguno...");
         return;
     }
 
     // Rotar los puntos segun LAO/RAO y CAU/CRA:
-    const double crl = cos(imgs_delin[angio_ID].LAORAO/180.0 * PI);
-    const double srl = sin(imgs_delin[angio_ID].LAORAO/180.0 * PI);
-    const double ccc = cos(imgs_delin[angio_ID].CRACAU/180.0 * PI);
-    const double scc = sin(imgs_delin[angio_ID].CRACAU/180.0 * PI);
+    const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * Mi_PI);
+    const double srl = sin(imgs_base[angio_ID].LAORAO/180.0 * Mi_PI);
+    const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * Mi_PI);
+    const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * Mi_PI);
 
-    const double DDP = imgs_delin[angio_ID].DDP;
-    const int n_niveles = imgs_delin[angio_ID].n_niveles;
+    const double DDP = 0.0;//imgs_base[angio_ID].DDP;
+    const int n_niveles = imgs_base[angio_ID].n_niveles;
 
     DEB_MSG("numero de niveles: " << n_niveles);
 
     {
         // Recorrer el grafo y generar en 3D una burda reconstruccion.
 
-        DEB_MSG("Mostrando los radios de cada 5 pixeles del esqueleto...");
+        DEB_MSG("Mostrando los radios de cada 100 pixeles del esqueleto...");
         vtkSmartPointer< vtkPoints > puntos = vtkSmartPointer< vtkPoints >::New();
         vtkSmartPointer< vtkCellArray > cilindros = vtkSmartPointer< vtkCellArray >::New();
         int n_pix = 0;
 
-        char nom_cilindros[] = "cilindros_XXX.dat";
-        sprintf( nom_cilindros, "cilindros_%i.dat", angio_ID);
+        char nom_cilindros[] = "cilindros_XXX_YYY.dat";
+        sprintf( nom_cilindros, "cilindros_%i_%i.dat", angio_ID, nivel_detalle);
         FILE *fp_cilindros = fopen(nom_cilindros, "w");
         fprintf( fp_cilindros, "X1 Y1 Z1 RADIO X2 Y2 Z2\n");
-        mostrarRadios(puntos, cilindros, &n_pix, imgs_delin[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, 50, fp_cilindros);
+        mostrarRadios(puntos, cilindros, &n_pix, imgs_base[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, nivel_detalle, fp_cilindros);
 
         fclose( fp_cilindros );
 
@@ -1187,7 +1459,11 @@ void RECONS3D::skeletonize(const int angio_ID){
         DEB_MSG("Agregando al renderizador");
         renderer_global->AddActor( actor );
     }
+    renderizar( renderer_global );
 }
+
+
+
 
 
 /*  Metodo: mostrarBase
@@ -1196,14 +1472,17 @@ void RECONS3D::skeletonize(const int angio_ID){
 */
 void RECONS3D::mostrarBase( const int angio_ID ){
     if( angio_ID > n_angios ){
-        char mensaje[] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
-        sprintf(mensaje, "\n<<Error: El angiograma %i no ha sido agregado al reconstructor>>\n\n", angio_ID);
-        DEB_MSG(mensaje);
-        escribirLog( mensaje );
+        char mensaje_err[] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
+        sprintf(mensaje_err, "\n<<Error: El angiograma %i no ha sido agregado al reconstructor>>\n\n", angio_ID);
+        DEB_MSG(mensaje_err);
+        escribirLog( mensaje_err );
     }else{
-        mostrarImagen( imgs_base[angio_ID], IMGVTK::BASE, mis_renderers[ angio_ID ]);
+        mostrarImagen( IMGVTK::BASE, mis_renderers[ angio_ID ], angio_ID);
+        renderizar( mis_renderers[angio_ID] );
     }
 }
+
+
 
 
 /*  Metodo: mostrarGroundtruth
@@ -1217,14 +1496,9 @@ void RECONS3D::mostrarGroundtruth( const int angio_ID ){
         DEB_MSG(mensaje);
         escribirLog( mensaje );
     }else{
-        mostrarImagen( imgs_delin[angio_ID], IMGVTK::BASE, mis_renderers[ angio_ID ]);
+        mostrarImagen( IMGVTK::GROUNDTRUTH, mis_renderers[ angio_ID ], angio_ID);
     }
 }
-
-
-
-
-
 
 
 
@@ -1235,7 +1509,6 @@ void RECONS3D::mostrarGroundtruth( const int angio_ID ){
 vtkSmartPointer< vtkRenderer > RECONS3D::getRenderer(){
     return renderer_global;
 }
-
 
 
 
@@ -1257,22 +1530,31 @@ vtkSmartPointer< vtkRenderer > RECONS3D::getRenderer( const int angio_ID ){
 
 
 
-/*  Metodo: setLog
 
-    Funcion: Define el editor donde se escribiran todos los logs del sistema
+
+/*  Metodo: setFiltroLog
+
+    Funcion: Define el editor donde se escribiran todos los logs del filtrado
 */
-void RECONS3D::setLog(QPlainTextEdit *log ){
-    mi_log = log;
+void RECONS3D::setFiltroLog( FILE *fplog ){
+    filtro.setLog( fplog );
+}
 
-    for( std::vector< IMGVTK >::iterator it = imgs_base.begin(); it != imgs_base.end(); it++){
-        it->setLog( mi_log );
-    }
-    for( std::vector< IMGVTK >::iterator it = imgs_delin.begin(); it != imgs_delin.end(); it++){
-        it->setLog( mi_log );
-    }
 
-    escribirLog( "Reconstructor 3D" );
-    escribirLog( "by: Fernando Cervantes-Sanchez\n" );
+
+/*  Metodo: setFiltroLog
+
+    Funcion: Define el editor donde se escribiran todos los logs del filtrado
+*/
+void RECONS3D::setFiltroLog( const char *ruta_log ){
+    filtro.setLog( ruta_log );
+}
+
+void RECONS3D::umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angio_ID)
+{
+    imgs_base[angio_ID].umbralizar(img_idx, tipo_umb, nivel);
+	mostrarImagen(IMGVTK::THRESHOLD, mis_renderers[angio_ID], angio_ID);
+	renderizar(mis_renderers[angio_ID]);
 }
 
 
@@ -1283,10 +1565,10 @@ void RECONS3D::setLog(QPlainTextEdit *log ){
     Funcion: Constructor por default.
 */
 RECONS3D::RECONS3D(){
-    mi_log = NULL;
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
-
+    fp_log = NULL;
     detalle = 180;
+    fp_log = NULL;
 
     double color[] = {1.0, 1.0, 1.0};
 //    agregarEsfera(0.0, 0.0, 0.0, 10.0, color, renderer_global);
@@ -1301,7 +1583,10 @@ RECONS3D::RECONS3D(){
     Funcion: Libera la memoria utilizada para almacenar las imagenes.
 */
 RECONS3D::~RECONS3D(){
-
+    if(fp_log){
+        fclose(fp_log);
+        fp_log = NULL;
+    }
 }
 
 //-------------------------------------------------------------------------------------------------- PUBLIC----- ^
