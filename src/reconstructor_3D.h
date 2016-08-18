@@ -62,6 +62,15 @@
 #include <vtkOutlineFilter.h>
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkProperty.h>
+#include <vtkChartXY.h>
+#include <vtkPlot.h>
+#include <vtkTable.h>
+#include <vtkIntArray.h>
+#include <vtkContextView.h>
+#include <vtkContextScene.h>
+#include <vtkAxis.h>
+#include "QVTKWidget.h"
+#include "QVTKInteractor.h"
 
 // Librerias para formas geometricas:
 #include <vtkVertex.h>
@@ -130,7 +139,8 @@ class RECONS3D{
 
         int n_angios;
         int detalle;
-
+        std::vector<int*> hist;
+        std::vector<double> h_media, h_desvest, h_suma;
 
         // Miembros para visualizar la segmentacion 3D:
         std::vector< vtkSmartPointer<vtkRenderer> > mis_renderers;
@@ -138,7 +148,7 @@ class RECONS3D{
         std::vector< vtkSmartPointer<vtkPoints> > puntos;
         std::vector< vtkSmartPointer<vtkCellArray> > pixeles;
         std::vector< NORCEN > normal_centros;
-
+        std::vector<  vtkSmartPointer<vtkContextView> > view;
 
         FILTROS filtro;
         FILE *fp_log;
@@ -186,13 +196,22 @@ class RECONS3D{
 
         void segmentarImagenBase(const int angio_ID );
         double medirExactitud(const int angio_ID);
+
+        void clasAnchos( IMGVTK::PIX_PAR *grafo, const int angios_ID);
+
+        void skeletonize(const int angio_ID);
         void skeletonize(const int angio_ID, const int nivel_detalle);
 
+        vtkRenderWindow *getHist(const int angio_ID);
+        double getHist_desvest(const int angio_ID);
+        double getHist_media(const int angio_ID);
+        double getHist_suma(const int angio_ID);
+
+
+        void setIteratorHist(vtkRenderWindowInteractor *interactor , const int angio_ID);
 
         void mostrarBase( const int angio_ID );
         void mostrarGroundtruth(  const int angio_ID  );
-
-
 
         void setFiltroEntrenamiento(const FILTROS::EVO_MET evo_met);
         void setFiltroEntrenamientoPars(const FILTROS::EVO_MET_PAR evo_par, const double val);
@@ -210,10 +229,8 @@ class RECONS3D{
 
         double *get_pixelData( const int angio_ID, IMGVTK::IMG_IDX img_idx );
 
-
         vtkSmartPointer< vtkRenderer > getRenderer();
         vtkSmartPointer< vtkRenderer > getRenderer( const int angio_ID );
-
 
         void setLog( const char *ruta_log );
         void setFiltroLog( QPlainTextEdit *txtLog );
@@ -224,6 +241,10 @@ class RECONS3D{
 
         void umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angio_ID);
         void lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angio_ID);
+
+
+        int getNangios();
+
 
     // O P E R A D O R E S  S O B R E C A R G A D O S
     //--------------------------------------------------------------------------------------- PUBLIC ----- ^

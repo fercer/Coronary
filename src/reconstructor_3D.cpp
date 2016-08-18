@@ -610,7 +610,7 @@ DEB_MSG("Mostrando detector para: " << angio_ID << ", LAORAO: " << imgs_base[ang
 
 void RECONS3D::lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angio_ID)
 {
-    imgs_base[angio_ID].lengthFilter(img_idx, min_length, IMGVTK::ITERATIVO);
+    imgs_base[angio_ID].lengthFilter(img_idx, min_length, IMGVTK::DINAMICO);
 }
 
 
@@ -635,12 +635,24 @@ double RECONS3D::medirExactitud(const int angios_ID)
 }
 
 
+
+
+
+/*  Metodo: getNangios
+
+    Funcion: Retorna el numero de angiogramas cargados dentro del reconstructor.
+*/
+int RECONS3D::getNangios(){
+    return (n_angios+1);
+}
+
+
+
 /*  Metodo: agregarInput
 
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
-void RECONS3D::
-agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar){
+void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar){
     DEB_MSG("Ruta ground: " << rutaground_input);
     NORCEN norcen_temp;
 
@@ -653,6 +665,13 @@ agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, c
             mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
             puntos.push_back(vtkSmartPointer<vtkPoints>::New());
             pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
+
+            view.push_back(vtkSmartPointer<vtkContextView>::New());
+            hist.push_back( NULL );
+            h_suma.push_back(0.0);
+            h_media.push_back(0.0);
+            h_desvest.push_back(0.0);
+
             normal_centros.push_back( norcen_temp );
             /// Mover el detector a su posicion definida por el archivo DICOM:
             mallarPuntos(n_angios);
@@ -671,6 +690,11 @@ agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, c
         pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
         normal_centros.push_back( norcen_temp );
 
+        view.push_back(vtkSmartPointer<vtkContextView>::New());
+        hist.push_back( NULL );
+        h_suma.push_back(0.0);
+        h_media.push_back(0.0);
+        h_desvest.push_back(0.0);
 
         /// Mover el detector a su posicion definida por el archivo DICOM:
         mallarPuntos(n_angios);
@@ -707,6 +731,12 @@ void RECONS3D::agregarInput( const char *rutabase_input, bool enmascarar ){
     pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
     normal_centros.push_back( norcen_temp );
 
+    view.push_back(vtkSmartPointer<vtkContextView>::New());
+    hist.push_back( NULL );
+    h_suma.push_back(0.0);
+    h_media.push_back(0.0);
+    h_desvest.push_back(0.0);
+
     /// Mover el detector a su posicion definida por el archivo DICOM:
     mallarPuntos(n_angios);
     isoCentro(n_angios);
@@ -721,8 +751,6 @@ void RECONS3D::agregarInput( const char *rutabase_input, bool enmascarar ){
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
 void RECONS3D::agregarInput( char **rutasbase_input, const int n_imgs, bool enmascarar){
-
-
     n_angios++;
 
     NORCEN norcen_temp;
@@ -735,6 +763,12 @@ void RECONS3D::agregarInput( char **rutasbase_input, const int n_imgs, bool enma
     puntos.push_back(vtkSmartPointer<vtkPoints>::New());
     pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
     normal_centros.push_back( norcen_temp );
+
+    view.push_back(vtkSmartPointer<vtkContextView>::New());
+    hist.push_back( NULL );
+    h_suma.push_back(0.0);
+    h_media.push_back(0.0);
+    h_desvest.push_back(0.0);
 
     /// Mover el detector a su posicion definida por el archivo DICOM:
     mallarPuntos(n_angios);
@@ -1408,14 +1442,152 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
 
 
 
+
+
+/*  Metodo: maxminAnchos
+    Funcion: Obtiene el maximo y minimo de los anchos estimados.
+*/
+void maxminAnchos( IMGVTK::PIX_PAR *grafo, double *max, double *min){
+    if( (2 * grafo->radio) > *max ){
+        *max = 2 * grafo->radio;
+    }
+
+
+    if( (2 * grafo->radio) < *min ){
+        *min = 2 * grafo->radio;
+    }
+
+
+    for( int i = 0; i < grafo->n_hijos; i++){
+        maxminAnchos( grafo->hijos[i], max, min );
+    }
+}
+
+
+
+
+/*  Metodo: clasAnchos
+    Funcion: Clasifica los anchos en las clases del histograma ( las clases tienen un rango interclase de 0.5's)
+*/
+void RECONS3D::clasAnchos(IMGVTK::PIX_PAR *grafo, const int angios_ID){
+    const double ancho = grafo->radio * 2.0;
+    const int clase = (int)floor(ancho);
+    const double residuo = ancho - floor(ancho);
+    const int clase_med = (residuo >= 0.75 ) ? 2 : ((residuo >= 0.25) ? 1 : 0);
+
+    hist[angios_ID][2*clase + clase_med]++;
+
+    for( int i = 0; i < grafo->n_hijos; i++){
+        clasAnchos( grafo->hijos[i], angios_ID );
+    }
+
+}
+
+
+/*  Metodo: skeletonize
+
+    Funcion: Obtiene el esqueleto de la imagen y genera el histograma de los anchos
+*/
+void RECONS3D::skeletonize(const int angio_ID){
+    DEB_MSG("Extrayendo esquelto a " << angio_ID);
+    if( !imgs_base[angio_ID].skl_ptr ){
+
+        imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
+
+        DEB_MSG("Caracteristicas puntero: " << imgs_base[angio_ID].pix_caract);
+
+        // Generar el histograma:
+        //// Recorrer los anchos y detectar el minimo y el maximo
+        if ( !imgs_base[angio_ID].pix_caract ){
+            DEB_MSG("No existe grafo alguno...");
+            return;
+        }else{
+            DEB_MSG("Generando Histograma...");
+        }
+
+        double max = -INF;
+        double min =  INF;
+
+        maxminAnchos( imgs_base[angio_ID].pix_caract, &max, &min );
+
+        DEB_MSG("Max ancho: " << max << ", min ancho: " << min);
+
+        // Armar el histograma:
+
+        const double residuo = max - floor(max);
+        double inc = 0.0;
+        if( residuo > 0.5 ){
+            inc = 1.0;
+        }else if( residuo > 0.0 ){
+            inc = 0.5;
+        }
+
+        max = floor(max) + inc;
+        const int n_clases = (int)(max * 2.0) + 1;
+
+        DEB_MSG("n clases: " << n_clases);
+        hist.at( angio_ID ) = new int [n_clases];
+        memset(hist[ angio_ID ], 0, n_clases*sizeof(int) );
+        clasAnchos( imgs_base[angio_ID].pix_caract, angio_ID);
+
+        for(int i = 0; i < n_clases; i++){
+            h_suma[ angio_ID ] = h_suma[ angio_ID ] + (double)i * 0.5 * hist[angio_ID][ i ];
+        }
+        h_media[angio_ID] = h_suma[angio_ID] / (double)n_clases;
+
+        for(int i = 0; i < n_clases; i++){
+            double temp = (double)i * 0.5 * hist[angio_ID][ i ] - h_media[angio_ID];
+            h_desvest[angio_ID] = h_desvest[angio_ID] + temp * temp;
+        }
+
+        h_desvest[angio_ID] = sqrt( h_desvest[angio_ID] / (double)n_clases );
+
+
+        // Inicializar los objetos para la visualizacion con VTK
+        view[angio_ID]->GetRenderer()->SetBackground(1.0, 1.0, 1.0);
+        view[angio_ID]->GetRenderWindow()->SetSize(400, 300);
+
+        vtkSmartPointer< vtkChartXY > hist_chart = vtkSmartPointer< vtkChartXY >::New();
+        view[angio_ID]->GetScene()->AddItem(hist_chart);
+
+        vtkSmartPointer< vtkTable > table =  vtkSmartPointer< vtkTable >::New();
+
+        vtkSmartPointer<vtkDoubleArray> arrAnchos = vtkSmartPointer<vtkDoubleArray>::New();
+        arrAnchos->SetName("Vessel width estimation");
+        table->AddColumn(arrAnchos);
+
+        vtkSmartPointer<vtkIntArray> arrFrecs = vtkSmartPointer<vtkIntArray>::New();
+        arrFrecs->SetName("Frecuency");
+        table->AddColumn(arrFrecs);
+        table->SetNumberOfRows(n_clases);
+
+        for(int i = 0; i < n_clases; i++){
+            table->SetValue(i,0,i*0.5);
+            table->SetValue(i,1,hist[angio_ID][i]);
+        }
+
+        vtkPlot *line = NULL;
+        line = hist_chart->AddPlot(vtkChart::BAR);
+        line->SetColor(0.0, 0.0, 1.0);
+
+        hist_chart->GetAxis(vtkAxis::LEFT)->SetTitle("Frecuency");
+        hist_chart->GetAxis(vtkAxis::BOTTOM)->SetTitle("Vessel width estimation");
+
+        line->SetInputData(table, 0, 1);
+    }
+}
+
+
+
+
+
 /*  Metodo: skeletonize
 
     Funcion: Obtiene el esqueleto de la imagen y muestra los puntos de interes.
 */
 void RECONS3D::skeletonize(const int angio_ID, const int nivel_detalle){
 
-    DEB_MSG("Extrayendo esquelto a " << angio_ID);
-    imgs_base[angio_ID].skeletonization(IMGVTK::THRESHOLD);
+    skeletonize(angio_ID);
 
     if( !imgs_base[angio_ID].pix_caract ){
         DEB_MSG("No existe grafo alguno...");
@@ -1468,11 +1640,44 @@ void RECONS3D::skeletonize(const int angio_ID, const int nivel_detalle){
         DEB_MSG("Agregando al renderizador");
         renderer_global->AddActor( actor );
     }
+
     renderizar( renderer_global );
 }
 
 
 
+/*  Metodo: getHist
+
+    Funcion: Retorna la ventana del visualizador donde se muestra el histograma.
+*/
+vtkRenderWindow* RECONS3D::getHist( const int angio_ID ){
+    return view[angio_ID]->GetRenderWindow();
+}
+
+double RECONS3D::getHist_desvest( const int angio_ID )
+{
+    return h_desvest[angio_ID];
+}
+
+double RECONS3D::getHist_media( const int angio_ID )
+{
+    return h_media[angio_ID];
+}
+
+double RECONS3D::getHist_suma( const int angio_ID )
+{
+    return h_suma[angio_ID];
+}
+
+
+
+/*  Metodo: setIteratorHist
+
+    Funcion: Define el interactor para visualizar el histograma.
+*/
+void RECONS3D::setIteratorHist( vtkRenderWindowInteractor *interactor, const int angio_ID ){
+    view[angio_ID]->SetInteractor( interactor );
+}
 
 
 /*  Metodo: mostrarBase
@@ -1607,6 +1812,12 @@ RECONS3D::~RECONS3D(){
     if(fp_log){
         fclose(fp_log);
         fp_log = NULL;
+    }
+
+    for( std::vector<int*>::iterator it = hist.begin(); it != hist.end(); it++){
+        if( *it ){
+            delete *it;
+        }
     }
 }
 

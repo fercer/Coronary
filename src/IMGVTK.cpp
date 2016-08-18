@@ -1065,6 +1065,7 @@ void IMGVTK::fillMask( double *img_tmp, double *mask_tmp, const int mis_cols, co
     Funcion: Genera un grafo a partir del esqueleto.
 */
 IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, bool *visitados){
+    DEB_MSG( x << "/" << cols << " :: " << y << "/" << rows);
     if( *(visitados + x + y*cols) ){
         return NULL;
     }
@@ -1106,8 +1107,8 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
     }
 
     if( !visitado ){
-        char mensaje[] = "\n" COLOR_BACK_RED  COLOR_YELLOW "El pixel [XXX, YYY] no tiene vecinos en la imagen de bordes a: DDD pixeles a la redonda" COLOR_NORMAL "\n";
-        sprintf( mensaje, "\n" COLOR_BACK_RED  COLOR_YELLOW "El pixel [%i, %i] no tiene vecinos en la imagen de bordes a: %i pixeles a la redonda" COLOR_NORMAL "\n", x, y, max_dist);
+        char mensaje[] = "\nEl pixel [XXX, YYY] no tiene vecinos en la imagen de bordes a: DDD pixeles a la redonda\n";
+        sprintf( mensaje, "\nEl pixel [%i, %i] no tiene vecinos en la imagen de bordes a: %i pixeles a la redonda\n", x, y, max_dist);
         escribirLog(mensaje);
     }
 
@@ -1288,11 +1289,11 @@ void IMGVTK::extraerCaract( IMG_IDX img_idx ){
     *(skl_tmp + xy ) = 2.0;
     int nivel = 0;
 
-    pix_caract = grafoSkeleton(skl_tmp, x_ini, y_ini, &nivel, tabla, visitados);
-
-    DEB_MSG("Encontrados " << nivel << " niveles");
+    //pix_caract = grafoSkeleton(skl_tmp, x_ini, y_ini, &nivel, tabla, visitados);
 
     n_niveles = nivel;
+
+    DEB_MSG("Encontrados " << n_niveles << " niveles");
 
     delete [] visitados;
     delete [] skl_tmp;
@@ -1609,7 +1610,7 @@ void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const doubl
 double IMGVTK::medirExactitud(){
 
     if( !gt_ptr ){
-        char mensaje_error[] = COLOR_BACK_BLACK COLOR_RED "<<ERROR: " COLOR_YELLOW "No se cargo la imagen ground-truth" COLOR_NORMAL "\n";
+        char mensaje_error[] = "<<ERROR: No se cargo la imagen ground-truth\n";
         escribirLog( mensaje_error);
         return 0.0;
     }
@@ -1904,7 +1905,7 @@ DEB_MSG("Imagen DICOM en RGB...");
                             }
                         }
                     }else{
-                        escribirLog( COLOR_BACK_BLACK COLOR_RED "< ERROR AL LEER ARCHIVO DICOM: Formato de imagen RGB no soportado >\n" COLOR_NORMAL);
+                        escribirLog( "< ERROR AL LEER ARCHIVO DICOM: Formato de imagen RGB no soportado >\n");
                     }
                     break;
                 }
@@ -1953,7 +1954,7 @@ DEB_MSG("Tipo UINT16");
                         }
 
                     }else{
-                        escribirLog( COLOR_BACK_BLACK COLOR_RED "< ERROR AL LEER ARCHIVO DICOM: Formato de imagen RGB no soportado >\n" COLOR_NORMAL);
+                        escribirLog("< ERROR AL LEER ARCHIVO DICOM: Formato de imagen RGB no soportado >\n");
                     }
                     break;
                 }
@@ -2570,8 +2571,8 @@ IMGVTK::IMGVTK(){
     DISO = SID / 2;
     LAORAO = 0.0;
     CRACAU = 0.0;
-    pixX = 0.308;
-    pixY = 0.308;
+    pixX = 1.0;//0.308;
+    pixY = 1.0;//0.308;
     WCenter = 127.5;
     WWidth = 255.0;
 }
@@ -2721,8 +2722,8 @@ IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs, const bool enmascarar){
     DISO = SID / 2;
     LAORAO = 0.0;
     CRACAU = 0.0;
-    pixX = 0.308;
-    pixY = 0.308;
+    pixX = 1.0;//0.308;
+    pixY = 1.0;//0.308;
     WCenter = 127.5;
     WWidth = 255.0;
 
@@ -2755,8 +2756,8 @@ IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel)
     DISO = SID / 2;
     LAORAO = 0.0;
     CRACAU = 0.0;
-    pixX = 0.308;
-    pixY = 0.308;
+    pixX = 1.0;//0.308;
+    pixY = 1.0;//0.308;
     WCenter = 127.5;
     WWidth = 255.0;
 

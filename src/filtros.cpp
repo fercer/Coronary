@@ -29,10 +29,10 @@ void FILTROS::escribirLog( const char *mensaje ){
 
     Funcion: Actualiza la barra de progreso.
 */
-void FILTROS::barraProgreso( const int avance, const int milestones ){
+void FILTROS::barraProgreso( const int avance, const int max_progress ){
 
     if( mi_pBar ){
-        mi_pBar->setMaximum( milestones );
+        mi_pBar->setMaximum( max_progress );
         mi_pBar->setValue( avance );
         return;
     }
@@ -45,11 +45,11 @@ void FILTROS::barraProgreso( const int avance, const int milestones ){
         printf("\r");
     }
     printf(COLOR_BACK_RED "[");
-    int avance_milestones = (int)((double)max_ancho * (double)avance / (double)milestones);
-    for( int i = 0; i < avance_milestones; i++){
+    int avance_progreso = (int)((double)max_ancho * (double)avance / (double)max_progress);
+    for( int i = 0; i < avance_progreso; i++){
         printf(COLOR_BACK_GREEN " ");
     }
-    for( int i = avance_milestones; i < max_ancho; i++){
+    for( int i = avance_progreso; i < max_ancho; i++){
         printf(COLOR_BACK_CYAN " ");
     }
     printf(COLOR_BACK_RED "]" COLOR_NORMAL);
@@ -91,7 +91,7 @@ inline double FILTROS::interpolacion(const double *pix, const int j, const int i
 /*  Metodo: rotarImg
     Funcion: Rota una imagen almacenada como intensidad de 0 a 1 en un angulo theta.
 */
-void FILTROS::rotarImg( const double *org, double *rot, const double ctheta, const double stheta, const int mis_rens, const int mis_cols, const int org_rens, const int org_cols){
+void FILTROS::rotateImg( const double *org, double *rot, const double ctheta, const double stheta, const int mis_rens, const int mis_cols, const int org_rens, const int org_cols){
 
     const double mitad_x = (double)(mis_cols - 1) / 2.0;
     const double mitad_y = (double)(mis_rens - 1) / 2.0;
@@ -380,21 +380,23 @@ void FILTROS::filtrar(){
 
     double fitness = 0.0;
 
-    char mensaje[] = COLOR_GREEN "Filtrado exitoso, el area bajo la curva de ROC es de X.XXXXXXX " COLOR_NORMAL "\n";
+    char mensaje[] = "Filtrado exitoso, el area bajo la curva de ROC es de X.XXXXXXX \n";
     switch( fitness_elegido ){
         case ROC:
             fitness = fitnessROC(mi_elite, resp);
-            sprintf(mensaje, COLOR_GREEN "Filtrado exitoso, el area bajo la curva de ROC es de %1.7f " COLOR_NORMAL "\n", fitness);
+            sprintf(mensaje, "Area under the ROC curve: %1.7f \n", fitness);
             break;
         case CORCON:
             fitness = fitnessCorCon(mi_elite, resp);            
-            sprintf(mensaje, COLOR_GREEN "Filtrado exitoso, la correlacion y contraste son de %2.7f " COLOR_NORMAL "\n", fitness);
+            sprintf(mensaje, "Filtrado exitoso, la correlacion y contraste son de %2.7f \n", fitness);
             break;
         default: /* FIT_UNSET */
-            char mensaje_error[] = COLOR_BACK_BLACK COLOR_RED "<<ERROR: " COLOR_YELLOW "No se ha definido la funcion de evaluacion (fitness)" COLOR_NORMAL "\n";
+            char mensaje_error[] = "<<ERROR: No se ha definido la funcion de evaluacion (fitness)\n";
             escribirLog( mensaje_error);
     }
-    escribirLog( mensaje );
+    if( ground_truth ){
+        escribirLog( mensaje );
+    }
     memcpy(dest, resp, rows_cols*sizeof(double));
 }
 
@@ -450,151 +452,180 @@ void FILTROS::setProgressBar( QProgressBar *pBar ){
  *
  * //        //      //      //      //      //      //        //      //      //      //      //      //        //      //      //      //      //      //        //      //      //      //      //      //
 */
-/*  Metodo: respGMF
 
-    Funcion: Obtiene la respuesta del filtro Gaussiano Multiescala, con desviacion estandar: sigma, largo del template: L, ancho del template: T, y numero de rotaciones que se hacen al filtro entre 0 y 180°: K.
+
+/*
+typedef struct INDIV {
+    double vars[4];
+    ///  vars[0]: L,
+    ///  vars[1]: T,
+    ///  vars[2]: K,
+    ///  vars[3]: sigma
+} INDIV;
+*/
+/*  Member: respGMF
+
+    Function: Applies the Gaussian Matched Filter to the input image using the parameters defined in the
+    INDIV structure 'test', and saves the output in a pointer 'resp'.
 */
 void FILTROS::respGMF(INDIV *test, double *resp){
-	TIMERS;
-
-	GETTIME_INI;
-
     const int L = round(test->vars[0]);
     const int T = round(test->vars[1]);
     const int K = round(test->vars[2]);
     const double sigma = test->vars[3];
+
     const int temp_dims = 1.5 * ((T > L) ? T : L);
 
     double **templates = new double*[K];
 
-    //// Se calcula el template Gaussiano en rotacion 0°.
+    ////// Calculate a single Gaussian curve along the template width, at 0 degrees:
     double *gauss_0 = new double[T];
-	double *gauss_ptr = gauss_0;
-
-    ////// Se calcula una linea de la gaussiana para el template, luego se copia hacia abajo:
+    double *gauss_ptr = gauss_0;
     const double sig_2 = 2.0 * sigma * sigma;
     double sum = 0.0;
-    for( double x = -floor((double)T/2.0) + (double)(1 - T%2)/2.0; x <= floor((double)T/2.0) - (double)(1 - T%2)/2.0; x+=1.0){
+    for( double x = -floor((double)T/2.0) + (double)(1 - T%2)/2.0;
+                x <= floor((double)T/2.0) - (double)(1 - T%2)/2.0;
+                x+=1.0)
+    {
         *(gauss_ptr) = 1.0 - exp( -(x*x / sig_2) );
         sum += *(gauss_ptr);
         gauss_ptr++;
     }
     sum *= L;
-
-    //// Se resta la media a todo el template, y se divide entre la suma:
     gauss_ptr = gauss_0;
-    const double media = sum / ((double)T * (double)L);
+    const double mean = sum / ((double)T * (double)L);
 
-    for( double x = -floor((double)T/2.0) + (double)(1 - T%2)/2.0; x <= floor((double)T/2.0) - (double)(1 - T%2)/2.0; x+=1.0){
-        *(gauss_ptr) = (*(gauss_ptr) - media) / sum;
+    for( double x = -floor((double)T/2.0) + (double)(1 - T%2)/2.0;
+         x <= floor((double)T/2.0) - (double)(1 - T%2)/2.0;
+         x+=1.0)
+    {
+        *(gauss_ptr) = (*(gauss_ptr) - mean) / sum;
          gauss_ptr++;
     }
-
-
-    //// Se termina de construir el template a 0°:
     templates[0] = new double [temp_dims * temp_dims];
+
+    //// Copy the Gaussian curve along the template height:
     memset(templates[0], 0, temp_dims*temp_dims*sizeof(double));
-    for( int y = 0; y < L; y++ ){
-        memcpy( templates[0] + (temp_dims/2 - L/2 + y)*temp_dims + (temp_dims/2 - T/2), gauss_0, T*sizeof(double) );
-//        for( int x = 0; x < T; x++){
-//             templates[0][(temp_dims/2 - L/2 + y)*temp_dims + (temp_dims/2 - T/2+x)] = 1.0;
-//        }
+    for( int y = 0; y < L; y++ )
+    {
+        memcpy( templates[0] + (temp_dims/2 - L/2 + y)*temp_dims + (temp_dims/2 - T/2),
+                gauss_0,
+                T*sizeof(double) );
     }
 
 
-    // Rotar el template segun el numero de rotaciones 'K':
+    // Rotate template at each 'K' orientation:
     const double theta_inc = 180.0 / (double)K;
     double theta = 0.0;
 
-    for( int k = 1; k < K; k++){
+    for( int k = 1; k < K; k++)
+    {
         theta += theta_inc;
         const double ctheta = cos( -theta * Mi_PI/180.0 );
         const double stheta = sin( -theta * Mi_PI/180.0 );
 
         templates[k] = new double [temp_dims * temp_dims];
         memset(templates[k], 0, temp_dims*temp_dims*sizeof(double));
-        rotarImg( templates[0], templates[k], ctheta, stheta, temp_dims, temp_dims, temp_dims, temp_dims);
-
-#ifndef NDEBUG
-        char temp_nom[] = "template_XXX.fcs";
-        sprintf(temp_nom, "template_%3i.fcs", k);
-        FILE *fp_temp = fp_temp = fopen(temp_nom, "w");
-
-        for( int y = 0; y < temp_dims; y++){
-            for( int x = 0; x < temp_dims; x++){
-                fprintf(fp_temp, "%1.12f ", *(templates[k] + x + y*temp_dims));
-            }
-            fprintf(fp_temp, "\n");
-        }
-        fclose(fp_temp);
-#endif
+        //rotateImg( templates[0], templates[k], ctheta, stheta, temp_dims, temp_dims, temp_dims, temp_dims);
+        rotateImg( templates[0], templates[k], ctheta, stheta, temp_dims, temp_dims, T, L);
     }
 
-	delete[] gauss_0;
-    ////--------------------------------------------------------- Aplicacion del filtro:
+    delete[] gauss_0;
 
+
+    //// Initialize the filter response:
     double *resp_tmp = new double [ K * (cols + temp_dims - 1) * (rows + temp_dims - 1) ];
-    for( int xy = 0; xy < K * (cols + temp_dims - 1) * (rows + temp_dims - 1); xy++ ){
+    for( int xy = 0; xy < K * (cols + temp_dims - 1) * (rows + temp_dims - 1); xy++ )
+    {
         *(resp_tmp + xy) = -INF;
     }
 
-	const int offset = (int)(temp_dims/2);
+    const int offset = (int)(temp_dims/2);
+    //// columns in the input image
     const int mis_cols = cols;
+    //// rows in the input image
     const int mis_rens = rows;
+    //// the pointer to the input image
     const double *mi_org = org;
 
-    #pragma omp parallel for shared(resp_tmp, mi_org, templates) firstprivate(mis_rens, mis_cols, temp_dims, K)
-    for( int k = 0; k < K; k++ ){
-        for( int yR = 0; yR < (mis_rens + temp_dims - 1); yR++){
-			// Definir los limites en el eje y que pueden recorrerse del template:
-			const int min_y = (yR > (temp_dims - 1)) ? (yR - temp_dims + 1) : 0;
-            const int max_y = (yR < mis_rens) ? (yR + 1) : mis_rens;
-            for( int xR = 0; xR < (mis_cols + temp_dims - 1); xR++){
+                                                                                                                                                                                        const int max_prog = (mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1) * K;
 
-				// Definir los limites en el eje x que pueden recorrerse del template:
+    //// Convolve the image with the templates at each 'K' orientation:
+    for( int k = 0; k < K; k++ )
+    {
+        for( int yR = 0; yR < (mis_rens + temp_dims - 1); yR++)
+        {
+
+            //// Determine the limits in the 'y' axis to keep the convolution inside the image rows:
+            const int min_y = (yR > (temp_dims - 1)) ? (yR - temp_dims + 1) : 0;
+            const int max_y = (yR < mis_rens) ? (yR + 1) : mis_rens;
+            for( int xR = 0; xR < (mis_cols + temp_dims - 1); xR++)
+            {
+
+                //// Determine the limits in the 'x' axis to keep the convolution inside the image columns:
                 const int min_x = (xR > (temp_dims - 1)) ? (xR - temp_dims + 1) : 0;
                 const int max_x = (xR < mis_cols) ? (xR + 1) : mis_cols;
 
-				double resp_k = 0.0;
-                // Convolucionar el template con la vecindad de pixeles de la imagen:
-                for( int y = min_y; y < max_y; y++){
-                    for( int x = min_x; x < max_x; x++){
-                        resp_k += *(templates[k] + (max_y - y - 1)*temp_dims + (max_x - x - 1)) * *(mi_org + y*mis_cols + x);
+                double resp_k = 0.0;
+                //// Convolve the template with the input image:
+                for( int y = min_y; y < max_y; y++)
+                {
+                    for( int x = min_x; x < max_x; x++)
+                    {
+                        resp_k += *(templates[k] + (max_y - y - 1)*temp_dims + (max_x - x - 1)) *
+                                  *(mi_org + y*mis_cols + x);
                     }
                 }
 
-                if (resp_k > *(resp_tmp + yR*(mis_cols + temp_dims - 1) + xR)) {
-                    *(resp_tmp + yR*(mis_cols + temp_dims - 1) + xR + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1)) = resp_k;
+                //// Save the response for each pixel among the 'K' orientations:
+                if (resp_k > *(resp_tmp + yR*(mis_cols + temp_dims - 1) + xR))
+                {
+                    *(resp_tmp + yR*(mis_cols + temp_dims - 1) +
+                            xR + k*(mis_cols + temp_dims - 1) *
+                            (mis_rens + temp_dims - 1))              =      resp_k;
                 }
+
             }
         }
+
+                                                                                                                                                                                                                            barraProgreso( k+1, K );
     }
 
-    // Liberar la matriz de templates:
-    for( int xy = 0; xy < rows_cols; xy++){
+    //// Keep the highest response for each pixel among the whole orientations as the final filter response:
+    for( int xy = 0; xy < rows_cols; xy++)
+    {
         *(resp +xy) =-INF;
     }
-
-    for (int y = 0; y < rows; y++) {
-        for (int x = 0; x < cols; x++) {
-            for( int k = 0; k < K; k++){
-                if( *(resp + x + y*cols) < *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1) + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1)) ){
-                    *(resp + x + y*cols) = *(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1) + k*(mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1));
+    for (int y = 0; y < rows; y++)
+    {
+        for (int x = 0; x < cols; x++)
+        {
+            for( int k = 0; k < K; k++)
+            {
+                if( *(resp + x + y*cols) <
+                        *(resp_tmp + (x + offset) +
+                          (y + offset)*(cols + temp_dims - 1) +
+                          k*(mis_cols + temp_dims - 1) *
+                          (mis_rens + temp_dims - 1)) )
+                {
+                    *(resp + x + y*cols) = *(resp_tmp + (x + offset) +
+                                             (y + offset)*(cols + temp_dims - 1) +
+                                             k*(mis_cols + temp_dims - 1) *
+                                             (mis_rens + temp_dims - 1));
                 }
             }
         }
     }
 
-    for( int k = 0; k < K; k++){
+
+    // Free memory
+    for( int k = 0; k < K; k++)
+    {
         delete [] templates[k];
     }
     delete [] templates;
-
     delete [] resp_tmp;
-
-	GETTIME_FIN;
-
-	DEB_MSG("Filtrado en " << DIFTIME << " segundos.");
+                                                                                                                                                                                        barraProgreso( max_prog, max_prog );
 }
 
 
@@ -941,7 +972,7 @@ double FILTROS::calcROC( double *resp ){
 
     char mensaje[] = "X.XXXXXXXXXXXXXXXX XXX.XXXXXXXXXXXX \n";
     sprintf(mensaje, "%1.16f %3.12f\n", Az, DIFTIME);
-    escribirLog( mensaje );
+    //escribirLog( mensaje );
 
     return Az;
 }
@@ -962,6 +993,9 @@ double FILTROS::fitnessROC( INDIV *test, double *mi_resp ){
             break;
     }
 
+    if ( !ground_truth ){
+        return -1.0;
+    }
     return calcROC(mi_resp);
 }
 
@@ -1187,6 +1221,9 @@ double FILTROS::fitnessCorCon( INDIV *test, double *resp){
             break;
     }
 
+    if ( !ground_truth ){
+        return -1.0;
+    }
     return calcCorCon(resp);
 }
 

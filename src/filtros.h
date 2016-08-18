@@ -96,10 +96,10 @@ class FILTROS{
         // M E T O D O S      P R I V A D O S
 
         void escribirLog( const char *mensaje );
-        void barraProgreso( const int avance, const int milestones );
+        void barraProgreso(const int avance, const int max_progress );
 
         inline double interpolacion(const double *pix, const int j, const int i, const double x, const double y, const int mis_rens, const int mis_cols);
-        void rotarImg(const double *org, double *rot, const double ctheta, const double stheta, const int mis_rens, const int mis_cols, const int org_rens, const int org_cols);
+        void rotateImg(const double *org, double *rot, const double ctheta, const double stheta, const int mis_rens, const int mis_cols, const int org_rens, const int org_cols);
 
         static int compIndiv(const void* A, const void* B);
 
