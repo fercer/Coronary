@@ -1289,7 +1289,7 @@ void IMGVTK::extraerCaract( IMG_IDX img_idx ){
     *(skl_tmp + xy ) = 2.0;
     int nivel = 0;
 
-    //pix_caract = grafoSkeleton(skl_tmp, x_ini, y_ini, &nivel, tabla, visitados);
+    pix_caract = grafoSkeleton(skl_tmp, x_ini, y_ini, &nivel, tabla, visitados);
 
     n_niveles = nivel;
 

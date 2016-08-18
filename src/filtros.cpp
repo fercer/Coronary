@@ -463,10 +463,21 @@ typedef struct INDIV {
     ///  vars[3]: sigma
 } INDIV;
 */
-/*  Member: respGMF
+/*  respGMF
 
     Function: Applies the Gaussian Matched Filter to the input image using the parameters defined in the
     INDIV structure 'test', and saves the output in a pointer 'resp'.
+
+    ******** Code used for the computational experiments presented in the chapter:
+
+    "Automatic Detection of Coronary Artery Stenosis using Bayesian Classification and
+            Gaussian Filters based on Differential Evolution"
+
+    for the book: "Hybrid Intelligence for Image Analysis and Understanding" published by John Wiley, UK.
+
+    Authors: Ivan Cruz-Aceves, Fernando Cervantes-Sanchez and Arturo Hernandez-Aguirre
+
+    *************************************
 */
 void FILTROS::respGMF(INDIV *test, double *resp){
     const int L = round(test->vars[0]);
@@ -474,7 +485,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
     const int K = round(test->vars[2]);
     const double sigma = test->vars[3];
 
-    const int temp_dims = 1.5 * ((T > L) ? T : L);
+    const int temp_dims = 1.5*((T > L) ? T : L);
 
     double **templates = new double*[K];
 
@@ -526,8 +537,8 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
         templates[k] = new double [temp_dims * temp_dims];
         memset(templates[k], 0, temp_dims*temp_dims*sizeof(double));
-        //rotateImg( templates[0], templates[k], ctheta, stheta, temp_dims, temp_dims, temp_dims, temp_dims);
-        rotateImg( templates[0], templates[k], ctheta, stheta, temp_dims, temp_dims, T, L);
+        rotateImg( templates[0], templates[k], ctheta, stheta, temp_dims, temp_dims, temp_dims, temp_dims);
+        //rotateImg( templates[0], templates[k], ctheta, stheta, temp_dims, temp_dims, T, L);
     }
 
     delete[] gauss_0;
