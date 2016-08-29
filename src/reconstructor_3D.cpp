@@ -21,6 +21,8 @@
 void RECONS3D::escribirLog( const char *mensaje ){
     if(fp_log){
         fprintf(fp_log, "%s", mensaje);
+    }else if(mi_txtLog){
+        mi_txtLog->appendPlainText( mensaje );
     }else{
         std::cout << mensaje;
     }
@@ -28,24 +30,29 @@ void RECONS3D::escribirLog( const char *mensaje ){
 
 
 
-
-
 /*  Metodo: barraProgreso
 
     Funcion: Actualiza la barra de progreso.
 */
-void RECONS3D::barraProgreso( const int avance, const int milestones ){
+void RECONS3D::barraProgreso( const int progress, const int max_progress ){
+    
+    if( mi_pBar ){
+        mi_pBar->setMaximum( max_progress );
+        mi_pBar->setValue( progress );
+        return;
+    }
+    
     /// Limpiar el resto de la linea:
     int max_ancho = 100;
     for( int i = 0; i < max_ancho; i++){
         printf("\r");
     }
     printf(COLOR_BACK_RED "[");
-    int avance_milestones = (int)((double)max_ancho * (double)avance / (double)milestones);
-    for( int i = 0; i < avance_milestones; i++){
+    int progress_completed = (int)((double)max_ancho * (double)progress / (double)max_progress);
+    for( int i = 0; i < progress_completed; i++){
         printf(COLOR_BACK_GREEN " ");
     }
-    for( int i = avance_milestones; i < max_ancho; i++){
+    for( int i = progress_completed; i < max_ancho; i++){
         printf(COLOR_BACK_CYAN " ");
     }
     printf(COLOR_BACK_RED "]" COLOR_NORMAL);
@@ -1127,6 +1134,14 @@ void RECONS3D::setLog(const char *ruta_log){
 }
 
 
+/*  Metodo: setLog
+ * 
+ *    Funcion: Define el objeto tipo QPlainTextEdit donde se guarda el log del proceso de reconstruccion.
+ */
+void RECONS3D::setLog(QPlainTextEdit *txtLog)
+{
+    mi_txtLog =  txtLog;
+}
 
 
 
@@ -1139,6 +1154,8 @@ void RECONS3D::setFiltroLog(QPlainTextEdit *txtLog)
 {
     filtro.setLog( txtLog );
 }
+
+
 
 
 /*  Metodo: segmentarImagenBase
@@ -1765,6 +1782,18 @@ void RECONS3D::setFiltroLog( const char *ruta_log ){
 
 
 
+
+
+/*  Metodo: setFiltroLog
+ * 
+ *   Funcion: Define el objeto donde se visualiza el progreso del proceso de filtrado.
+ */
+void RECONS3D::setProgressBar(QProgressBar *pBar){
+    mi_pBar = pBar;
+}
+
+
+
 /*  Metodo: setFiltroLog
 
     Funcion: Define el objeto donde se visualiza el progreso del proceso de filtrado.
@@ -1795,6 +1824,8 @@ RECONS3D::RECONS3D(){
     fp_log = NULL;
     detalle = 180;
     fp_log = NULL;
+    mi_txtLog = NULL;
+    mi_pBar = NULL;
 
     double color[] = {1.0, 1.0, 1.0};
 //    agregarEsfera(0.0, 0.0, 0.0, 10.0, color, renderer_global);

@@ -70,7 +70,7 @@ void coronaryGUI::loadBase(){
             QByteArray filename_ba = filenames.at(0).toLatin1();
 
             if( strlen(filename_ba.data())  ){
-                mi_rec3D.agregarInput( filename_ba.data() );
+                mi_rec3D.agregarInput( filename_ba.data(), true );
                 ui->action_Open_file->setEnabled(false);
                 ui->btnLoadGT->setEnabled(true);
                 ui->btnMaximizeVP4->setEnabled(true);
@@ -87,7 +87,7 @@ void coronaryGUI::loadBase(){
                 paths[i][len_path_i] = '\0';
             }
 
-            mi_rec3D.agregarInput(paths, n_paths);
+            mi_rec3D.agregarInput(paths, n_paths, true);
 
             ui->action_Open_file->setEnabled(false);
             ui->btnLoadGT->setEnabled(true);

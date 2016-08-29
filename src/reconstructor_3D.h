@@ -152,6 +152,10 @@ class RECONS3D{
 
         FILTROS filtro;
         FILE *fp_log;
+        
+        
+        QPlainTextEdit *mi_txtLog;
+        QProgressBar *mi_pBar;
 
     // M E T O D O S       P R I V A D O S
         void escribirLog( const char *mensaje );
@@ -233,10 +237,12 @@ class RECONS3D{
         vtkSmartPointer< vtkRenderer > getRenderer( const int angio_ID );
 
         void setLog( const char *ruta_log );
+        void setLog( QPlainTextEdit *txtLog );
         void setFiltroLog( QPlainTextEdit *txtLog );
         void setFiltroLog( FILE *fplog );
         void setFiltroLog( const char* ruta_log );
-
+        
+        void setProgressBar( QProgressBar *pBar );
         void setFiltroProgressBar( QProgressBar *pBar );
 
         void umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angio_ID);
