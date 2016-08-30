@@ -22,7 +22,7 @@ void RECONS3D::escribirLog( const char *mensaje ){
     if(fp_log){
         fprintf(fp_log, "%s", mensaje);
     }else if(mi_txtLog){
-        mi_txtLog->appendPlainText( mensaje );
+        mi_txtLog->append( mensaje );
     }else{
         std::cout << mensaje;
     }
@@ -1138,7 +1138,7 @@ void RECONS3D::setLog(const char *ruta_log){
  * 
  *    Funcion: Define el objeto tipo QPlainTextEdit donde se guarda el log del proceso de reconstruccion.
  */
-void RECONS3D::setLog(QPlainTextEdit *txtLog)
+void RECONS3D::setLog(QTextEdit *txtLog)
 {
     mi_txtLog =  txtLog;
 }
@@ -1150,7 +1150,7 @@ void RECONS3D::setLog(QPlainTextEdit *txtLog)
 
     Funcion: Define el objeto tipo QPlainTextEdit donde se guarda el log del proceso de reconstruccion.
 */
-void RECONS3D::setFiltroLog(QPlainTextEdit *txtLog)
+void RECONS3D::setFiltroLog(QTextEdit *txtLog)
 {
     filtro.setLog( txtLog );
 }

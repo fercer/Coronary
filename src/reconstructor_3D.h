@@ -94,6 +94,7 @@
 
 
 #include <QPlainTextEdit>
+#include <QTextEdit>
 #include <QProgressBar>
 
 #include <assert.h>
@@ -154,7 +155,7 @@ class RECONS3D{
         FILE *fp_log;
         
         
-        QPlainTextEdit *mi_txtLog;
+        QTextEdit *mi_txtLog;
         QProgressBar *mi_pBar;
 
     // M E T O D O S       P R I V A D O S
@@ -237,8 +238,8 @@ class RECONS3D{
         vtkSmartPointer< vtkRenderer > getRenderer( const int angio_ID );
 
         void setLog( const char *ruta_log );
-        void setLog( QPlainTextEdit *txtLog );
-        void setFiltroLog( QPlainTextEdit *txtLog );
+        void setLog( QTextEdit *txtLog );
+        void setFiltroLog( QTextEdit *txtLog );
         void setFiltroLog( FILE *fplog );
         void setFiltroLog( const char* ruta_log );
         

@@ -77,7 +77,7 @@ class FILTROS{
 
         void filtrar();
 
-        void setLog( QPlainTextEdit *txtLog );
+        void setLog( QTextEdit *txtLog );
         void setLog( FILE *fplog );
         void setLog(const char *ruta_log);
 
@@ -176,7 +176,7 @@ class FILTROS{
 
         char *mi_ruta_log;
         FILE *mi_fplog;
-        QPlainTextEdit *mi_txtLog;
+        QTextEdit *mi_txtLog;
         QProgressBar *mi_pBar;
 
         //================================================================================== FILTROS:

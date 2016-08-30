@@ -17,7 +17,7 @@ void FILTROS::escribirLog( const char *mensaje ){
     if(mi_fplog){
         fprintf(mi_fplog, "%s", mensaje);
     }else if(mi_txtLog){
-        mi_txtLog->appendPlainText( mensaje );
+        mi_txtLog->append( mensaje );
     }else{
         std::cout << mensaje << std::endl;
         fflush(stdout);
@@ -406,7 +406,7 @@ void FILTROS::filtrar(){
 /*  Metodo: setLog
     Funcion: Define el objeto tipo QPlainTextEdit donde se imprimen los logs del sistema.
 */
-void FILTROS::setLog(QPlainTextEdit *txtLog)
+void FILTROS::setLog(QTextEdit *txtLog)
 {
     mi_txtLog = txtLog;
 }

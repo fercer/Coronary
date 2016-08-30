@@ -14,6 +14,7 @@
 #include <QSlider>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QLabel>
 
 #include <vector>
 
@@ -38,61 +39,26 @@ public:
 private slots:
     void defineColors();
 
-    void showImage(IMGVTK::IMG_IDX, const int viewport_ID , const int img_i);
+    void showImage(IMGVTK::IMG_IDX, const int viewport_ID);
 
-    void writeConfiguration(const char *path);
-    void readConfiguration(const char *path);
     void loadBase();
-    void loadGroundtruth();
 
-    void minimizeVP4();
-    void maximizeVP4();
+    void loadGroundtruth();
 
     void on_action_Open_file_triggered();
 
     void on_action_Quit_triggered();
 
     void on_actionSkeletonize_triggered();
-
-    void on_btnLoadGT_clicked();
-
-    void on_btnMaximizeVP4_clicked();
-
-    void on_hsldImages_valueChanged(int value);
-
-    void on_actionSet_filter_parameters_triggered();
-
-    void on_actionImport_parameters_triggered();
-
-    void on_chkFixT_toggled(bool checked);
-
-    void on_actionExport_parameters_triggered();
-
-    void on_chkFixK_toggled(bool checked);
-
-    void on_chkFixL_toggled(bool checked);
-
-    void on_chkFixSigma_toggled(bool checked);
-
-    void on_cmbAlgorithm_currentIndexChanged(int index);
-
-    void on_cmbFilter_currentIndexChanged(int index);
-
-    void on_btnRunConfiguration_clicked();
-
-    void on_ptxtLog_customContextMenuRequested(const QPoint &pos);
-
-    void on_actionLog_configuration_triggered();
+    void on_actionOpen_file_as_ground_truth_triggered();
 
 private:
     QVector<QRgb> colors;
     Ui::coronaryGUI *ui;
 
-    QImage *imgBase;
+    QImage *imgVP1, *imgVP2, *imgVP3, *imgVP4;
 
     RECONS3D mi_rec3D;
-    bool loaded, showing_gt;
-    bool maximized;
 
     FILE *fp_filters;
 };
