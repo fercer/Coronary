@@ -7,17 +7,17 @@
     <x>0</x>
     <y>0</y>
     <width>695</width>
-    <height>313</height>
+    <height>546</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="6" column="1">
+   <item row="8" column="1">
     <widget class="QPushButton" name="pushButton_3">
      <property name="text">
-      <string>PushButton</string>
+      <string>Export Configuration</string>
      </property>
     </widget>
    </item>
@@ -35,54 +35,7 @@
      </item>
     </widget>
    </item>
-   <item row="5" column="0" colspan="2">
-    <widget class="QGroupBox" name="groupBox">
-     <property name="title">
-      <string>Std. Deviation (σ)</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0" colspan="2">
-    <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="2">
-    <widget class="QPushButton" name="pushButton">
-     <property name="text">
-      <string>PushButton</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="0" colspan="2">
-    <widget class="QGroupBox" name="grpWidth">
-     <property name="title">
-      <string>Width (T)</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0" colspan="2">
-    <widget class="QGroupBox" name="grpLength">
-     <property name="title">
-      <string>Length (L)</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0" colspan="2">
-    <widget class="QLabel" name="label">
-     <property name="font">
-      <font>
-       <pointsize>14</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Filter</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="2" rowspan="6">
+   <item row="1" column="3" rowspan="6">
     <layout class="QGridLayout" name="gridLayout_2">
      <item row="0" column="0">
       <widget class="QLabel" name="lblTemplate">
@@ -102,12 +55,336 @@
      </item>
     </layout>
    </item>
-   <item row="6" column="0">
-    <widget class="QPushButton" name="pushButton_2">
-     <property name="text">
-      <string>PushButton</string>
+   <item row="2" column="0" colspan="3">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
      </property>
     </widget>
+   </item>
+   <item row="8" column="3">
+    <widget class="QPushButton" name="pushButton">
+     <property name="text">
+      <string>Set Configuration</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0" colspan="3">
+    <layout class="QGridLayout" name="gridLayout_5">
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="font">
+        <font>
+         <pointsize>12</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>Length (L)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QCheckBox" name="chkLFix">
+       <property name="text">
+        <string>Fixed</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1" rowspan="2">
+      <layout class="QGridLayout" name="gridLayout_8">
+       <item row="0" column="0" rowspan="2">
+        <widget class="QDoubleSpinBox" name="dspnL"/>
+       </item>
+      </layout>
+     </item>
+     <item row="4" column="2" rowspan="2">
+      <layout class="QGridLayout" name="gridLayout_6">
+       <item row="2" column="1">
+        <widget class="QDoubleSpinBox" name="dspnLUpp"/>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="lblLLow">
+         <property name="text">
+          <string>Lower</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QDoubleSpinBox" name="dspnLLow"/>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="lblLUpp">
+         <property name="text">
+          <string>Upper</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QLabel" name="lblLDel">
+         <property name="text">
+          <string>Delta</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QDoubleSpinBox" name="dspnLDel"/>
+       </item>
+      </layout>
+     </item>
+     <item row="4" column="0" rowspan="2">
+      <widget class="QLabel" name="lblLStat">
+       <property name="text">
+        <string>Fixed Value</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="2">
+    <widget class="QCheckBox" name="checkBox">
+     <property name="maximumSize">
+      <size>
+       <width>80</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Tune</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="2">
+    <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <pointsize>14</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Filter</string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="0">
+    <widget class="QPushButton" name="pushButton_2">
+     <property name="text">
+      <string>Import Configuration</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0" colspan="3">
+    <widget class="Line" name="line_2">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0" colspan="3">
+    <layout class="QGridLayout" name="gridLayout_4">
+     <item row="4" column="1">
+      <widget class="QPushButton" name="pushButton_4">
+       <property name="text">
+        <string>Set Parameters</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item row="2" column="0" colspan="2">
+      <widget class="QComboBox" name="cmbOMethod">
+       <item>
+        <property name="text">
+         <string>Exhaustive search</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Genetic Algorithm</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Differential Evolution</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Univariate Marginal Distribution Algorithm</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Boltzmann Univariate Marginal Distribution Algorithm</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="lblOMethod">
+       <property name="font">
+        <font>
+         <pointsize>12</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>Optimization Method</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="6" column="0" colspan="3">
+    <layout class="QGridLayout" name="gridLayout_9">
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="font">
+        <font>
+         <pointsize>12</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>Width (T)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QCheckBox" name="chkTFix">
+       <property name="text">
+        <string>Fixed</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1" rowspan="2">
+      <layout class="QGridLayout" name="gridLayout_10">
+       <item row="0" column="0" rowspan="2">
+        <widget class="QDoubleSpinBox" name="dspnT"/>
+       </item>
+      </layout>
+     </item>
+     <item row="4" column="2" rowspan="2">
+      <layout class="QGridLayout" name="gridLayout_11">
+       <item row="2" column="1">
+        <widget class="QDoubleSpinBox" name="dspnTUpp"/>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="lblTLow">
+         <property name="text">
+          <string>Lower</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QDoubleSpinBox" name="dspnTLow"/>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="lblTUpp">
+         <property name="text">
+          <string>Upper</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QLabel" name="lblTDel">
+         <property name="text">
+          <string>Delta</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QDoubleSpinBox" name="dspnTDel"/>
+       </item>
+      </layout>
+     </item>
+     <item row="4" column="0" rowspan="2">
+      <widget class="QLabel" name="lblTStat">
+       <property name="text">
+        <string>Fixed Value</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="7" column="0" colspan="3">
+    <layout class="QGridLayout" name="gridLayout_12">
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_4">
+       <property name="font">
+        <font>
+         <pointsize>12</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>Standard Deviation (σ)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QCheckBox" name="chkSFix">
+       <property name="text">
+        <string>Fixed</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1" rowspan="2">
+      <layout class="QGridLayout" name="gridLayout_13">
+       <item row="0" column="0" rowspan="2">
+        <widget class="QDoubleSpinBox" name="dspnS"/>
+       </item>
+      </layout>
+     </item>
+     <item row="4" column="2" rowspan="2">
+      <layout class="QGridLayout" name="gridLayout_14">
+       <item row="2" column="1">
+        <widget class="QDoubleSpinBox" name="dspnSUpp"/>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="lblSLow">
+         <property name="text">
+          <string>Lower</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QDoubleSpinBox" name="dspnSLow"/>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="lblSUpp">
+         <property name="text">
+          <string>Upper</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QLabel" name="lblSDel">
+         <property name="text">
+          <string>Delta</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QDoubleSpinBox" name="dspnSDel"/>
+       </item>
+      </layout>
+     </item>
+     <item row="4" column="0" rowspan="2">
+      <widget class="QLabel" name="lblSStat">
+       <property name="text">
+        <string>Fixed Value</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
