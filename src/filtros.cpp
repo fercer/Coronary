@@ -144,6 +144,7 @@ void FILTROS::setEvoMetPar(const EVO_MET_PAR evo_par, const double val){
         max_iters = (int)val;
         break;
     case CR:
+        prob_cruza = val;
         seleccion = (int)(val * (double)n_pob);
         seleccion += (seleccion%2);
         DEB_MSG("Selection size: " << seleccion);
@@ -290,6 +291,10 @@ void FILTROS::setInput(IMGVTK &img_org){
 */
 void FILTROS::setPar(){
     switch( metodo_elegido ){
+        case EA_DE:
+            DE();
+            break;
+
         case EA_GA:
             GA();
             break;
@@ -305,6 +310,7 @@ void FILTROS::setPar(){
         case EXHAUSTIVA:
             busquedaExhaustiva();
             break;
+
         default: /* EVO_UNSET */
             char mensaje_error[] = COLOR_BACK_BLACK COLOR_RED "<<ERROR: " COLOR_YELLOW "No se ha definido el metodo de optimizacion" COLOR_NORMAL "\n";
             escribirLog( mensaje_error);
@@ -1398,7 +1404,7 @@ void FILTROS::generarPobInicial(INDIV *poblacion){
                 break;
         }
     }
-}\
+}
 
 
 
@@ -1985,6 +1991,134 @@ void FILTROS::GA(){
 
 
 
+// DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE ----- DE
+/*
+    Metodo:     diferenciarPoblacion
+    Funcion:    Generar una nueva poblacion a partir de la poblacion anterior.
+
+*/
+void FILTROS::diferenciarPoblacion( INDIV* poblacion, INDIV* pob_base ){
+
+    // Crear una copia de la poblacion anterior a partir de la cual se genera la nueva poblacion:
+    memcpy( pob_base, poblacion, n_pob * sizeof(INDIV) );
+
+    for(int i = 0; i < n_pob; i++){
+        // Diferenciar el individuo unicamente si se cumple la probabilidad de cruza:
+        if( HybTaus(0.0, 1.0) <= prob_cruza ){
+
+            // Generar tres indices aleatorios diferentes (excluyendo el indice actual):
+            int idx_1 = Hybtaus(-0.5, (double)(n_pob-2) + 0.5);
+            idx_1 += (idx_1 >= i) ? 1 : 0;
+
+            int idx_2 = idx_1;
+            do{
+                idx_2 = HybTaus(-0.5, (double)(n_pob-2) + 0.5);
+                idx_2 += (idx_2 >= i) ? 1 : 0;
+            }while( idx_2 == idx_1 );
+
+            int idx_3 = idx_1;
+            do{
+                idx_3 = HybTaus(-0.5, (double)(n_pob-2) + 0.5);
+                idx_3 += (idx_3 >= i) ? 1 : 0;
+            }while( (idx_3 == idx1) || (idx_3 == idx_2) );
+
+            // Diferenciar todas las variables del individuo:
+            for( int j = 0; j < n_pars; j++){
+                const unsigned int k = idx_pars[j];
+                double val_gen = (pob_base + idx_1)->vars[k] + prob_mutacion * ( (pob_base + idx_2)->vars[k] -  (pob_base + idx_3)->vars[k]);
+
+                val_gen = (val_gen <= lim_sup[ k ]) ? ((val_gen >= lim_inf[ k ]) ? val_gen : lim_inf[ k ]) : lim_sup[ k ];
+                (poblacion + i)->vars[ k ] = val_gen;
+            }
+
+            switch( fitness_elegido ){
+                case ROC:
+                    (poblacion + i)->eval = fitnessROC( poblacion + i, resp );
+                    break;
+
+                case CORCON:
+                    (poblacion + i)->eval = fitnessCorCon( poblacion + i, resp );
+                    break;
+            }
+
+            // Verificar si el individuo nuevo mejora con respecto del anterior:
+            if( (poblacion + i)->eval <= (pob_base + i)->eval ){ // El individuo nuevo NO mejora la solucion del anterior:
+                memcpy( poblacion + i, pob_base + i, sizeof(INDIV) );
+            }
+        }
+    }
+
+}
+
+
+/*
+    Metodo:     DE
+    Funcion:    Differential Evolution algorithm for filter parameters optimization.
+
+*/
+void FILTROS::DE(){
+    INDIV *poblacion = new INDIV [n_pob];
+    INDIV *pob_anterior = new INDIV [n_pob];
+
+    // Poner los valores del elite por defecto:
+    for( int i = 0; i < n_pob; i++){
+        memcpy( poblacion + i, mi_elite, sizeof(INDIV));
+    }
+
+    // Se cuantan los parametros activos:
+    n_pars = 0;
+    for( int p = 0; p < 4; p++){
+        if( pars_optim[p] ){
+            idx_pars[n_pars] = p;
+            n_pars ++;
+        }
+    }
+
+    if(semilla){
+        delete semilla;
+    }
+    semilla = ini_semilla(0);
+
+    // Inicia el algoritmo BUMDA
+    int k = 1;
+    bool procesar = true;
+
+    //// Generar la primer poblacion:
+    TIMERS;
+    GETTIME_INI;
+    generarPobInicial(poblacion);
+    qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv); // El mejor fitness queda en la posicion 0
+
+    //Se define el theta en el tiempo 0 como el minimo de la poblacion inicial.
+    char mensaje_iter[] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
+    escribirLog( "iteration\tbest_fit\tT\tL\tSigma\tK\telapsed_time\n" );
+
+    do{
+        GETTIME_FIN;
+        sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, poblacion->eval, poblacion->vars[PAR_T], poblacion->vars[PAR_L], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K], DIFTIME);
+        escribirLog( mensaje_iter );
+        barraProgreso( k, max_iters);
+
+        diferenciarPoblacion( poblacion, pob_anterior );
+        qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv); // El mejor fitness queda en la posicion 0 ya comparando el elite
+
+        k++;
+
+        //// Verificar condiciones de paro:
+        procesar = (k < max_iters);
+
+    }while(procesar);
+
+    memcpy(mi_elite, poblacion, sizeof(INDIV));
+
+    GETTIME_FIN;
+    sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+    escribirLog( mensaje_iter );
+    barraProgreso( max_iters, max_iters);
+
+    delete [] poblacion;
+    delete [] pob_anterior;
+}
 
 /*
     Metodo:     busquedaExhaustiva

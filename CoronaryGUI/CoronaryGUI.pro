@@ -21,13 +21,16 @@ SOURCES += main.cpp\
            dialogbayes.cpp\
            ../src/IMGVTK.cpp\
            ../src/reconstructor_3D.cpp\
-           ../src/filtros.cpp
+           ../src/filtros.cpp \
+    filterpars.cpp
 
 HEADERS  += coronarygui.h\
             dialogbayes.h\
             ../src/IMGVTK.h\
             ../src/reconstructor_3D.h\
-            ../src/filtros.h
+            ../src/filtros.h \
+    filterpars.h
 
 FORMS    += coronarygui.ui\
-            dialogbayes.ui
+            dialogbayes.ui \
+    filterpars.ui

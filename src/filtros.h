@@ -42,7 +42,7 @@ class FILTROS{
         // T I P O S        D E     D A T O S      P U B L I C O S
         typedef enum LIMITES { INFERIOR, SUPERIOR, DELTA } LIMITES;
         typedef enum SEG_FILTRO { SEG_UNSET, GMF, SS_GABOR } SEG_FILTRO;
-        typedef enum EVO_MET { EVO_UNSET, EXHAUSTIVA, EDA_BUMDA, EDA_UMDA, EA_GA } EVO_MET;
+        typedef enum EVO_MET { EVO_UNSET, EXHAUSTIVA, EDA_BUMDA, EDA_UMDA, EA_DE, EA_GA } EVO_MET;
         typedef enum EVO_MET_PAR { POPSIZE, MAXGEN, CR, MR} EVO_MET_PAR;
         typedef enum FITNESS { FIT_UNSET, ROC, CORCON } FITNESS;
         typedef enum PARAMETRO { PAR_L, PAR_T, PAR_K, PAR_SIGMA } PARAMETRO;
@@ -148,7 +148,12 @@ class FILTROS{
         double generarPob(INDIV *poblacion, const INDIV *cruza, const INDIV *sel_grp, const double *deltas_var);
         void GA();
 
-        //--------------------------------------------------------------------------------------------------------------------------------- GA:
+
+        //--------------------------------------------------------------------------------------------------------------------------------- DE:
+        void diferenciarPoblacion( INDIV* poblacion, INDIV* pob_base );
+        void DE();
+
+        //--------------------------------------------------------------------------------------------------------------------------------- Exhaustive Search:
         void busquedaExhaustiva();
 
         // M I E M B R O S      P R I V A D O S
@@ -170,7 +175,7 @@ class FILTROS{
         double *ground_truth, *mask;
         int rows, cols, rows_cols;
         int n_pob, max_iters, seleccion;
-        double prob_mutacion;
+        double prob_mutacion, prob_cruza;
 
         double min_vars[4], lim_inf[4], lim_sup[4];
 
