@@ -258,3 +258,9 @@ void coronaryGUI::on_actionOpen_file_as_ground_truth_triggered()
 {
     loadGroundtruth();
 }
+
+void coronaryGUI::on_actionSet_filter_parameters_triggered()
+{
+    mis_filterpars.setModal( true );
+    mis_filterpars.exec();
+}

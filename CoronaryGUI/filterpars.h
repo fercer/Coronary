@@ -15,6 +15,13 @@ public:
     explicit filterpars(QWidget *parent = 0);
     ~filterpars();
 
+private slots:
+    void on_chkTune_toggled(bool checked);
+
+    void on_chkLFix_toggled(bool checked);
+
+    void on_cmbFilter_currentIndexChanged(int index);
+
 private:
     Ui::filterpars *ui;
 };

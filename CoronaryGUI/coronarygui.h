@@ -23,6 +23,8 @@
 #include <string.h>
 
 #include "../src/reconstructor_3D.h"
+#include "filterpars.h"
+#include "dialogbayes.h"
 
 namespace Ui {
 class coronaryGUI;
@@ -52,6 +54,8 @@ private slots:
     void on_actionSkeletonize_triggered();
     void on_actionOpen_file_as_ground_truth_triggered();
 
+    void on_actionSet_filter_parameters_triggered();
+
 private:
     QVector<QRgb> colors;
     Ui::coronaryGUI *ui;
@@ -59,6 +63,8 @@ private:
     QImage *imgVP1, *imgVP2, *imgVP3, *imgVP4;
 
     RECONS3D mi_rec3D;
+
+    filterpars mis_filterpars;
 
     FILE *fp_filters;
 };

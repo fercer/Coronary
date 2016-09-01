@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1185</width>
-    <height>687</height>
+    <height>689</height>
    </rect>
   </property>
   <property name="contextMenuPolicy">
@@ -116,7 +116,7 @@
             <x>10</x>
             <y>10</y>
             <width>531</width>
-            <height>241</height>
+            <height>258</height>
            </rect>
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout">
@@ -214,6 +214,7 @@
     <addaction name="separator"/>
     <addaction name="actionGMF"/>
     <addaction name="separator"/>
+    <addaction name="actionSet_filter_parameters"/>
    </widget>
    <widget class="QMenu" name="menuSegmentation">
     <property name="title">
@@ -281,6 +282,11 @@
   <action name="actionOpen_file_as_ground_truth">
    <property name="text">
     <string>Open file as ground-truth</string>
+   </property>
+  </action>
+  <action name="actionSet_filter_parameters">
+   <property name="text">
+    <string>Set filter parameters</string>
    </property>
   </action>
  </widget>
