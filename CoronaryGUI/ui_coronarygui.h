@@ -39,6 +39,7 @@ public:
     QAction *actionSkeletonize;
     QAction *actionRidler_and_Calvard;
     QAction *actionOpen_file_as_ground_truth;
+    QAction *actionSet_filter_parameters;
     QWidget *centralWidget;
     QGridLayout *gridLayout_2;
     QProgressBar *pbarLog;
@@ -69,7 +70,7 @@ public:
     {
         if (coronaryGUI->objectName().isEmpty())
             coronaryGUI->setObjectName(QString::fromUtf8("coronaryGUI"));
-        coronaryGUI->resize(1185, 687);
+        coronaryGUI->resize(1185, 689);
         coronaryGUI->setContextMenuPolicy(Qt::CustomContextMenu);
         action_Open_file = new QAction(coronaryGUI);
         action_Open_file->setObjectName(QString::fromUtf8("action_Open_file"));
@@ -83,6 +84,8 @@ public:
         actionRidler_and_Calvard->setObjectName(QString::fromUtf8("actionRidler_and_Calvard"));
         actionOpen_file_as_ground_truth = new QAction(coronaryGUI);
         actionOpen_file_as_ground_truth->setObjectName(QString::fromUtf8("actionOpen_file_as_ground_truth"));
+        actionSet_filter_parameters = new QAction(coronaryGUI);
+        actionSet_filter_parameters->setObjectName(QString::fromUtf8("actionSet_filter_parameters"));
         centralWidget = new QWidget(coronaryGUI);
         centralWidget->setObjectName(QString::fromUtf8("centralWidget"));
         gridLayout_2 = new QGridLayout(centralWidget);
@@ -131,7 +134,7 @@ public:
         tab->setObjectName(QString::fromUtf8("tab"));
         horizontalLayoutWidget = new QWidget(tab);
         horizontalLayoutWidget->setObjectName(QString::fromUtf8("horizontalLayoutWidget"));
-        horizontalLayoutWidget->setGeometry(QRect(10, 10, 531, 241));
+        horizontalLayoutWidget->setGeometry(QRect(10, 10, 531, 258));
         horizontalLayout = new QHBoxLayout(horizontalLayoutWidget);
         horizontalLayout->setSpacing(6);
         horizontalLayout->setContentsMargins(11, 11, 11, 11);
@@ -210,6 +213,7 @@ public:
         menuDetection->addSeparator();
         menuDetection->addAction(actionGMF);
         menuDetection->addSeparator();
+        menuDetection->addAction(actionSet_filter_parameters);
         menuSegmentation->addAction(actionRidler_and_Calvard);
         menu3D->addAction(actionSkeletonize);
 
@@ -232,6 +236,7 @@ public:
         actionSkeletonize->setText(QApplication::translate("coronaryGUI", "Skeletonize", 0, QApplication::UnicodeUTF8));
         actionRidler_and_Calvard->setText(QApplication::translate("coronaryGUI", "Ridler and Calvard", 0, QApplication::UnicodeUTF8));
         actionOpen_file_as_ground_truth->setText(QApplication::translate("coronaryGUI", "Open file as ground-truth", 0, QApplication::UnicodeUTF8));
+        actionSet_filter_parameters->setText(QApplication::translate("coronaryGUI", "Set filter parameters", 0, QApplication::UnicodeUTF8));
         lblVP1->setText(QApplication::translate("coronaryGUI", "TextLabel", 0, QApplication::UnicodeUTF8));
         lblVP2->setText(QApplication::translate("coronaryGUI", "TextLabel", 0, QApplication::UnicodeUTF8));
         lblVP4->setText(QApplication::translate("coronaryGUI", "TextLabel", 0, QApplication::UnicodeUTF8));

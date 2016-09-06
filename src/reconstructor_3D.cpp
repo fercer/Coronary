@@ -21,8 +21,12 @@
 void RECONS3D::escribirLog( const char *mensaje ){
     if(fp_log){
         fprintf(fp_log, "%s", mensaje);
+
+#ifdef BUILD_GUI_VERSION
     }else if(mi_txtLog){
         mi_txtLog->append( mensaje );
+#endif
+
     }else{
         std::cout << mensaje;
     }
@@ -35,13 +39,15 @@ void RECONS3D::escribirLog( const char *mensaje ){
     Funcion: Actualiza la barra de progreso.
 */
 void RECONS3D::barraProgreso( const int progress, const int max_progress ){
-    
+
+#ifdef BUILD_GUI_VERSION
     if( mi_pBar ){
         mi_pBar->setMaximum( max_progress );
         mi_pBar->setValue( progress );
         return;
     }
-    
+#endif
+
     /// Limpiar el resto de la linea:
     int max_ancho = 100;
     for( int i = 0; i < max_ancho; i++){
@@ -65,8 +71,8 @@ void RECONS3D::barraProgreso( const int progress, const int max_progress ){
 
     Funcion: Renderiza los 'actores' contenidos en 'renderer' en una ventana de VTK.
 */
+#ifdef BUILD_VTK_VERSION
 void RECONS3D::renderizar( vtkSmartPointer<vtkRenderer> mi_renderer ){
-
     mi_renderer->ResetCamera();
 DEB_MSG("Camara reset");
     // Crear una ventana temporal:
@@ -84,13 +90,14 @@ DEB_MSG("Iterador para la ventana lista");
     renderWindowInteractor->Start();
 DEB_MSG("Retornando...");
 }
-
+#endif
 
 
 /*  Metodo: isoCentro
 
     Funcion: Calcula el isocentro de la imagen 'angio_ID' como la linea que va desde el centro de la imagen al centro de la fuente.
 */
+#ifdef BUILD_VTK_VERSION
 void RECONS3D::isoCentro( const int angio_ID ){
     // Calcular la ecuacion del plano:
     const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * Mi_PI);
@@ -155,13 +162,15 @@ void RECONS3D::isoCentro( const int angio_ID ){
     mi_normal->origen[1] = Py;
     mi_normal->origen[2] = Pz;
 }
-
+#endif
 
 
 /*  Metodo: mallaPuntos
 
     Funcion: Genera una malla de puntos para representar la imagen en un renderizador global.
 */
+
+#ifdef BUILD_VTK_VERSION
 void RECONS3D::mallarPuntos( const int angio_ID ){
     // Rotar los puntos segun LAO/RAO y CAU/CRA:
     const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * Mi_PI);
@@ -205,12 +214,16 @@ void RECONS3D::mallarPuntos( const int angio_ID ){
         yy += mi_pixY;
     }
 }
+#endif
+
 
 
 /*  Metodo: mostrarImagen
 
     Funcion: Muestra la imagen en una ventana VTK.
 */
+
+#ifdef BUILD_VTK_VERSION
 void RECONS3D::mostrarImagen(IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer, const int angio_ID){
 
     int mis_cols = imgs_base[angio_ID].cols;
@@ -290,7 +303,7 @@ DEB_MSG("min: " << min << ", max: " << max);
     mi_renderer->Clear();
     mi_renderer->AddActor2D(actor);
 }
-
+#endif
 
 
 
@@ -298,6 +311,8 @@ DEB_MSG("min: " << min << ", max: " << max);
 
     Funcion: Muestra la imagen en una ventana VTK usando el renderizador global.
 */
+
+#ifdef BUILD_VTK_VERSION
 void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
     const int mis_cols = imgs_base[angio_ID].cols;
     const int mis_rens = imgs_base[angio_ID].rows;
@@ -384,12 +399,16 @@ void RECONS3D::mostrarImagen( const int angio_ID, IMGVTK::IMG_IDX img_idx){
     agregarVector(mi_isocen, 1.0, color, renderer_global);
     agregarEsfera(mi_isocen.origen[0] + mi_isocen.direccion[0], mi_isocen.origen[1] + mi_isocen.direccion[1], mi_isocen.origen[2] + mi_isocen.direccion[2], 20.0, color, renderer_global);
 }
+#endif
+
+
 
 
 /*  Metodo: agregarVector
 
     Funcion: Agrega un vector al renderizador definido.
 */
+#ifdef BUILD_VTK_VERSION
 void RECONS3D::agregarVector(NORCEN org_dir, const double t, double color[3], vtkSmartPointer<vtkRenderer> &mi_renderer){
 
     double fin[3];
@@ -450,7 +469,7 @@ DEB_MSG("length: " << length);
     // Agregar el actor al renderer:
     mi_renderer->AddActor( vec_actor );
 }
-
+#endif
 
 
 
@@ -458,6 +477,7 @@ DEB_MSG("length: " << length);
 
     Funcion: Muestra los ejes en que se encuentra la escena global respecto al paciente.
 */
+#ifdef BUILD_VTK_VERSION
 void RECONS3D::agregarEjes(vtkSmartPointer<vtkRenderer> &mi_renderer){
     double color[3];
     NORCEN eje_dir;
@@ -481,6 +501,8 @@ void RECONS3D::agregarEjes(vtkSmartPointer<vtkRenderer> &mi_renderer){
     agregarVector( eje_dir, 500.0, color, mi_renderer);
 
 }
+#endif
+
 
 
 
@@ -489,6 +511,7 @@ void RECONS3D::agregarEjes(vtkSmartPointer<vtkRenderer> &mi_renderer){
 
     Funcion: Agrega una esfera al renderizador.
 */
+#ifdef BUILD_VTK_VERSION
 void RECONS3D::agregarEsfera(const double x, const double y, const double z, const double radio, double color[3], vtkSmartPointer<vtkRenderer> mi_renderer){
     vtkSmartPointer<vtkSphereSource> sphereSource = vtkSmartPointer<vtkSphereSource>::New();
 
@@ -508,7 +531,7 @@ void RECONS3D::agregarEsfera(const double x, const double y, const double z, con
     mi_renderer->AddActor(actor);
     mi_renderer->ResetCamera();
 }
-
+#endif
 
 
 
@@ -516,6 +539,7 @@ void RECONS3D::agregarEsfera(const double x, const double y, const double z, con
 
     Funcion: Retorna la posicion por defecto del detector y fuente:
 */
+#ifdef BUILD_VTK_VERSION
 inline RECONS3D::POS RECONS3D::posicionDefecto( const double ancho, const double alto, const double punta){
     POS defecto;
     defecto.puntos[0][0] = -ancho/2; defecto.puntos[0][1] =  alto/2; defecto.puntos[0][2] = 0.0;
@@ -525,6 +549,8 @@ inline RECONS3D::POS RECONS3D::posicionDefecto( const double ancho, const double
     defecto.puntos[4][0] =  0.0; defecto.puntos[4][1] =  0.0; defecto.puntos[4][2] =  punta;
     return defecto;
 }
+#endif
+
 
 
 
@@ -532,6 +558,7 @@ inline RECONS3D::POS RECONS3D::posicionDefecto( const double ancho, const double
 
     Funcion: Mueve los puntos de la imagen base hasta la orientacion definida por los angulos (en el archivo DICOM)
 */
+#ifdef BUILD_VTK_VERSION
 void RECONS3D::mostrarDetector(const int angio_ID){
     // Rotar los puntos segun LAO/RAO y CAU/CRA:
     const double crl = cos(imgs_base[angio_ID].LAORAO/180.0 * Mi_PI);
@@ -605,16 +632,13 @@ DEB_MSG("Mostrando detector para: " << angio_ID << ", LAORAO: " << imgs_base[ang
 
     renderer_global->AddActor(det_actor);
 }
-
+#endif
 
 
 //------------------------------------------------------------------------------------------------ PRIVATE ----- ^
 //-------------------------------------------------------------------------------------------------- PUBLIC----- v
 
 // M I E M B R O S      P U B L I C O S
-
-
-
 void RECONS3D::lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angio_ID)
 {
     imgs_base[angio_ID].lengthFilter(img_idx, min_length, IMGVTK::DINAMICO);
@@ -661,12 +685,14 @@ int RECONS3D::getNangios(){
 */
 void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar){
     DEB_MSG("Ruta ground: " << rutaground_input);
-    NORCEN norcen_temp;
 
     if( nivel_u > nivel_l ){ // Si hay varios niveles:
 
         for( int i = nivel_l; i <= nivel_u; i++){
             n_angios++;
+
+#ifdef BUILD_VTK_VERSION
+            NORCEN norcen_temp;
 
             imgs_base.push_back(IMGVTK(rutabase_input, true, i));
             mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
@@ -674,15 +700,16 @@ void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const
             pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
 
             view.push_back(vtkSmartPointer<vtkContextView>::New());
-            hist.push_back( NULL );
-            h_suma.push_back(0.0);
-            h_media.push_back(0.0);
-            h_desvest.push_back(0.0);
 
             normal_centros.push_back( norcen_temp );
             /// Mover el detector a su posicion definida por el archivo DICOM:
             mallarPuntos(n_angios);
             isoCentro(n_angios);
+#endif
+            hist.push_back( NULL );
+            h_suma.push_back(0.0);
+            h_media.push_back(0.0);
+            h_desvest.push_back(0.0);
             existe_ground.push_back( false );
         }
 
@@ -692,20 +719,25 @@ void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const
         imgs_base.push_back(IMGVTK(rutabase_input, enmascarar, nivel_l));
         existe_ground.push_back( false );
 
+#ifdef BUILD_VTK_VERSION
+        NORCEN norcen_temp;
+
         mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
         puntos.push_back(vtkSmartPointer<vtkPoints>::New());
         pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
         normal_centros.push_back( norcen_temp );
 
         view.push_back(vtkSmartPointer<vtkContextView>::New());
-        hist.push_back( NULL );
-        h_suma.push_back(0.0);
-        h_media.push_back(0.0);
-        h_desvest.push_back(0.0);
 
         /// Mover el detector a su posicion definida por el archivo DICOM:
         mallarPuntos(n_angios);
         isoCentro(n_angios);
+#endif
+
+        hist.push_back( NULL );
+        h_suma.push_back(0.0);
+        h_media.push_back(0.0);
+        h_desvest.push_back(0.0);
 
         if( strcmp(rutaground_input, "NULL") ){
             DEB_MSG("Abriendo " << rutaground_input << " como ground truth");
@@ -726,12 +758,13 @@ void RECONS3D::agregarInput( const char *rutabase_input, bool enmascarar ){
 
     n_angios++;
 
-    NORCEN norcen_temp;
-
     imgs_base.push_back(IMGVTK(rutabase_input, enmascarar, 0));
     existe_ground.push_back( false );
 
     DEB_MSG("Dimensiones imagen: " << imgs_base[n_angios].cols << " x " << imgs_base[n_angios].rows);
+
+#ifdef BUILD_VTK_VERSION
+    NORCEN norcen_temp;
 
     mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
     puntos.push_back(vtkSmartPointer<vtkPoints>::New());
@@ -739,14 +772,16 @@ void RECONS3D::agregarInput( const char *rutabase_input, bool enmascarar ){
     normal_centros.push_back( norcen_temp );
 
     view.push_back(vtkSmartPointer<vtkContextView>::New());
-    hist.push_back( NULL );
-    h_suma.push_back(0.0);
-    h_media.push_back(0.0);
-    h_desvest.push_back(0.0);
 
     /// Mover el detector a su posicion definida por el archivo DICOM:
     mallarPuntos(n_angios);
     isoCentro(n_angios);
+#endif
+
+    hist.push_back( NULL );
+    h_suma.push_back(0.0);
+    h_media.push_back(0.0);
+    h_desvest.push_back(0.0);
 }
 
 
@@ -760,10 +795,12 @@ void RECONS3D::agregarInput( const char *rutabase_input, bool enmascarar ){
 void RECONS3D::agregarInput( char **rutasbase_input, const int n_imgs, bool enmascarar){
     n_angios++;
 
-    NORCEN norcen_temp;
 
     imgs_base.push_back(IMGVTK(rutasbase_input, n_imgs, enmascarar));
     existe_ground.push_back( false );
+
+#ifdef BUILD_VTK_VERSION
+    NORCEN norcen_temp;
 
     // Mostrar la imagen en un renderizador
     mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
@@ -772,15 +809,16 @@ void RECONS3D::agregarInput( char **rutasbase_input, const int n_imgs, bool enma
     normal_centros.push_back( norcen_temp );
 
     view.push_back(vtkSmartPointer<vtkContextView>::New());
-    hist.push_back( NULL );
-    h_suma.push_back(0.0);
-    h_media.push_back(0.0);
-    h_desvest.push_back(0.0);
 
     /// Mover el detector a su posicion definida por el archivo DICOM:
     mallarPuntos(n_angios);
     isoCentro(n_angios);
+#endif
 
+    hist.push_back( NULL );
+    h_suma.push_back(0.0);
+    h_media.push_back(0.0);
+    h_desvest.push_back(0.0);
 }
 
 
@@ -946,6 +984,10 @@ void RECONS3D::leerConfiguracion(const char *ruta_conf){
             }else if( strcmp( tmp_par, "BUMDA") == 0 ){
                 if( atoi(tmp_val) ){
                     filtro.setEvoMet( FILTROS::EDA_BUMDA );
+                }
+            }else if( strcmp( tmp_par, "DE") == 0 ){
+                if( atoi(tmp_val) ){
+                    filtro.setEvoMet( FILTROS::EA_DE );
                 }
             }else if( strcmp( tmp_par, "pop_size") == 0 ){
                 const int pop_size = atoi(tmp_val);
@@ -1138,23 +1180,25 @@ void RECONS3D::setLog(const char *ruta_log){
  * 
  *    Funcion: Define el objeto tipo QPlainTextEdit donde se guarda el log del proceso de reconstruccion.
  */
+#ifdef BUILD_GUI_VERSION
 void RECONS3D::setLog(QTextEdit *txtLog)
 {
     mi_txtLog =  txtLog;
 }
+#endif
 
 
 
-
-/*  Metodo: setLog
+/*  Metodo: setFiltroLog
 
     Funcion: Define el objeto tipo QPlainTextEdit donde se guarda el log del proceso de reconstruccion.
 */
+#ifdef BUILD_GUI_VERSION
 void RECONS3D::setFiltroLog(QTextEdit *txtLog)
 {
     filtro.setLog( txtLog );
 }
-
+#endif
 
 
 
@@ -1185,6 +1229,7 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
     Funcion: Muestra el radio de cada pixel del esqueleto.
 */
+#ifdef BUILD_VTK_VERSION
 void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> cilindros, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros){
 
     const double theta_inc = 2 * Mi_PI / (double)detalle;
@@ -1368,6 +1413,7 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
         mostrarRadios(puntos, cilindros, n_pix, sig_hijo, DDP, crl, srl, ccc, scc, nivel_detalle, fp_cilindros);
     }
 }
+#endif
 
 
 
@@ -1379,6 +1425,83 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
 
     Funcion: Muestra el radio de cada pixel del esqueleto.
 */
+void RECONS3D::mostrarRadios(int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros){
+
+    const double xx = grafo->x;
+    const double yy = grafo->y;
+
+    for( int h = 0; h < grafo->n_hijos; h++){
+
+        double radio = grafo->radio;
+
+        IMGVTK::PIX_PAR *sig_hijo = grafo->hijos[h];
+        int n_prof = 0;
+        while( 1 ){
+            radio += sig_hijo->radio;
+            n_prof++;
+
+            if( sig_hijo->pix_tipo != IMGVTK::PIX_SKL || n_prof >= nivel_detalle){
+                break;
+            }
+
+            sig_hijo = sig_hijo->hijos[0];
+        }
+
+        /// Promedio de los radios de esta seccion:
+        radio /= (double)n_prof;
+
+        double x_fin = sig_hijo->x;
+        double y_fin = sig_hijo->y;
+        double r_temp;
+
+        if( fp_cilindros ){
+            double xx_3D_ini = xx;
+            double yy_3D_ini = yy;
+            double zz_3D_ini = DDP;
+
+            //// Rotacion usando el eje 'x' como base:
+            r_temp = crl*yy_3D_ini - srl*zz_3D_ini;
+            zz_3D_ini = srl*yy_3D_ini + crl*zz_3D_ini;
+            yy_3D_ini = r_temp;
+
+
+            //// Rotacion usando el eje 'y' como base:
+            r_temp = ccc*xx_3D_ini - scc*zz_3D_ini;
+            zz_3D_ini = scc*xx_3D_ini + ccc*zz_3D_ini;
+            xx_3D_ini = r_temp;
+
+            double xx_3D_fin = x_fin;
+            double yy_3D_fin = y_fin;
+            double zz_3D_fin = DDP;
+
+            //// Rotacion usando el eje 'x' como base:
+            r_temp = crl*yy_3D_fin - srl*zz_3D_fin;
+            zz_3D_fin = srl*yy_3D_fin + crl*zz_3D_fin;
+            yy_3D_fin = r_temp;
+
+
+            //// Rotacion usando el eje 'y' como base:
+            r_temp = ccc*xx_3D_fin - scc*zz_3D_fin;
+            zz_3D_fin = scc*xx_3D_fin + ccc*zz_3D_fin;
+            xx_3D_fin = r_temp;
+
+            fprintf(fp_cilindros, "%f %f %f %f %f %f %f\n",xx_3D_ini, yy_3D_ini, zz_3D_ini, radio, xx_3D_fin, yy_3D_fin, zz_3D_fin);
+        }
+
+        *(n_pix) = *(n_pix) + (detalle+1)*2;
+        mostrarRadios(n_pix, sig_hijo, DDP, crl, srl, ccc, scc, nivel_detalle, fp_cilindros);
+    }
+}
+
+
+
+
+
+/*  Metodo: mostrarRadios
+
+    Funcion: Muestra el radio de cada pixel del esqueleto.
+*/
+#ifdef BUILD_VTK_VERSION
 void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, vtkSmartPointer<vtkUnsignedCharArray> grafo_nivel, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int n_niveles){
 
     unsigned char nivel[3];
@@ -1456,7 +1579,7 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
         mostrarRadios(puntos, vert_skl, grafo_nivel, n_pix, grafo->hijos[i], DDP, crl, srl, ccc, scc, n_niveles);
     }
 }
-
+#endif
 
 
 
@@ -1559,7 +1682,7 @@ void RECONS3D::skeletonize(const int angio_ID){
 
         h_desvest[angio_ID] = sqrt( h_desvest[angio_ID] / (double)n_clases );
 
-
+#ifdef BUILD_VTK_VERSION
         // Inicializar los objetos para la visualizacion con VTK
         view[angio_ID]->GetRenderer()->SetBackground(1.0, 1.0, 1.0);
         view[angio_ID]->GetRenderWindow()->SetSize(400, 300);
@@ -1591,6 +1714,7 @@ void RECONS3D::skeletonize(const int angio_ID){
         hist_chart->GetAxis(vtkAxis::BOTTOM)->SetTitle("Vessel width estimation");
 
         line->SetInputData(table, 0, 1);
+#endif
     }
 }
 
@@ -1617,48 +1741,57 @@ void RECONS3D::skeletonize(const int angio_ID, const int nivel_detalle){
     const double ccc = cos(imgs_base[angio_ID].CRACAU/180.0 * Mi_PI);
     const double scc = sin(imgs_base[angio_ID].CRACAU/180.0 * Mi_PI);
 
-    const double DDP = 0.0;//imgs_base[angio_ID].DDP;
+    const double DDP = imgs_base[angio_ID].DDP;
     const int n_niveles = imgs_base[angio_ID].n_niveles;
 
-    DEB_MSG("numero de niveles: " << n_niveles);
+DEB_MSG("numero de niveles: " << n_niveles);
 
-    {
-        // Recorrer el grafo y generar en 3D una burda reconstruccion.
+    // Recorrer el grafo y generar en 3D una burda reconstruccion.
+DEB_MSG("Mostrando los radios de cada " << nivel_detalle << " pixeles del esqueleto...");
 
-        DEB_MSG("Mostrando los radios de cada 100 pixeles del esqueleto...");
-        vtkSmartPointer< vtkPoints > puntos = vtkSmartPointer< vtkPoints >::New();
-        vtkSmartPointer< vtkCellArray > cilindros = vtkSmartPointer< vtkCellArray >::New();
-        int n_pix = 0;
+#ifdef BUILD_VTK_VERSION
+    vtkSmartPointer< vtkPoints > puntos = vtkSmartPointer< vtkPoints >::New();
+    vtkSmartPointer< vtkCellArray > cilindros = vtkSmartPointer< vtkCellArray >::New();
+#endif
 
-        char nom_cilindros[] = "cilindros_XXX_YYY.dat";
-        sprintf( nom_cilindros, "cilindros_%i_%i.dat", angio_ID, nivel_detalle);
-        FILE *fp_cilindros = fopen(nom_cilindros, "w");
-        fprintf( fp_cilindros, "X1 Y1 Z1 RADIO X2 Y2 Z2\n");
-        mostrarRadios(puntos, cilindros, &n_pix, imgs_base[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, nivel_detalle, fp_cilindros);
+    int n_pix = 0;
 
-        fclose( fp_cilindros );
+    char nom_cilindros[] = "cilindros_XXX_YYY.dat";
+    sprintf( nom_cilindros, "cilindros_%i_%i.dat", angio_ID, nivel_detalle);
+    FILE *fp_cilindros = fopen(nom_cilindros, "w");
 
-        /// Generar los cilindros:
-        vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
-        polydata->SetPoints(puntos);
-        polydata->SetPolys(cilindros);
+    fprintf( fp_cilindros, "X1 Y1 Z1 RADIO X2 Y2 Z2\n");
 
-        vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-        mapper->SetInputData(polydata);
-        DEB_MSG("Generando Mapper");
+#ifdef BUILD_VTK_VERSION
+    mostrarRadios(puntos, cilindros, &n_pix, imgs_base[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, nivel_detalle, fp_cilindros);
+#else
+    mostrarRadios(&n_pix, imgs_base[angio_ID].pix_caract, DDP, crl, srl, ccc, scc, nivel_detalle, fp_cilindros);
+#endif
 
-        vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-        actor->SetMapper(mapper);
-        DEB_MSG("Generando Actor");
+    fclose( fp_cilindros );
 
-        double color[] = {0.0, 1.0, 0.0};
-        actor->GetProperty()->SetColor(color);
+#ifdef BUILD_VTK_VERSION
+    /// Generar los cilindros:
+    vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+    polydata->SetPoints(puntos);
+    polydata->SetPolys(cilindros);
 
-        DEB_MSG("Agregando al renderizador");
-        renderer_global->AddActor( actor );
-    }
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputData(polydata);
+    DEB_MSG("Generando Mapper");
+
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+    DEB_MSG("Generando Actor");
+
+    double color[] = {0.0, 1.0, 0.0};
+    actor->GetProperty()->SetColor(color);
+
+    DEB_MSG("Agregando al renderizador");
+    renderer_global->AddActor( actor );
 
     renderizar( renderer_global );
+#endif
 }
 
 
@@ -1667,9 +1800,13 @@ void RECONS3D::skeletonize(const int angio_ID, const int nivel_detalle){
 
     Funcion: Retorna la ventana del visualizador donde se muestra el histograma.
 */
+#ifdef BUILD_VTK_VERSION
 vtkRenderWindow* RECONS3D::getHist( const int angio_ID ){
     return view[angio_ID]->GetRenderWindow();
 }
+#endif
+
+
 
 double RECONS3D::getHist_desvest( const int angio_ID )
 {
@@ -1692,15 +1829,19 @@ double RECONS3D::getHist_suma( const int angio_ID )
 
     Funcion: Define el interactor para visualizar el histograma.
 */
+#ifdef BUILD_VTK_VERSION
 void RECONS3D::setIteratorHist( vtkRenderWindowInteractor *interactor, const int angio_ID ){
     view[angio_ID]->SetInteractor( interactor );
 }
+#endif
+
 
 
 /*  Metodo: mostrarBase
 
     Funcion: Muestra la imagen base en el renderizador del input 'angio_ID'
 */
+#ifdef BUILD_VTK_VERSION
 void RECONS3D::mostrarBase( const int angio_ID ){
     if( angio_ID > n_angios ){
         char mensaje_err[] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
@@ -1711,7 +1852,7 @@ void RECONS3D::mostrarBase( const int angio_ID ){
         mostrarImagen( IMGVTK::BASE, mis_renderers[ angio_ID ], angio_ID);
     }
 }
-
+#endif
 
 
 
@@ -1719,6 +1860,7 @@ void RECONS3D::mostrarBase( const int angio_ID ){
 
     Funcion: Muestra la imagen ground-truth en el renderizador del input 'angio_ID'
 */
+#ifdef BUILD_VTK_VERSION
 void RECONS3D::mostrarGroundtruth( const int angio_ID ){
     if( (angio_ID > n_angios) || (!existe_ground.at(angio_ID)) ){
         char mensaje[] = "\n<<Error: El ground-truth para el angiograma XXX no ha sido agregado al reconstructor>>\n\n";
@@ -1729,23 +1871,25 @@ void RECONS3D::mostrarGroundtruth( const int angio_ID ){
         mostrarImagen( IMGVTK::GROUNDTRUTH, mis_renderers[ angio_ID ], angio_ID);
     }
 }
-
+#endif
 
 
 /*  Metodo: getRenderer
 
     Funcion: Retorna el renderizador global.
 */
+#ifdef BUILD_VTK_VERSION
 vtkSmartPointer< vtkRenderer > RECONS3D::getRenderer(){
     return renderer_global;
 }
-
+#endif
 
 
 /*  Metodo: getRenderer
 
     Funcion: Retorna el renderizador correspondiente al input 'angio_ID'.
 */
+#ifdef BUILD_VTK_VERSION
 vtkSmartPointer< vtkRenderer > RECONS3D::getRenderer( const int angio_ID ){
     if( angio_ID > n_angios ){
         char mensaje[] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
@@ -1757,6 +1901,7 @@ vtkSmartPointer< vtkRenderer > RECONS3D::getRenderer( const int angio_ID ){
         return mis_renderers[ angio_ID ];
     }
 }
+#endif
 
 
 
@@ -1784,33 +1929,38 @@ void RECONS3D::setFiltroLog( const char *ruta_log ){
 
 
 
-/*  Metodo: setFiltroLog
- * 
- *   Funcion: Define el objeto donde se visualiza el progreso del proceso de filtrado.
- */
+/*  Metodo: setProgressLog
+
+    Funcion: Define el objeto donde se visualiza el progreso del proceso de filtrado.
+*/
+#ifdef BUILD_GUI_VERSION
 void RECONS3D::setProgressBar(QProgressBar *pBar){
     mi_pBar = pBar;
 }
-
+#endif
 
 
 /*  Metodo: setFiltroLog
 
     Funcion: Define el objeto donde se visualiza el progreso del proceso de filtrado.
 */
+#ifdef BUILD_GUI_VERSION
 void RECONS3D::setFiltroProgressBar(QProgressBar *pBar){
     filtro.setProgressBar( pBar );
 }
+#endif
 
 
 
+
+/*  Metodo: umbralizar
+
+    Funcion: Umbraliza la imagen definida con 'img_idx'
+*/
 void RECONS3D::umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angio_ID)
 {
     imgs_base[angio_ID].umbralizar(img_idx, tipo_umb, nivel);
 }
-
-
-
 
 
 
@@ -1820,16 +1970,20 @@ void RECONS3D::umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tip
     Funcion: Constructor por default.
 */
 RECONS3D::RECONS3D(){
+#ifdef BUILD_VTK_VERSION
     renderer_global = vtkSmartPointer<vtkRenderer>::New();
-    fp_log = NULL;
-    detalle = 180;
-    fp_log = NULL;
-    mi_txtLog = NULL;
-    mi_pBar = NULL;
-
     double color[] = {1.0, 1.0, 1.0};
 //    agregarEsfera(0.0, 0.0, 0.0, 10.0, color, renderer_global);
 //    agregarEjes(renderer_global);
+#endif
+
+    fp_log = NULL;
+    detalle = 180;
+
+#ifdef BUILD_GUI_VERSION
+    mi_txtLog = NULL;
+    mi_pBar = NULL;
+#endif
 
     n_angios = -1;
 }

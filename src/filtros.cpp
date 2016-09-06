@@ -16,8 +16,10 @@
 void FILTROS::escribirLog( const char *mensaje ){
     if(mi_fplog){
         fprintf(mi_fplog, "%s", mensaje);
+#ifdef BUILD_GUI_VERSION
     }else if(mi_txtLog){
         mi_txtLog->append( mensaje );
+#endif
     }else{
         std::cout << mensaje << std::endl;
         fflush(stdout);
@@ -31,11 +33,14 @@ void FILTROS::escribirLog( const char *mensaje ){
 */
 void FILTROS::barraProgreso( const int avance, const int max_progress ){
 
+#ifdef BUILD_GUI_VERSION
     if( mi_pBar ){
         mi_pBar->setMaximum( max_progress );
         mi_pBar->setValue( avance );
         return;
     }
+#endif
+
 
     DEB_MSG("No se definio el pBar");
 
@@ -188,8 +193,11 @@ void FILTROS::setFitness( const FITNESS fit_fun){
     Funcion: Inicializa los parametros en valores por defecto.
 */
 FILTROS::FILTROS(){
+#ifdef BUILD_GUI_VERSION
     mi_pBar = NULL;
     mi_txtLog = NULL;
+#endif
+
     mi_ruta_log = NULL;
     mi_fplog = NULL;
     resp = NULL;
@@ -412,10 +420,12 @@ void FILTROS::filtrar(){
 /*  Metodo: setLog
     Funcion: Define el objeto tipo QPlainTextEdit donde se imprimen los logs del sistema.
 */
+#ifdef BUILD_GUI_VERSION
 void FILTROS::setLog(QTextEdit *txtLog)
 {
     mi_txtLog = txtLog;
 }
+#endif
 
 
 /*  Metodo: setLog
@@ -446,10 +456,11 @@ void FILTROS::setLog( const char *ruta_log){
 /*  Metodo: setProgressBar
     Funcion: Define el objeto para mostrar el avance del proceso.
 */
+#ifdef BUILD_GUI_VERSION
 void FILTROS::setProgressBar( QProgressBar *pBar ){
     mi_pBar = pBar;
 }
-
+#endif
 
 
 /*//        //      //      //      //      //      //        //      //      //      //      //      //        //      //      //      //      //      //        //      //      //      //      //      //
@@ -2007,7 +2018,7 @@ void FILTROS::diferenciarPoblacion( INDIV* poblacion, INDIV* pob_base ){
         if( HybTaus(0.0, 1.0) <= prob_cruza ){
 
             // Generar tres indices aleatorios diferentes (excluyendo el indice actual):
-            int idx_1 = Hybtaus(-0.5, (double)(n_pob-2) + 0.5);
+            int idx_1 = HybTaus(-0.5, (double)(n_pob-2) + 0.5);
             idx_1 += (idx_1 >= i) ? 1 : 0;
 
             int idx_2 = idx_1;
@@ -2020,7 +2031,7 @@ void FILTROS::diferenciarPoblacion( INDIV* poblacion, INDIV* pob_base ){
             do{
                 idx_3 = HybTaus(-0.5, (double)(n_pob-2) + 0.5);
                 idx_3 += (idx_3 >= i) ? 1 : 0;
-            }while( (idx_3 == idx1) || (idx_3 == idx_2) );
+            }while( (idx_3 == idx_1) || (idx_3 == idx_2) );
 
             // Diferenciar todas las variables del individuo:
             for( int j = 0; j < n_pars; j++){

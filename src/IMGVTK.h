@@ -12,16 +12,18 @@
 // Librerias de uso comun con QT:
 //#include <QPlainTextEdit>
 
-// Librerias de uso comun:
-#include <vtkVersion.h>
-#include <vtkSmartPointer.h>
+#ifdef BUILD_VTK_VERSION
+    // Librerias de uso comun:
+    #include <vtkVersion.h>
+    #include <vtkSmartPointer.h>
 
-// Librerias para trabajar con imagenes:
-#include <vtkImageData.h>
-#include <vtkImageReader2Factory.h>
-#include <vtkImageReader2.h>
-#include <vtkImageExtractComponents.h>
-#include <vtkPNGWriter.h>
+    // Librerias para trabajar con imagenes:
+    #include <vtkImageData.h>
+    #include <vtkImageReader2Factory.h>
+    #include <vtkImageReader2.h>
+    #include <vtkImageExtractComponents.h>
+    #include <vtkPNGWriter.h>
+#endif
 
 #include <gdcmImageReader.h>
 #include <gdcmImage.h>
@@ -43,51 +45,54 @@
 
 #include <omp.h>
 
-#define COLOR_NORMAL        "\33[0m"
-#define COLOR_BOLD          "\33[1m"
-#define COLOR_UNDER         "\33[4m"
-#define COLOR_BLINK         "\33[5m"
+#define COLOR_NORMAL            "\33[0m"
+#define COLOR_BOLD              "\33[1m"
+#define COLOR_UNDER             "\33[4m"
+#define COLOR_BLINK             "\33[5m"
 #define COLOR_INVERSE		"\33[7m"
-#define COLOR_BLACK         "\33[30m"
-#define COLOR_RED           "\33[31m"
-#define COLOR_GREEN         "\33[32m"
+#define COLOR_BLACK             "\33[30m"
+#define COLOR_RED               "\33[31m"
+#define COLOR_GREEN             "\33[32m"
 #define COLOR_YELLOW		"\33[33m"
-#define COLOR_BLUE          "\33[34m"
+#define COLOR_BLUE              "\33[34m"
 #define COLOR_MAGENTA		"\33[35m"
-#define COLOR_CYAN          "\33[36m"
-#define COLOR_WHITE         "\33[37m"
-#define COLOR_BACK_BLACK    "\33[40m"
-#define COLOR_BACK_RED      "\33[41m"
-#define COLOR_BACK_GREEN    "\33[42m"
-#define COLOR_BACK_YELLOW   "\33[43m"
-#define COLOR_BACK_BLUE     "\33[44m"
-#define COLOR_BACK_MAGENTA  "\33[45m"
-#define COLOR_BACK_CYAN     "\33[46m"
-#define COLOR_BACK_WHITE    "\33[47m"
+#define COLOR_CYAN              "\33[36m"
+#define COLOR_WHITE             "\33[37m"
+#define COLOR_BACK_BLACK        "\33[40m"
+#define COLOR_BACK_RED          "\33[41m"
+#define COLOR_BACK_GREEN        "\33[42m"
+#define COLOR_BACK_YELLOW       "\33[43m"
+#define COLOR_BACK_BLUE         "\33[44m"
+#define COLOR_BACK_MAGENTA      "\33[45m"
+#define COLOR_BACK_CYAN         "\33[46m"
+#define COLOR_BACK_WHITE        "\33[47m"
+#define COLOR_RESET             "\x1b[0m"
 
 
 #ifdef _WIN32
 	#include <time.h>
 #endif
-#ifdef _OPENMP
+
+
+#ifdef _OPENM
     #define TIMERS double t_ini, t_fin
     #define GETTIME_INI t_ini = omp_get_wtime()
     #define GETTIME_FIN t_fin = omp_get_wtime()
     #define DIFTIME (t_fin - t_ini)
     #define OMP_ENABLED true
 #else
-	#ifdef _WIN32
-		#define TIMERS time_t t_ini, t_fin
-		#define GETTIME_INI time (&t_ini)
-		#define GETTIME_FIN time (&t_fin)
-		#define DIFTIME difftime( t_fin, t_ini)
-	#else
-		#include <sys/time.h>
-		#define TIMERS struct timeval t_ini, t_fin
-		#define GETTIME_INI gettimeofday( &t_ini, NULL)
-		#define GETTIME_FIN gettimeofday( &t_fin, NULL)
-		#define DIFTIME ((t_fin.tv_sec*1e6 + t_fin.tv_usec) - (t_ini.tv_sec*1e6 + t_ini.tv_usec) )/ 1e6
-	#endif
+    #ifdef _WIN32
+            #define TIMERS time_t t_ini, t_fin
+            #define GETTIME_INI time (&t_ini)
+            #define GETTIME_FIN time (&t_fin)
+            #define DIFTIME difftime( t_fin, t_ini)
+    #else
+            #include <sys/time.h>
+            #define TIMERS struct timeval t_ini, t_fin
+            #define GETTIME_INI gettimeofday( &t_ini, NULL)
+            #define GETTIME_FIN gettimeofday( &t_fin, NULL)
+            #define DIFTIME ((t_fin.tv_sec*1e6 + t_fin.tv_usec) - (t_ini.tv_sec*1e6 + t_ini.tv_usec) )/ 1e6
+    #endif
     #define omp_get_num_threads() 1
     #define omp_set_num_threads(cores)
     #define omp_get_thread_num() 0
@@ -166,6 +171,7 @@ class IMGVTK{
         IMGVTK& operator= ( const IMGVTK &origen );
 
         // M I E M B R O S      P U B L I C O S
+#ifdef BUILD_VTK_VERSION
         vtkSmartPointer<vtkImageData> base;
         vtkSmartPointer<vtkImageData> ground;
         vtkSmartPointer<vtkImageData> mask;
@@ -174,6 +180,7 @@ class IMGVTK{
         vtkSmartPointer<vtkImageData> threshold;
         vtkSmartPointer<vtkImageData> mapa_dist;
         vtkSmartPointer<vtkImageData> borders;
+#endif
 
         int rows, cols, rows_cols;
         int n_niveles;
@@ -199,10 +206,12 @@ class IMGVTK{
         /** ####:   **/
         // M E T O D O S      P R I V A D O S
         void escribirLog( const char *mensaje );
-
-
+#ifdef BUILD_VTK_VERSION
         void Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel, const bool enmascarar);
         void Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, char **rutas, const int n_imgs, const bool enmascarar);
+#endif
+        int *Cargar(const char *ruta_origen, double **img_src, double **mask_src, const int nivel, const bool enmascarar);
+        int *Cargar(double **img_src, double **mask_src, char **rutas, const int n_imgs, const bool enmascarar);
 
         void maskFOV(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
         void fillMask(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);

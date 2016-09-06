@@ -33,4 +33,4 @@ HEADERS  += coronarygui.h\
 
 FORMS    += coronarygui.ui\
             dialogbayes.ui \
-    filterpars.ui
+            filterpars.ui

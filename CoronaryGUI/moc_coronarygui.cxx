@@ -22,7 +22,7 @@ static const uint qt_meta_data_coronaryGUI[] = {
        6,       // revision
        0,       // classname
        0,    0, // classinfo
-       8,   14, // methods
+       9,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -38,6 +38,7 @@ static const uint qt_meta_data_coronaryGUI[] = {
      133,   12,   12,   12, 0x08,
      160,   12,   12,   12, 0x08,
      193,   12,   12,   12, 0x08,
+     240,   12,   12,   12, 0x08,
 
        0        // eod
 };
@@ -50,6 +51,7 @@ static const char qt_meta_stringdata_coronaryGUI[] = {
     "on_action_Quit_triggered()\0"
     "on_actionSkeletonize_triggered()\0"
     "on_actionOpen_file_as_ground_truth_triggered()\0"
+    "on_actionSet_filter_parameters_triggered()\0"
 };
 
 void coronaryGUI::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
@@ -66,6 +68,7 @@ void coronaryGUI::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id,
         case 5: _t->on_action_Quit_triggered(); break;
         case 6: _t->on_actionSkeletonize_triggered(); break;
         case 7: _t->on_actionOpen_file_as_ground_truth_triggered(); break;
+        case 8: _t->on_actionSet_filter_parameters_triggered(); break;
         default: ;
         }
     }
@@ -103,9 +106,9 @@ int coronaryGUI::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 8)
+        if (_id < 9)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 8;
+        _id -= 9;
     }
     return _id;
 }

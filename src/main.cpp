@@ -209,6 +209,11 @@ int main(int argc, char** argv ){
     definirParametros( parametros );
 
     if( argc < 2 ){
+#ifdef BUILD_VTK_VERSION
+        printf("\n" COLOR_INVERSE "Version VTK" COLOR_RESET "\n");
+#else
+        printf("\n" COLOR_INVERSE "Version No-VTK" COLOR_RESET "\n");
+#endif
         mostrar_ayuda(parametros, 23, "Coronary");
         delete [] parametros;
         return EXIT_FAILURE;

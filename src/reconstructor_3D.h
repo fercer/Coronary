@@ -11,80 +11,80 @@
 
 
 // Librerias de uso comun:
+#ifdef BUILD_VTK_VERSION
+    #include <vtkVersion.h>
+    #include <vtkSmartPointer.h>
+    #include <vtkTransform.h>
+    #include <vtkPointData.h>
 
-#include <vtkVersion.h>
-#include <vtkSmartPointer.h>
-#include <vtkTransform.h>
-#include <vtkPointData.h>
+    // Arreglos de VTK:
+    #include <vtkUnsignedCharArray.h>
+    #include <vtkDoubleArray.h>
+    #include <vtkMath.h>
+    #include <vtkTransform.h>
+    #include <vtkMatrix4x4.h>
+    #include <vtkTransformPolyDataFilter.h>
 
-// Arreglos de VTK:
-#include <vtkUnsignedCharArray.h>
-#include <vtkDoubleArray.h>
-#include <vtkMath.h>
-#include <vtkTransform.h>
-#include <vtkMatrix4x4.h>
-#include <vtkTransformPolyDataFilter.h>
+    // Actores:
+    #include <vtkActor.h>
+    #include <vtkActor2D.h>
+    #include <vtkImageActor.h>
+    #include <vtkAxesActor.h>
 
-// Actores:
-#include <vtkActor.h>
-#include <vtkActor2D.h>
-#include <vtkImageActor.h>
-#include <vtkAxesActor.h>
+    // Mappers:
+    #include <vtkImageMapper.h>
+    #include <vtkImageMapper3D.h>
+    #include <vtkDataSetMapper.h>
+    #include <vtkImageSliceMapper.h>
+    #include <vtkPolyDataMapper.h>
 
-// Mappers:
-#include <vtkImageMapper.h>
-#include <vtkImageMapper3D.h>
-#include <vtkDataSetMapper.h>
-#include <vtkImageSliceMapper.h>
-#include <vtkPolyDataMapper.h>
+    // Librerias para trabajar con imagenes:
+    #include <vtkImageData.h>
+    #include <vtkImageReader2Factory.h>
+    #include <vtkImageReader2.h>
+    #include <vtkImageExtractComponents.h>
+    #include <vtkImageSlice.h>
+    #include <vtkImageDataGeometryFilter.h>
 
-// Librerias para trabajar con imagenes:
-#include <vtkImageData.h>
-#include <vtkImageReader2Factory.h>
-#include <vtkImageReader2.h>
-#include <vtkImageExtractComponents.h>
-#include <vtkImageSlice.h>
-#include <vtkImageDataGeometryFilter.h>
+    // Librerias para generar mallas:
+    #include <vtkCellArray.h>
+    #include <vtkPolyData.h>
+    #include <vtkCellData.h>
+    #include <vtkUnstructuredGrid.h>
+    #include <vtkStructuredGrid.h>
+    #include <vtkStructuredGridGeometryFilter.h>
 
-// Librerias para generar mallas:
-#include <vtkCellArray.h>
-#include <vtkPolyData.h>
-#include <vtkCellData.h>
-#include <vtkUnstructuredGrid.h>
-#include <vtkStructuredGrid.h>
-#include <vtkStructuredGridGeometryFilter.h>
+    // Librerias para visualizacion
+    #include <vtkCamera.h>
+    #include <vtkRenderWindow.h>
+    #include <vtkRenderer.h>
+    #include <vtkRenderWindowInteractor.h>
+    #include <vtkOutlineFilter.h>
+    #include <vtkInteractorStyleTrackballCamera.h>
+    #include <vtkProperty.h>
+    #include <vtkChartXY.h>
+    #include <vtkPlot.h>
+    #include <vtkTable.h>
+    #include <vtkIntArray.h>
+    #include <vtkContextView.h>
+    #include <vtkContextScene.h>
+    #include <vtkAxis.h>
 
-// Librerias para visualizacion
-#include <vtkCamera.h>
-#include <vtkRenderWindow.h>
-#include <vtkRenderer.h>
-#include <vtkRenderWindowInteractor.h>
-#include <vtkOutlineFilter.h>
-#include <vtkInteractorStyleTrackballCamera.h>
-#include <vtkProperty.h>
-#include <vtkChartXY.h>
-#include <vtkPlot.h>
-#include <vtkTable.h>
-#include <vtkIntArray.h>
-#include <vtkContextView.h>
-#include <vtkContextScene.h>
-#include <vtkAxis.h>
-#include "QVTKWidget.h"
-#include "QVTKInteractor.h"
+    // Librerias para formas geometricas:
+    #include <vtkVertex.h>
+    #include <vtkLine.h>
+    #include <vtkQuad.h>
+    #include <vtkTriangle.h>
+    #include <vtkSphereSource.h>
+    #include <vtkCylinderSource.h>
+    #include <vtkPyramid.h>
+    #include <vtkGlyph3D.h>
+    #include <vtkArrowSource.h>
+    #include <vtkSurfaceReconstructionFilter.h>
+    #include <vtkContourFilter.h>
+    #include <vtkReverseSense.h>
+#endif
 
-// Librerias para formas geometricas:
-#include <vtkVertex.h>
-#include <vtkLine.h>
-#include <vtkQuad.h>
-#include <vtkTriangle.h>
-#include <vtkSphereSource.h>
-#include <vtkCylinderSource.h>
-#include <vtkPyramid.h>
-#include <vtkGlyph3D.h>
-#include <vtkArrowSource.h>
-#include <vtkSurfaceReconstructionFilter.h>
-#include <vtkContourFilter.h>
-#include <vtkReverseSense.h>
 
 #include <gdcmImageReader.h>
 #include <gdcmImage.h>
@@ -92,10 +92,14 @@
 #include <gdcmTag.h>
 #include <gdcmPrivateTag.h>
 
+#ifdef BUILD_GUI_VERSION
+    #include "QVTKWidget.h"
+    #include "QVTKInteractor.h"
 
-#include <QPlainTextEdit>
-#include <QTextEdit>
-#include <QProgressBar>
+    #include <QPlainTextEdit>
+    #include <QTextEdit>
+    #include <QProgressBar>
+#endif
 
 #include <assert.h>
 
@@ -107,8 +111,6 @@
 #include <vector>
 
 #include <omp.h>
-
-
 
 #include "IMGVTK.h"
 #include "filtros.h"
@@ -144,24 +146,28 @@ class RECONS3D{
         std::vector<double> h_media, h_desvest, h_suma;
 
         // Miembros para visualizar la segmentacion 3D:
+#ifdef BUILD_VTK_VERSION
         std::vector< vtkSmartPointer<vtkRenderer> > mis_renderers;
         vtkSmartPointer<vtkRenderer> renderer_global;
         std::vector< vtkSmartPointer<vtkPoints> > puntos;
         std::vector< vtkSmartPointer<vtkCellArray> > pixeles;
         std::vector< NORCEN > normal_centros;
         std::vector<  vtkSmartPointer<vtkContextView> > view;
+#endif
 
         FILTROS filtro;
         FILE *fp_log;
         
-        
+#ifdef BUILD_GUI_VERSION
         QTextEdit *mi_txtLog;
         QProgressBar *mi_pBar;
+#endif
 
     // M E T O D O S       P R I V A D O S
         void escribirLog( const char *mensaje );
         void barraProgreso( const int avance, const int milestones );
 
+#ifdef BUILD_VTK_VERSION
         void renderizar(vtkSmartPointer<vtkRenderer> mi_renderer);
         void mostrarImagen(IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer, const int angio_ID);
         void mostrarImagen(const int angio_ID, IMGVTK::IMG_IDX img_idx);
@@ -175,10 +181,10 @@ class RECONS3D{
         POS posicionDefecto(const double ancho, const double alto, const double punta);
         void mostrarDetector(const int angio_ID);
 
-
-
         void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> cilindros, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros);
         void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, vtkSmartPointer<vtkUnsignedCharArray> grafo_nivel, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int n_niveles);
+#endif
+        void mostrarRadios(int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros);
 
     //-------------------------------------------------------------------------------------- PRIVATE ----- ^
 
@@ -207,16 +213,10 @@ class RECONS3D{
         void skeletonize(const int angio_ID);
         void skeletonize(const int angio_ID, const int nivel_detalle);
 
-        vtkRenderWindow *getHist(const int angio_ID);
-        double getHist_desvest(const int angio_ID);
-        double getHist_media(const int angio_ID);
-        double getHist_suma(const int angio_ID);
-
-
-        void setIteratorHist(vtkRenderWindowInteractor *interactor , const int angio_ID);
-
+#ifdef BUILD_VTK_VERSION
         void mostrarBase( const int angio_ID );
         void mostrarGroundtruth(  const int angio_ID  );
+#endif
 
         void setFiltroEntrenamiento(const FILTROS::EVO_MET evo_met);
         void setFiltroEntrenamientoPars(const FILTROS::EVO_MET_PAR evo_par, const double val);
@@ -229,28 +229,34 @@ class RECONS3D{
 
         void Guardar(const char *ruta, IMGVTK::IMG_IDX img_idx, IMGVTK::TIPO_IMG tipo_img, const int angio_ID);
 
+        double getHist_desvest(const int angio_ID);
+        double getHist_media(const int angio_ID);
+        double getHist_suma(const int angio_ID);
         int getRows( const int angio_ID );
         int getCols( const int angio_ID );
-
+        int getNangios();
         double *get_pixelData( const int angio_ID, IMGVTK::IMG_IDX img_idx );
 
+#ifdef BUILD_VTK_VERSION
+        vtkRenderWindow *getHist(const int angio_ID);
+        void setIteratorHist(vtkRenderWindowInteractor *interactor , const int angio_ID);
         vtkSmartPointer< vtkRenderer > getRenderer();
         vtkSmartPointer< vtkRenderer > getRenderer( const int angio_ID );
+#endif
 
         void setLog( const char *ruta_log );
-        void setLog( QTextEdit *txtLog );
-        void setFiltroLog( QTextEdit *txtLog );
         void setFiltroLog( FILE *fplog );
         void setFiltroLog( const char* ruta_log );
-        
+
+#ifdef BUILD_GUI_VERSION
+        void setLog( QTextEdit *txtLog );
+        void setFiltroLog( QTextEdit *txtLog );
         void setProgressBar( QProgressBar *pBar );
         void setFiltroProgressBar( QProgressBar *pBar );
+#endif
 
         void umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angio_ID);
         void lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angio_ID);
-
-
-        int getNangios();
 
 
     // O P E R A D O R E S  S O B R E C A R G A D O S

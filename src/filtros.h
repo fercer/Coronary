@@ -22,13 +22,16 @@
 #else
     #include <fftw3.h>
 #endif
+
 #include <math.h>
 #include <omp.h>
 
 #include <iostream>
 
-#include <QPlainTextEdit>
-#include <QProgressBar>
+#ifdef BUILD_GUI_VERSION
+    #include <QPlainTextEdit>
+    #include <QProgressBar>
+#endif
 
 //#include <vtkSmartPointer.h>
 //#include <vtkImageData.h>
@@ -77,11 +80,13 @@ class FILTROS{
 
         void filtrar();
 
-        void setLog( QTextEdit *txtLog );
         void setLog( FILE *fplog );
         void setLog(const char *ruta_log);
 
+#ifdef BUILD_GUI_VERSION
+        void setLog( QTextEdit *txtLog );
         void setProgressBar( QProgressBar *pBar );
+#endif
 
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
         // T I P O S        D E     D A T O S      P R I V A D O S
@@ -181,8 +186,11 @@ class FILTROS{
 
         char *mi_ruta_log;
         FILE *mi_fplog;
+
+#ifdef BUILD_GUI_VERSION
         QTextEdit *mi_txtLog;
         QProgressBar *mi_pBar;
+#endif
 
         //================================================================================== FILTROS:
         void respGMF(INDIV *test, double *resp);
