@@ -1999,9 +1999,6 @@ DEB_MSG("Tipo UINT16");
         for( int xy = 0; xy < mis_rows_cols; xy++){
             fscanf( fp_img, "%i", &intensidad );
             *(img_tmp + xy) = (double)intensidad / max_intensidad;
-            if (enmascarar && (xy % 1000) == 0 ) {
-                DEB_MSG( "[" << xy << "]: " << *(img_tmp + xy) << " :: " << (double)intensidad);
-            }
         }
 
     }else{ ///------------------------------------------------------------------------------------------------
@@ -2171,6 +2168,7 @@ DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
     int mis_cols, mis_rows;
 
     if( esDICOM ){
+#ifdef BUILD_GDCM_VERSION
         gdcm::ImageReader DICOMreader;
         DICOMreader.SetFileName( ruta_origen );
 
@@ -2456,11 +2454,13 @@ DEB_MSG("Tipo UINT16");
                 }
         }
         delete [] buffer;
-
+#else
+        escribirLog("\n" COLOR_RED "<<ERROR:" COLOR_BACK_YELLOW " Este tipo de archivo no se puede cargar sin la version GDCM construida >>" COLOR_RESET "\n");
+#endif
     }else if(esPGM){ ///------------------------------------------------------------------------------------------------
         //// Cargar imagen formato PGM
         FILE *fp_img = fopen( ruta_origen, "r" );
-
+DEB_MSG("abriendo archivo: " << ruta_origen);
         char temp_str[512] = "";
         fgets(temp_str, 512, fp_img);  // Leer 'Magic number'
     DEB_MSG("Magic number: " << temp_str);
@@ -2483,9 +2483,6 @@ DEB_MSG("Tipo UINT16");
         for( int xy = 0; xy < mis_rows_cols; xy++){
             fscanf( fp_img, "%i", &intensidad );
             *(*img_src + xy) = (double)intensidad / max_intensidad;
-            if (enmascarar && (xy % 1000) == 0 ) {
-                DEB_MSG( "[" << xy << "]: " << *(*img_src + xy) << " :: " << (double)intensidad);
-            }
         }
 
     }else{ ///------------------------------------------------------------------------------------------------
@@ -2601,15 +2598,14 @@ int *IMGVTK::Cargar(double **img_src, double **mask_src, char **rutas, const int
 
     // Extract data:
     *img_src = new double [n_cols * mis_rows];
-
     if(enmascarar){
         *mask_src = new double [n_cols * mis_rows];
     }
 
     for( int y = 0; y < mis_rows; y++){
-        memcpy(img_src + y*n_cols, auxiliar + y*mis_cols, mis_cols*sizeof(double));
+        memcpy(*img_src + y*n_cols, auxiliar + y*mis_cols, mis_cols*sizeof(double));
         if(enmascarar){
-            memcpy(mask_src + y*n_cols, mask_auxiliar + y*mis_cols, mis_cols*sizeof(double));
+            memcpy(*mask_src + y*n_cols, mask_auxiliar + y*mis_cols, mis_cols*sizeof(double));
         }
     }
 
@@ -2620,9 +2616,9 @@ int *IMGVTK::Cargar(double **img_src, double **mask_src, char **rutas, const int
         dims = Cargar(rutas[img_i], &auxiliar, &mask_auxiliar, 0, enmascarar);
 
         for( int y = 0; y < mis_rows; y++){
-            memcpy(img_src + y*n_cols + img_i*mis_cols, auxiliar + y*mis_cols, mis_cols*sizeof(double));
+            memcpy(*img_src + y*n_cols + img_i*mis_cols, auxiliar + y*mis_cols, mis_cols*sizeof(double));
             if(enmascarar){
-                memcpy(mask_src + y*n_cols + img_i*mis_cols, mask_auxiliar + y*mis_cols, mis_cols*sizeof(double));
+                memcpy(*mask_src + y*n_cols + img_i*mis_cols, mask_auxiliar + y*mis_cols, mis_cols*sizeof(double));
             }
         }
     }
@@ -2631,6 +2627,8 @@ int *IMGVTK::Cargar(double **img_src, double **mask_src, char **rutas, const int
     if( enmascarar ){
         delete [] mask_auxiliar;
     }
+
+    dims[0] = n_cols;
 
     return dims;
 }

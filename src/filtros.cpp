@@ -665,9 +665,9 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 void FILTROS::fftImgOrigen(){
     if( rows_cols ){
 
-		TIMERS;
+        TIMERS;
 
-		GETTIME_INI;
+        GETTIME_INI;
 
         if(!transformada){
             Img_fft = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
@@ -2018,25 +2018,27 @@ void FILTROS::diferenciarPoblacion( INDIV* poblacion, INDIV* pob_base ){
         if( HybTaus(0.0, 1.0) <= prob_cruza ){
 
             // Generar tres indices aleatorios diferentes (excluyendo el indice actual):
-            int idx_1 = HybTaus(-0.5, (double)(n_pob-2) + 0.5);
+            int idx_1 = HybTaus(-0.5, (double)(n_pob-2) + 0.49);
             idx_1 += (idx_1 >= i) ? 1 : 0;
 
             int idx_2 = idx_1;
             do{
-                idx_2 = HybTaus(-0.5, (double)(n_pob-2) + 0.5);
+                idx_2 = HybTaus(-0.5, (double)(n_pob-2) + 0.49);
                 idx_2 += (idx_2 >= i) ? 1 : 0;
             }while( idx_2 == idx_1 );
 
             int idx_3 = idx_1;
             do{
-                idx_3 = HybTaus(-0.5, (double)(n_pob-2) + 0.5);
+                idx_3 = HybTaus(-0.5, (double)(n_pob-2) + 0.49);
                 idx_3 += (idx_3 >= i) ? 1 : 0;
             }while( (idx_3 == idx_1) || (idx_3 == idx_2) );
+
+            DEB_MSG("[" << i << "]: {" << idx_1 << ", " << idx_2 << ", " << idx_3 << "}");
 
             // Diferenciar todas las variables del individuo:
             for( int j = 0; j < n_pars; j++){
                 const unsigned int k = idx_pars[j];
-                double val_gen = (pob_base + idx_1)->vars[k] + prob_mutacion * ( (pob_base + idx_2)->vars[k] -  (pob_base + idx_3)->vars[k]);
+                double val_gen = (pob_base + idx_1)->vars[k] + prob_mutacion*((pob_base + idx_2)->vars[k] - (pob_base + idx_3)->vars[k]);
 
                 val_gen = (val_gen <= lim_sup[ k ]) ? ((val_gen >= lim_inf[ k ]) ? val_gen : lim_inf[ k ]) : lim_sup[ k ];
                 (poblacion + i)->vars[ k ] = val_gen;
@@ -2076,7 +2078,7 @@ void FILTROS::DE(){
         memcpy( poblacion + i, mi_elite, sizeof(INDIV));
     }
 
-    // Se cuantan los parametros activos:
+    // Se cuentan los parametros activos:
     n_pars = 0;
     for( int p = 0; p < 4; p++){
         if( pars_optim[p] ){
@@ -2090,7 +2092,7 @@ void FILTROS::DE(){
     }
     semilla = ini_semilla(0);
 
-    // Inicia el algoritmo BUMDA
+    // Inicia el algoritmo DE
     int k = 1;
     bool procesar = true;
 

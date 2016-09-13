@@ -25,11 +25,12 @@
     #include <vtkPNGWriter.h>
 #endif
 
-#include <gdcmImageReader.h>
-#include <gdcmImage.h>
-#include <gdcmReader.h>
-#include <gdcmTag.h>
-
+#ifdef BUILD_GDCM_VERSION
+    #include <gdcmImageReader.h>
+    #include <gdcmImage.h>
+    #include <gdcmReader.h>
+    #include <gdcmTag.h>
+#endif
 
 
 #include <string.h>

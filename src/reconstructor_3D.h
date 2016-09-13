@@ -85,12 +85,13 @@
     #include <vtkReverseSense.h>
 #endif
 
-
-#include <gdcmImageReader.h>
-#include <gdcmImage.h>
-#include <gdcmReader.h>
-#include <gdcmTag.h>
-#include <gdcmPrivateTag.h>
+#ifdef BUILD_GCM_VERSION
+    #include <gdcmImageReader.h>
+    #include <gdcmImage.h>
+    #include <gdcmReader.h>
+    #include <gdcmTag.h>
+    #include <gdcmPrivateTag.h>
+#endif
 
 #ifdef BUILD_GUI_VERSION
     #include "QVTKWidget.h"
