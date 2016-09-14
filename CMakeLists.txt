@@ -98,29 +98,35 @@ TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${FFTW_LIBRARIES} )
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
-FIND_PACKAGE(GDCM REQUIRED)
-IF(GDCM_FOUND)
-  INCLUDE(${GDCM_USE_FILE})
-  MESSAGE("GDCM libraries found in: ${GDCM_DIR}")
-   SET(GDCM_LIBRARIES 
-#     gdcmcharls
-     gdcmCommon
-     gdcmDICT		
-     gdcmDSED
-#     gdcmexpat
-#     gdcmgetopt
-     gdcmIOD
-     gdcmjpeg12
-     gdcmjpeg16
-     gdcmjpeg8
-     gdcmMEXD
-     gdcmMSFF
-#     gdcmopenjpeg
-#     gdcmzlib
-     socketxx)
-#     vtkgdcm)
-#     Rpcrt4)
-  TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${GDCM_LIBRARIES})
-ELSE(GDCM_FOUND)
-  MESSAGE(FATAL_ERROR "Cannot find GDCM, did you set GDCM_DIR?")
-ENDIF(GDCM_FOUND)
+
+
+OPTION(BUILD_GDCM "Build GDCM version." OFF)
+IF(BUILD_GDCM)
+    FIND_PACKAGE(GDCM REQUIRED)
+    IF(GDCM_FOUND)
+        ADD_DEFINITIONS(-DBUILD_GDCM_VERSION)
+        INCLUDE(${GDCM_USE_FILE})
+        MESSAGE("GDCM libraries found in: ${GDCM_DIR}")
+        SET(GDCM_LIBRARIES 
+        #     gdcmcharls
+            gdcmCommon
+            gdcmDICT		
+            gdcmDSED
+        #     gdcmexpat
+        #     gdcmgetopt
+            gdcmIOD
+            gdcmjpeg12
+            gdcmjpeg16
+            gdcmjpeg8
+            gdcmMEXD
+            gdcmMSFF
+        #     gdcmopenjpeg
+        #     gdcmzlib
+            socketxx)
+        #     vtkgdcm)
+        #     Rpcrt4)
+        TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${GDCM_LIBRARIES})
+    ELSE(GDCM_FOUND)
+        MESSAGE(FATAL_ERROR "Cannot find GDCM, did you set GDCM_DIR?")
+    ENDIF(GDCM_FOUND)    
+ENDIF(BUILD_GDCM)

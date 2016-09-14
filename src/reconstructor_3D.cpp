@@ -1210,7 +1210,10 @@ void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
     filtro.setInput(imgs_base[angio_ID]);
 
-    if( filtro.getParametrosOptimizar() >= 1 ){
+    if( filtro.getParametrosOptimizar() > 0 ){
+
+        DEB_MSG("Comenzando entrenamiento de parametros ...");
+
         filtro.setPar();
     }
 

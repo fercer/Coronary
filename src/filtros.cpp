@@ -42,7 +42,7 @@ void FILTROS::barraProgreso( const int avance, const int max_progress ){
 #endif
 
 
-    DEB_MSG("No se definio el pBar");
+    //DEB_MSG("No se definio el pBar");
 
     /// Limpiar el resto de la linea:
     int max_ancho = 100;
@@ -360,6 +360,9 @@ int FILTROS::getParametrosOptimizar(){
             n_pars++;
         }
     }
+
+    DEB_MSG("Optimizar " << n_pars << " parametros.");
+
     return n_pars;
 }
 
