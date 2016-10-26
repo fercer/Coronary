@@ -245,16 +245,16 @@ int main(int argc, char** argv ){
         reconstructor.segmentarImagenBase( 0 );
         reconstructor.Guardar("resp.pgm", IMGVTK::SEGMENT, IMGVTK::PGM, 0);
 
-        reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
-        reconstructor.Guardar("ryc.png", IMGVTK::THRESHOLD, IMGVTK::PNG, 0);
+//        reconstructor.umbralizar(IMGVTK::SEGMENT, IMGVTK::RIDLER_CALVARD, 0, 0);
+//        reconstructor.Guardar("ryc.png", IMGVTK::THRESHOLD, IMGVTK::PNG, 0);
 
-        reconstructor.lengthFilter(IMGVTK::THRESHOLD, 600, 0);
-        reconstructor.Guardar("ryc_600.png", IMGVTK::THRESHOLD, IMGVTK::PNG, 0);
+//        reconstructor.lengthFilter(IMGVTK::THRESHOLD, 600, 0);
+//        reconstructor.Guardar("ryc_600.png", IMGVTK::THRESHOLD, IMGVTK::PNG, 0);
 
-        reconstructor.skeletonize(0, 100);
-        reconstructor.skeletonize(0, 50);
-        reconstructor.skeletonize(0, 20);
-        reconstructor.skeletonize(0, 5);
+//        reconstructor.skeletonize(0, 100);
+//        reconstructor.skeletonize(0, 50);
+//        reconstructor.skeletonize(0, 20);
+//        reconstructor.skeletonize(0, 5);
 
         if( parametros[21].mi_valor.par_s[0] == 'y' ){
 
