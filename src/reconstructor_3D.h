@@ -202,7 +202,7 @@ class RECONS3D{
         void agregarInput(char **rutasbase_input, const int n_imgs, bool enmascarar);
 
         void agregarGroundtruth(const char *rutaground_input, const int angio_ID);
-        void agregarGroundtruth(char **rutasground_input, const int n_imgs, const int angio_ID );
+        void agregarGroundtruth(char **rutasground_input, const int n_imgs );
 
         void leerConfiguracion( const char *ruta_conf);
 

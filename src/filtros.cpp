@@ -267,29 +267,74 @@ FILTROS::~FILTROS(){
 /*  Metodo: setInputOriginal
     Funcion: Establece las imagenes origen yu ground truth.
 */
-void FILTROS::setInput(IMGVTK &img_org){
-    org = img_org.base_ptr;
-    DEB_MSG("ORG ptr: " << img_org.base_ptr);
-    mask = img_org.mask_ptr;
-    dest = img_org.segment_ptr;
-    ground_truth = img_org.gt_ptr;
+void FILTROS::setInput(std::vector< IMGVTK > &img_org, const int ini, const int end){
 
-    // Obtener las dimensiones de la imagen:
-    cols = img_org.cols;
-    rows = img_org.rows;
-    rows_cols = img_org.rows_cols;
+	my_ini = ini;
+	my_end = end;
+
+	n_imgs = my_end - my_ini + 1;
+
+	if (org) {
+		free( org );
+	}
+
+
+	// Obtener las dimensiones de la imagen:
+	rows_cols = img_org[my_ini].rows_cols;
+	cols = img_org[my_ini].cols;
+	rows = img_org[my_ini].rows;
 
     DEB_MSG("Dimensiones para el filtro: " << cols << "x" << rows);
 
+	mask = (double**)malloc(n_imgs * sizeof(double*));
+	ground_truth = (double**)malloc(n_imgs * sizeof(double*));
+	dest = (double**)malloc(n_imgs * sizeof(double*));
+	org = (double**)malloc(n_imgs * sizeof(double*));
+
+	for (int i = 0; i < n_imgs; i++) {
+
+		*(org + i) = (double*)malloc(rows_cols * sizeof(double));
+		*(ground_truth + i) = (double*)malloc(rows_cols * sizeof(double));
+		*(mask + i) = (double*)malloc(rows_cols * sizeof(double));
+
+		memcpy(*(org + i) + rows_cols + i, img_org[i + my_ini].base_ptr, rows_cols * sizeof(double));
+		memcpy(*(ground_truth + i) + rows_cols + i, img_org[i + my_ini].gt_ptr, rows_cols * sizeof(double));
+		memcpy(*(mask + i) + rows_cols + i, img_org[i + my_ini].mask_ptr, rows_cols * sizeof(double));
+
+		*(dest + i) = img_org[i + my_ini].segment_ptr;
+	}
+	
     resp = new double [rows_cols];
 
     switch( filtro_elegido ){
         case SS_GABOR:
+			Img_fft = (fftw_complex**)malloc(n_imgs * sizeof(fftw_complex*));
+			Img_fft_HPF = (fftw_complex**)malloc(n_imgs * sizeof(fftw_complex*));
             pars_optim[3] = false;
             mi_elite->vars[3] = 0.0;
             fftImgOrigen();
             break;
     }
+}
+
+
+
+
+/*  Metodo: setGT
+Funcion: Establece el ground truth cuando hay mas de una imagen.
+*/
+void FILTROS::setGT(IMGVTK &img_mask){
+	mask = img_mask.mask_ptr;
+}
+
+
+
+
+/*  Metodo: setMask
+Funcion: Establece el ground truth cuando hay mas de una imagen.
+*/
+void FILTROS::setGT(IMGVTK &img_gt) {
+	ground_truth = img_gt.gt_ptr;
 }
 
 
@@ -500,12 +545,12 @@ typedef struct INDIV {
     *************************************
 */
 void FILTROS::respGMF(INDIV *test, double *resp){
-    const int L = round(test->vars[0]);
-    const int T = round(test->vars[1]);
-    const int K = round(test->vars[2]);
+    const int L = (int)round(test->vars[0]);
+    const int T = (int)round(test->vars[1]);
+    const int K = (int)round(test->vars[2]);
     const double sigma = test->vars[3];
 
-    const int temp_dims = 1.5*((T > L) ? T : L);
+    const int temp_dims = (int)(1.5*((T > L) ? T : L));
 
     double **templates = new double*[K];
 
@@ -673,20 +718,27 @@ void FILTROS::fftImgOrigen(){
         GETTIME_INI;
 
         if(!transformada){
-            Img_fft = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
-            Img_fft_HPF = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
+
+			for (int i = 0; i < n_imgs; i++) {
+				*(Img_fft + i) = (fftw_complex*)fftw_malloc(rows*(cols / 2 + 1) * sizeof(fftw_complex));
+				*(Img_fft_HPF + i) = (fftw_complex*)fftw_malloc(rows*(cols / 2 + 1) * sizeof(fftw_complex));
+			}
             transformada = true;
+
         }
 
-        double *Img_org = (double*) malloc(rows_cols * sizeof(double));
-        for(int xy = 0; xy < rows_cols; xy++){
-            *(Img_org + xy) = 1.0 - *(org + xy);
-        }
+		double *Img_org = (double*)malloc(rows_cols * sizeof(double));
+		for (int i = 0; i < n_imgs; i++) {
+			for (int xy = 0; xy < rows_cols; xy++) {
+				*(Img_org + xy) = 1.0 - *( *(org + i) + xy);
+			}
 
-        fftw_plan p_r2c = fftw_plan_dft_r2c_2d(rows, cols, Img_org, Img_fft, FFTW_ESTIMATE);
-        fftw_execute(p_r2c);
-        fftw_destroy_plan(p_r2c);
-        free(Img_org);
+			fftw_plan p_r2c = fftw_plan_dft_r2c_2d(rows, cols, Img_org, *(Img_fft + i), FFTW_ESTIMATE);
+			fftw_execute(p_r2c);
+			fftw_destroy_plan(p_r2c);
+		}
+
+		free(Img_org);
 
 		GETTIME_FIN;
 
@@ -703,8 +755,8 @@ void FILTROS::fftImgOrigen(){
 */
 void FILTROS::respGabor(INDIV *test, double *resp){
     const double L = test->vars[0];
-    const int T = round(test->vars[1]);
-    const int K = round(test->vars[2]);
+    const int T = (int)round(test->vars[1]);
+    const int K = (int)round(test->vars[2]);
 
     // Calculate sx y sy:
     double sx2 = (double)T / (2.0*sqrt(2.0 * log(2.0)));
@@ -754,85 +806,94 @@ void FILTROS::respGabor(INDIV *test, double *resp){
         }
     }
 
+
+
+
+	// 'Img_filter' is the temporal filtered image in the frequencies domain:
+	fftw_complex *Img_filter = (fftw_complex*)fftw_malloc(rows*(cols / 2 + 1) * sizeof(fftw_complex));
+
+	// 'Img_resp' contains the response of the gabor filter at certain orientation 'theta':
+	double *Img_resp = (double*)calloc(rows_cols, sizeof(double));
+
+	// 'max_resp' saves the highest response for every pixel of the input:
+	double *max_resp = (double*)malloc(rows_cols * sizeof(double));
+
+#ifndef NDEBUG
+	double *max_resp_angles = (double*)malloc(rows_cols * sizeof(double));
+#endif
+
+	fftw_plan p_c2r;
     //// Apply the high-pass filter to the image in the frequencies domain:
-    for(int y = 0; y < rows; y++){
-		for( int x = 0; x <= cols/2; x++){
-            *(*(Img_fft_HPF + x+y*(cols/2+1))  ) = *(*(Img_fft + x+y*(cols/2+1))  ) * *(HPF + x+y*(cols/2 + 1));
-            *(*(Img_fft_HPF + x+y*(cols/2+1))+1) = *(*(Img_fft + x+y*(cols/2+1))+1) * *(HPF + x+y*(cols/2 + 1));
-        }
-    }
-    free( HPF );
+	for (int i = 0; i < n_imgs; i++) {
+		for (int y = 0; y < rows; y++) {
+			for (int x = 0; x <= cols / 2; x++) {
+				*(*( *(Img_fft_HPF+i) + x + y*(cols / 2 + 1))) = *(*(*(Img_fft+i) + x + y*(cols / 2 + 1))) * *(HPF + x + y*(cols / 2 + 1));
+				*(*(*(Img_fft_HPF + i) + x + y*(cols / 2 + 1)) + 1) = *(*(*(Img_fft + i) + x + y*(cols / 2 + 1)) + 1) * *(HPF + x + y*(cols / 2 + 1));
+			}
+		}
+		   
+		for( int xy = 0; xy < rows_cols; xy++){
+			*(max_resp + xy) = -INF;
+		}
 
-    // 'Img_filter' is the temporal filtered image in the frequencies domain:
-    fftw_complex *Img_filter = (fftw_complex*) fftw_malloc(rows*(cols/2+1)*sizeof(fftw_complex));
+		const double theta_increment = 180.0 / (double)K;
 
-    // 'Img_resp' contains the response of the gabor filter at certain orientation 'theta':
-    double *Img_resp = (double*) calloc(rows_cols, sizeof(double));
+		double Gabor_xy, Vr, Ur;
 
-    // 'max_resp' saves the highest response for every pixel of the input:
-    double *max_resp = (double*) malloc(rows_cols * sizeof(double));
-    for( int xy = 0; xy < rows_cols; xy++){
-        *(max_resp + xy) = -INF;
-    }
+		for( double theta = 0.0; theta < 180.0; theta+=theta_increment){
+			const double stheta = sin(theta*Mi_PI/180.0);
+			const double ctheta = cos(theta*Mi_PI/180.0);
 
-    fftw_plan p_c2r;
-    const double theta_increment = 180.0 / (double)K;
+			//// The Gabor filter is calculated for the rotated base at 'theta' degrees:
+			for( int y = 0; y < rows/2; y++){
+				const double v_y = *(v+y+rows/2);
+				for( int x = 0; x < cols/2; x++){
+					Ur = *(u + x+cols/2)*ctheta + v_y*stheta;
+					Vr =-*(u + x+cols/2)*stheta + v_y*ctheta;
+					Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) * cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
+					*(*(Img_filter + y*(cols / 2 + 1) + x)) = *(*(*(Img_fft_HPF + i) + y*(cols / 2 + 1) + x)) * Gabor_xy;
+					*(*(Img_filter + y*(cols / 2 + 1) + x) + 1) = *(*(*(Img_fft_HPF + i) + y*(cols / 2 + 1) + x) + 1) * Gabor_xy;
+				}
+				Ur = *(u)*ctheta + v_y*stheta;
+				Vr =-*(u)*stheta + v_y*ctheta;
+				Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) * cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
+				*(*(Img_filter + y*(cols/2+1) + cols/2)  ) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)  ) * Gabor_xy;
+				*(*(Img_filter + y*(cols/2+1) + cols/2)+1) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)+1) * Gabor_xy;
+			}
 
-    double Gabor_xy, Vr, Ur;
+			for( int y = rows/2; y < rows; y++){
+				const double v_y = *(v + y-rows/2);
+				for( int x = 0; x < cols/2; x++){
+					Ur = *(u + x+cols/2)*ctheta + v_y*stheta;
+					Vr =-*(u + x+cols/2)*stheta + v_y*ctheta;
+					Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) * cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
+					*(*(Img_filter + y*(cols / 2 + 1) + x)) = *(*(*(Img_fft_HPF + i) + y*(cols / 2 + 1) + x)) * Gabor_xy;
+					*(*(Img_filter + y*(cols / 2 + 1) + x) + 1) = *(*(*(Img_fft_HPF + i) + y*(cols / 2 + 1) + x) + 1) * Gabor_xy;
+				}
+				Ur = *(u)*ctheta + v_y*stheta;
+				Vr =-*(u)*stheta + v_y*ctheta;
+				Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) * cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
+				*(*(Img_filter + y*(cols/2+1) + cols/2)  ) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)  ) * Gabor_xy;
+				*(*(Img_filter + y*(cols/2+1) + cols/2)+1) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)+1) * Gabor_xy;
+			}
 
-    double *max_resp_angles = (double*) malloc( rows_cols * sizeof(double) );
+			//// Transform the response to the original domain:
+			p_c2r = fftw_plan_dft_c2r_2d(rows, cols, Img_filter, Img_resp, FFTW_ESTIMATE);
+			fftw_execute(p_c2r);
+			fftw_destroy_plan(p_c2r);
 
-    for( double theta = 0.0; theta < 180.0; theta+=theta_increment){
-        const double stheta = sin(theta*Mi_PI/180.0);
-        const double ctheta = cos(theta*Mi_PI/180.0);
-
-        //// The Gabor filter is calculated for the rotated base at 'theta' degrees:
-        for( int y = 0; y < rows/2; y++){
-            const double v_y = *(v+y+rows/2);
-            for( int x = 0; x < cols/2; x++){
-                Ur = *(u + x+cols/2)*ctheta + v_y*stheta;
-                Vr =-*(u + x+cols/2)*stheta + v_y*ctheta;
-                Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) * cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
-                *(*(Img_filter + y*(cols/2+1) + x)  ) = *(*(Img_fft_HPF + y*(cols/2+1) + x)  ) * Gabor_xy;
-                *(*(Img_filter + y*(cols/2+1) + x)+1) = *(*(Img_fft_HPF + y*(cols/2+1) + x)+1) * Gabor_xy;
-            }
-            Ur = *(u)*ctheta + v_y*stheta;
-            Vr =-*(u)*stheta + v_y*ctheta;
-            Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) * cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
-            *(*(Img_filter + y*(cols/2+1) + cols/2)  ) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)  ) * Gabor_xy;
-            *(*(Img_filter + y*(cols/2+1) + cols/2)+1) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)+1) * Gabor_xy;
-        }
-
-        for( int y = rows/2; y < rows; y++){
-            const double v_y = *(v + y-rows/2);
-            for( int x = 0; x < cols/2; x++){
-                Ur = *(u + x+cols/2)*ctheta + v_y*stheta;
-                Vr =-*(u + x+cols/2)*stheta + v_y*ctheta;
-                Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) * cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
-                *(*(Img_filter + y*(cols/2+1) + x)  ) = *(*(Img_fft_HPF + y*(cols/2+1) + x)  ) * Gabor_xy;
-                *(*(Img_filter + y*(cols/2+1) + x)+1) = *(*(Img_fft_HPF + y*(cols/2+1) + x)+1) * Gabor_xy;
-
-            }
-            Ur = *(u)*ctheta + v_y*stheta;
-            Vr =-*(u)*stheta + v_y*ctheta;
-            Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) * cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
-            *(*(Img_filter + y*(cols/2+1) + cols/2)  ) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)  ) * Gabor_xy;
-            *(*(Img_filter + y*(cols/2+1) + cols/2)+1) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)+1) * Gabor_xy;
-        }
-
-        //// Transform the response to the original domain:
-        p_c2r = fftw_plan_dft_c2r_2d(rows, cols, Img_filter, Img_resp, FFTW_ESTIMATE);
-        fftw_execute(p_c2r);
-        fftw_destroy_plan(p_c2r);
-
-        //// Update the highest response for every pixel:
-        for( int xy = 0; xy < rows_cols; xy++){
-            if( *(max_resp + xy) < *(Img_resp + xy)){
-                *(max_resp + xy) = *(Img_resp + xy);
-                *(max_resp_angles + xy) = -theta * Mi_PI / 180.0 + Mi_PI/2.0;
-            }
-        }
-    }
+			//// Update the highest response for every pixel:
+			for( int xy = 0; xy < rows_cols; xy++){
+				if( *(max_resp + xy) < *(Img_resp + xy)){
+					*(max_resp + xy) = *(Img_resp + xy);
+#ifndef NDEBUG
+					*(max_resp_angles + xy) = -theta * Mi_PI / 180.0 + Mi_PI/2.0;
+#endif
+				}
+			}
+		}
+	}
+	free(HPF);
 
     fftw_free(Img_filter);
     free(Img_resp);
@@ -844,8 +905,9 @@ void FILTROS::respGabor(INDIV *test, double *resp){
     }
 
     free(max_resp);
+#ifndef NDEBUG
     free(max_resp_angles);
-
+#endif
 }
 
 
@@ -954,7 +1016,7 @@ double FILTROS::calcROC( double *resp ){
     while( threshold > min_resp ){
         //// Count the positive and negative individuals at this threshold:
 
-        if( i_negative == 0 & i_positive == 0){
+        if( i_negative == 0 && i_positive == 0){
             break;
         }
 
@@ -1300,8 +1362,7 @@ unsigned int FILTROS::lcg_s(){
     if(!st_semilla){
         st_semilla = rand();
     }
-    const unsigned int m = pow(2,31);
-    return (1103515245u*st_semilla + 12345) % m;
+    return (1103515245u*st_semilla + 12345) % 2147483648;
 }
 
 
@@ -1311,8 +1372,7 @@ unsigned int FILTROS::lcg_s(){
     Funcion: Genera un numero pseudo-aleatorio por medio del metodo Linear Congruential Generator. El generador utiliza una semilla enviada por referencia, la cual actualiza y los parametros que utiliza son los mismos que utiliza gcc.
 */
 unsigned int FILTROS::lcg_r(unsigned int *mi_semilla){
-    const unsigned int m = pow(2,31);
-    return *mi_semilla= (1103515245u* *mi_semilla + 12345) % m;
+    return *mi_semilla= (1103515245u* *mi_semilla + 12345) % 2147483648;
 }
 
 
@@ -1386,7 +1446,7 @@ int FILTROS::compIndiv(const void* A, const void* B){
     INDIV *indB = (INDIV*)B;
     if(indA->eval < indB->eval) return  1;
     if(indA->eval == indB->eval) return  0;
-    if(indA->eval > indB->eval) return -1;
+    return -1;
 }
 
 
@@ -1404,7 +1464,7 @@ void FILTROS::generarPobInicial(INDIV *poblacion){
     for(int i = 0; i < n_pob; i++){
         memcpy( poblacion[i].vars, mi_elite->vars, 5*sizeof(double) );
 
-        for( int j = 0; j < n_pars; j++){
+        for( unsigned int j = 0; j < n_pars; j++){
             const unsigned int k = idx_pars[j];
             (poblacion + i)->vars[k] = HybTaus(lim_inf[k], lim_sup[k]);
         }
@@ -1435,8 +1495,8 @@ void FILTROS::generarPob(double medias[4], double varianzas[4], INDIV *poblacion
     //Se generan n_pob - 1 individuos, y permanece el elite que se tiene.
     // VERIFICAR CUALES PARAMETROS SE BUSCAN:
     using namespace std;
-    for(register int i = 0; i < n_pob; i++){
-        for( int j = 0; j < n_pars; j++){
+    for(int i = 0; i < n_pob; i++){
+        for(unsigned int j = 0; j < n_pars; j++){
             const unsigned int k = idx_pars[j];
             val_gen =  anorm( medias[k], varianzas[k]);
             val_gen = (val_gen <= lim_sup[ k ]) ? ((val_gen >= lim_inf[ k ]) ? val_gen : lim_inf[ k ]) : lim_sup[ k ];
@@ -1470,13 +1530,13 @@ void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, doubl
         for( int i = 0; i < truncamiento; i++){//Este es el ciclo para toda la seleccion.
             const double g_bar = (poblacion + i)->eval - gx_sel;
             sum_evals += g_bar;
-            for( int j = 0; j < n_pars; j++){
+            for(unsigned int j = 0; j < n_pars; j++){
                 const unsigned int k = idx_pars[j];
                 *(medias + k) = *(medias + k) + (poblacion + i)->vars[ k ] * g_bar;
             }
         }
 
-        for( int j = 0; j < n_pars; j++){
+        for(unsigned int j = 0; j < n_pars; j++){
             *( medias + idx_pars[j] ) = *( medias + idx_pars[j] ) / sum_evals;
         }
         //Se calculan las varianzas:
@@ -1484,7 +1544,7 @@ void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, doubl
         memset(varianzas, 0, 4*sizeof(double));
         for( int i = 0; i < truncamiento; i++){
             const double g_bar = (poblacion + i)->eval - gx_sel;
-            for( int j = 0; j < n_pars; j++){
+            for(unsigned int j = 0; j < n_pars; j++){
 
                 const unsigned int k = idx_pars[j];
                 tmp = (poblacion+i)->vars[k] - *(medias + k);
@@ -1492,7 +1552,7 @@ void FILTROS::calcularPars(const INDIV *poblacion, const int truncamiento, doubl
             }
         }
 
-        for( int j = 0; j < n_pars; j++){
+        for(unsigned int j = 0; j < n_pars; j++){
             *(varianzas + idx_pars[j] ) = *(varianzas + idx_pars[j] ) / (sum_evals);
         }
 }
@@ -1585,8 +1645,8 @@ void FILTROS::BUMDA(){
         k++;
 
         //// Verificar condiciones de paro:
-        int condicion = 0;
-        for(int j = 0; j < n_pars; j++){
+		unsigned int condicion = 0;
+        for(unsigned int j = 0; j < n_pars; j++){
             const unsigned int v = idx_pars[j];
             DEB_MSG("var[" << v << "] = " << *(varianzas + v) << "/" << *(min_vars + v));
             condicion += ( *(varianzas + v) <= *(min_vars + v));
@@ -1618,7 +1678,7 @@ void FILTROS::generarPob(INDIV *poblacion, const double *probs, const double *de
     for(int i = 0; i < n_pob; i++){
         // Se muestrean los genes para cada parametro:
         unsigned int bits_recorridos = 0;
-        for( int j = 0; j < n_pars; j++){
+        for(unsigned int j = 0; j < n_pars; j++){
             const unsigned int k = idx_pars[j];
             double cadena_val = 0;
             double pow_2 = 1.0;
@@ -1701,7 +1761,7 @@ void FILTROS::UMDA(){
 
     double *probs = new double [n_bits];
     // Inicializar las probabilidades en 0.5:
-    for( int b = 0; b < n_bits; b++){
+    for(unsigned int b = 0; b < n_bits; b++){
         probs[b] = 0.5;
     }
 
@@ -1767,7 +1827,7 @@ double FILTROS::generarPobInicial(INDIV *poblacion, const double *deltas_var){
         // Se genera cada bit con la misma probabilidad de ser 0 o 1:
 
         unsigned int bits_recorridos = 0;
-		for (int j = 0; j < n_pars; j++) {
+		for (unsigned int j = 0; j < n_pars; j++) {
 			const unsigned int k = idx_pars[j];
 			double pow_2 = 1.0;
 			double cadena_val = 0.0;
@@ -1831,7 +1891,7 @@ void FILTROS::cruzaPob(INDIV* cruza, const INDIV* sel_grp, const unsigned int n_
 
         int padre_1 = i;
         int padre_2 = i + 1;
-        int bits_ini = 0;
+		unsigned int bits_ini = 0;
 		
         // Realizar cortes hasta terminar con la secuencia de los individuos:
         while(bits_ini < n_bits){
@@ -1878,7 +1938,7 @@ double FILTROS::generarPob(INDIV *poblacion, const INDIV *cruza, const INDIV *se
         memcpy( poblacion + i, cruza + i, sizeof(INDIV) );
 
         unsigned int bits_recorridos = 0;
-        for( int j = 0; j < n_pars; j++){
+        for(unsigned int j = 0; j < n_pars; j++){
             const unsigned int k = idx_pars[j];
             double pow_2 = 1.0;
             double cadena_val = 0.0;
@@ -2021,25 +2081,25 @@ void FILTROS::diferenciarPoblacion( INDIV* poblacion, INDIV* pob_base ){
         if( HybTaus(0.0, 1.0) <= prob_cruza ){
 
             // Generar tres indices aleatorios diferentes (excluyendo el indice actual):
-            int idx_1 = HybTaus(-0.5, (double)(n_pob-2) + 0.49);
+            int idx_1 = (int)round(HybTaus(-0.5, (double)(n_pob-2) + 0.49));
             idx_1 += (idx_1 >= i) ? 1 : 0;
 
             int idx_2 = idx_1;
             do{
-                idx_2 = HybTaus(-0.5, (double)(n_pob-2) + 0.49);
+                idx_2 = (int)round(HybTaus(-0.5, (double)(n_pob-2) + 0.49));
                 idx_2 += (idx_2 >= i) ? 1 : 0;
             }while( idx_2 == idx_1 );
 
             int idx_3 = idx_1;
             do{
-                idx_3 = HybTaus(-0.5, (double)(n_pob-2) + 0.49);
+                idx_3 = (int)round(HybTaus(-0.5, (double)(n_pob-2) + 0.49));
                 idx_3 += (idx_3 >= i) ? 1 : 0;
             }while( (idx_3 == idx_1) || (idx_3 == idx_2) );
 
             DEB_MSG("[" << i << "]: {" << idx_1 << ", " << idx_2 << ", " << idx_3 << "}");
 
             // Diferenciar todas las variables del individuo:
-            for( int j = 0; j < n_pars; j++){
+            for(unsigned int j = 0; j < n_pars; j++){
                 const unsigned int k = idx_pars[j];
                 double val_gen = (pob_base + idx_1)->vars[k] + prob_mutacion*((pob_base + idx_2)->vars[k] - (pob_base + idx_3)->vars[k]);
 
@@ -2155,7 +2215,7 @@ void FILTROS::busquedaExhaustiva(){
             idx_pars[ n_pars ] = p;
 
             // Determinar cuantas particiones tiene cada variable:
-            max_bit_val[ p ] = (lim_sup[ p ] - lim_inf[ p ] + 1e-12) / min_vars[p];
+            max_bit_val[ p ] = (unsigned int) ((lim_sup[ p ] - lim_inf[ p ] + 1e-12) / min_vars[p]);
             n_bits *= max_bit_val[ p ] + 1;
             n_pars ++;
         }
@@ -2172,16 +2232,16 @@ void FILTROS::busquedaExhaustiva(){
     TIMERS;
 
     GETTIME_INI;
-    for( int i_L = 0; i_L <= max_bit_val[PAR_L]; i_L++){
+    for(unsigned int i_L = 0; i_L <= max_bit_val[PAR_L]; i_L++){
         test->vars[PAR_L] = (double)i_L * min_vars[PAR_L] + lim_inf[PAR_L];
 
-        for( int i_T = 0; i_T <= max_bit_val[PAR_T]; i_T++){
+        for(unsigned int i_T = 0; i_T <= max_bit_val[PAR_T]; i_T++){
             test->vars[PAR_T] = (double)i_T * min_vars[PAR_T] + lim_inf[PAR_T];
 
-            for( int i_K = 0; i_K <= max_bit_val[PAR_K]; i_K++){
+            for(unsigned int i_K = 0; i_K <= max_bit_val[PAR_K]; i_K++){
                 test->vars[PAR_K] = (double)i_K * min_vars[PAR_K] + lim_inf[PAR_K];
 
-                for( int i_Sigma = 0; i_Sigma <= max_bit_val[PAR_SIGMA]; i_Sigma++){
+                for(unsigned int i_Sigma = 0; i_Sigma <= max_bit_val[PAR_SIGMA]; i_Sigma++){
                     test->vars[PAR_SIGMA] = (double)i_Sigma * min_vars[PAR_SIGMA] + lim_inf[PAR_SIGMA];
 
                     switch( fitness_elegido ){

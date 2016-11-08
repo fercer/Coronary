@@ -18,37 +18,52 @@
 	DESCRIPCION:
                 Busca entre los parametros de entrada dados en la ejecucion del programa, la lista de parametros que se requieren.
 */
-void revisar_pars(PARS_ENTRADA* pars, const int n_pars, int *argc, char **argv){
+int revisar_pars(PARS_ENTRADA* pars, const int n_pars, int *argc, char **argv){
+    int ayuda_req = 0;
+
 	// Para quitar el nombre con el que se ejecuto el programa:
 	*argc = *argc - 1;
-	int *retirados = (int *) calloc(*argc, sizeof(int));
+    
+	int *retirados = NULL;
+    
+    if( *argc ){
+        retirados = (int *) calloc(*argc, sizeof(int));
+	}
+	else {
+		ayuda_req = 1;
+	}
 	
 	for(int i = 0; i < n_pars; i++){
-
 		int n = 1;
 		int encontrado = 0;
-		do{
-			if(!retirados[n-1]){
-                if(!strcmp(pars[i].short_tag, argv[n]) || !strcmp(pars[i].long_tag, argv[n])){	// El tag de la pregunta si se encontro:
-					retirados[n-1] = 1;
-					encontrado = 1;
-					switch(pars[i].mi_tipo){
-						case CHAR:
-								sprintf(pars[i].mi_valor.par_s, "%s", argv[n+1]);
-								break;
 
-						case INT:
-								pars[i].mi_valor.par_i = atoi(argv[n+1]);
-								break;
+        if( retirados ){
+            do{
+                if(!retirados[n-1]){
+                    if(!strcmp(pars[i].short_tag, argv[n]) || !strcmp(pars[i].long_tag, argv[n])){	// El tag de la pregunta si se encontro:
+                        retirados[n-1] = 1;
+                        encontrado = 1;
+                        switch(pars[i].mi_tipo){
+                            case MI_CHAR:
+                                    sprintf(pars[i].mi_valor.par_s, "%s", argv[n+1]);
+                                    break;
 
-						case DOUBLE:
-								pars[i].mi_valor.par_d = atof(argv[n+1]);
-								break;
-					}
-				}
-			}
-			n++;
-		}while(!encontrado && n <= *argc);
+                            case MI_INT:
+                                    pars[i].mi_valor.par_i = atoi(argv[n+1]);
+                                    break;
+
+                            case MI_DOUBLE:
+                                    pars[i].mi_valor.par_d = atof(argv[n+1]);
+                                    break;
+                            case MI_HELP:
+                                    ayuda_req = 1;
+                                    break;
+                        }
+                    }
+                }
+                n++;
+            }while(!encontrado && n <= *argc);
+		}
 
 		// No se encontro el tag de la pregunta:
 		if(!encontrado){
@@ -56,39 +71,41 @@ void revisar_pars(PARS_ENTRADA* pars, const int n_pars, int *argc, char **argv){
 			if(pars[i].opcional){
 				// Si lo es, se copia el valor por default directamente:
 				switch(pars[i].mi_tipo){
-					case CHAR:
+					case MI_CHAR:
 						sprintf(pars[i].mi_valor.par_s, "%s", pars[i].mi_default.par_s);
 						break;
 
-					case INT:
+					case MI_INT:
 						pars[i].mi_valor.par_i = pars[i].mi_default.par_i;
 						break;
 
-					case DOUBLE:
+					case MI_DOUBLE:
 						pars[i].mi_valor.par_d = pars[i].mi_default.par_d;
 						break;
 				}
 			}else{
 				// De lo contrario se pregunta al usuario por el parametro:
 				printf("\n %s " ANSI_COLOR_BLUE "(default: ", pars[i].pregunta);
+                
+                char *resp;
+                
 				switch(pars[i].mi_tipo){
-					case CHAR:
+					case MI_CHAR:
 							printf("\'%s\')" ANSI_COLOR_RESET "\n", pars[i].mi_default.par_s);
 							printf("\n Para dejarlo en su valor por default presione " ANSI_COLOR_YELLOW "[Enter]" ANSI_COLOR_RESET ", de lo contrario, defina el valor y presione " ANSI_COLOR_YELLOW "[Enter]: " ANSI_COLOR_RESET "\n");	
-							fgets(pars[i].mi_valor.par_s, 128, stdin);
+							resp = fgets(pars[i].mi_valor.par_s, 128, stdin);
 							if((int)pars[i].mi_valor.par_s[0]==10){ //Default seleccionado:
 								sprintf(pars[i].mi_valor.par_s, "%s", pars[i].mi_default.par_s);
 							}else{ // Otro valor definido:
 								pars[i].mi_valor.par_s[strlen(pars[i].mi_valor.par_s)-1] = '\0';
 							}
-
 							break;
 
-					case INT:
+					case MI_INT:
 							printf("%i )" ANSI_COLOR_RESET "\n", pars[i].mi_default.par_i);
 							printf("\n Para dejarlo en su valor por default presione " ANSI_COLOR_YELLOW "[Enter]" ANSI_COLOR_RESET ", de lo contrario, defina el valor y presione " ANSI_COLOR_YELLOW "[Enter]: " ANSI_COLOR_RESET "\n");
 							char tmp_i[128];
-							fgets(tmp_i, 128, stdin);
+							resp = fgets(tmp_i, 128, stdin);
 							if((int)tmp_i[0]==10){ //Default seleccionado:
 								pars[i].mi_valor.par_i = pars[i].mi_default.par_i;
 							}else{
@@ -97,11 +114,11 @@ void revisar_pars(PARS_ENTRADA* pars, const int n_pars, int *argc, char **argv){
 			
 							break;
 
-					case DOUBLE:
+					case MI_DOUBLE:
 							printf("%f )" ANSI_COLOR_RESET "\n", pars[i].mi_default.par_d);
 							printf("\n Para dejarlo en su valor por default presione " ANSI_COLOR_YELLOW "[Enter]" ANSI_COLOR_RESET ", de lo contrario, defina el valor y presione " ANSI_COLOR_YELLOW "[Enter]: " ANSI_COLOR_RESET "\n");
 							char tmp_d[128];
-							fgets(tmp_d, 128, stdin);
+							resp = fgets(tmp_d, 128, stdin);
 							if((int)tmp_d[0]==10){ //Default seleccionado:
 								pars[i].mi_valor.par_d = pars[i].mi_default.par_d;
 							}else{
@@ -113,7 +130,16 @@ void revisar_pars(PARS_ENTRADA* pars, const int n_pars, int *argc, char **argv){
 			}
 		}
 	}
-	free(retirados);
+
+	if( retirados ){
+        free(retirados);
+    }
+    
+    if( ayuda_req ){
+        mostrar_ayuda(pars, n_pars, argv[0]);
+    }
+
+    return ayuda_req;
 }
 
 
@@ -128,7 +154,7 @@ void revisar_pars(PARS_ENTRADA* pars, const int n_pars, int *argc, char **argv){
                 Muestra las preguntas, los tags y los valores por defecto.
 */
 void mostrar_ayuda(PARS_ENTRADA* pars, const int n_pars, const char *nombre_programa){
-    // Mostrar uno a uno los paraemtros que solicita el programa:
+    // Mostrar uno a uno los parametros que solicita el programa:
     printf( "Usage: " ANSI_COLOR_GREEN "%s" ANSI_COLOR_RESET " [OPTION " ANSI_COLOR_MAGENTA "obligatory" ANSI_COLOR_RESET "/" ANSI_COLOR_YELLOW "optional" ANSI_COLOR_RESET "] Value\n", nombre_programa);
     for( int i = 0; i < n_pars; i++){
         if( pars[i].opcional ){
@@ -138,13 +164,13 @@ void mostrar_ayuda(PARS_ENTRADA* pars, const int n_pars, const char *nombre_prog
         }
         printf("%s %s\t\t\t" ANSI_COLOR_GREEN "%s " ANSI_COLOR_RESET "(", pars[i].short_tag, pars[i].long_tag, pars[i].pregunta);
         switch( pars[i].mi_tipo ){
-            case CHAR:
+            case MI_CHAR:
                 printf(ANSI_COLOR_CYAN "%s", pars[i].mi_default.par_s );
                 break;
-            case INT:
+            case MI_INT:
                 printf(ANSI_COLOR_CYAN "%i", pars[i].mi_default.par_i );
                 break;
-            case DOUBLE:
+            case MI_DOUBLE:
                 printf(ANSI_COLOR_CYAN "%f", pars[i].mi_default.par_d );
                 break;
         }

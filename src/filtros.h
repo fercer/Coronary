@@ -18,7 +18,7 @@
 #include <stdio.h>
 
 #if _WIN32
-    #include "D:\Apps\FFTW\include\fftw3.h"
+    #include "C:\Apps\FFTW\fftw3.h"
 #else
     #include <fftw3.h>
 #endif
@@ -69,7 +69,8 @@ class FILTROS{
         void setFiltro( const SEG_FILTRO seg_fil);
         void setFitness( const FITNESS fit_fun);
 
-        void setInput(IMGVTK &img_org);
+        void setInput(std::vector< IMGVTK > &img_org, const int ini, const int fin);
+		void setGT(IMGVTK &img_gt);
 
         void setPar();
         void setPar( const PARAMETRO par, const double val);
@@ -175,9 +176,10 @@ class FILTROS{
         INDIV *mi_elite;
 
         // Entradas comunes:
-        double *resp;
-        double *org, *dest;
-        double *ground_truth, *mask;
+        double **resp;
+        double **org, **dest;
+        double **ground_truth, **mask;
+		int my_ini, my_end, n_imgs;
         int rows, cols, rows_cols;
         int n_pob, max_iters, seleccion;
         double prob_mutacion, prob_cruza;
@@ -195,8 +197,8 @@ class FILTROS{
         //================================================================================== FILTROS:
         void respGMF(INDIV *test, double *resp);
         bool transformada;
-        fftw_complex *Img_fft;
-        fftw_complex *Img_fft_HPF;
+        fftw_complex **Img_fft;
+        fftw_complex **Img_fft_HPF;
         void fftImgOrigen();
         void respGabor(INDIV *test, double *resp);
 

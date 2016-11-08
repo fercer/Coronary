@@ -13,21 +13,23 @@
 */
 void definirParametros(PARS_ENTRADA *parametros){
     // Parametro input base:
-    parametros[0].mi_tipo = CHAR;
+    parametros[0].mi_tipo = MI_CHAR;
     sprintf(parametros[0].short_tag, "-b1");
     sprintf(parametros[0].long_tag, "--base1");
     sprintf(parametros[0].mi_default.par_s, "NULL");
     sprintf(parametros[0].pregunta, "Imagen angiografica BASE 1 de entrada (.PNG, .BMP, .JPEG/.JPG, o archivo DICOM)");
     parametros[0].opcional = 1;
+
     // Parametro nivel extraido del archivo DICOM:
-    parametros[1].mi_tipo = INT;
+    parametros[1].mi_tipo = MI_INT;
     sprintf(parametros[1].short_tag, "-l1");
     sprintf(parametros[1].long_tag, "--desde1");
     parametros[1].mi_default.par_i = 0;
     sprintf(parametros[1].pregunta, "Nivel desde el que se extraen las imagenes del archivo DICOM como imagenes base 1");
     parametros[1].opcional = 1;
+
     // Parametro nivel extraido del archivo DICOM:
-    parametros[2].mi_tipo = INT;
+    parametros[2].mi_tipo = MI_INT;
     sprintf(parametros[2].short_tag, "-u1");
     sprintf(parametros[2].long_tag, "--hasta1");
     parametros[2].mi_default.par_i = 0;
@@ -36,21 +38,23 @@ void definirParametros(PARS_ENTRADA *parametros){
 
 
     // Parametro input base:
-    parametros[3].mi_tipo = CHAR;
+    parametros[3].mi_tipo = MI_CHAR;
     sprintf(parametros[3].short_tag, "-b2");
     sprintf(parametros[3].long_tag, "--base2");
     sprintf(parametros[3].mi_default.par_s, "NULL");
     sprintf(parametros[3].pregunta, "Imagen angiografica BASE 2 de entrada (.PNG, .BMP, .JPEG/.JPG, o archivo DICOM)");
     parametros[3].opcional = 1;
+
     // Parametro nivel extraido del archivo DICOM:
-    parametros[4].mi_tipo = INT;
+    parametros[4].mi_tipo = MI_INT;
     sprintf(parametros[4].short_tag, "-l2");
     sprintf(parametros[4].long_tag, "--desde2");
     parametros[4].mi_default.par_i = 0;
     sprintf(parametros[4].pregunta, "Nivel desde el que se extraen las imagenes del archivo DICOM como imagenes base 2");
     parametros[4].opcional = 1;
+
     // Parametro nivel extraido del archivo DICOM:
-    parametros[5].mi_tipo = INT;
+    parametros[5].mi_tipo = MI_INT;
     sprintf(parametros[5].short_tag, "-u2");
     sprintf(parametros[5].long_tag, "--hasta2");
     parametros[5].mi_default.par_i = 0;
@@ -59,21 +63,23 @@ void definirParametros(PARS_ENTRADA *parametros){
 
 
     // Parametro input base:
-    parametros[6].mi_tipo = CHAR;
+    parametros[6].mi_tipo = MI_CHAR;
     sprintf(parametros[6].short_tag, "-b3");
     sprintf(parametros[6].long_tag, "--base3");
     sprintf(parametros[6].mi_default.par_s, "NULL");
     sprintf(parametros[6].pregunta, "Imagen angiografica BASE 3 de entrada (.PNG, .BMP, .JPEG/.JPG, o archivo DICOM)");
     parametros[6].opcional = 1;
+
     // Parametro nivel extraido del archivo DICOM:
-    parametros[7].mi_tipo = INT;
+    parametros[7].mi_tipo = MI_INT;
     sprintf(parametros[7].short_tag, "-l3");
     sprintf(parametros[7].long_tag, "--desde3");
     parametros[7].mi_default.par_i = 0;
     sprintf(parametros[7].pregunta, "Nivel desde el que se extraen las imagenes del archivo DICOM como imagenes base 3");
     parametros[7].opcional = 1;
     // Parametro nivel extraido del archivo DICOM:
-    parametros[8].mi_tipo = INT;
+
+    parametros[8].mi_tipo = MI_INT;
     sprintf(parametros[8].short_tag, "-u3");
     sprintf(parametros[8].long_tag, "--hasta3");
     parametros[8].mi_default.par_i = 0;
@@ -84,7 +90,7 @@ void definirParametros(PARS_ENTRADA *parametros){
 
 
     // Parametro input ground:
-    parametros[9].mi_tipo = CHAR;
+    parametros[9].mi_tipo = MI_CHAR;
     sprintf(parametros[9].short_tag, "-g1");
     sprintf(parametros[9].long_tag, "--ground1");
     sprintf(parametros[9].mi_default.par_s, "NULL");
@@ -92,7 +98,7 @@ void definirParametros(PARS_ENTRADA *parametros){
     parametros[9].opcional = 1;
 
     // Parametro input ground:
-    parametros[10].mi_tipo = CHAR;
+    parametros[10].mi_tipo = MI_CHAR;
     sprintf(parametros[10].short_tag, "-g2");
     sprintf(parametros[10].long_tag, "--ground2");
     sprintf(parametros[10].mi_default.par_s, "NULL");
@@ -100,7 +106,7 @@ void definirParametros(PARS_ENTRADA *parametros){
     parametros[10].opcional = 1;
 
     // Parametro input ground:
-    parametros[11].mi_tipo = CHAR;
+    parametros[11].mi_tipo = MI_CHAR;
     sprintf(parametros[11].short_tag, "-g3");
     sprintf(parametros[11].long_tag, "--ground3");
     sprintf(parametros[11].mi_default.par_s, "NULL");
@@ -111,7 +117,7 @@ void definirParametros(PARS_ENTRADA *parametros){
 
     ////---------------------------------------------------------------------- PARA GENERAR IMAGENES PHANTOM EN ARCHIVO DICOM
     // Parametro output phantom
-    parametros[12].mi_tipo = CHAR;
+    parametros[12].mi_tipo = MI_CHAR;
     sprintf(parametros[12].short_tag, "-ph");
     sprintf(parametros[12].long_tag, "--phantom");
     sprintf(parametros[12].mi_default.par_s, "NULL");
@@ -119,7 +125,7 @@ void definirParametros(PARS_ENTRADA *parametros){
     parametros[12].opcional = 1;
 
     // Parametro output phantom
-    parametros[13].mi_tipo = CHAR;
+    parametros[13].mi_tipo = MI_CHAR;
     sprintf(parametros[13].short_tag, "-op");
     sprintf(parametros[13].long_tag, "--output");
     sprintf(parametros[13].mi_default.par_s, "NULL");
@@ -129,7 +135,7 @@ void definirParametros(PARS_ENTRADA *parametros){
 
     ////---------------------------------------------------------------------- PARA CARGAR VARIAS IMAGENES Y REALIZAR UN ENTRENAMIENTO DE LOS PARAMETROS
     // Parametro input data.set
-    parametros[14].mi_tipo = CHAR;
+    parametros[14].mi_tipo = MI_CHAR;
     sprintf(parametros[14].short_tag, "-dsb");
     sprintf(parametros[14].long_tag, "--datasetbase");
     sprintf(parametros[14].mi_default.par_s, "NULL");
@@ -137,7 +143,7 @@ void definirParametros(PARS_ENTRADA *parametros){
     parametros[14].opcional = 1;
 
     // Parametro input data.set
-    parametros[15].mi_tipo = CHAR;
+    parametros[15].mi_tipo = MI_CHAR;
     sprintf(parametros[15].short_tag, "-dsg");
     sprintf(parametros[15].long_tag, "--datasetground");
     sprintf(parametros[15].mi_default.par_s, "NULL");
@@ -145,7 +151,7 @@ void definirParametros(PARS_ENTRADA *parametros){
     parametros[15].opcional = 1;
 
     // Parametro input configuracion.dat
-    parametros[16].mi_tipo = CHAR;
+    parametros[16].mi_tipo = MI_CHAR;
     sprintf(parametros[16].short_tag, "-c");
     sprintf(parametros[16].long_tag, "--config");
     sprintf(parametros[16].mi_default.par_s, "NULL");
@@ -153,7 +159,7 @@ void definirParametros(PARS_ENTRADA *parametros){
     parametros[16].opcional = 1;
 
     // Parametro input filtrado.log
-    parametros[17].mi_tipo = CHAR;
+    parametros[17].mi_tipo = MI_CHAR;
     sprintf(parametros[17].short_tag, "-lf");
     sprintf(parametros[17].long_tag, "--log-filtrado");
     sprintf(parametros[17].mi_default.par_s, "NULL");
@@ -161,7 +167,7 @@ void definirParametros(PARS_ENTRADA *parametros){
     parametros[17].opcional = 1;
 
     // Parametro output.pgm
-    parametros[18].mi_tipo = CHAR;
+    parametros[18].mi_tipo = MI_CHAR;
     sprintf(parametros[18].short_tag, "-pgm");
     sprintf(parametros[18].long_tag, "--rutaPGM");
     sprintf(parametros[18].mi_default.par_s, "NULL");
@@ -169,7 +175,7 @@ void definirParametros(PARS_ENTRADA *parametros){
     parametros[18].opcional = 1;
 
     // Parametro dataset as single image
-    parametros[19].mi_tipo = CHAR;
+    parametros[19].mi_tipo = MI_CHAR;
     sprintf(parametros[19].short_tag, "-con");
     sprintf(parametros[19].long_tag, "--concatenar");
     sprintf(parametros[19].mi_default.par_s, "yes");
@@ -177,7 +183,7 @@ void definirParametros(PARS_ENTRADA *parametros){
     parametros[19].opcional = 1;
 
     // Parametro log de reconstruccion
-    parametros[20].mi_tipo = CHAR;
+    parametros[20].mi_tipo = MI_CHAR;
     sprintf(parametros[20].short_tag, "-lr");
     sprintf(parametros[20].long_tag, "--log-reconstruccion");
     sprintf(parametros[20].mi_default.par_s, "NULL");
@@ -185,7 +191,7 @@ void definirParametros(PARS_ENTRADA *parametros){
     parametros[20].opcional = 1;
 
     // Parametro umbralizar
-    parametros[21].mi_tipo = CHAR;
+    parametros[21].mi_tipo = MI_CHAR;
     sprintf(parametros[21].short_tag, "-umb");
     sprintf(parametros[21].long_tag, "--umbralizar");
     sprintf(parametros[21].mi_default.par_s, "no");
@@ -194,7 +200,7 @@ void definirParametros(PARS_ENTRADA *parametros){
 
 
     // Parametro input dir_threshold
-    parametros[22].mi_tipo = CHAR;
+    parametros[22].mi_tipo = MI_CHAR;
     sprintf(parametros[22].short_tag, "-dt");
     sprintf(parametros[22].long_tag, "--directoriothreshold");
     sprintf(parametros[22].mi_default.par_s, ".");

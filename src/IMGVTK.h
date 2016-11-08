@@ -155,16 +155,14 @@ class IMGVTK{
         double medirExactitud();
 
         void Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool enmascarar, const int nivel);
-        void Cargar(const IMG_IDX img_idx, char **rutas , const int n_imgs, const bool enmascarar);
-
-        void Guardar( IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida );
+		void Guardar( IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida );
 
 //        void setLog( QPlainTextEdit *log );
 
         IMGVTK();
         IMGVTK(const IMGVTK &origen );
-        IMGVTK(char **rutas_origen, const int n_imgs, const bool enmascarar);
-        IMGVTK(const char *ruta_origen, const bool enmascarar, const int nivel);
+		IMGVTK(char ** rutas_origen, const int n_imgs);
+		IMGVTK(const char *ruta_origen, const bool enmascarar, const int nivel);
 
         ~IMGVTK();
 
@@ -209,10 +207,9 @@ class IMGVTK{
         void escribirLog( const char *mensaje );
 #ifdef BUILD_VTK_VERSION
         void Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel, const bool enmascarar);
-        void Cargar(vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, char **rutas, const int n_imgs, const bool enmascarar);
+        void Cargar(vtkSmartPointer<vtkImageData> img_src, char **rutas, const int n_imgs);
 #endif
         int *Cargar(const char *ruta_origen, double **img_src, double **mask_src, const int nivel, const bool enmascarar);
-        int *Cargar(double **img_src, double **mask_src, char **rutas, const int n_imgs, const bool enmascarar);
 
         void maskFOV(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
         void fillMask(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
@@ -242,7 +239,7 @@ class IMGVTK{
 
         inline void ampliarConjunto(int *etiquetas, const int equiv_A, const int equiv_B, const int max_etiquetas);
         unsigned int *conjuntosConexos(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens);
-        void lengthFilter(double *ptr, const int min_length , const int mis_cols, const int mis_rens, ALG_CONJUNTOS mi_alg);
+        void lengthFilter(double *ptr, const unsigned int min_length , const int mis_cols, const int mis_rens, ALG_CONJUNTOS mi_alg);
 
         char* setRuta( const char *ruta_input );
 

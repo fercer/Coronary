@@ -793,32 +793,10 @@ void RECONS3D::agregarInput( const char *rutabase_input, bool enmascarar ){
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
 void RECONS3D::agregarInput( char **rutasbase_input, const int n_imgs, bool enmascarar){
-    n_angios++;
-
-
-    imgs_base.push_back(IMGVTK(rutasbase_input, n_imgs, enmascarar));
-    existe_ground.push_back( false );
-
-#ifdef BUILD_VTK_VERSION
-    NORCEN norcen_temp;
-
-    // Mostrar la imagen en un renderizador
-    mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
-    puntos.push_back(vtkSmartPointer<vtkPoints>::New());
-    pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
-    normal_centros.push_back( norcen_temp );
-
-    view.push_back(vtkSmartPointer<vtkContextView>::New());
-
-    /// Mover el detector a su posicion definida por el archivo DICOM:
-    mallarPuntos(n_angios);
-    isoCentro(n_angios);
-#endif
-
-    hist.push_back( NULL );
-    h_suma.push_back(0.0);
-    h_media.push_back(0.0);
-    h_desvest.push_back(0.0);
+	// Cargar todas las rutas por separado:
+	for (int i = 0; i < n_imgs; i++) {
+		agregarInput(*(rutasbase_input + i), enmascarar);
+	}
 }
 
 
@@ -848,14 +826,11 @@ void RECONS3D::agregarGroundtruth(const char *rutaground_input, const int angio_
 
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
-void RECONS3D::agregarGroundtruth(char **rutasground_input, const int n_imgs, const int angio_ID ){
-    if( angio_ID > n_angios ){
-        char mensaje[] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
-        sprintf(mensaje, "\n<<Error: El angiograma %i no ha sido agregado al reconstructor>>\n\n", angio_ID);
-        escribirLog( mensaje );
-    }else{
-        imgs_base[ angio_ID ].Cargar(IMGVTK::GROUNDTRUTH, rutasground_input, n_imgs, false);
-        existe_ground[ angio_ID ] = true;
+void RECONS3D::agregarGroundtruth(char **rutasground_input, const int n_imgs){
+    // Cargar todos los ground truth, para cada imagen
+	for( int i = 0; i < n_imgs; i++ ){
+        imgs_base[ i ].Cargar(IMGVTK::GROUNDTRUTH, *(rutasground_input + i), n_imgs, false);
+        existe_ground[ i ] = true;
     }
 }
 
@@ -1208,7 +1183,7 @@ void RECONS3D::setFiltroLog(QTextEdit *txtLog)
 */
 void RECONS3D::segmentarImagenBase( const int angio_ID ){
 
-    filtro.setInput(imgs_base[angio_ID]);
+    filtro.setInput(imgs_base, angio_ID, angio_ID);
 
     if( filtro.getParametrosOptimizar() > 0 ){
 
