@@ -243,7 +243,7 @@ FILTROS::~FILTROS(){
     }
 
     if( resp ){
-        delete [] resp;
+        free(resp);
     }
 
     if( mi_fplog ){
@@ -267,44 +267,30 @@ FILTROS::~FILTROS(){
 /*  Metodo: setInputOriginal
     Funcion: Establece las imagenes origen yu ground truth.
 */
-void FILTROS::setInput(std::vector< IMGVTK > &img_org, const int ini, const int end){
+void FILTROS::setInput( IMGVTK *img_org, const int input_ini, const int input_end){
 
-	my_ini = ini;
-	my_end = end;
-
-	n_imgs = my_end - my_ini + 1;
-
-	if (org) {
-		free( org );
-	}
-
+	n_imgs = input_end - input_ini + 1;
 
 	// Obtener las dimensiones de la imagen:
-	rows_cols = img_org[my_ini].rows_cols;
-	cols = img_org[my_ini].cols;
-	rows = img_org[my_ini].rows;
+	rows_cols = img_org->rows_cols;
+	cols = img_org->cols;
+	rows = img_org->rows;
 
     DEB_MSG("Dimensiones para el filtro: " << cols << "x" << rows);
 
+	org = (double**)malloc(n_imgs * sizeof(double*));
+	dest = (double**)malloc(n_imgs * sizeof(double*));
 	mask = (double**)malloc(n_imgs * sizeof(double*));
 	ground_truth = (double**)malloc(n_imgs * sizeof(double*));
-	dest = (double**)malloc(n_imgs * sizeof(double*));
-	org = (double**)malloc(n_imgs * sizeof(double*));
 
 	for (int i = 0; i < n_imgs; i++) {
-
-		*(org + i) = (double*)malloc(rows_cols * sizeof(double));
-		*(ground_truth + i) = (double*)malloc(rows_cols * sizeof(double));
-		*(mask + i) = (double*)malloc(rows_cols * sizeof(double));
-
-		memcpy(*(org + i) + rows_cols + i, img_org[i + my_ini].base_ptr, rows_cols * sizeof(double));
-		memcpy(*(ground_truth + i) + rows_cols + i, img_org[i + my_ini].gt_ptr, rows_cols * sizeof(double));
-		memcpy(*(mask + i) + rows_cols + i, img_org[i + my_ini].mask_ptr, rows_cols * sizeof(double));
-
-		*(dest + i) = img_org[i + my_ini].segment_ptr;
+		*(org + i) = (img_org + i)->base_ptr;
+		*(mask + i) = (img_org + i)->mask_ptr;
+		*(dest + i) = (img_org + i)->segment_ptr;
+		*(ground_truth + i) = (img_org + i)->gt_ptr;
 	}
 	
-    resp = new double [rows_cols];
+	resp = (double*)malloc(n_imgs * rows_cols * sizeof(double));
 
     switch( filtro_elegido ){
         case SS_GABOR:
@@ -317,25 +303,6 @@ void FILTROS::setInput(std::vector< IMGVTK > &img_org, const int ini, const int 
     }
 }
 
-
-
-
-/*  Metodo: setGT
-Funcion: Establece el ground truth cuando hay mas de una imagen.
-*/
-void FILTROS::setGT(IMGVTK &img_mask){
-	mask = img_mask.mask_ptr;
-}
-
-
-
-
-/*  Metodo: setMask
-Funcion: Establece el ground truth cuando hay mas de una imagen.
-*/
-void FILTROS::setGT(IMGVTK &img_gt) {
-	ground_truth = img_gt.gt_ptr;
-}
 
 
 
@@ -437,19 +404,16 @@ void FILTROS::setLim( const PARAMETRO par, const LIMITES lim, const double val){
     Funcion: Aplica el filtro sobre la imagen de origen y la almacena sobre la imagen destino.
 */
 void FILTROS::filtrar(){
-
-    memset( resp, 0, rows_cols * sizeof(double));
-
-    double fitness = 0.0;
+	double fitness = 0.0;
 
     char mensaje[] = "Filtrado exitoso, el area bajo la curva de ROC es de X.XXXXXXX \n";
     switch( fitness_elegido ){
         case ROC:
-            fitness = fitnessROC(mi_elite, resp);
+            fitness = fitnessROC(mi_elite);
             sprintf(mensaje, "Area under the ROC curve: %1.7f \n", fitness);
             break;
         case CORCON:
-            fitness = fitnessCorCon(mi_elite, resp);            
+            fitness = fitnessCorCon(mi_elite);            
             sprintf(mensaje, "Filtrado exitoso, la correlacion y contraste son de %2.7f \n", fitness);
             break;
         default: /* FIT_UNSET */
@@ -459,7 +423,13 @@ void FILTROS::filtrar(){
     if( ground_truth ){
         escribirLog( mensaje );
     }
-    memcpy(dest, resp, rows_cols*sizeof(double));
+	for (int i = 0; i < n_imgs; i++) {
+		for (int y = 0; y < rows; y++) {
+			for (int x = 0; x < cols; x++) {
+				*(*(dest + i) + y*cols + x) = *(resp + y*(n_imgs*cols) + (x + i*cols));
+			}
+		}
+	}
 }
 
 
@@ -544,7 +514,7 @@ typedef struct INDIV {
 
     *************************************
 */
-void FILTROS::respGMF(INDIV *test, double *resp){
+void FILTROS::respGMF(INDIV *test){
     const int L = (int)round(test->vars[0]);
     const int T = (int)round(test->vars[1]);
     const int K = (int)round(test->vars[2]);
@@ -552,10 +522,10 @@ void FILTROS::respGMF(INDIV *test, double *resp){
 
     const int temp_dims = (int)(1.5*((T > L) ? T : L));
 
-    double **templates = new double*[K];
+    double **templates = (double**) malloc( K * sizeof(double*));
 
     ////// Calculate a single Gaussian curve along the template width, at 0 degrees:
-    double *gauss_0 = new double[T];
+	double *gauss_0 = (double*)malloc(T * sizeof(double));
     double *gauss_ptr = gauss_0;
     const double sig_2 = 2.0 * sigma * sigma;
     double sum = 0.0;
@@ -567,6 +537,7 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         sum += *(gauss_ptr);
         gauss_ptr++;
     }
+
     sum *= L;
     gauss_ptr = gauss_0;
     const double mean = sum / ((double)T * (double)L);
@@ -578,15 +549,13 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         *(gauss_ptr) = (*(gauss_ptr) - mean) / sum;
          gauss_ptr++;
     }
-    templates[0] = new double [temp_dims * temp_dims];
+	*(templates) = (double*)malloc(temp_dims * temp_dims * sizeof(double));
 
     //// Copy the Gaussian curve along the template height:
-    memset(templates[0], 0, temp_dims*temp_dims*sizeof(double));
+    memset(*(templates), 0, temp_dims*temp_dims*sizeof(double));
     for( int y = 0; y < L; y++ )
     {
-        memcpy( templates[0] + (temp_dims/2 - L/2 + y)*temp_dims + (temp_dims/2 - T/2),
-                gauss_0,
-                T*sizeof(double) );
+		memcpy(*(templates) + (temp_dims / 2 - L / 2 + y)*temp_dims + (temp_dims / 2 - T / 2), gauss_0, T * sizeof(double));
     }
 
 
@@ -600,108 +569,79 @@ void FILTROS::respGMF(INDIV *test, double *resp){
         const double ctheta = cos( -theta * Mi_PI/180.0 );
         const double stheta = sin( -theta * Mi_PI/180.0 );
 
-        templates[k] = new double [temp_dims * temp_dims];
-        memset(templates[k], 0, temp_dims*temp_dims*sizeof(double));
+		*(templates + k) = (double*) malloc(temp_dims * temp_dims * sizeof(double));
+		memset(*(templates + k), 0, temp_dims*temp_dims * sizeof(double));
         rotateImg( templates[0], templates[k], ctheta, stheta, temp_dims, temp_dims, temp_dims, temp_dims);
-        //rotateImg( templates[0], templates[k], ctheta, stheta, temp_dims, temp_dims, T, L);
     }
 
-    delete[] gauss_0;
+	free(gauss_0);
 
 
     //// Initialize the filter response:
-    double *resp_tmp = new double [ K * (cols + temp_dims - 1) * (rows + temp_dims - 1) ];
-    for( int xy = 0; xy < K * (cols + temp_dims - 1) * (rows + temp_dims - 1); xy++ )
-    {
-        *(resp_tmp + xy) = -INF;
-    }
+	double *resp_tmp = (double*)malloc((cols + temp_dims - 1) * (rows + temp_dims - 1) * sizeof(double));
 
     const int offset = (int)(temp_dims/2);
-    //// columns in the input image
-    const int mis_cols = cols;
-    //// rows in the input image
-    const int mis_rens = rows;
-    //// the pointer to the input image
-    const double *mi_org = org;
-
-                                                                                                                                                                                        const int max_prog = (mis_cols + temp_dims - 1) * (mis_rens + temp_dims - 1) * K;
-
+	
     //// Convolve the image with the templates at each 'K' orientation:
-    for( int k = 0; k < K; k++ )
-    {
-        for( int yR = 0; yR < (mis_rens + temp_dims - 1); yR++)
-        {
+	for (int i = 0; i < n_imgs; i++)
+	{
+		for (int y = 0; y < (rows + temp_dims - 1); y++) {
+			for (int x = 0; x < (cols + temp_dims - 1); x++) {
+				*(resp_tmp + x + y * (cols + temp_dims - 1)) = -MY_INF;
+			}
+		}
 
-            //// Determine the limits in the 'y' axis to keep the convolution inside the image rows:
-            const int min_y = (yR > (temp_dims - 1)) ? (yR - temp_dims + 1) : 0;
-            const int max_y = (yR < mis_rens) ? (yR + 1) : mis_rens;
-            for( int xR = 0; xR < (mis_cols + temp_dims - 1); xR++)
-            {
+		for (int k = 0; k < K; k++)
+		{
+			for (int yR = 0; yR < (rows + temp_dims - 1); yR++)
+			{
+				//// Determine the limits in the 'y' axis to keep the convolution inside the image rows:
+				const int min_y = (yR > (temp_dims - 1)) ? (yR - temp_dims + 1) : 0;
+				const int max_y = (yR < rows) ? (yR + 1) : rows;
+				for (int xR = 0; xR < (cols + temp_dims - 1); xR++)
+				{
+					//// Determine the limits in the 'x' axis to keep the convolution inside the image columns:
+					const int min_x = (xR > (temp_dims - 1)) ? (xR - temp_dims + 1) : 0;
+					const int max_x = (xR < cols) ? (xR + 1) : cols;
 
-                //// Determine the limits in the 'x' axis to keep the convolution inside the image columns:
-                const int min_x = (xR > (temp_dims - 1)) ? (xR - temp_dims + 1) : 0;
-                const int max_x = (xR < mis_cols) ? (xR + 1) : mis_cols;
+					double resp_k = 0.0;
+					//// Convolve the template with the input image:
+					for (int y = min_y; y < max_y; y++)
+					{
+						for (int x = min_x; x < max_x; x++)
+						{
+							resp_k += *(*(templates + k) + (max_y - y - 1)*temp_dims + (max_x - x - 1)) *
+								*(*(org + i) + y*cols + x);
+						}
+					}
 
-                double resp_k = 0.0;
-                //// Convolve the template with the input image:
-                for( int y = min_y; y < max_y; y++)
-                {
-                    for( int x = min_x; x < max_x; x++)
-                    {
-                        resp_k += *(templates[k] + (max_y - y - 1)*temp_dims + (max_x - x - 1)) *
-                                  *(mi_org + y*mis_cols + x);
-                    }
-                }
+					//// Save the response for each pixel among the 'K' orientations:
+					if (resp_k > *(resp_tmp + yR*(cols + temp_dims - 1) + xR))
+					{
+						*(resp_tmp + yR*(cols + temp_dims - 1) + xR + (cols + temp_dims - 1) * (rows + temp_dims - 1)) = resp_k;
+					}
+				}
+			}
+		}
 
-                //// Save the response for each pixel among the 'K' orientations:
-                if (resp_k > *(resp_tmp + yR*(mis_cols + temp_dims - 1) + xR))
-                {
-                    *(resp_tmp + yR*(mis_cols + temp_dims - 1) +
-                            xR + k*(mis_cols + temp_dims - 1) *
-                            (mis_rens + temp_dims - 1))              =      resp_k;
-                }
-
-            }
-        }
-
-                                                                                                                                                                                                                            barraProgreso( k+1, K );
-    }
-
-    //// Keep the highest response for each pixel among the whole orientations as the final filter response:
-    for( int xy = 0; xy < rows_cols; xy++)
-    {
-        *(resp +xy) =-INF;
-    }
-    for (int y = 0; y < rows; y++)
-    {
-        for (int x = 0; x < cols; x++)
-        {
-            for( int k = 0; k < K; k++)
-            {
-                if( *(resp + x + y*cols) <
-                        *(resp_tmp + (x + offset) +
-                          (y + offset)*(cols + temp_dims - 1) +
-                          k*(mis_cols + temp_dims - 1) *
-                          (mis_rens + temp_dims - 1)) )
-                {
-                    *(resp + x + y*cols) = *(resp_tmp + (x + offset) +
-                                             (y + offset)*(cols + temp_dims - 1) +
-                                             k*(mis_cols + temp_dims - 1) *
-                                             (mis_rens + temp_dims - 1));
-                }
-            }
-        }
-    }
-
+		//// Keep the highest response for each pixel among the whole orientations as the final filter response:
+		for (int y = 0; y < rows; y++)
+		{
+			for (int x = 0; x < cols; x++)
+			{
+				*(resp + y*(n_imgs*cols) + (x + i*cols)) = 
+					*(resp_tmp + (x + offset) + (y + offset)*(cols + temp_dims - 1));
+			}
+		}
+	}
 
     // Free memory
     for( int k = 0; k < K; k++)
     {
-        delete [] templates[k];
+		free(*(templates + k));
     }
-    delete [] templates;
-    delete [] resp_tmp;
-                                                                                                                                                                                        barraProgreso( max_prog, max_prog );
+    free(templates);
+    free(resp_tmp);
 }
 
 
@@ -753,7 +693,7 @@ void FILTROS::fftImgOrigen(){
 
     Funcion: Obtiene la respuesta del filtro de escala simple de Gabor, largo del template: L, ancho del template: T, y numero de rotaciones que se hacen al filtro entre 0 y 180°: K.
 */
-void FILTROS::respGabor(INDIV *test, double *resp){
+void FILTROS::respGabor(INDIV *test){
     const double L = test->vars[0];
     const int T = (int)round(test->vars[1]);
     const int K = (int)round(test->vars[2]);
@@ -827,13 +767,15 @@ void FILTROS::respGabor(INDIV *test, double *resp){
 	for (int i = 0; i < n_imgs; i++) {
 		for (int y = 0; y < rows; y++) {
 			for (int x = 0; x <= cols / 2; x++) {
-				*(*( *(Img_fft_HPF+i) + x + y*(cols / 2 + 1))) = *(*(*(Img_fft+i) + x + y*(cols / 2 + 1))) * *(HPF + x + y*(cols / 2 + 1));
-				*(*(*(Img_fft_HPF + i) + x + y*(cols / 2 + 1)) + 1) = *(*(*(Img_fft + i) + x + y*(cols / 2 + 1)) + 1) * *(HPF + x + y*(cols / 2 + 1));
+				*(*(*(Img_fft_HPF + i) + x + y*(cols / 2 + 1))) = 
+					*(*(*(Img_fft + i) + x + y*(cols / 2 + 1))) * *(HPF + x + y*(cols / 2 + 1));
+				*(*(*(Img_fft_HPF + i) + x + y*(cols / 2 + 1)) + 1) = 
+					*(*(*(Img_fft + i) + x + y*(cols / 2 + 1)) + 1) * *(HPF + x + y*(cols / 2 + 1));
 			}
 		}
 		   
 		for( int xy = 0; xy < rows_cols; xy++){
-			*(max_resp + xy) = -INF;
+			*(max_resp + xy) = -MY_INF;
 		}
 
 		const double theta_increment = 180.0 / (double)K;
@@ -850,15 +792,27 @@ void FILTROS::respGabor(INDIV *test, double *resp){
 				for( int x = 0; x < cols/2; x++){
 					Ur = *(u + x+cols/2)*ctheta + v_y*stheta;
 					Vr =-*(u + x+cols/2)*stheta + v_y*ctheta;
-					Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) * cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
-					*(*(Img_filter + y*(cols / 2 + 1) + x)) = *(*(*(Img_fft_HPF + i) + y*(cols / 2 + 1) + x)) * Gabor_xy;
-					*(*(Img_filter + y*(cols / 2 + 1) + x) + 1) = *(*(*(Img_fft_HPF + i) + y*(cols / 2 + 1) + x) + 1) * Gabor_xy;
+					Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy)))
+						* cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
+
+					*(*(Img_filter + y*(cols / 2 + 1) + x)) =
+						*(*(*(Img_fft_HPF + i) + y*(cols / 2 + 1) + x)) * Gabor_xy;
+
+					*(*(Img_filter + y*(cols / 2 + 1) + x) + 1) =
+						*(*(*(Img_fft_HPF + i) + y*(cols / 2 + 1) + x) + 1) * Gabor_xy;
 				}
+
 				Ur = *(u)*ctheta + v_y*stheta;
 				Vr =-*(u)*stheta + v_y*ctheta;
-				Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) * cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
-				*(*(Img_filter + y*(cols/2+1) + cols/2)  ) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)  ) * Gabor_xy;
-				*(*(Img_filter + y*(cols/2+1) + cols/2)+1) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)+1) * Gabor_xy;
+
+				Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) 
+					* cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
+
+				*(*(Img_filter + y*(cols/2+1) + cols/2)  ) = 
+					*(*(*(Img_fft_HPF + i) + y*(cols/2+1) + cols/2)  ) * Gabor_xy;
+
+				*(*(Img_filter + y*(cols/2+1) + cols/2)+1) = 
+					*(*(*(Img_fft_HPF + i) + y*(cols/2+1) + cols/2)+1) * Gabor_xy;
 			}
 
 			for( int y = rows/2; y < rows; y++){
@@ -866,15 +820,27 @@ void FILTROS::respGabor(INDIV *test, double *resp){
 				for( int x = 0; x < cols/2; x++){
 					Ur = *(u + x+cols/2)*ctheta + v_y*stheta;
 					Vr =-*(u + x+cols/2)*stheta + v_y*ctheta;
-					Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) * cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
-					*(*(Img_filter + y*(cols / 2 + 1) + x)) = *(*(*(Img_fft_HPF + i) + y*(cols / 2 + 1) + x)) * Gabor_xy;
-					*(*(Img_filter + y*(cols / 2 + 1) + x) + 1) = *(*(*(Img_fft_HPF + i) + y*(cols / 2 + 1) + x) + 1) * Gabor_xy;
+					Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy)))
+						* cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
+
+					*(*(Img_filter + y*(cols / 2 + 1) + x)) =
+						*(*(*(Img_fft_HPF + i) + y*(cols / 2 + 1) + x)) * Gabor_xy;
+
+					*(*(Img_filter + y*(cols / 2 + 1) + x) + 1) =
+						*(*(*(Img_fft_HPF + i) + y*(cols / 2 + 1) + x) + 1) * Gabor_xy;
 				}
+
 				Ur = *(u)*ctheta + v_y*stheta;
 				Vr =-*(u)*stheta + v_y*ctheta;
-				Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy))) * cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
-				*(*(Img_filter + y*(cols/2+1) + cols/2)  ) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)  ) * Gabor_xy;
-				*(*(Img_filter + y*(cols/2+1) + cols/2)+1) = *(*(Img_fft_HPF + y*(cols/2+1) + cols/2)+1) * Gabor_xy;
+
+				Gabor_xy = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*Mi_PI*fx*Mi_PI*fx) + sy2*(Vr*Vr + 4.0*Mi_PI*fy*Mi_PI*fy)))
+					* cosh(2.0*Mi_PI*(sx2*fx*Ur + sy2*fy*Vr));
+
+				*(*(Img_filter + y*(cols/2+1) + cols/2)  ) = 
+					*(*(*(Img_fft_HPF + i) + y*(cols/2+1) + cols/2)  ) * Gabor_xy;
+
+				*(*(Img_filter + y*(cols/2+1) + cols/2)+1) = 
+					*(*(*(Img_fft_HPF + i) + y*(cols/2+1) + cols/2)+1) * Gabor_xy;
 			}
 
 			//// Transform the response to the original domain:
@@ -892,19 +858,23 @@ void FILTROS::respGabor(INDIV *test, double *resp){
 				}
 			}
 		}
+
+		for (int y = 0; y < rows; y++) {
+			for (int x = 0; x < cols; x++) {
+				*(resp + y * (cols * n_imgs) + (i*cols + x)) = (*(*(mask + i) + y*cols + x) > 0.5) 
+					? (*(max_resp + x + y*cols) / rows_cols) 
+					: 0.0;
+			}
+		}
 	}
+
 	free(HPF);
-
-    fftw_free(Img_filter);
-    free(Img_resp);
-    free(u);
-    free(v);
-
-    for( int xy = 0; xy < rows_cols; xy++){
-        *(resp + xy) = (*(mask + xy) > 0.5) ? (*(max_resp + xy) / rows_cols) : 0.0;
-    }
-
+	fftw_free(Img_filter);
+	free(Img_resp);
+	free(u);
+	free(v);
     free(max_resp);
+
 #ifndef NDEBUG
     free(max_resp_angles);
 #endif
@@ -937,9 +907,9 @@ int comp_resp( const void *a, const void *b){
 
     Funcion: Calculates the area under the Receiver Operating Characteristic curve.
 */
-double FILTROS::calcROC( double *resp ){
+double FILTROS::calcROC(){
 
-    if( !ground_truth ){
+    if( !*(ground_truth) ){
         char mensaje_error[] = COLOR_BACK_BLACK COLOR_RED "<<ERROR: " COLOR_YELLOW "No se cargo la imagen ground-truth" COLOR_NORMAL "\n";
         escribirLog( mensaje_error);
         return 0.0;
@@ -953,13 +923,16 @@ double FILTROS::calcROC( double *resp ){
 
     //// Count the number of positive and negative individuals on the ground-truth that belong to the masked area:
     int n_positive = 0, n_negative = 0;
-    for( int xy = 0; xy < rows_cols; xy++){
-        if( *(ground_truth + xy) > 0.5 && *(mask + xy) > 0.5){
-            n_positive++;
-        }else{
-            n_negative++;
-        }
-    }
+	for (int i = 0; i < n_imgs; i++) {
+		for (int xy = 0; xy < rows_cols; xy++) {
+			if (*(*(ground_truth + i) + xy) > 0.5 && *(*(mask + i) + xy) > 0.5) {
+				n_positive++;
+			}
+			else {
+				n_negative++;
+			}
+		}
+	}
 
     double *positive_array = (double*) malloc( n_positive * sizeof(double));
     double *negative_array = (double*) malloc( n_negative * sizeof(double));
@@ -967,31 +940,34 @@ double FILTROS::calcROC( double *resp ){
     n_negative = 0;
 
     //// Store the values of the response in the corresponding array according to the ground-truth:
-    double max_resp =-INF;
-    double min_resp = INF;
+    double max_resp =-MY_INF;
+    double min_resp = MY_INF;
 
-    for( int xy = 0; xy < rows_cols; xy++){
-        //// Store the value only if belongs to the masked area:
-        if( *(mask + xy) > 0.5 ){
-            if( *(ground_truth + xy) >= 0.5 ){
-                positive_array[n_positive] = resp[xy];
-                n_positive++;
-            }else{
-                negative_array[n_negative] = resp[xy];
-                n_negative++;
-            }
+	for (int i = 0; i < n_imgs; i++) {
+		for (int y = 0; y < rows; y++) {
+			for (int x = 0; x < cols; x++) {
+				//// Store the value only if belongs to the masked area:
+				if (*(*(mask + i) + x + y*cols) > 0.5) {
+					if (*(*(ground_truth + i) + x + y*cols) >= 0.5) {
+						*(positive_array + n_positive) = *(resp + y * (n_imgs * cols) + (x + i*cols));
+						n_positive++;
+					}
+					else {
+						*(negative_array + n_negative) = *(resp + y * (n_imgs * cols) + (x + i*cols));
+						n_negative++;
+					}
 
-            //// Determine minima and maxima in the response:
-            if(max_resp < resp[xy]){
-                max_resp = resp[xy];
-            }
-            if(min_resp > resp[xy]){
-                min_resp = resp[xy];
-            }
-        }
-    }
-
-    DEB_MSG("min resp:" << COLOR_BLINK << min_resp << COLOR_NORMAL << ", max resp: " << COLOR_BLINK << max_resp << COLOR_NORMAL);
+					//// Determine minima and maxima in the response:
+					if (max_resp < *(resp + y * (n_imgs * cols) + (x + i*cols))) {
+						max_resp = *(resp + y * (n_imgs * cols) + (x + i*cols));
+					}
+					if (min_resp > *(resp + y * (n_imgs * cols) + (x + i*cols))) {
+						min_resp = *(resp + y * (n_imgs * cols) + (x + i*cols));
+					}
+				}
+			}
+		}
+	}
 
     //// Sort both arrays:
     qsort(positive_array, n_positive, sizeof(double), comp_resp);
@@ -1008,20 +984,19 @@ double FILTROS::calcROC( double *resp ){
     double TPF_new, FPF_new;
     double Az = 0.0;
 
+#ifndef NDEBUG
     FILE *fp_ROC = fopen("ROC_curve.fcs", "w");
-
-    DEB_MSG("n pos: " << i_positive << ", n neg " << n_negative );
+#endif
 
     min_resp -= delta;
     while( threshold > min_resp ){
         //// Count the positive and negative individuals at this threshold:
-
         if( i_negative == 0 && i_positive == 0){
             break;
         }
 
         while( i_positive > 0 ){
-            if(positive_array[i_positive] >= threshold){
+            if(*(positive_array + i_positive) >= threshold){
                 TP += 1.0;
                 i_positive--;
             }else{
@@ -1030,7 +1005,7 @@ double FILTROS::calcROC( double *resp ){
         }
 
         while( i_negative > 0){
-            if( negative_array[i_negative] >= threshold){
+            if( *(negative_array + i_negative) >= threshold){
                 TN -= 1.0;
                 i_negative--;
             }else{
@@ -1052,11 +1027,14 @@ double FILTROS::calcROC( double *resp ){
         // Mover los valores de la curva:
         TPF_old = TPF_new;
         FPF_old = FPF_new;
+#ifndef NDEBUG
         fprintf( fp_ROC , "%1.12f %1.12f\n", TPF_old, FPF_old);
+#endif
     }
 
-
+#ifndef NDEBUG
     fclose(fp_ROC);
+#endif
 
     free(positive_array);
     free(negative_array);
@@ -1065,7 +1043,7 @@ double FILTROS::calcROC( double *resp ){
 
     char mensaje[] = "X.XXXXXXXXXXXXXXXX XXX.XXXXXXXXXXXX \n";
     sprintf(mensaje, "%1.16f %3.12f\n", Az, DIFTIME);
-    //escribirLog( mensaje );
+    escribirLog( mensaje );
 
     return Az;
 }
@@ -1075,21 +1053,21 @@ double FILTROS::calcROC( double *resp ){
 /*  Metodo: fitnessROC
     Funcion: Evalua la eficacia de un detector utilizando el area bajo la curva de ROC:
 */
-double FILTROS::fitnessROC( INDIV *test, double *mi_resp ){
+double FILTROS::fitnessROC( INDIV *test ){
     //// Generar la respuesta del filtro de establecido para los parametros dados:
     switch(filtro_elegido){
         case SS_GABOR:
-            respGabor(test, mi_resp);
+            respGabor(test);
             break;
         case GMF:
-            respGMF(test, mi_resp);
+            respGMF(test);
             break;
     }
 
     if ( !ground_truth ){
         return -1.0;
     }
-    return calcROC(mi_resp);
+    return calcROC();
 }
 
 
@@ -1103,7 +1081,7 @@ double FILTROS::fitnessROC( INDIV *test, double *mi_resp ){
 
     Funcion: Calculates the correlation and contrast of the filtered response.
 */
-double FILTROS::calcCorCon(double *resp){
+double FILTROS::calcCorCon(){
 
     TIMERS;
 
@@ -1112,26 +1090,27 @@ double FILTROS::calcCorCon(double *resp){
     //// Scale the response to 8 levels:
     const int levels = 8;
 
-    double max_resp =-INF;
-    double min_resp = INF;
+    double max_resp =-MY_INF;
+    double min_resp = MY_INF;
 
-    for( int xy = 0; xy< rows_cols; xy++){
-        if( max_resp < *(resp + xy)){
-            max_resp = *(resp + xy);
-        }
-        if( min_resp > *(resp + xy)){
-            min_resp = *(resp + xy);
-        }
-    }
+	for (int xy = 0; xy < n_imgs * rows_cols; xy++) {
+		if (max_resp < *(resp + xy)) {
+			max_resp = *(resp + xy);
+		}
+		if (min_resp > *(resp + xy)) {
+			min_resp = *(resp + xy);
+		}
+	}
+
 
     const double range = max_resp - min_resp;
     const double scalar = (double)(levels - 1) / range;
 
-    int *scaled_resp = (int*) malloc(rows_cols * sizeof(int));
+    int *scaled_resp = (int*) malloc(n_imgs * rows_cols * sizeof(int));
 
-    for( int xy = 0; xy < rows_cols; xy++){
-        *(scaled_resp + xy) = (int)round( scalar * (*(resp + xy) - min_resp) );
-    }
+	for (int xy = 0; xy < n_imgs * rows_cols; xy++) {
+		*(scaled_resp + xy) = (int)round(scalar * (*(resp + xy) - min_resp));
+	}
 
     //// Compute the GLCM matrix using an intensity at 8 levels, for 4 orientations:
     double *GLCM_mat = (double*) calloc((levels * levels * 4), sizeof(double));
@@ -1146,35 +1125,34 @@ double FILTROS::calcCorCon(double *resp){
     double m_i[4] = {0.0, 0.0, 0.0, 0.0};
     double m_j[4] = {0.0, 0.0, 0.0, 0.0};
 
-    for( int x = 0; x < cols-1; x++){
-        // SI(x + 1, y    )
-        const int i = *(scaled_resp +   x  );
-        const int j = *(scaled_resp + (x+1));
+	for (int x = 0; x < n_imgs*cols - 1; x++) {
+		// SI(x + 1, y    )
+		const int i = *(scaled_resp + x);
+		const int j = *(scaled_resp + (x + 1));
 
-        *(GLCM_mat + (levels*4)*i + 4*j  ) = *(GLCM_mat + (levels*4)*i + 4*j  ) + fraction_1;
-        contrast_1 += (double)((i-j)*(i-j)) * fraction_1;
+		*(GLCM_mat + (levels * 4)*i + 4 * j) = *(GLCM_mat + (levels * 4)*i + 4 * j) + fraction_1;
+		contrast_1 += (double)((i - j)*(i - j)) * fraction_1;
 
-        *(m_i  ) += (double)(i+1) * fraction_1;
-        *(m_j  ) += (double)(j+1) * fraction_1;
-    }
+		*(m_i) += (double)(i + 1) * fraction_1;
+		*(m_j) += (double)(j + 1) * fraction_1;
+	}
+
+	for (int y = 1; y < rows; y++) {
+		// SI(x   , y - 1)
+		const int i = *(scaled_resp + (y + 1)*(n_imgs*cols) - 1);
+		const int j = *(scaled_resp + y  *(n_imgs*cols) - 1);
+		*(GLCM_mat + (levels * 4)*i + 4 * j + 2) = *(GLCM_mat + (levels * 4)*i + 4 * j + 2) + fraction_3;
+		contrast_3 += (double)((i - j)*(i - j)) * fraction_3;
+
+		*(m_i + 2) += (double)(i + 1) * fraction_3;
+		*(m_j + 2) += (double)(j + 1) * fraction_3;
+	}
 
     for( int y = 1; y < rows; y++){
-        // SI(x   , y - 1)
-        const int i = *(scaled_resp + (y+1)*cols - 1);
-        const int j = *(scaled_resp +   y  *cols - 1);
-        *(GLCM_mat + (levels*4)*i + 4*j+2) = *(GLCM_mat + (levels*4)*i + 4*j+2) + fraction_3;
-        contrast_3 += (double)((i-j)*(i-j)) * fraction_3;
-
-        *(m_i+2) += (double)(i+1) * fraction_3;
-        *(m_j+2) += (double)(j+1) * fraction_3;
-    }
-
-
-    for( int y = 1; y < rows; y++){
-        for( int x = 0; x < cols-1; x++){
+        for( int x = 0; x < n_imgs*cols-1; x++){
             {// SI(x + 1, y    )
-                const int i = *(scaled_resp + ( x ) + ( y )*cols);
-                const int j = *(scaled_resp + (x+1) + ( y )*cols);
+                const int i = *(scaled_resp + ( x ) + ( y )*(n_imgs*cols));
+                const int j = *(scaled_resp + (x+1) + ( y )*(n_imgs*cols));
                 *(GLCM_mat + (levels*4)*i + 4*j  ) = *(GLCM_mat + (levels*4)*i + 4*j  ) + fraction_1;
                 contrast_1 += (double)((i-j)*(i-j)) * fraction_1;
 
@@ -1183,8 +1161,8 @@ double FILTROS::calcCorCon(double *resp){
 
             }
             {// SI(x + 1, y - 1)
-                const int i = *(scaled_resp + ( x ) + ( y )*cols);
-                const int j = *(scaled_resp + (x+1) + (y-1)*cols);
+                const int i = *(scaled_resp + ( x ) + ( y )*(n_imgs*cols));
+                const int j = *(scaled_resp + (x+1) + (y-1)*(n_imgs*cols));
                 *(GLCM_mat + (levels*4)*i + 4*j+1) = *(GLCM_mat + (levels*4)*i + 4*j+1) + fraction_2;
                 contrast_2 += (double)((i-j)*(i-j)) * fraction_2;
 
@@ -1192,8 +1170,8 @@ double FILTROS::calcCorCon(double *resp){
                 *(m_j+1) += (double)(j+1) * fraction_2;
             }
             {// SI(x    , y - 1)
-                const int i = *(scaled_resp + ( x ) + ( y )*cols);
-                const int j = *(scaled_resp + ( x ) + (y-1)*cols);
+                const int i = *(scaled_resp + ( x ) + ( y )*(n_imgs*cols));
+                const int j = *(scaled_resp + ( x ) + (y-1)*(n_imgs*cols));
                 *(GLCM_mat + (levels*4)*i + 4*j+2) = *(GLCM_mat + (levels*4)*i + 4*j+2) + fraction_3;
                 contrast_3 += (double)((i-j)*(i-j)) * fraction_3;
 
@@ -1201,8 +1179,8 @@ double FILTROS::calcCorCon(double *resp){
                 *(m_j+2) += (double)(j+1) * fraction_3;
             }
             {// SI(x - 1, y - 1)
-                const int i = *(scaled_resp + (x+1) + ( y )*cols);
-                const int j = *(scaled_resp + ( x ) + (y-1)*cols);
+                const int i = *(scaled_resp + (x+1) + ( y )*(n_imgs*cols));
+                const int j = *(scaled_resp + ( x ) + (y-1)*(n_imgs*cols));
                 *(GLCM_mat + (levels*4)*i + 4*j+3) = *(GLCM_mat + (levels*4)*i + 4*j+3) + fraction_4;
                 contrast_4 += (double)((i-j)*(i-j)) * fraction_4;
 
@@ -1211,8 +1189,9 @@ double FILTROS::calcCorCon(double *resp){
             }
         }
     }
+	free(scaled_resp);
 
-    free(scaled_resp);
+
     DEB_MSG( "Contrast: " << contrast_1 << ", " << contrast_2 << ", " << contrast_3 << ", " << contrast_4 << ", mean: " << (contrast_1 + contrast_2 + contrast_3 + contrast_4)/ 4.0);
 
     double s_i[4] = {0.0, 0.0, 0.0, 0.0};
@@ -1303,21 +1282,21 @@ double FILTROS::calcCorCon(double *resp){
 /*  Metodo: fitnessCorCon
     Funcion: Evalua los parametros 'L', 'T' y //'K'// para el filtro de Gabor y el la correlacion y contraste:
 */
-double FILTROS::fitnessCorCon( INDIV *test, double *resp){
+double FILTROS::fitnessCorCon( INDIV *test ){
     //// Generar la respuesta del filtro de establecido para los parametros dados:
     switch(filtro_elegido){
         case SS_GABOR:
-            respGabor(test, resp);
+            respGabor(test);
             break;
         case GMF:
-            respGMF(test, resp);
+            respGMF(test);
             break;
     }
 
     if ( !ground_truth ){
         return -1.0;
     }
-    return calcCorCon(resp);
+    return calcCorCon();
 }
 
 
@@ -1471,10 +1450,10 @@ void FILTROS::generarPobInicial(INDIV *poblacion){
 
         switch( fitness_elegido ){
             case ROC:
-                (poblacion + i)->eval = fitnessROC( poblacion + i, resp );
+                (poblacion + i)->eval = fitnessROC( poblacion + i);
                 break;
             case CORCON:
-                (poblacion + i)->eval = fitnessCorCon( poblacion + i, resp );
+                (poblacion + i)->eval = fitnessCorCon( poblacion + i);
                 break;
         }
     }
@@ -1504,11 +1483,11 @@ void FILTROS::generarPob(double medias[4], double varianzas[4], INDIV *poblacion
         }
         switch( fitness_elegido ){
             case ROC:
-                (poblacion + i)->eval = fitnessROC( poblacion + i, resp );
+                (poblacion + i)->eval = fitnessROC( poblacion + i);
                 break;
 
             case CORCON:
-                (poblacion + i)->eval = fitnessCorCon( poblacion + i, resp );
+                (poblacion + i)->eval = fitnessCorCon( poblacion + i);
                 break;
         }
     }
@@ -1693,10 +1672,10 @@ void FILTROS::generarPob(INDIV *poblacion, const double *probs, const double *de
 
         switch( fitness_elegido ){
             case ROC:
-                (poblacion + i)->eval = fitnessROC( poblacion + i, resp );
+                (poblacion + i)->eval = fitnessROC( poblacion + i);
                 break;
             case CORCON:
-                (poblacion + i)->eval = fitnessCorCon( poblacion + i, resp );
+                (poblacion + i)->eval = fitnessCorCon( poblacion + i);
                 break;
         }
     }
@@ -1842,7 +1821,7 @@ double FILTROS::generarPobInicial(INDIV *poblacion, const double *deltas_var){
 
         switch( fitness_elegido ){
             case ROC:
-                (poblacion + i)->eval = fitnessROC( poblacion + i, resp );
+                (poblacion + i)->eval = fitnessROC( poblacion + i);
                 break;
         }
         sum_fitness += (poblacion + i)->eval;
@@ -1952,10 +1931,10 @@ double FILTROS::generarPob(INDIV *poblacion, const INDIV *cruza, const INDIV *se
         }
         switch( fitness_elegido ){
         case ROC:
-            (poblacion + i)->eval = fitnessROC( poblacion + i, resp );
+            (poblacion + i)->eval = fitnessROC( poblacion + i);
             break;
         case CORCON:
-            (poblacion + i)->eval = fitnessCorCon( poblacion + i, resp );
+            (poblacion + i)->eval = fitnessCorCon( poblacion + i);
             break;
         }
         suma_fitness += (poblacion + i)->eval;
@@ -2109,11 +2088,11 @@ void FILTROS::diferenciarPoblacion( INDIV* poblacion, INDIV* pob_base ){
 
             switch( fitness_elegido ){
                 case ROC:
-                    (poblacion + i)->eval = fitnessROC( poblacion + i, resp );
+                    (poblacion + i)->eval = fitnessROC( poblacion + i);
                     break;
 
                 case CORCON:
-                    (poblacion + i)->eval = fitnessCorCon( poblacion + i, resp );
+                    (poblacion + i)->eval = fitnessCorCon( poblacion + i);
                     break;
             }
 
@@ -2246,10 +2225,10 @@ void FILTROS::busquedaExhaustiva(){
 
                     switch( fitness_elegido ){
                         case ROC:
-                            test->eval = fitnessROC( test, resp );
+                            test->eval = fitnessROC( test);
                             break;
                         case CORCON:
-                            test->eval = fitnessCorCon( test, resp );
+                            test->eval = fitnessCorCon( test);
                             break;
                     }
 

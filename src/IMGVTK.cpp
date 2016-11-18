@@ -60,7 +60,7 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
     }
 
     for( int xy = 0 ; xy < rows_cols; xy++ ){
-        *(map_ptr + xy) = (*(img_ptr + xy) < 1.0) ? 0.0 : INF;
+        *(map_ptr + xy) = (*(img_ptr + xy) < 1.0) ? 0.0 : MY_INF;
     }
 
     double *f = new double[ rows > cols ? rows : cols  ];
@@ -76,8 +76,8 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
 
         int k = 0;
         vh[0] = 0;
-        zh[0] = -INF;
-        zh[1] = +INF;
+        zh[0] = -MY_INF;
+        zh[1] = +MY_INF;
 
         for (int q = 1; q < rows; q++){
             double s  = ((f[q]+(q*q))-(f[vh[k]]+(vh[k]*vh[k])))/(2*q-2*vh[k]);
@@ -90,7 +90,7 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
             k++;
             vh[k] = q;
             zh[k] = s;
-            zh[k+1] = +INF;
+            zh[k+1] = +MY_INF;
         }
 
         k = 0;
@@ -117,8 +117,8 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
         }
         int k = 0;
         vw[0] = 0;
-        zw[0] = -INF;
-        zw[1] = +INF;
+        zw[0] = -MY_INF;
+        zw[1] = +MY_INF;
 
         for (int q = 1; q < cols; q++){
             double s  = ((f[q]+(q*q))-(f[vw[k]]+(vw[k]*vw[k])))/(2*q-2*vw[k]);
@@ -129,7 +129,7 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
             k++;
             vw[k] = q;
             zw[k] = s;
-            zw[k+1] = +INF;
+            zw[k+1] = +MY_INF;
         }
 
         k = 0;
@@ -1024,7 +1024,7 @@ void IMGVTK::fillMask( double *img_tmp, double *mask_tmp, const int mis_cols, co
             }
         }
 
-        const int n_borde = borde.size();
+        const int n_borde = (int)borde.size();
         DEB_MSG("Iter: " << iter << ", pixeles en el borde: " <<  n_borde);
 
         //// Si ya no existen pixeles en el borde, se termina el ciclo:
@@ -1034,8 +1034,8 @@ void IMGVTK::fillMask( double *img_tmp, double *mask_tmp, const int mis_cols, co
 
         // Para cada pixel en el borde, se calcula la media usando una ventana de 21 x 21 pixeles.
         for( int b = 0; b < n_borde; b++ ){
-            const int x_act = borde[b].x;
-            const int y_act = borde[b].y;
+            const int x_act = (int)borde[b].x;
+            const int y_act = (int)borde[b].y;
             const int offset_x_izq = (x_act < 10) ? 0 : (x_act - 10);
             const int offset_x_der = (x_act >= (mis_cols - 10)) ? (mis_cols-1) : (x_act + 10);
             const int offset_y_sup = (y_act < 10) ? 0 : (y_act - 10);
@@ -1095,7 +1095,7 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
     const int min_y = ((y - max_dist - 1) < 0) ? 0 : (y - max_dist - 1);
     const int max_y = ((y + max_dist - 1) > rows) ? rows : (y + max_dist - 1);
 
-    double dist, radio = INF;
+    double dist, radio = MY_INF;
     bool visitado = false;
     double x_r, y_r;
     for( int yy = min_y; yy < max_y; yy++){
@@ -2155,7 +2155,7 @@ DEB_MSG("Tipo UINT16");
 */
 int *IMGVTK::Cargar(const char *ruta_origen, double **img_src, double **mask_src, const int nivel, const bool enmascarar){
 
-    const int ruta_l = strlen(ruta_origen);
+    const int ruta_l = (int)strlen(ruta_origen);
 DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
     int esDICOM = 1;
     int esPGM = !strcmp(ruta_origen + ruta_l - 3, "pgm");
@@ -2767,8 +2767,8 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
         break;
     }
 
-    double min = INF;
-    double max =-INF;
+    double min = MY_INF;
+    double max =-MY_INF;
 
     for( int y = 0; y < rows; y++ ){
         for( int x = 0; x < cols; x++ ){
@@ -3019,39 +3019,6 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
 
 
 
-IMGVTK::IMGVTK( char **rutas_origen, const int n_imgs){
-    max_dist = 0;
-
-    base_ptr = NULL;
-    gt_ptr = NULL;
-    skl_ptr = NULL;
-    mask_ptr = NULL;
-    map_ptr = NULL;
-    borders_ptr = NULL;
-    pix_caract = NULL;
-    segment_ptr = NULL;
-    threshold_ptr = NULL;
-
-    // Defaults:
-    SID = 0.0;
-    SOD = 0.0;
-    DDP = SID - SOD;
-    DISO = SID / 2;
-    LAORAO = 0.0;
-    CRACAU = 0.0;
-    pixX = 1.0;//0.308;
-    pixY = 1.0;//0.308;
-    WCenter = 127.5;
-    WWidth = 255.0;
-
-
-    cols = 0;
-    rows = 0;
-    max_dist = 0;
-
-    Cargar(rutas_origen, n_imgs);
-}
-
 
 IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel){
     max_dist = 0;
@@ -3300,9 +3267,9 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
     Funcion: Copia al argumento a una variable local.
 */
 char* IMGVTK::setRuta( const char *ruta_input ){
-    const int l_src = strlen( ruta_input ) + 1;
+    const int l_src = (int)strlen( ruta_input ) + 1;
     char *mi_ruta = new char [l_src];
-    strcpy( mi_ruta, ruta_input );
+	strcpy(mi_ruta, ruta_input);
     return mi_ruta;
 }
 

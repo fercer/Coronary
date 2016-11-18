@@ -138,7 +138,7 @@ class RECONS3D{
 
     // M I E M B R O S      P R I V A D O S
         // Miembros para cargar las imagenes:
-        std::vector< IMGVTK > imgs_base;
+        IMGVTK **imgs_base;	/* Para evitar usar la clase vector */
         std::vector< bool > existe_ground;
 
         int n_angios;
@@ -170,17 +170,17 @@ class RECONS3D{
 
 #ifdef BUILD_VTK_VERSION
         void renderizar(vtkSmartPointer<vtkRenderer> mi_renderer);
-        void mostrarImagen(IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer, const int angio_ID);
-        void mostrarImagen(const int angio_ID, IMGVTK::IMG_IDX img_idx);
+        void mostrarImagen(IMGVTK::IMG_IDX img_idx, vtkSmartPointer<vtkRenderer> mi_renderer, const int angios_ID);
+        void mostrarImagen(const int angios_ID, IMGVTK::IMG_IDX img_idx);
 
         void agregarVector(NORCEN org_dir, const double t, double color[], vtkSmartPointer<vtkRenderer> &mi_renderer);
         void agregarEjes(vtkSmartPointer<vtkRenderer> &mi_renderer);
         void agregarEsfera(const double x, const double y, const double z, const double radio, double color[3], vtkSmartPointer<vtkRenderer> mi_renderer );
 
-        void isoCentro( const int angio_ID );
-        void mallarPuntos(const int angio_ID);
+        void isoCentro( const int angios_ID );
+        void mallarPuntos(const int angios_ID);
         POS posicionDefecto(const double ancho, const double alto, const double punta);
-        void mostrarDetector(const int angio_ID);
+        void mostrarDetector(const int angios_ID);
 
         void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> cilindros, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros);
         void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, vtkSmartPointer<vtkUnsignedCharArray> grafo_nivel, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int n_niveles);
@@ -201,22 +201,22 @@ class RECONS3D{
         void agregarInput(const char *rutabase_input, bool enmascarar);
         void agregarInput(char **rutasbase_input, const int n_imgs, bool enmascarar);
 
-        void agregarGroundtruth(const char *rutaground_input, const int angio_ID);
+        void agregarGroundtruth(const char *rutaground_input, const int angios_ID);
         void agregarGroundtruth(char **rutasground_input, const int n_imgs );
 
         void leerConfiguracion( const char *ruta_conf);
 
-        void segmentarImagenBase(const int angio_ID );
-        double medirExactitud(const int angio_ID);
+        void segmentarImagenBase(const int angios_ID );
+        double medirExactitud(const int angios_ID);
 
         void clasAnchos( IMGVTK::PIX_PAR *grafo, const int angios_ID);
 
-        void skeletonize(const int angio_ID);
-        void skeletonize(const int angio_ID, const int nivel_detalle);
+        void skeletonize(const int angios_ID);
+        void skeletonize(const int angios_ID, const int nivel_detalle);
 
 #ifdef BUILD_VTK_VERSION
-        void mostrarBase( const int angio_ID );
-        void mostrarGroundtruth(  const int angio_ID  );
+        void mostrarBase( const int angios_ID );
+        void mostrarGroundtruth(  const int angios_ID  );
 #endif
 
         void setFiltroEntrenamiento(const FILTROS::EVO_MET evo_met);
@@ -228,21 +228,21 @@ class RECONS3D{
         void setFiltroParametros( const FILTROS::PARAMETRO par, const double val );
         void setFiltroParametros();
 
-        void Guardar(const char *ruta, IMGVTK::IMG_IDX img_idx, IMGVTK::TIPO_IMG tipo_img, const int angio_ID);
+        void Guardar(const char *ruta, IMGVTK::IMG_IDX img_idx, IMGVTK::TIPO_IMG tipo_img, const int angios_ID);
 
-        double getHist_desvest(const int angio_ID);
-        double getHist_media(const int angio_ID);
-        double getHist_suma(const int angio_ID);
-        int getRows( const int angio_ID );
-        int getCols( const int angio_ID );
+        double getHist_desvest(const int angios_ID);
+        double getHist_media(const int angios_ID);
+        double getHist_suma(const int angios_ID);
+        int getRows( const int angios_ID );
+        int getCols( const int angios_ID );
         int getNangios();
-        double *get_pixelData( const int angio_ID, IMGVTK::IMG_IDX img_idx );
+        double *get_pixelData( const int angios_ID, IMGVTK::IMG_IDX img_idx );
 
 #ifdef BUILD_VTK_VERSION
-        vtkRenderWindow *getHist(const int angio_ID);
-        void setIteratorHist(vtkRenderWindowInteractor *interactor , const int angio_ID);
+        vtkRenderWindow *getHist(const int angios_ID);
+        void setIteratorHist(vtkRenderWindowInteractor *interactor , const int angios_ID);
         vtkSmartPointer< vtkRenderer > getRenderer();
-        vtkSmartPointer< vtkRenderer > getRenderer( const int angio_ID );
+        vtkSmartPointer< vtkRenderer > getRenderer( const int angios_ID );
 #endif
 
         void setLog( const char *ruta_log );
@@ -256,8 +256,8 @@ class RECONS3D{
         void setFiltroProgressBar( QProgressBar *pBar );
 #endif
 
-        void umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angio_ID);
-        void lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angio_ID);
+        void umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angios_ID);
+        void lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angios_ID);
 
 
     // O P E R A D O R E S  S O B R E C A R G A D O S
