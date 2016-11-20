@@ -46,33 +46,57 @@
 
 #include <omp.h>
 
-#define COLOR_NORMAL            "\33[0m"
-#define COLOR_BOLD              "\33[1m"
-#define COLOR_UNDER             "\33[4m"
-#define COLOR_BLINK             "\33[5m"
-#define COLOR_INVERSE		"\33[7m"
-#define COLOR_BLACK             "\33[30m"
-#define COLOR_RED               "\33[31m"
-#define COLOR_GREEN             "\33[32m"
-#define COLOR_YELLOW		"\33[33m"
-#define COLOR_BLUE              "\33[34m"
-#define COLOR_MAGENTA		"\33[35m"
-#define COLOR_CYAN              "\33[36m"
-#define COLOR_WHITE             "\33[37m"
-#define COLOR_BACK_BLACK        "\33[40m"
-#define COLOR_BACK_RED          "\33[41m"
-#define COLOR_BACK_GREEN        "\33[42m"
-#define COLOR_BACK_YELLOW       "\33[43m"
-#define COLOR_BACK_BLUE         "\33[44m"
-#define COLOR_BACK_MAGENTA      "\33[45m"
-#define COLOR_BACK_CYAN         "\33[46m"
-#define COLOR_BACK_WHITE        "\33[47m"
-#define COLOR_RESET             "\x1b[0m"
+#include "args_fercer.h"
 
-
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
 	#include <time.h>
+	#define COLOR_NORMAL
+	#define COLOR_BOLD
+	#define COLOR_UNDER
+	#define COLOR_BLINK
+	#define COLOR_INVERSE
+	#define COLOR_BLACK
+	#define COLOR_RED
+	#define COLOR_GREEN
+	#define COLOR_YELLOW
+	#define COLOR_BLUE
+	#define COLOR_MAGENTA
+	#define COLOR_CYAN
+	#define COLOR_WHITE
+	#define COLOR_BACK_BLACK
+	#define COLOR_BACK_RED
+	#define COLOR_BACK_GREEN
+	#define COLOR_BACK_YELLOW
+	#define COLOR_BACK_BLUE
+	#define COLOR_BACK_MAGENTA
+	#define COLOR_BACK_CYAN
+	#define COLOR_BACK_WHITE
+	#define COLOR_RESET
+#else
+	#define COLOR_NORMAL            "\33[0m"
+	#define COLOR_BOLD              "\33[1m"
+	#define COLOR_UNDER             "\33[4m"
+	#define COLOR_BLINK             "\33[5m"
+	#define COLOR_INVERSE		"\33[7m"
+	#define COLOR_BLACK             "\33[30m"
+	#define COLOR_RED               "\33[31m"
+	#define COLOR_GREEN             "\33[32m"
+	#define COLOR_YELLOW		"\33[33m"
+	#define COLOR_BLUE              "\33[34m"
+	#define COLOR_MAGENTA		"\33[35m"
+	#define COLOR_CYAN              "\33[36m"
+	#define COLOR_WHITE             "\33[37m"
+	#define COLOR_BACK_BLACK        "\33[40m"
+	#define COLOR_BACK_RED          "\33[41m"
+	#define COLOR_BACK_GREEN        "\33[42m"
+	#define COLOR_BACK_YELLOW       "\33[43m"
+	#define COLOR_BACK_BLUE         "\33[44m"
+	#define COLOR_BACK_MAGENTA      "\33[45m"
+	#define COLOR_BACK_CYAN         "\33[46m"
+	#define COLOR_BACK_WHITE        "\33[47m"
+	#define COLOR_RESET             "\x1b[0m"
 #endif
+
 
 
 #ifdef _OPENM
@@ -160,8 +184,7 @@ class IMGVTK{
 //        void setLog( QPlainTextEdit *log );
 
         IMGVTK();
-        IMGVTK(const IMGVTK &origen );
-		IMGVTK(char ** rutas_origen, const int n_imgs);
+		IMGVTK(const IMGVTK &origen );
 		IMGVTK(const char *ruta_origen, const bool enmascarar, const int nivel);
 
         ~IMGVTK();
@@ -242,7 +265,7 @@ class IMGVTK{
         void lengthFilter(double *ptr, const unsigned int min_length , const int mis_cols, const int mis_rens, ALG_CONJUNTOS mi_alg);
 
         char* setRuta( const char *ruta_input );
-
+		
         // M I E M B R O S      P R I V A D O S
         //QPlainTextEdit *mi_log;
         int max_dist;

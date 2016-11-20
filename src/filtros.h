@@ -17,8 +17,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#if _WIN32
-    #include "C:\FFTW\fftw3.h"
+
+
+#if defined(_WIN32)
+	#include "D:\Apps\FFTW_32\fftw3.h"
+#elif defined(_WIN64)
+    #include "D:\Apps\FFTW_64\fftw3.h"
 #else
     #include <fftw3.h>
 #endif
@@ -36,6 +40,7 @@
 //#include <vtkSmartPointer.h>
 //#include <vtkImageData.h>
 
+#include "args_fercer.h"
 #include "IMGVTK.h"
 
 
@@ -162,6 +167,8 @@ class FILTROS{
         void busquedaExhaustiva();
 
         // M I E M B R O S      P R I V A D O S
+		ARGUMENTS *my_args;
+
         STAUS *semilla;
         unsigned int semilla_g;
 

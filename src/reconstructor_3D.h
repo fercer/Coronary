@@ -113,11 +113,12 @@
 
 #include <omp.h>
 
+#include "args_fercer.h"
 #include "IMGVTK.h"
 #include "filtros.h"
 
 
-#define PI 3.14159265
+#define MY_PI 3.14159265
 
 
 // C L A S E: RECONS3D  ------------------------------------------------------------------------ v
@@ -126,15 +127,15 @@ class RECONS3D{
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
     // T I P O S        D E     D A T O S       Y       E S T R U C T U R A S       P R I V A D A S
         // POS define la estructura para almacenar la posicion del artefacto que emula el detector.
-        typedef struct{
+        typedef struct POS {
             double puntos[5][3];
         } POS;
 
         // NORISO define la estructura para almacenar la normal y el isocentro de una proyeccion.
-        typedef struct{
-            double direccion[3]; //Las componentes de la normal
-            double origen[3]; // El cenntro de la imagen.
-        } NORCEN;
+		typedef struct NORCEN {
+			double direccion[3]; //Las componentes de la normal
+			double origen[3]; // El cenntro de la imagen.
+		} NORCEN;
 
     // M I E M B R O S      P R I V A D O S
         // Miembros para cargar las imagenes:
@@ -155,7 +156,7 @@ class RECONS3D{
         std::vector< NORCEN > normal_centros;
         std::vector<  vtkSmartPointer<vtkContextView> > view;
 #endif
-
+		ARGUMENTS *my_args;
         FILTROS filtro;
         FILE *fp_log;
         
@@ -194,7 +195,10 @@ class RECONS3D{
 
     // C O N S T R U C T O R E S    /   D E S T R U C T O R E S
         RECONS3D();
+		RECONS3D(ARGUMENTS *input_arguments);
         ~RECONS3D();
+
+		void defineArguments();
 
     // M E T O D O S        P U B L I C O S
         void agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar);
@@ -258,8 +262,7 @@ class RECONS3D{
 
         void umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angios_ID);
         void lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angios_ID);
-
-
+	
     // O P E R A D O R E S  S O B R E C A R G A D O S
     //--------------------------------------------------------------------------------------- PUBLIC ----- ^
 };

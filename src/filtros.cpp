@@ -232,31 +232,33 @@ FILTROS::FILTROS(){
 }
 
 
+
+
 /*  Metodo: ~FILTROS
 
     Funcion: Libera la memoria requerida por el objeto.
 */
 FILTROS::~FILTROS(){
     delete mi_elite;
-    if( semilla ){
+    if ( semilla ){
         delete semilla;
     }
 
-    if( resp ){
+    if ( resp ){
         free(resp);
     }
 
-    if( mi_fplog ){
+    if ( mi_fplog ){
         fclose( mi_fplog );
         mi_fplog = NULL;
     }
 
-    if( mi_ruta_log ){
+    if ( mi_ruta_log ){
         delete [] mi_ruta_log;
         mi_ruta_log = NULL;
     }
 
-    if(transformada){
+    if (transformada){
         fftw_free(Img_fft);
         fftw_free(Img_fft_HPF);
     }
@@ -406,15 +408,23 @@ void FILTROS::setLim( const PARAMETRO par, const LIMITES lim, const double val){
 void FILTROS::filtrar(){
 	double fitness = 0.0;
 
-    char mensaje[] = "Filtrado exitoso, el area bajo la curva de ROC es de X.XXXXXXX \n";
+    char mensaje[512] = "Filtrado exitoso, el area bajo la curva de ROC es de X.XXXXXXX \n";
     switch( fitness_elegido ){
         case ROC:
             fitness = fitnessROC(mi_elite);
+#if defined(_WIN32) || defined(_WIN64)
+			sprintf_s(mensaje, 512 * sizeof(char), "Area under the ROC curve: %1.7f \n", fitness);
+#else
             sprintf(mensaje, "Area under the ROC curve: %1.7f \n", fitness);
+#endif
             break;
         case CORCON:
-            fitness = fitnessCorCon(mi_elite);            
+            fitness = fitnessCorCon(mi_elite);
+#if defined(_WIN32) || defined(_WIN64)
+			sprintf_s(mensaje, "Filtrado exitoso, la correlacion y contraste son de %2.7f \n", fitness);
+#else
             sprintf(mensaje, "Filtrado exitoso, la correlacion y contraste son de %2.7f \n", fitness);
+#endif
             break;
         default: /* FIT_UNSET */
             char mensaje_error[] = "<<ERROR: No se ha definido la funcion de evaluacion (fitness)\n";
@@ -459,12 +469,20 @@ void FILTROS::setLog(FILE *fplog){
     Funcion: Define el stream donde se imprimen los logs del sistema.
 */
 void FILTROS::setLog( const char *ruta_log){
-    mi_ruta_log = new char [(int)strlen(ruta_log) + 1];
+    mi_ruta_log = new char [512];
+#if defined(_WIN32) || defined(_WIN64)
+	sprintf_s(mi_ruta_log, 512 * sizeof(char), "%s", ruta_log);
+#else
     sprintf(mi_ruta_log, "%s", ruta_log);
+#endif
     if(mi_fplog){
         fclose( mi_fplog );
     }
+#if defined(_WIN32) || defined(_WIN64)
+	fopen_s(&mi_fplog, mi_ruta_log, "a");
+#else
     mi_fplog = fopen( mi_ruta_log, "a" );
+#endif
 }
 
 
@@ -488,16 +506,6 @@ void FILTROS::setProgressBar( QProgressBar *pBar ){
  * //        //      //      //      //      //      //        //      //      //      //      //      //        //      //      //      //      //      //        //      //      //      //      //      //
 */
 
-
-/*
-typedef struct INDIV {
-    double vars[4];
-    ///  vars[0]: L,
-    ///  vars[1]: T,
-    ///  vars[2]: K,
-    ///  vars[3]: sigma
-} INDIV;
-*/
 /*  respGMF
 
     Function: Applies the Gaussian Matched Filter to the input image using the parameters defined in the
@@ -984,8 +992,13 @@ double FILTROS::calcROC(){
     double TPF_new, FPF_new;
     double Az = 0.0;
 
-#ifndef NDEBUG
-    FILE *fp_ROC = fopen("ROC_curve.fcs", "w");
+#if !defined(NDEBUG)
+#if defined(_WIN32) || defined(_WIN64)
+	FILE *fp_ROC;
+	fopen_s(&fp_ROC, "ROC_curve.fcs", "w");
+#else
+	FILE *fp_ROC = fopen("ROC_curve.fcs", "w");
+#endif
 #endif
 
     min_resp -= delta;
@@ -1028,7 +1041,11 @@ double FILTROS::calcROC(){
         TPF_old = TPF_new;
         FPF_old = FPF_new;
 #ifndef NDEBUG
+#if defined(_WIN32) || defined(_WIN64)
+		fprintf_s(fp_ROC, "%1.12f %1.12f\n", TPF_old, FPF_old);
+#else
         fprintf( fp_ROC , "%1.12f %1.12f\n", TPF_old, FPF_old);
+#endif
 #endif
     }
 
@@ -1041,8 +1058,12 @@ double FILTROS::calcROC(){
 
     GETTIME_FIN;
 
-    char mensaje[] = "X.XXXXXXXXXXXXXXXX XXX.XXXXXXXXXXXX \n";
+    char mensaje[512] = "X.XXXXXXXXXXXXXXXX XXX.XXXXXXXXXXXX \n";
+#if defined(_WIN32) || defined(_WIN64)
+	sprintf_s(mensaje, 512 * sizeof(char), "%1.16f %3.12f\n", Az, DIFTIME);
+#else
     sprintf(mensaje, "%1.16f %3.12f\n", Az, DIFTIME);
+#endif
     escribirLog( mensaje );
 
     return Az;
@@ -1270,8 +1291,12 @@ double FILTROS::calcCorCon(){
 
     DEB_MSG( "Correlation: " << correlation_1 << ", " << correlation_2 << ", " << correlation_3 << ", " << correlation_4 << ", mean: " << (correlation_1 + correlation_2 + correlation_3 + correlation_4)/ 4.0);
 
-    char mensaje[] = "X.XXXXXXXXXXXXXXXX XXX.XXXXXXXXXXXX \n";
+    char mensaje[512] = "X.XXXXXXXXXXXXXXXX XXX.XXXXXXXXXXXX \n";
+#if defined(_WIN32) || defined(_WIN64)
+	sprintf_s(mensaje, 512 * sizeof(char), "%1.16f %3.12f\n", corcon, DIFTIME);
+#else
     sprintf(mensaje, "%1.16f %3.12f\n", corcon, DIFTIME);
+#endif
     escribirLog(mensaje);
 
     return corcon;
@@ -1603,7 +1628,7 @@ void FILTROS::BUMDA(){
 
     //Se define el theta en el tiempo 0 como el minimo de la poblacion inicial.
     double tetha_t = (poblacion + n_pob - 1)->eval;
-    char mensaje_iter[] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
+    char mensaje_iter[512] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
     escribirLog( "iteration\tbest_fit\tT\tL\tSigma\tK\telapsed_time\n" );
 
     do{
@@ -1611,7 +1636,11 @@ void FILTROS::BUMDA(){
         memcpy(poblacion + n_pob, poblacion, sizeof(INDIV));
 
         GETTIME_FIN;
+#if defined(_WIN32) || defined(_WIN64)
+		sprintf_s(mensaje_iter, 512 * sizeof(char), "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, poblacion->eval, poblacion->vars[PAR_T], poblacion->vars[PAR_L], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K], DIFTIME);
+#else
         sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, poblacion->eval, poblacion->vars[PAR_T], poblacion->vars[PAR_L], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K], DIFTIME);
+#endif
         escribirLog( mensaje_iter );
         barraProgreso( k, max_iters);
 
@@ -1637,7 +1666,11 @@ void FILTROS::BUMDA(){
     memcpy(mi_elite, poblacion, sizeof(INDIV));
 
     GETTIME_FIN;
+#if defined(_WIN32) || defined(_WIN64)
+	sprintf_s(mensaje_iter, 512 * sizeof(char), "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+#else
     sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+#endif
     escribirLog( mensaje_iter );
     barraProgreso( max_iters, max_iters);
 
@@ -1667,7 +1700,10 @@ void FILTROS::generarPob(INDIV *poblacion, const double *probs, const double *de
             }
             // Asignar el valor segun la cadena formada para el atributo 'k':
             (poblacion + i)->vars[k] = *(deltas_var + k) * cadena_val + lim_inf[k];
-			DEB_MSG(COLOR_GREEN "[" COLOR_BLUE << k << COLOR_GREEN "] cadena: " COLOR_BACK_WHITE COLOR_BLACK << cadena_val << "/" << (poblacion + i)->vars[k] << " :: " COLOR_BACK_BLACK COLOR_BLUE << "delta: " << *(deltas_var + k) << " :: lim_inf: " << lim_inf[k] << " :: lim_sup: " << lim_sup[k] << COLOR_NORMAL);
+			DEB_MSG(COLOR_GREEN "[" COLOR_BLUE << k << COLOR_GREEN "] cadena: " COLOR_BACK_WHITE COLOR_BLACK
+				<< cadena_val << "/" << (poblacion + i)->vars[k] << " :: " COLOR_BACK_BLACK COLOR_BLUE
+				<< "delta: " << *(deltas_var + k) << " :: lim_inf: " << lim_inf[k] << " :: lim_sup: "
+				<< lim_sup[k] COLOR_NORMAL);
         }
 
         switch( fitness_elegido ){
@@ -1754,7 +1790,7 @@ void FILTROS::UMDA(){
     bool procesar = true;
 
 
-    char mensaje_iter[] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
+    char mensaje_iter[512] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
     escribirLog( "iteration\tbest_fit\tT\tL\tSigma\tK\telapsed_time\n" );
 
     TIMERS;
@@ -1777,13 +1813,21 @@ void FILTROS::UMDA(){
         procesar = (k < max_iters);
 
         GETTIME_FIN;
+#if defined(_WIN32) || defined(_WIN64)
+		sprintf_s(mensaje_iter, 512 * sizeof(char), "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+#else
         sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+#endif
         escribirLog( mensaje_iter );
         barraProgreso( k, max_iters);
     }while(procesar);
 
     GETTIME_FIN;
+#if defined(_WIN32) || defined(_WIN64)
+	sprintf_s(mensaje_iter, 512 * sizeof(char), "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+#else
     sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+#endif
     escribirLog( mensaje_iter );
     barraProgreso( k, max_iters);
 
@@ -1927,7 +1971,10 @@ double FILTROS::generarPob(INDIV *poblacion, const INDIV *cruza, const INDIV *se
             }
             // Asignar el valor segun la cadena formada para el atributo 'k':
             (poblacion + i)->vars[ k ] = *(deltas_var + k) * cadena_val + lim_inf[k];
-			DEB_MSG(COLOR_GREEN "[" COLOR_BLUE << k << COLOR_GREEN "] cadena: " COLOR_BACK_WHITE COLOR_BLACK << cadena_val << "/" << (poblacion + i)->vars[k] << " :: " COLOR_BACK_BLACK COLOR_BLUE << "delta: " << *(deltas_var + k) << " :: lim_inf: " << lim_inf[k] << " :: lim_sup: " << lim_sup[k] << COLOR_NORMAL);
+			DEB_MSG(COLOR_GREEN "[" COLOR_BLUE << k << COLOR_GREEN "] cadena: " COLOR_BACK_WHITE COLOR_BLACK
+				<< cadena_val << "/" << (poblacion + i)->vars[k] << " :: " COLOR_BACK_BLACK COLOR_BLUE
+				<< "delta: " << *(deltas_var + k) << " :: lim_inf: " << lim_inf[k] << " :: lim_sup: "
+				<< lim_sup[k] COLOR_NORMAL);
         }
         switch( fitness_elegido ){
         case ROC:
@@ -2004,7 +2051,7 @@ void FILTROS::GA(){
 
     double *fitness_acum = new double [n_pob];
 
-    char mensaje_iter[] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
+    char mensaje_iter[512] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
     escribirLog( "iteration\tbest_fit\tT\tL\tSigma\tK\telapsed_time\n" );
     mi_elite->eval = 0.0;
 
@@ -2020,7 +2067,11 @@ void FILTROS::GA(){
         }
 
         GETTIME_FIN;
+#if defined(_WIN32) || defined(_WIN64)
+		sprintf_s(mensaje_iter, 512 * sizeof(char), "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+#else
         sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+#endif
         escribirLog( mensaje_iter );
         barraProgreso( k, max_iters);
         k++;
@@ -2032,7 +2083,11 @@ void FILTROS::GA(){
     }while(procesar);
 
     GETTIME_FIN;
+#if defined(_WIN32) || defined(_WIN64)
+	sprintf_s(mensaje_iter, 512 * sizeof(char), "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+#else
     sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+#endif
     escribirLog( mensaje_iter );
     barraProgreso( k, max_iters);
 
@@ -2145,12 +2200,16 @@ void FILTROS::DE(){
     qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv); // El mejor fitness queda en la posicion 0
 
     //Se define el theta en el tiempo 0 como el minimo de la poblacion inicial.
-    char mensaje_iter[] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
+    char mensaje_iter[512] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
     escribirLog( "iteration\tbest_fit\tT\tL\tSigma\tK\telapsed_time\n" );
 
     do{
         GETTIME_FIN;
+#if defined(_WIN32) || defined(_WIN64)
+		sprintf_s(mensaje_iter, 512 * sizeof(char), "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, poblacion->eval, poblacion->vars[PAR_T], poblacion->vars[PAR_L], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K], DIFTIME);
+#else
         sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, poblacion->eval, poblacion->vars[PAR_T], poblacion->vars[PAR_L], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K], DIFTIME);
+#endif
         escribirLog( mensaje_iter );
         barraProgreso( k, max_iters);
 
@@ -2167,7 +2226,11 @@ void FILTROS::DE(){
     memcpy(mi_elite, poblacion, sizeof(INDIV));
 
     GETTIME_FIN;
+#if defined(_WIN32) || defined(_WIN64)
+	sprintf_s(mensaje_iter, 512 * sizeof(char), "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+#else
     sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+#endif
     escribirLog( mensaje_iter );
     barraProgreso( max_iters, max_iters);
 
@@ -2204,7 +2267,7 @@ void FILTROS::busquedaExhaustiva(){
     int idx = 0;
 
 
-    char mensaje_iter[] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
+    char mensaje_iter[512] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
     escribirLog( "iteration\tbest_fit\tT\tL\tSigma\tK\telapsed_time\n" );
 
 
@@ -2238,7 +2301,11 @@ void FILTROS::busquedaExhaustiva(){
                     idx++;
 
                     GETTIME_FIN;
+#if defined(_WIN32) || defined(_WIN64)
+					sprintf_s(mensaje_iter, 512 * sizeof(char), "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", idx, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+#else
                     sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", idx, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+#endif
                     escribirLog( mensaje_iter );
                     barraProgreso( idx, n_bits);
                 }
@@ -2247,7 +2314,11 @@ void FILTROS::busquedaExhaustiva(){
     }
 
     GETTIME_FIN;
+#if defined(_WIN32) || defined(_WIN64)
+	sprintf_s(mensaje_iter, 512 * sizeof(char), "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", idx, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+#else
     sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", idx, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+#endif
     escribirLog( mensaje_iter );
     barraProgreso( idx, n_bits);
 

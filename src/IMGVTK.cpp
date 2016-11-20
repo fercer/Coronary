@@ -1111,15 +1111,19 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
     }
 
     if( !visitado ){
-        char mensaje[] = "\nEl pixel [XXX, YYY] no tiene vecinos en la imagen de bordes a: DDD pixeles a la redonda\n";
+        char mensaje[512] = "\nEl pixel [XXX, YYY] no tiene vecinos en la imagen de bordes a: DDD pixeles a la redonda\n";
+#if defined(_WIN32) || defined(_WIN64)
+		sprintf_s(mensaje, 512 * sizeof(char), "\nEl pixel [%i, %i] no tiene vecinos en la imagen de bordes a: %i pixeles a la redonda\n", x, y, max_dist);
+#else
         sprintf( mensaje, "\nEl pixel [%i, %i] no tiene vecinos en la imagen de bordes a: %i pixeles a la redonda\n", x, y, max_dist);
+#endif
         escribirLog(mensaje);
     }
 
     temp->radio = sqrt(radio) * pixX;
     temp->y_r = (y_r - (double)rows/2)*pixY;
     temp->x_r = (x_r - (double)cols/2)*pixX;
-    temp->alpha = atan2(temp->y_r - temp->y, temp->x_r - temp->x);// + PI / 2.0;
+    temp->alpha = atan2(temp->y_r - temp->y, temp->x_r - temp->x);// + MY_PI / 2.0;
 
     switch( lutabla[ resp ] ){
         case (unsigned char)1:{ /* END point*/
@@ -1427,6 +1431,7 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
     delete [] skl_mark;
     extraerCaract( img_idx );
 }
+
 
 
 
@@ -2459,29 +2464,43 @@ DEB_MSG("Tipo UINT16");
 #endif
     }else if(esPGM){ ///------------------------------------------------------------------------------------------------
         //// Cargar imagen formato PGM
+#if defined(_WIN32) || defined(_WIN64)
+		FILE *fp_img;
+		fopen_s(&fp_img, ruta_origen, "r");
+#else
         FILE *fp_img = fopen( ruta_origen, "r" );
+#endif
 DEB_MSG("abriendo archivo: " << ruta_origen);
         char temp_str[512] = "";
         fgets(temp_str, 512, fp_img);  // Leer 'Magic number'
     DEB_MSG("Magic number: " << temp_str);
         fgets(temp_str, 512, fp_img);  // Leer Comentario
     DEB_MSG("Comentarios: " << temp_str);
-
+        double max_intensidad;
+#if defined(_WIN32) || defined(_WIN64)
+		fscanf_s(fp_img, "%i", &mis_cols);    // Leer ancho
+		fscanf_s(fp_img, "%i", &mis_rows);    // Leer alto
+		fscanf_s(fp_img, "%lf", &max_intensidad);  // Leer la escala de intensidad maxima
+#else
         fscanf(fp_img, "%i", &mis_cols);    // Leer ancho
+		fscanf(fp_img, "%i", &mis_rows);    // Leer alto
+		fscanf(fp_img, "%lf", &max_intensidad);  // Leer la escala de intensidad maxima
+#endif
     DEB_MSG("columnas: " << mis_cols);
-        fscanf(fp_img, "%i", &mis_rows);    // Leer alto
     DEB_MSG("renglones: " << mis_rows);
         int mis_rows_cols = mis_cols * mis_rows;
 
-        double max_intensidad;
-        fscanf(fp_img, "%lf", &max_intensidad);  // Leer la escala de intensidad maxima
     DEB_MSG("max intensidad: " << max_intensidad);
 
     *img_src = new double [mis_rows_cols];
 
         int intensidad;
         for( int xy = 0; xy < mis_rows_cols; xy++){
+#if defined(_WIN32) || defined(_WIN64)
+			fscanf_s(fp_img, "%i", &intensidad);
+#else
             fscanf( fp_img, "%i", &intensidad );
+#endif
             *(*img_src + xy) = (double)intensidad / max_intensidad;
         }
 
@@ -2790,8 +2809,12 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
 
     switch(tipo_salida){
         case PGM:{
-
+#if defined(_WIN32) || defined(_WIN64)
+			FILE *fp_out;
+			fopen_s(&fp_out, ruta, "w");
+#else
             FILE *fp_out = fopen( ruta, "w");
+#endif
 
             fprintf(fp_out, "P2\n");
             fprintf(fp_out, "# by FerCer\n");
@@ -3049,7 +3072,7 @@ IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel)
     rows = 0;
     max_dist = 0;
 
-    DEB_MSG("Cargando imagen desde: " COLOR_GREEN << ruta_origen << COLOR_NORMAL);
+    DEB_MSG("Cargando imagen desde: " COLOR_GREEN << ruta_origen COLOR_NORMAL);
 
     Cargar(BASE, ruta_origen, enmascarar, nivel);
 }
@@ -3268,10 +3291,13 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
 */
 char* IMGVTK::setRuta( const char *ruta_input ){
     const int l_src = (int)strlen( ruta_input ) + 1;
-    char *mi_ruta = new char [l_src];
+    char *mi_ruta = new char [512];
+#if defined(_WIN32) || defined(_WIN64)
+	sprintf_s(mi_ruta, 512 * sizeof(char), "%s" , ruta_input);
+#else
 	strcpy(mi_ruta, ruta_input);
+#endif
     return mi_ruta;
 }
-
 
 // C L A S E: IMGVTK  ------------------------------------------------------------------------------------------------- ^

@@ -658,8 +658,12 @@ double RECONS3D::medirExactitud(const int angios_ID)
 
     double acc = (*(imgs_base + angios_ID))->medirExactitud();
 
-    char mensaje[] = "X.XXXXXXXXXXXXXXXX \n";
-    sprintf(mensaje, "%1.16f\n", acc);
+    char mensaje[512] = "X.XXXXXXXXXXXXXXXX \n";
+#if defined(_WIN32) || defined(_WIN64)
+	sprintf_s(mensaje, 512 * sizeof(char), "%1.16f\n", acc);
+#else
+    sprintf_s(mensaje, "%1.16f\n", acc);
+#endif
     escribirLog(mensaje);
 
     return acc;
@@ -834,8 +838,12 @@ void RECONS3D::agregarInput( char **rutasbase_input, const int n_imgs, bool enma
 */
 void RECONS3D::agregarGroundtruth(const char *rutaground_input, const int angios_ID ){
     if( angios_ID > n_angios ){
-        char mensaje[] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
+        char mensaje[512] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
+#if defined(_WIN32) || defined(_WIN64)
+		sprintf_s(mensaje, 512 * sizeof(char), "\n<<Error: El angiograma %i no ha sido agregado al reconstructor>>\n\n", angios_ID);
+#else
         sprintf(mensaje, "\n<<Error: El angiograma %i no ha sido agregado al reconstructor>>\n\n", angios_ID);
+#endif
         escribirLog( mensaje );
     }else{
         (*(imgs_base + angios_ID))->Cargar(IMGVTK::GROUNDTRUTH, rutaground_input, false, 0);
@@ -867,11 +875,20 @@ void RECONS3D::agregarGroundtruth(char **rutasground_input, const int n_imgs){
     Funcion: Carga una configuracion predefinida para el filtro de deteccion
 */
 void RECONS3D::leerConfiguracion(const char *ruta_conf){
-    FILE *fp_config = fopen(ruta_conf, "r");
+#if defined(_WIN32) || defined(_WIN64)
+	FILE *fp_config;
+	fopen_s(&fp_config, ruta_conf, "r");
+#else
+	FILE *fp_config = fopen(ruta_conf, "r");
+#endif
 
     if( !fp_config ){
-        char mensaje_err[513] = "\n<< Error: Cannot open file:\'%s\'\n\n";
+        char mensaje_err[512] = "\n<< Error: Cannot open file:\'%s\'\n\n";
+#if defined(_WIN32) || defined(_WIN64)
+		sprintf_s(mensaje_err, 544 *sizeof(char), "\n<< Error: Cannot open file:\'%s\'\n\n", ruta_conf);
+#else
         sprintf(mensaje_err, "\n<< Error: Cannot open file:\'%s\'\n\n", ruta_conf);
+#endif
         escribirLog( mensaje_err );
         return;
     }
@@ -1171,8 +1188,11 @@ void RECONS3D::setLog(const char *ruta_log){
         fclose(fp_log);
         fp_log = NULL;
     }
-
+#if defined(_WIN32) || defined(_WIN64)
+	fopen_s(&fp_log, ruta_log, "w");
+#else
     fp_log = fopen(ruta_log, "w");
+#endif
 }
 
 
@@ -1221,8 +1241,12 @@ void RECONS3D::segmentarImagenBase( const int angios_ID ){
     GETTIME_INI;
     filtro.filtrar();
     GETTIME_FIN;
-    char mensaje[] = "XXX.XXXXXXXX\n";
+    char mensaje[512] = "XXX.XXXXXXXX\n";
+#if defined(_WIN32) || defined(_WIN64)
+	sprintf_s(mensaje, 512 *sizeof(char), "%3.8f\n", DIFTIME);
+#else
     sprintf(mensaje, "%3.8f\n", DIFTIME);
+#endif
     escribirLog( mensaje );
 }
 
@@ -1760,8 +1784,14 @@ DEB_MSG("Mostrando los radios de cada " << nivel_detalle << " pixeles del esquel
     int n_pix = 0;
 
     char nom_cilindros[] = "cilindros_XXX_YYY.dat";
+#if defined(_WIN32) || defined(_WIN64)
+	sprintf_s(nom_cilindros, "cilindros_%i_%i.dat", angios_ID, nivel_detalle);
+	FILE *fp_cilindros;
+	fopen_s(&fp_cilindros, nom_cilindros, "w");
+#else
     sprintf( nom_cilindros, "cilindros_%i_%i.dat", angios_ID, nivel_detalle);
-    FILE *fp_cilindros = fopen(nom_cilindros, "w");
+	FILE *fp_cilindros = fopen(nom_cilindros, "w");
+#endif
 
     fprintf( fp_cilindros, "X1 Y1 Z1 RADIO X2 Y2 Z2\n");
 
@@ -1866,8 +1896,12 @@ void RECONS3D::mostrarBase( const int angios_ID ){
 #ifdef BUILD_VTK_VERSION
 void RECONS3D::mostrarGroundtruth( const int angios_ID ){
     if( (angios_ID > n_angios) || (!existe_ground.at(angios_ID)) ){
-        char mensaje[] = "\n<<Error: El ground-truth para el angiograma XXX no ha sido agregado al reconstructor>>\n\n";
+        char mensaje[512] = "\n<<Error: El ground-truth para el angiograma XXX no ha sido agregado al reconstructor>>\n\n";
+#if defined(_WIN32) || defined(_WIN64)
+		sprintf_s(mensaje, 512 * sizeof(char), "\n<<Error: El ground-truth para el angiograma %i no ha sido agregado al reconstructor>>\n\n", angios_ID);
+#else
         sprintf(mensaje, "\n<<Error: El ground-truth para el angiograma %i no ha sido agregado al reconstructor>>\n\n", angios_ID);
+#endif
         DEB_MSG(mensaje);
         escribirLog( mensaje );
     }else{
@@ -1895,8 +1929,12 @@ vtkSmartPointer< vtkRenderer > RECONS3D::getRenderer(){
 #ifdef BUILD_VTK_VERSION
 vtkSmartPointer< vtkRenderer > RECONS3D::getRenderer( const int angios_ID ){
     if( angios_ID > n_angios ){
-        char mensaje[] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
+        char mensaje[512] = "\n<<Error: El angiograma XXX no ha sido agregado al reconstructor>>\n\n";
+#if defined(_WIN32) || defined(_WIN64)
+		sprintf_s(mensaje, 512 * sizeof(char), "\n<<Error: El angiograma %i no ha sido agregado al reconstructor>>\n\n", angios_ID);
+#else
         sprintf(mensaje, "\n<<Error: El angiograma %i no ha sido agregado al reconstructor>>\n\n", angios_ID);
+#endif
         DEB_MSG(mensaje);
         escribirLog( mensaje );
         return NULL;
@@ -1993,6 +2031,47 @@ RECONS3D::RECONS3D(){
 
 
 
+
+
+
+
+/************************************************************************************************************
+*                                                                                                           *
+* FUNCTION NAME: RECONS3D                                                                                   *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT        TYPE                I/O        DESCRIPTION                                                *
+* input_arguments ARGUMENTS*          input      The arguments object                                       *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Constructor for RECONS3D that defines the reconstruction arguments                                        *
+*                                                                                                           *
+************************************************************************************************************/
+RECONS3D::RECONS3D(ARGUMENTS *input_arguments)
+{
+	my_args = input_arguments;
+	defineArguments();
+	
+#ifdef BUILD_VTK_VERSION
+	renderer_global = vtkSmartPointer<vtkRenderer>::New();
+	double color[] = { 1.0, 1.0, 1.0 };
+	//    agregarEsfera(0.0, 0.0, 0.0, 10.0, color, renderer_global);
+	//    agregarEjes(renderer_global);
+#endif
+
+	fp_log = NULL;
+	detalle = 180;
+
+#ifdef BUILD_GUI_VERSION
+	mi_txtLog = NULL;
+	mi_pBar = NULL;
+#endif
+
+	n_angios = -1;
+}
+
+
+
 /*  Destructor
     Funcion: Libera la memoria utilizada para almacenar las imagenes.
 */
@@ -2002,10 +2081,12 @@ RECONS3D::~RECONS3D() {
 		fp_log = NULL;
 	}
 
-	for (int i = 0; i <= n_angios; i++) {
-		delete *(imgs_base);
+	if (n_angios >= 0) {
+		for (int i = 0; i <= n_angios; i++) {
+			delete *(imgs_base);
+		}
+		free(imgs_base);
 	}
-	free(imgs_base);
 
     for( std::vector<int*>::iterator it = hist.begin(); it != hist.end(); it++){
         if( *it ){
@@ -2014,6 +2095,54 @@ RECONS3D::~RECONS3D() {
     }
 }
 
-//-------------------------------------------------------------------------------------------------- PUBLIC----- ^
+
+
+
+
+void RECONS3D::defineArguments()
+{
+	my_args->newArgument(
+		"Input angiography to be used as base image (.PNG, .BMP, .JPEG/.JPG, o DICOM file)",
+		"b", "base", "NULL", true);
+
+	my_args->newArgument(
+		"Lower level to extract the images (from a DICOM file only)",
+		"bl", "lower", 0, true);
+
+	my_args->newArgument(
+		"Upper level to extract the images (from a DICOM file only)",
+		"bu", "upper", 0, true);
+
+	my_args->newArgument(
+		"Input ground-truth image for the base image (.PNG, .BMP, .JPEG/.JPG)",
+		"g", "ground-truth", "NULL", true);
+	
+	my_args->newArgument(
+		"Paths file to dataset base images used for training", "dsb", "dataset-base", "NULL", true);
+
+	my_args->newArgument(
+		"Paths file to dataset ground-truth images used for training", "dsg", "dataset-ground", "NULL", true);
+
+	my_args->newArgument(
+		"Path to save segmentation output image", "oseg", "output-segment", "segment.pgm", true);
+
+	my_args->newArgument(
+		"Path to save thresholding output image", "othr", "output-threshold", "threshold.pgm", true);
+
+	my_args->newArgument(
+		"Reconstruction process' log", "lr", "log-reconstruction", "NULL", true);
+
+	my_args->newArgument(
+		"Configuration file with the segmentation instructions", "c", "config", "NULL", true);
+
+	my_args->newArgument(
+		"Filtering process' log", "lf", "log-filter", "NULL", true);
+
+	my_args->newArgument(
+		"Treshold segmented image?", "thr", "threshold", "no", true);
+
+}
+
+//---- ----------------------------------------------------------------------------- PUBLIC----- ^
 
 // C L A S E: RECONS3D  ------------------------------------------------------------------------ ^
