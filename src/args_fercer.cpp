@@ -278,6 +278,7 @@ ARGUMENTS::ARGUMENTS()
 	my_args_root->my_upper_short = NULL;
 
 	my_args_root->is_optional = true;
+	my_args_root->was_defined = false;
 	my_args_root->my_type = MY_HELP;
 	
 #if defined(_WIN32) || defined(_WIN64)
@@ -323,6 +324,7 @@ ARGUMENTS::ARGUMENTS(int input_argc, char **input_argv)
 	my_args_root->my_upper_short = NULL;
 
 	my_args_root->is_optional = true;
+	my_args_root->was_defined = false;
 	my_args_root->my_type = MY_HELP;
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -681,13 +683,17 @@ void ARGUMENTS::askForValue(BIN_TREE_ARGS *searched_input)
 			break;
 	}
 
-	std::cout << ")" << ANSI_COLOR_RESET std::endl;
+	std::cout << ")" ANSI_COLOR_RESET << std::endl;
 	std::cout << "To left the default value, press " ANSI_COLOR_YELLOW "[Enter]" ANSI_COLOR_RESET
 		", otherwise, please define the argument value and press " ANSI_COLOR_YELLOW "[Enter]: " ANSI_COLOR_RESET << std::endl;
 
 	char input_value[513] = "";
 	char *resp;
+#if defined(_WIN32) || defined(_WIN64)
 	resp = gets_s(input_value, 512*sizeof(char));
+#else
+	resp = gets(input_value);
+#endif
 	flushLine();
 	
 	if ( (int)(*input_value) == 0 ){ /* Default selected: */
@@ -756,8 +762,30 @@ void ARGUMENTS::checkIfPassed(BIN_TREE_ARGS *searched_input) {
 		}
 		arg_idx++;
 	}
-	
-	if (arg_idx == my_argc) {
+
+	if ((arg_idx < my_argc) || (searched_input->was_defined == true)) {
+		/* The argument was passed by the user: */
+		switch (searched_input->my_type) {
+		case MY_CHAR:
+#if defined(_WIN32) || defined(_WIN64)
+			sprintf_s(searched_input->my_value.my_value_s, 512 * sizeof(char),
+				"%s", *(my_argv + arg_idx + 1));
+#else
+			sprintf(searched_input->my_value.my_value_s, "%s", *(my_argv + arg_idx + 1));
+#endif
+			break;
+		case MY_HELP:
+			searched_input->my_value.my_value_i = 1;
+			break;
+		case MY_INT:
+			searched_input->my_value.my_value_i = atoi(*(my_argv + arg_idx + 1));
+			break;
+		case MY_DOUBLE:
+			searched_input->my_value.my_value_d = atof(*(my_argv + arg_idx + 1));
+			break;
+		}
+	}
+	else {
 		/* The argument was not passed by the user: */
 		if (searched_input->is_optional) {
 			/* If the argument is optional, copy the default value: */
@@ -782,28 +810,6 @@ void ARGUMENTS::checkIfPassed(BIN_TREE_ARGS *searched_input) {
 		else {
 			/* If the argument is not optional, ask for its value: */
 			askForValue(searched_input);
-		}
-	}
-	else {
-		/* The argument was passed by the user: */
-		switch (searched_input->my_type) {
-			case MY_CHAR:
-#if defined(_WIN32) || defined(_WIN64)
-				sprintf_s(searched_input->my_value.my_value_s, 512 * sizeof(char),
-					"%s", *(my_argv + arg_idx + 1));
-#else
-				sprintf(searched_input->my_value.my_value_s, "%s", *(my_argv + arg_idx + 1));
-#endif
-				break;
-			case MY_HELP:
-				searched_input->my_value.my_value_i = 1;
-				break;
-			case MY_INT:
-				searched_input->my_value.my_value_i = atoi(*(my_argv + arg_idx + 1));
-				break;
-			case MY_DOUBLE:
-				searched_input->my_value.my_value_d = atof(*(my_argv + arg_idx + 1));
-				break;
 		}
 	}
 
@@ -921,7 +927,7 @@ double ARGUMENTS::getArgumentDOUBLE(const char *searched_tag)
 
 	if (!found_arg) {
 		std::cout << ANSI_COLOR_RED "<< Error: The tag " << searched_tag << " was not defined >>" ANSI_COLOR_RESET << std::endl;
-		return NULL;
+		return -1.0;
 	}
 
 	if (!found_arg->was_defined) {
@@ -958,7 +964,6 @@ void ARGUMENTS::setArgumentINT(const char * searched_tag, const int input_value)
 	}
 
 	found_arg->was_defined = true;
-
 	found_arg->my_value.my_value_i = input_value;
 }
 
@@ -1066,23 +1071,35 @@ void ARGUMENTS::displayArgument(ARGUMENTS::BIN_TREE_ARGS* my_root) {
 
 	std::cout << "-" << my_root->short_tag << "\t--"
 		<< my_root->long_tag << "\t\t\t"
-		<< ANSI_COLOR_GREEN my_root->my_question ANSI_COLOR_RESET;
+		<< ANSI_COLOR_GREEN << my_root->question << ANSI_COLOR_RESET;
 #endif
 
 	std::cout << " (default: ";
 
 	switch (my_root->my_type) {
 	case MY_CHAR:
+#if defined(_WIN32) || defined(_WIN64)
 		std::cout << ANSI_COLOR_CYAN my_root->my_default_value.my_value_s;
+#else
+		std::cout << ANSI_COLOR_CYAN << my_root->my_default_value.my_value_s;
+#endif
 		break;
 	case MY_HELP:
 		std::cout << ANSI_COLOR_CYAN "no";
 		break;
 	case MY_INT:
+#if defined(_WIN32) || defined(_WIN64)
 		std::cout << ANSI_COLOR_CYAN my_root->my_default_value.my_value_i;
+#else
+		std::cout << ANSI_COLOR_CYAN << my_root->my_default_value.my_value_i;
+#endif
 		break;
 	case MY_DOUBLE:
+#if defined(_WIN32) || defined(_WIN64)
 		std::cout << ANSI_COLOR_CYAN my_root->my_default_value.my_value_d;
+#else
+		std::cout << ANSI_COLOR_CYAN << my_root->my_default_value.my_value_d;
+#endif
 		break;
 	}
 	std::cout << ANSI_COLOR_RESET ")" << std::endl;
@@ -1116,7 +1133,7 @@ void ARGUMENTS::showHelp() {
 
 	/* Check if the help was requested by the user: */
 	checkIfPassed(my_args_root);
-
+	
 	if (my_args_root->my_value.my_value_i == 0) {
 		return;
 	}
@@ -1130,5 +1147,9 @@ void ARGUMENTS::showHelp() {
 
 	displayArgument(my_args_root);
 
+#if defined(_WIN32) || defined(_WIN64)
 	std::cout << ANSI_COLOR_RESET std::endl << std::endl;
+#else
+	std::cout << ANSI_COLOR_RESET << std::endl << std::endl;
+#endif
 }

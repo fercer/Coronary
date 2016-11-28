@@ -568,11 +568,11 @@ void RECONS3D::mostrarDetector(const int angios_ID){
 
 DEB_MSG("Mostrando detector para: " << angios_ID << ", LAORAO: " << (*(imgs_base + angios_ID))->LAORAO << ", CRACAU: " << (*(imgs_base + angios_ID))->CRACAU << ", SID: " << (*(imgs_base + angios_ID))->SID << ", SOD: " << (*(imgs_base + angios_ID))->SOD );
 
-    const int mis_rens = imgs_base[n_angios].rows;
-    const int mis_cols = imgs_base[n_angios].cols;
+const int mis_rens = (*(imgs_base + angios_ID))->rows;
+const int mis_cols = (*(imgs_base + angios_ID))->cols;
 
     const double mi_pixX = (*(imgs_base + angios_ID))->pixX;
-    const double mi_pixY = imgs_base[angios_ID].pixY;
+    const double mi_pixY = (*(imgs_base + angios_ID))->pixY;
 
     //------------------------------------------------------------------------------------------------------------------ FIGURA DEL DETECTOR
     /// Mover el detector y fuente a las posiciones definidas:
@@ -580,7 +580,7 @@ DEB_MSG("Mostrando detector para: " << angios_ID << ", LAORAO: " << (*(imgs_base
 
     // Mover los puntos segun SID y SOD:
     for( int i = 0; i < 5; i++){
-        det_pos.puntos[i][2] += imgs_base[angios_ID].DDP;
+        det_pos.puntos[i][2] += (*(imgs_base + angios_ID))->DDP;
     }
 
     //// Rotacion usando el eje x como base:
@@ -768,6 +768,8 @@ void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const
         }
 
     }
+
+	mostrarImagen(IMGVTK::BASE, mis_renderers.at(n_angios), n_angios);
 }
 
 
@@ -780,12 +782,15 @@ void RECONS3D::agregarInput( const char *rutabase_input, bool enmascarar ){
 
     n_angios++;
 
+	DEB_MSG("n_angios:" << n_angios << ", ruta: " << rutabase_input);
 
 	IMGVTK **swap = imgs_base;
 	imgs_base = (IMGVTK**)malloc((n_angios + 1) * sizeof(IMGVTK*));
 	if (n_angios > 0) {
 		memcpy(imgs_base, swap, n_angios * sizeof(IMGVTK*));
 	}
+	DEB_MSG("swap ptr: " << swap);
+
 	*(imgs_base + n_angios) = new IMGVTK(rutabase_input, enmascarar, 0);
 	if (swap) {
 		free(swap);
@@ -811,21 +816,9 @@ void RECONS3D::agregarInput( const char *rutabase_input, bool enmascarar ){
     h_suma.push_back(0.0);
     h_media.push_back(0.0);
     h_desvest.push_back(0.0);
-}
 
+	mostrarImagen(IMGVTK::BASE, mis_renderers.at(n_angios), n_angios);
 
-
-
-
-/*  Metodo: agregarInput
-
-    Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
-*/
-void RECONS3D::agregarInput( char **rutasbase_input, const int n_imgs, bool enmascarar){
-	// Cargar todas las rutas por separado:
-	for (int i = 0; i < n_imgs; i++) {
-		agregarInput(*(rutasbase_input + i), enmascarar);
-	}
 }
 
 
@@ -854,24 +847,7 @@ void RECONS3D::agregarGroundtruth(const char *rutaground_input, const int angios
 
 
 
-
-/*  Metodo: agregarGroundtruth
-
-    Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
-*/
-void RECONS3D::agregarGroundtruth(char **rutasground_input, const int n_imgs){
-    // Cargar todos los ground truth, para cada imagen
-	for( int i = 0; i < n_imgs; i++ ){
-		(*(imgs_base + i ))->Cargar(IMGVTK::GROUNDTRUTH, *(rutasground_input + i), false, 0);
-        existe_ground[ i ] = true;
-    }
-}
-
-
-
-
 /*  Metodo: leerConfiguracion
-
     Funcion: Carga una configuracion predefinida para el filtro de deteccion
 */
 void RECONS3D::leerConfiguracion(const char *ruta_conf){
@@ -2026,6 +2002,7 @@ RECONS3D::RECONS3D(){
     mi_pBar = NULL;
 #endif
 
+	imgs_base = NULL;
     n_angios = -1;
 }
 
@@ -2067,6 +2044,7 @@ RECONS3D::RECONS3D(ARGUMENTS *input_arguments)
 	mi_pBar = NULL;
 #endif
 
+	imgs_base = NULL;
 	n_angios = -1;
 }
 

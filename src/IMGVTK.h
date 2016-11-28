@@ -179,6 +179,8 @@ class IMGVTK{
         double medirExactitud();
 
         void Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool enmascarar, const int nivel);
+
+
 		void Guardar( IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida );
 
 //        void setLog( QPlainTextEdit *log );
@@ -230,7 +232,6 @@ class IMGVTK{
         void escribirLog( const char *mensaje );
 #ifdef BUILD_VTK_VERSION
         void Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel, const bool enmascarar);
-        void Cargar(vtkSmartPointer<vtkImageData> img_src, char **rutas, const int n_imgs);
 #endif
         int *Cargar(const char *ruta_origen, double **img_src, double **mask_src, const int nivel, const bool enmascarar);
 

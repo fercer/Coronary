@@ -20,8 +20,6 @@
 
 
 #if defined(_WIN32)
-	#include "D:\Apps\FFTW_32\fftw3.h"
-#elif defined(_WIN64)
     #include "D:\Apps\FFTW_64\fftw3.h"
 #else
     #include <fftw3.h>

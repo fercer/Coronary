@@ -2524,53 +2524,6 @@ DEB_MSG("abriendo archivo: " << ruta_origen);
 
 
 
-
-/*  Metodo: Cargar
-    Funcion: Cargar la imagen a formato VTK desde varios archivos (Solo para imagenes JPEG, BMP o PNG).
-*/
-#ifdef BUILD_VTK_VERSION
-void IMGVTK::Cargar(vtkSmartPointer<vtkImageData> img_src, char **rutas, const int n_imgs){
-    vtkSmartPointer<vtkImageData> auxiliar = vtkSmartPointer<vtkImageData>::New();
-
-    Cargar(rutas[0], auxiliar, NULL, 0, false);
-
-    double *aux_tmp = static_cast<double*>(auxiliar->GetScalarPointer(0, 0, 0));
-
-    int dims[3];
-    auxiliar->GetDimensions(dims);
-
-    const int mis_cols = dims[0];
-    const int mis_rows = dims[1];
-
-    const int n_cols = mis_cols * n_imgs;
-
-    // Extract data:
-    img_src->SetExtent(0, n_cols-1, 0, mis_rows-1, 0, 0);
-    img_src->AllocateScalars( VTK_DOUBLE, 1);
-    img_src->SetOrigin(0.0, 0.0, 0.0);
-    img_src->SetSpacing(1.0, 1.0, 1.0);
-	
-    double *base_ptr_tmp = static_cast<double*>(img_src->GetScalarPointer(0, 0, 0));
-
-
-    for( int y = 0; y < mis_rows; y++){
-        memcpy(base_ptr_tmp + y*n_cols, aux_tmp + y*mis_cols, mis_cols*sizeof(double));
-    }
-
-    for( int img_i = 1; img_i < n_imgs; img_i++){
-        Cargar(rutas[img_i], auxiliar, mask_auxiliar, 0, enmascarar);
-        aux_tmp = static_cast<double*>(auxiliar->GetScalarPointer(0, 0, 0));
-
-        for( int y = 0; y < mis_rows; y++){
-            memcpy(base_ptr_tmp + y*n_cols + img_i*mis_cols, aux_tmp+ y*mis_cols, mis_cols*sizeof(double));
-        }
-    }
-}
-#endif
-
-
-
-
 /*  Metodo: Cargar
     Funcion: Cargar la imagen a formato VTK desde un archivo.
 */
@@ -2578,14 +2531,10 @@ void IMGVTK::Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool e
 #ifdef BUILD_VTK_VERSION
 	vtkSmartPointer<vtkImageData> img_tmp = NULL;
 	vtkSmartPointer<vtkImageData> msk_tmp = NULL;
-#else
-	double **img_tmp = NULL;
-	double **msk_tmp = NULL;
-#endif
+
 
 	switch (img_idx) {
 	case BASE:
-#ifdef BUILD_VTK_VERSION
 		if (!base) {
 			base = vtkSmartPointer<vtkImageData>::New();
 		}
@@ -2594,84 +2543,50 @@ void IMGVTK::Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool e
 		}
 		img_tmp = base;
 		msk_tmp = mask;
-#else
-		img_tmp = &base_ptr;
-		msk_tmp = &mask_ptr;
-#endif
 		break;
 	case GROUNDTRUTH:
-#ifdef BUILD_VTK_VERSION
 		if (!ground) {
 			ground = vtkSmartPointer<vtkImageData>::New();
 		}
 		img_tmp = ground;
-#else
-		img_tmp = &gt_ptr;
-#endif
 		break;
 	case MASK:
-#ifdef BUILD_VTK_VERSION
 		if (!mask) {
 			mask = vtkSmartPointer<vtkImageData>::New();
 		}
 		img_tmp = mask;
-#else
-		img_tmp = &mask_ptr;
-#endif
 		break;
 	case SKELETON:
-#ifdef BUILD_VTK_VERSION
 		if (!skeleton) {
 			skeleton = vtkSmartPointer<vtkImageData>::New();
 		}
 		img_tmp = skeleton;
-#else
-		img_tmp = &skl_ptr;
-#endif
 		break;
 	case SEGMENT:
-#ifdef BUILD_VTK_VERSION
 		if (!segment) {
 			segment = vtkSmartPointer<vtkImageData>::New();
 		}
 		img_tmp = segment;
-#else
-		img_tmp = &segment_ptr;
-#endif
 		break;
 	case MAPDIST:
-#ifdef BUILD_VTK_VERSION
 		if (!mapa_dist) {
 			mapa_dist = vtkSmartPointer<vtkImageData>::New();
 		}
 		img_tmp = mapa_dist;
-#else
-		img_tmp = &map_ptr;
-#endif
 		break;
 	case THRESHOLD:
-#ifdef BUILD_VTK_VERSION
 		if (!threshold) {
 			threshold = vtkSmartPointer<vtkImageData>::New();
 		}
 		img_tmp = threshold;
-#else
-		img_tmp = &threshold_ptr;
-#endif
 		break;
 	case BORDERS:
-#ifdef BUILD_VTK_VERSION
 		if (!borders) {
 			borders = vtkSmartPointer<vtkImageData>::New();
 		}
 		img_tmp = borders;
-#else
-		img_tmp = &borders_ptr;
-#endif
 		break;
 	}
-
-#ifdef BUILD_VTK_VERSION
 
 	Cargar(ruta_origen, img_tmp, msk_tmp, nivel, enmascarar);
 
@@ -2721,6 +2636,37 @@ void IMGVTK::Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool e
 		break;
 	}
 #else
+	double **img_tmp = NULL;
+	double **msk_tmp = NULL;
+
+
+	switch (img_idx) {
+	case BASE:
+		img_tmp = &base_ptr;
+		msk_tmp = &mask_ptr;
+		break;
+	case GROUNDTRUTH:
+		img_tmp = &gt_ptr;
+		break;
+	case MASK:
+		img_tmp = &mask_ptr;
+		break;
+	case SKELETON:
+		img_tmp = &skl_ptr;
+		break;
+	case SEGMENT:
+		img_tmp = &segment_ptr;
+		break;
+	case MAPDIST:
+		img_tmp = &map_ptr;
+		break;
+	case THRESHOLD:
+		img_tmp = &threshold_ptr;
+		break;
+	case BORDERS:
+		img_tmp = &borders_ptr;
+		break;
+	}
 
 	int *dims = Cargar(ruta_origen, img_tmp, msk_tmp, nivel, enmascarar);
 
@@ -2875,6 +2821,17 @@ IMGVTK::IMGVTK(){
     segment_ptr = NULL;
     threshold_ptr = NULL;
 
+#ifdef BUILD_VTK_VERSION
+	base = NULL;
+	ground = NULL;
+	skeleton = NULL;
+	mask = NULL;
+	mapa_dist = NULL;
+	borders = NULL;
+	segment = NULL;
+	threshold = NULL;
+#endif
+
     // Defaults:
     SID = 0.0;
     SOD = 0.0;
@@ -2902,6 +2859,17 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
     pix_caract = NULL;
     segment_ptr = NULL;
     threshold_ptr = NULL;
+
+#ifdef BUILD_VTK_VERSION
+	base = NULL;
+	ground = NULL;
+	skeleton = NULL;
+	mask = NULL;
+	mapa_dist = NULL;
+	borders = NULL;
+	segment = NULL;
+	threshold = NULL;
+#endif
 
     // Defaults:
     SID = origen.SID;
@@ -3056,6 +3024,17 @@ IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel)
     segment_ptr = NULL;
     threshold_ptr = NULL;
 
+#ifdef BUILD_VTK_VERSION
+	base = NULL;
+	ground = NULL;
+	skeleton = NULL;
+	mask = NULL;
+	mapa_dist = NULL;
+	borders = NULL;
+	segment = NULL;
+	threshold = NULL;
+#endif
+
     // Defaults:
     SID = 0.0;
     SOD = 0.0;
@@ -3120,6 +3099,38 @@ IMGVTK::~IMGVTK(){
         if(threshold_ptr){
             delete [] threshold_ptr;
         }
+#else
+	if (base) {
+		base->Delete();
+	}
+
+	if (ground) {
+		ground->Delete();
+	}
+
+	if (mask) {
+		mask->Delete();
+	}
+
+	if (segment) {
+		segment->Delete();
+	}
+
+	if (skeleton) {
+		skeleton->Delete();
+	}
+
+	if (mapa_dist) {
+		mapa_dist->Delete();
+	}
+
+	if (borders) {
+		borders->Delete();
+	}
+
+	if (threshold) {
+		threshold->Delete();
+	}
 #endif
 }
 
@@ -3141,6 +3152,16 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
     segment_ptr = NULL;
     threshold_ptr = NULL;
 
+#ifdef BUILD_VTK_VERSION
+	base = NULL;
+	ground = NULL;
+	skeleton = NULL;
+	mask = NULL;
+	mapa_dist = NULL;
+	borders = NULL;
+	segment = NULL;
+	threshold = NULL;
+#endif
 
     // Defaults:
     SID = origen.SID;

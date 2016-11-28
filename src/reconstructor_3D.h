@@ -203,10 +203,8 @@ class RECONS3D{
     // M E T O D O S        P U B L I C O S
         void agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar);
         void agregarInput(const char *rutabase_input, bool enmascarar);
-        void agregarInput(char **rutasbase_input, const int n_imgs, bool enmascarar);
 
         void agregarGroundtruth(const char *rutaground_input, const int angios_ID);
-        void agregarGroundtruth(char **rutasground_input, const int n_imgs );
 
         void leerConfiguracion( const char *ruta_conf);
 
