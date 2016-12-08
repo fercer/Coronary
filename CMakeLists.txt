@@ -7,9 +7,9 @@ endif()
 
 
 
-SET(SRC_DIR "../src")
-SET(HEADERS ${SRC_DIR}/reconstructor_3D.h ${SRC_DIR}/filtros.h ${SRC_DIR}/IMGVTK.h)
-SET(SOURCES ${SRC_DIR}/reconstructor_3D.cpp ${SRC_DIR}/filtros.cpp ${SRC_DIR}/IMGVTK.cpp)
+SET(SRC_DIR "./src")
+SET(HEADERS ${SRC_DIR}/reconstructor_3D.h ${SRC_DIR}/filtros.h ${SRC_DIR}/IMGVTK.h ${SRC_DIR}/args_fercer.h)
+SET(SOURCES ${SRC_DIR}/reconstructor_3D.cpp ${SRC_DIR}/filtros.cpp ${SRC_DIR}/IMGVTK.cpp ${SRC_DIR}/args_fercer.cpp)
 
 # The GUI version is going to be build?
 OPTION(BUILD_GUI "Build gui version." OFF)
@@ -24,14 +24,14 @@ ELSE(BUILD_GUI)
 ENDIF(BUILD_GUI)
 
 
-SET(CMAKE_C_FLAGS_DISTRIBUTION "-O3 -DNDEBUG -lm -fopenmp")
-SET(CMAKE_C_FLAGS_DEBUG "-g -lm -fopenmp")
+SET(CMAKE_C_FLAGS_DISTRIBUTION "-O3 -DNDEBUG -lm -fopenmp -std=c99")
+SET(CMAKE_C_FLAGS_DEBUG "-g -lm -fopenmp -std=c99")
 SET(CMAKE_CXX_FLAGS_DISTRIBUTION "-O3 -DNDEBUG -fopenmp")
 SET(CMAKE_CXX_FLAGS_DEBUG "-g -fopenmp")
 
 # Project name for building
 PROJECT( ${NOMBRE_PROYECTO} )
-ADD_DEFINITIONS(-std=c99)
+
 
 IF(BUILD_GUI)
     ADD_DEFINITIONS(-DBUILD_GUI_VERSION)
@@ -86,13 +86,13 @@ ENDIF(VTK_LIBRARIES AND BUILD_VTK)
 
 # Add FFTW3 libraries:
 FIND_PATH (FFTW_INCLUDES fftw3.h)
-FIND_LIBRARY (FFTW_LIBRARIES NAMES fftw3)
+SET(FFTW_LIBRARIES "${FFTW_INCLUDES}/libfftw3-3.lib;${FFTW_INCLUDES}/libfftw3l-3.lib;${FFTW_INCLUDES}/libfftw3f-3.lib")
 
 # handle the QUIETLY and REQUIRED arguments and set FFTW_FOUND to TRUE if
 # all listed variables are TRUE
 INCLUDE(FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(FFTW DEFAULT_MSG FFTW_LIBRARIES FFTW_INCLUDES)
-
+ADD_DEFINITIONS(-DMY_FFTW_PATH="${FFTW_INCLUDES}/fftw3.h")
 TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${FFTW_LIBRARIES} ) 
 
 

@@ -20,7 +20,7 @@
 
 
 #if defined(_WIN32)
-    #include "D:\Apps\FFTW_64\fftw3.h"
+    #include MY_FFTW_PATH
 #else
     #include <fftw3.h>
 #endif

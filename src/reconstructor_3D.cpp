@@ -769,7 +769,7 @@ void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const
 
     }
 
-	mostrarImagen(IMGVTK::BASE, mis_renderers.at(n_angios), n_angios);
+	//mostrarImagen(IMGVTK::BASE, mis_renderers.at(n_angios), n_angios);
 }
 
 
@@ -817,7 +817,7 @@ void RECONS3D::agregarInput( const char *rutabase_input, bool enmascarar ){
     h_media.push_back(0.0);
     h_desvest.push_back(0.0);
 
-	mostrarImagen(IMGVTK::BASE, mis_renderers.at(n_angios), n_angios);
+	//mostrarImagen(IMGVTK::BASE, mis_renderers.at(n_angios), n_angios);
 
 }
 
