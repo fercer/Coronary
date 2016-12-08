@@ -17,8 +17,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-
-
 #if defined(_WIN32)
     #include MY_FFTW_PATH
 #else

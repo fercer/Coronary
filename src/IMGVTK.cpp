@@ -1656,6 +1656,185 @@ double IMGVTK::medirExactitud(){
 }
 
 
+/*
+*  Source: readpng.c form the libpng documentation
+*  
+*/
+int IMGVTK::CargarPNG(const char *ruta_origen, double *img_src_ptr) {
+	/* Open the file in binary mode */
+	FILE *img_file = fopen(ruta_origen, "b");
+
+	/* Read PNG signature */
+	unsigned char signature[8];
+	fread(signature, 1, 8, img_file);
+
+	if (png_sig_cmp(signature, 0, 8)) {
+		/* Incorrect signature */
+		fclose(img_file);
+		return 1;
+	}
+
+	static png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	if (!png_ptr) {
+		/* Out ot memory */
+		fclose(img_file);
+		return 4;
+	}
+
+	static png_infop info_ptr = png_create_info_struct(png_ptr);
+	if (!info_ptr) {
+		/* Out ot memory */
+		png_destroy_read_struct(&png_ptr, NULL, NULL);
+		fclose(img_file);
+		return 4;
+	}
+
+	if (setjmp(png_jmpbuf(png_ptr))) {
+		png_destroy_read_struct(&png_ptr, NULL, NULL);
+		return 2;
+	}
+	png_init_io(png_ptr, img_file);
+
+	png_set_sig_bytes(png_ptr, 8);
+
+	/* read all PNG info up to image data */
+	png_read_info(png_ptr, info_ptr);
+
+	int bit_depth, color_type;
+	png_uint_32 width, height;
+	png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type, NULL, NULL, NULL);
+
+	unsigned long my_height = (unsigned long)height;
+	unsigned long my_width = (unsigned long)width;
+
+	/* Check if the image has background color */
+	if (setjmp(png_jmpbuf(png_ptr))) {
+		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+		return 2;
+	}
+
+	png_color_16p pBackground;
+	unsigned char red_ch = 0;
+	unsigned char green_ch = 0;
+	unsigned char blue_ch = 0;
+
+	if (png_get_valid(png_ptr, info_ptr, PNG_INFO_bKGD)) {
+		png_get_bKGD(png_ptr, info_ptr, &pBackground);
+
+		if (bit_depth == 16) {
+			red_ch = pBackground->red >> 8;
+			green_ch = pBackground->green >> 8;
+			blue_ch = pBackground->blue >> 8;
+		}
+		else if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) {
+			if (bit_depth == 1) {
+				red_ch = green_ch = blue_ch = pBackground->gray ? 255 : 0;
+			}
+			else if (bit_depth == 2) {
+				red_ch = green_ch = blue_ch = (255 / 3) * pBackground->gray;
+			}
+			else { /* bit_depth == 4 */
+				red_ch = green_ch = blue_ch = (255 / 15) * pBackground->gray;
+			}
+		}
+		else {
+			red_ch = (unsigned char)pBackground->red;
+			green_ch = (unsigned char)pBackground->green;
+			blue_ch = (unsigned char)pBackground->blue;
+		}
+	}
+
+	unsigned char *image_data = (unsigned char*)malloc(height * width * sizeof(unsigned char));
+
+	double  gamma;
+	png_uint_32  i, rowbytes;
+	png_bytepp row_pointers = (png_bytepp)malloc(height * sizeof(png_bytep));
+
+	if (setjmp(png_jmpbuf(png_ptr))) {
+		free(image_data);
+		free(row_pointers);
+		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+		return 5;
+	}
+
+	/* expand palette images to RGB, low-bit-depth grayscale images to 8 bits,
+	*  transparency chunks to full alpha channel; strip 16-bit-per-sample
+	*  images to 8 bits per sample; and convert grayscale to RGB[A]
+	*/
+
+	if (color_type == PNG_COLOR_TYPE_PALETTE) {
+		png_set_expand(png_ptr);
+	}
+	if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) {
+		png_set_expand(png_ptr);
+	}
+	if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
+		png_set_expand(png_ptr);
+	}
+#ifdef PNG_READ_16_TO_8_SUPPORTED
+	if (bit_depth == 16) {
+#ifdef PNG_READ_SCALE_16_TO_8_SUPPORTED
+		png_set_scale_16(png_ptr);
+#else
+		png_set_strip_16(png_ptr);
+#endif
+	}
+#endif
+
+	if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
+		png_set_gray_to_rgb(png_ptr);
+	}
+
+	/* unlike the example in the libpng documentation, we have *no* idea where
+	*  this file may have come from--so if it doesn't have a file gamma, don't
+	*  do any correction ("do no harm")
+	*/
+
+	double display_exponent = 1.0;
+	if (png_get_gAMA(png_ptr, info_ptr, &gamma)) {
+		png_set_gamma(png_ptr, display_exponent, gamma);
+	}
+
+	/* all transformations have been registered; now update info_ptr data,
+	*  get rowbytes and channels, and allocate image memory 
+	*/
+	png_read_update_info(png_ptr, info_ptr);
+
+	unsigned long rowbytes = png_get_rowbytes(png_ptr, info_ptr);
+	int Channels = (int)png_get_channels(png_ptr, info_ptr);
+
+
+	/* set the individual row_pointers to point at the correct offsets */
+	for (unsigned int i = 0; i < (unsigned int)height; i++) {
+		*(row_pointers + i) = image_data + i*rowbytes;
+	}
+
+
+	/* now we can go ahead and just read the whole image */
+	png_read_image(png_ptr, row_pointers);
+
+	/* and we're done!  (png_read_end() can be omitted if no processing of
+	* post-IDAT text/time/etc. is desired) */
+
+	free(row_pointers);
+	row_pointers = NULL;
+
+	png_read_end(png_ptr, NULL);
+
+	/* Pass the image to the image structure */
+	for (unsigned int i = 0; i < (unsigned int)(height * width); i++) {
+		*(img_src_ptr + i) = (double)*(image_data + i) / 255.0;
+	}
+
+	if (png_ptr && info_ptr) {
+		free(image_data);
+		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+	}
+}
+
+
+
+
 /*  Metodo: Cargar
     Funcion: Cargar desde un archivo DICOM/JPEG/PNG/BMP la imagen a formato VTK.
 */

@@ -32,6 +32,11 @@
     #include <gdcmTag.h>
 #endif
 
+#if defined(_WIN32)
+	#include MY_PNG
+#else
+	#include <png.h>
+#endif
 
 #include <string.h>
 #include <stdlib.h>
@@ -233,6 +238,10 @@ class IMGVTK{
 #ifdef BUILD_VTK_VERSION
         void Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel, const bool enmascarar);
 #endif
+
+		int CargarPNG(const char * ruta_origen, double *img_src_ptr);
+
+
         int *Cargar(const char *ruta_origen, double **img_src, double **mask_src, const int nivel, const bool enmascarar);
 
         void maskFOV(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);

@@ -27,8 +27,7 @@ int main(int argc, char** argv ){
 #ifndef BUILD_GCM_VERSION
 		printf("No-");
 #endif
-		printf("GDCM-");
-		printf("Version" COLOR_RESET "\n");
+		printf("GDCM-Version" COLOR_RESET "\n");
 
 		parametros.setArgumentINT("-h", 1);
 		parametros.showHelp();
