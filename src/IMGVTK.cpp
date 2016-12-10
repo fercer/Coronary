@@ -1747,7 +1747,6 @@ int IMGVTK::CargarPNG(const char *ruta_origen, double *img_src_ptr) {
 	unsigned char *image_data = (unsigned char*)malloc(height * width * sizeof(unsigned char));
 
 	double  gamma;
-	png_uint_32  i, rowbytes;
 	png_bytepp row_pointers = (png_bytepp)malloc(height * sizeof(png_bytep));
 
 	if (setjmp(png_jmpbuf(png_ptr))) {

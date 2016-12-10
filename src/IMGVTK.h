@@ -32,7 +32,7 @@
     #include <gdcmTag.h>
 #endif
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(_WIN64)
 	#include MY_PNG
 #else
 	#include <png.h>
