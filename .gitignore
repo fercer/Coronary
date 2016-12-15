@@ -243,3 +243,6 @@ ModelManifest.xml
 
 # FAKE - F# Make
 .fake/
+/libfftw3-3.dll
+/libfftw3f-3.dll
+/libfftw3l-3.dll

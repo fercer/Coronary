@@ -1179,9 +1179,8 @@ void IMGVTK::fillMask( IMGCONT *img_src, IMGCONT *mask_src ){
 
 /*  Metodo: grafoSkeleton
     Funcion: Genera un grafo a partir del esqueleto.
-*/
+*//*
 IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, bool *visitados){
-    DEB_MSG( x << "/" << cols << " :: " << y << "/" << rows);
     if( *(visitados + x + y*cols) ){
         return NULL;
     }
@@ -1238,15 +1237,15 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
     temp->alpha = atan2(temp->y_r - temp->y, temp->x_r - temp->x);// + MY_PI / 2.0;
 
     switch( lutabla[ resp ] ){
-        case (unsigned char)1:{ /* END point*/
+        case (unsigned char)1:{ /* END point*
             temp->pix_tipo = PIX_END;
             break;
         }
-        case (unsigned char)2:{ /* BRANCH point */
+        case (unsigned char)2:{ /* BRANCH point *
             temp->pix_tipo = PIX_BRANCH;
             break;
         }
-        case (unsigned char)3:{ /* CROSS point */
+        case (unsigned char)3:{ /* CROSS point *
             temp->pix_tipo = PIX_CROSS;
             break;
         }
@@ -1367,13 +1366,13 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
 
     return temp;
 }
-
+*/
 
 
 
 /*  Metodo: extraerCaract
     Funcion: Extrae los pixeles caracteristicos (end y branch points) a partir del esqueleot de la imagen.
-*/
+*//*
 void IMGVTK::extraerCaract( IMG_IDX img_idx ){
     if( !my_boundaries ){
         detectarBorde( img_idx );
@@ -1418,7 +1417,7 @@ void IMGVTK::extraerCaract( IMG_IDX img_idx ){
     delete [] visitados;
     delete [] skl_tmp;
 }
-
+*/
 
 
 /*  Metodo: borrarSkeleton
@@ -1657,7 +1656,7 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
 
 /*  Metodo: umbralizar
     Funcion: Utiliza el metodo de Otsu o Ridler & Calvard para umbralizar la imagen y separar el fondo y el primer plano de la imagen.
-*/
+*//*
 void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const double nivel){
 
     if( !threshold_ptr ){
@@ -1720,14 +1719,14 @@ void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const doubl
         *(threshold_ptr + xy) = ( ((*(img_ptr + xy) - min) / (max - min)) >= umbral) ? 1.0 : 0.0;
     }
 }
-
+*/
 
 
 
 
 /*  Metodo: Cargar
     Funcion: Retorna la exactitud del clasificador resultante contra el ground-truth
-*/
+*//*
 double IMGVTK::medirExactitud(){
 
     if( !gt_ptr ){
@@ -1758,7 +1757,7 @@ double IMGVTK::medirExactitud(){
 
     return (double)(TP + TN) / (double)(TP + TN + FP + FN);
 }
-
+*/
 
 /*
 *  Source: readpng.c form the libpng documentation

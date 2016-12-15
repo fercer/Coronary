@@ -41,49 +41,51 @@ IF(BUILD_GUI)
     FILE(GLOB CXX_FILES *.cpp)
 ENDIF(BUILD_GUI)
 
-
-FIND_PACKAGE(VTK REQUIRED)
-INCLUDE(${VTK_USE_FILE})
-IF(VTK_LIBRARIES AND BUILD_VTK)
-    MESSAGE("VTK libraries found in: ${VTK_DIR}")
-    ADD_DEFINITIONS(-DBUILD_VTK_VERSION)
-    IF(${VTK_VERSION} VERSION_GREATER "6" AND VTK_QT_VERSION VERSION_GREATER "4")
-        IF(BUILD_GUI)
-            # Instruct CMake to run moc automatically when needed.
-            SET(CMAKE_AUTOMOC ON)
-            FIND_PACKAGE(Qt5Widgets REQUIRED QUIET)
-            QT5_WRAP_UI(UISrcs ${UI_FILES} )
-            # CMAKE_AUTOMOC in ON so the MOC headers will be automatically wrapped.
-            QT5_USE_MODULES(${NOMBRE_PROYECTO} Core Gui)
-        ENDIF(BUILD_GUI)
-        
-        # Add the sources to the project:
-        ADD_EXECUTABLE(${NOMBRE_PROYECTO} MACOSX_BUNDLE ${CXX_FILES} ${UISrcs} ${QT_WRAP} ${SOURCES} ${HEADERS})
-        
-        TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${VTK_LIBRARIES})
-    ELSE()
-        IF(BUILD_GUI)
-            FIND_PACKAGE(Qt4 REQUIRED)
-            INCLUDE(${QT_USE_FILE})
-            QT4_WRAP_UI(UISrcs ${UI_FILES})
-            QT4_WRAP_CPP(MOCSrcs ${QT_WRAP})
-        ENDIF(BUILD_GUI)
-        
-        # Add the sources to the project:
-        ADD_EXECUTABLE(${NOMBRE_PROYECTO} MACOSX_BUNDLE ${CXX_FILES} ${UISrcs} ${MOCSrcs} ${SOURCES} ${HEADERS})
-        
-        IF(${VTK_VERSION} VERSION_LESS "6")
-            TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${VTK_LIBRARIES} QVTK)
-        ELSE()
-            TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${VTK_LIBRARIES})
-        ENDIF()
-    ENDIF()
-ELSE(VTK_LIBRARIES AND BUILD_VTK)
-    MESSAGE("VTK libraries could not be found, a No-VTK version will be built")
-    # Add the sources to the project:
-    ADD_EXECUTABLE(${NOMBRE_PROYECTO} MACOSX_BUNDLE ${CXX_FILES} ${UISrcs} ${QT_WRAP} ${SOURCES} ${HEADERS})
-ENDIF(VTK_LIBRARIES AND BUILD_VTK)
-
+IF(BUILD_VTK)
+	FIND_PACKAGE(VTK REQUIRED)
+	INCLUDE(${VTK_USE_FILE})
+	IF(VTK_LIBRARIES)
+		MESSAGE("VTK libraries found in: ${VTK_DIR}")
+		ADD_DEFINITIONS(-DBUILD_VTK_VERSION)
+		IF(${VTK_VERSION} VERSION_GREATER "6" AND VTK_QT_VERSION VERSION_GREATER "4")
+			IF(BUILD_GUI)
+				# Instruct CMake to run moc automatically when needed.
+				SET(CMAKE_AUTOMOC ON)
+				FIND_PACKAGE(Qt5Widgets REQUIRED QUIET)
+				QT5_WRAP_UI(UISrcs ${UI_FILES} )
+				# CMAKE_AUTOMOC in ON so the MOC headers will be automatically wrapped.
+				QT5_USE_MODULES(${NOMBRE_PROYECTO} Core Gui)
+			ENDIF(BUILD_GUI)
+			
+			# Add the sources to the project:
+			ADD_EXECUTABLE(${NOMBRE_PROYECTO} MACOSX_BUNDLE ${CXX_FILES} ${UISrcs} ${QT_WRAP} ${SOURCES} ${HEADERS})
+			
+			TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${VTK_LIBRARIES})
+		ELSE()
+			IF(BUILD_GUI)
+				FIND_PACKAGE(Qt4 REQUIRED)
+				INCLUDE(${QT_USE_FILE})
+				QT4_WRAP_UI(UISrcs ${UI_FILES})
+				QT4_WRAP_CPP(MOCSrcs ${QT_WRAP})
+			ENDIF(BUILD_GUI)
+			
+			# Add the sources to the project:
+			ADD_EXECUTABLE(${NOMBRE_PROYECTO} MACOSX_BUNDLE ${CXX_FILES} ${UISrcs} ${MOCSrcs} ${SOURCES} ${HEADERS})
+			
+			IF(${VTK_VERSION} VERSION_LESS "6")
+				TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${VTK_LIBRARIES} QVTK)
+			ELSE()
+				TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${VTK_LIBRARIES})
+			ENDIF()
+		ENDIF()
+	ELSE(VTK_LIBRARIES)
+		MESSAGE("VTK libraries could not be found, a No-VTK version will be built")
+		# Add the sources to the project:
+		ADD_EXECUTABLE(${NOMBRE_PROYECTO} MACOSX_BUNDLE ${CXX_FILES} ${UISrcs} ${QT_WRAP} ${SOURCES} ${HEADERS})
+	ENDIF(VTK_LIBRARIES)
+ELSE(BUILD_VTK)
+	ADD_EXECUTABLE(${NOMBRE_PROYECTO} MACOSX_BUNDLE ${SOURCES} ${HEADERS})
+ENDIF(BUILD_VTK)
 
 # Add PNG libraries:
 SET(PNG_INCLUDES_PATH "D:/Apps/libpng/include" CACHE PATH "Set PNG include path")
@@ -91,6 +93,14 @@ SET(PNG_LIBRARIES_PATH "D:/Apps/libpng/lib" CACHE PATH "Set PNG libraries path")
 ADD_DEFINITIONS(-DMY_PNG="${PNG_INCLUDES_PATH}/png.h")
 SET(PNG_LIBRARIES "${PNG_LIBRARIES_PATH}/libpng16d.lib")
 TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${PNG_LIBRARIES}) 
+
+
+# Add ZLIB libraries:
+SET(ZLIB_INCLUDES_PATH "D:/Apps/libpng/include" CACHE PATH "Set ZLIB include path")
+SET(ZLIB_LIBRARIES_PATH "D:/Apps/libpng/lib" CACHE PATH "Set ZLIB libraries path")
+ADD_DEFINITIONS(-DMY_ZLIB="${ZLIB_INCLUDES_PATH}/zlib.h")
+SET(ZLIB_LIBRARIES "${ZLIB_LIBRARIES_PATH}/zdll.lib")
+TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${ZLIB_LIBRARIES}) 
 
 
 # Add FFTW3 libraries:
