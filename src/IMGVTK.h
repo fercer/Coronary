@@ -32,8 +32,12 @@
     #include <gdcmTag.h>
 #endif
 
+<<<<<<< HEAD
 #if defined(_WIN32)
 	#include MY_ZLIB
+=======
+#if defined(_WIN32) || defined(_WIN64)
+>>>>>>> fb7c61c8fe372c795883fa64edd19adeaeea4360
 	#include MY_PNG
 #else
 	#include <png.h>
