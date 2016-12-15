@@ -30,128 +30,128 @@ void IMGVTK::escribirLog( const char *mensaje ){
 /*  Metodo: mapaDistancias
     Funcion: Obtiene el mapa de distancias de los pixeles a los bordes.
 */
-void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
-    double *img_ptr = NULL;
+void IMGVTK::mapaDistancias(IMG_IDX img_idx) {
+	IMGCONT *img_tmp = NULL;
 
-    switch( img_idx ){
-    case BASE:
-        img_ptr = base_ptr;
-        break;
-    case GROUNDTRUTH:
-        img_ptr = gt_ptr;
-        break;
-    case MASK:
-        img_ptr = mask_ptr;
-        break;
-    case SKELETON:
-        img_ptr = skl_ptr;
-        break;
-    case SEGMENT:
-        img_ptr = segment_ptr;
-        break;
-    case THRESHOLD:
-        img_ptr = threshold_ptr;
-        break;
-    }
-
-
-    if( !map_ptr ){
-        map_ptr = new double[ rows_cols ];
-    }
-
-    for( int xy = 0 ; xy < rows_cols; xy++ ){
-        *(map_ptr + xy) = (*(img_ptr + xy) < 1.0) ? 0.0 : MY_INF;
-    }
-
-    double *f = new double[ rows > cols ? rows : cols  ];
-    double *dh = new double[ rows ];
-    int *vh= new int[ rows ];
-    double *zh = new double[ rows+1 ];
-
-    // transform along columns
-    for (int x = 0; x < cols; x++){
-        for (int y = 0; y < rows; y++){
-            f[y] = *(map_ptr + y*cols + x);
-        }
-
-        int k = 0;
-        vh[0] = 0;
-        zh[0] = -MY_INF;
-        zh[1] = +MY_INF;
-
-        for (int q = 1; q < rows; q++){
-            double s  = ((f[q]+(q*q))-(f[vh[k]]+(vh[k]*vh[k])))/(2*q-2*vh[k]);
-
-            while(s <= zh[k]){
-                k--;
-                s  = ((f[q]+(q*q))-(f[vh[k]]+(vh[k]*vh[k])))/(2*q-2*vh[k]);
-            }
-
-            k++;
-            vh[k] = q;
-            zh[k] = s;
-            zh[k+1] = +MY_INF;
-        }
-
-        k = 0;
-        for (int y = 0; y < rows; y++){
-            while (zh[k+1] < y){
-                k++;
-            }
-            *(map_ptr + y*cols + x) = ((y-vh[k])*(y-vh[k])) + f[vh[k]];
-        }
-
-    }
-    delete [] dh;
-    delete [] vh;
-    delete [] zh;
-
-    double *dw = new double[cols];
-    int *vw = new int[cols];
-    double *zw = new double[cols+1];
-
-    // transform along rows
-    for (int y = 0; y < rows; y++){
-        for (int x = 0; x < cols; x++){
-            f[x] = *(map_ptr + y*cols + x);
-        }
-        int k = 0;
-        vw[0] = 0;
-        zw[0] = -MY_INF;
-        zw[1] = +MY_INF;
-
-        for (int q = 1; q < cols; q++){
-            double s  = ((f[q]+(q*q))-(f[vw[k]]+(vw[k]*vw[k])))/(2*q-2*vw[k]);
-            while (s <= zw[k]){
-                k--;
-                s  = ((f[q]+(q*q))-(f[vw[k]]+(vw[k]*vw[k])))/(2*q-2*vw[k]);
-            }
-            k++;
-            vw[k] = q;
-            zw[k] = s;
-            zw[k+1] = +MY_INF;
-        }
-
-        k = 0;
-        for( int x = 0; x < cols; x++){
-            while (zw[k+1] < x){
-                k++;
-            }
-            map_ptr[y*cols + x] = sqrt( ((x-vw[k])*(x-vw[k])) + f[vw[k]] );
-
-            if( ((int)*(map_ptr + y*cols + x) + 1) > max_dist){
-                max_dist = (int)*(map_ptr + y*cols + x) + 1;
-            }
-        }
-    }
-
-    DEB_MSG("Max dist: " << max_dist);
+	switch (img_idx) {
+	case BASE:
+		img_tmp = my_base;
+		break;
+	case GROUNDTRUTH:
+		img_tmp = my_groundtruth;
+		break;
+	case MASK:
+		img_tmp = my_mask;
+		break;
+	case SKELETON:
+		img_tmp = my_skeleton;
+		break;
+	case SEGMENT:
+		img_tmp = my_response;
+		break;
+	case THRESHOLD:
+		img_tmp = my_segmented;
+		break;
+	}
 
 
-    delete [] dw;
-    delete [] vw;
-    delete [] zw;
-    delete [] f;
+	if (!my_distmap) {
+		my_distmap = new IMGCONT(img_tmp->my_height, img_tmp->my_width);
+	}
+
+	for (int xy = 0; xy < (my_distmap->my_height * my_distmap->my_width); xy++) {
+		*(my_distmap->my_img_data + xy) = (*(img_tmp->my_img_data + xy) < 1.0) ? 0.0 : MY_INF;
+	}
+
+	double *f = new double[my_distmap->my_height > my_distmap->my_width ?
+		my_distmap->my_height :
+		my_distmap->my_width];
+
+	double *dh = new double[my_distmap->my_height];
+	int *vh = new int[my_distmap->my_height];
+	double *zh = new double[my_distmap->my_height + 1];
+
+	// transform along columns
+	for (int x = 0; x < cols; x++) {
+		for (int y = 0; y < my_distmap->my_height; y++) {
+			f[y] = *(my_distmap->my_img_data + y*my_distmap->my_width + x);
+		}
+
+		int k = 0;
+		vh[0] = 0;
+		zh[0] = -MY_INF;
+		zh[1] = MY_INF;
+
+		for (int q = 1; q < my_distmap->my_height; q++) {
+			double s = ((f[q] + (q*q)) - (f[vh[k]] + (vh[k] * vh[k]))) / (2 * q - 2 * vh[k]);
+
+			while (s <= zh[k]) {
+				k--;
+				s = ((f[q] + (q*q)) - (f[vh[k]] + (vh[k] * vh[k]))) / (2 * q - 2 * vh[k]);
+			}
+
+			k++;
+			vh[k] = q;
+			zh[k] = s;
+			zh[k + 1] = MY_INF;
+		}
+
+		k = 0;
+		for (int y = 0; y < my_distmap->my_height; y++) {
+			while (zh[k + 1] < y) {
+				k++;
+			}
+			*(my_distmap->my_img_data + y*my_distmap->my_width + x) = ((y - vh[k])*(y - vh[k])) + f[vh[k]];
+		}
+
+	}
+	delete[] dh;
+	delete[] vh;
+	delete[] zh;
+
+	double *dw = new double[my_distmap->my_width];
+	int *vw = new int[my_distmap->my_width];
+	double *zw = new double[my_distmap->my_width + 1];
+
+	// transform along rows
+	for (int y = 0; y < rows; y++) {
+		for (int x = 0; x < my_distmap->my_width; x++) {
+			f[x] = *(my_distmap->my_img_data + y*my_distmap->my_width + x);
+		}
+		int k = 0;
+		vw[0] = 0;
+		zw[0] = -MY_INF;
+		zw[1] = +MY_INF;
+
+		for (int q = 1; q < my_distmap->my_width; q++) {
+			double s = ((f[q] + (q*q)) - (f[vw[k]] + (vw[k] * vw[k]))) / (2 * q - 2 * vw[k]);
+			while (s <= zw[k]) {
+				k--;
+				s = ((f[q] + (q*q)) - (f[vw[k]] + (vw[k] * vw[k]))) / (2 * q - 2 * vw[k]);
+			}
+			k++;
+			vw[k] = q;
+			zw[k] = s;
+			zw[k + 1] = +MY_INF;
+		}
+
+		k = 0;
+		for (int x = 0; x < my_distmap->my_width; x++) {
+			while (zw[k + 1] < x) {
+				k++;
+			}
+			*(my_distmap->my_img_data + y*my_distmap->my_width + x) = sqrt(((x - vw[k])*(x - vw[k])) + f[vw[k]]);
+
+			if (((int)*(my_distmap->my_img_data + y*my_distmap->my_width + x) + 1) > max_dist) {
+				max_dist = (int)*(my_distmap->my_img_data + y*my_distmap->my_width + x) + 1;
+			}
+		}
+	}
+
+	delete[] dw;
+	delete[] vw;
+	delete[] zw;
+	delete[] f;
 }
 
 
@@ -159,57 +159,45 @@ void IMGVTK::mapaDistancias( IMG_IDX img_idx ){
 /*  Metodo: detectarBorde
 	Funcion: Detecta los bordes de la imagen en base a la transformada de la distancia.
 */
-void IMGVTK::detectarBorde( IMG_IDX img_idx ){
+void IMGVTK::detectarBorde(IMG_IDX img_idx)
+{
 
-    if (!map_ptr) {
-        mapaDistancias( img_idx );
-    }
+	if (!my_distmap) {
+		mapaDistancias(img_idx);
+	}
 
-    double *img_ptr = NULL;
+	IMGCONT *img_tmp = NULL;
 
-    switch( img_idx ){
-    case BASE:
-        img_ptr = base_ptr;
-        break;
-    case GROUNDTRUTH:
-        img_ptr = gt_ptr;
-        break;
-    case MASK:
-        img_ptr = mask_ptr;
-        break;
-    case SKELETON:
-        img_ptr = skl_ptr;
-        break;
-    case SEGMENT:
-        img_ptr = segment_ptr;
-        break;
-    case THRESHOLD:
-        img_ptr = threshold_ptr;
-        break;
-    }
+	switch (img_idx) {
+	case BASE:
+		img_tmp = my_base;
+		break;
+	case GROUNDTRUTH:
+		img_tmp = my_groundtruth;
+		break;
+	case MASK:
+		img_tmp = my_mask;
+		break;
+	case SKELETON:
+		img_tmp = my_skeleton;
+		break;
+	case SEGMENT:
+		img_tmp = my_response;
+		break;
+	case THRESHOLD:
+		img_tmp = my_segmented;
+		break;
+	}
 
-    if( !borders_ptr ){
-#ifdef BUILD_VTK_VERSION
-        borders = vtkSmartPointer<vtkImageData>::New();
+	if (!my_boundaries) {
+		my_boundaries = new IMGCONT(img_tmp->my_height, img_tmp->my_width);
+	}
 
-        borders->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-        borders->AllocateScalars(VTK_DOUBLE, 1);
-        borders->SetOrigin(0.0, 0.0, 0.0);
-        borders->SetSpacing(1.0, 1.0, 1.0);
-
-        borders_ptr = static_cast<double*>(borders->GetScalarPointer(0, 0, 0));
-#else
-        borders_ptr = new double [rows_cols];
-#endif
-    }
-    memset(borders_ptr, 0, rows_cols*sizeof(double));
-
-
-    for (int xy = 0; xy < rows_cols; xy++) {
-    if ( (*(img_ptr + xy) > 0.5) && (*(map_ptr + xy) < 2.0) ) {
-            *(borders_ptr + xy) = 1.0;
-        }
-    }
+	for (int xy = 0; xy < (img_tmp->my_height * img_tmp->my_width); xy++) {
+		if ((*(img_tmp->my_img_data + xy) > 0.5) && (*(my_distmap->my_img_data + xy) < 2.0)) {
+			*(my_boundaries->my_img_data + xy) = 1.0;
+		}
+	}
 }
 
 
@@ -217,55 +205,64 @@ void IMGVTK::detectarBorde( IMG_IDX img_idx ){
 /*  Metodo: regionFilling9
     Funcion: Rellena espacios vacios dentro del conjunto de pixeles resaltado.
 */
-bool IMGVTK::regionFilling9( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rows){
-    int n_hits = 0;
+bool IMGVTK::regionFilling9(IMGCONT *img_src, const int x, const int y)
+{
+	int n_hits = 0;
 
-    for( int m = 0; m < 9; m++){
-        // Arriba:
-        if( (y-4) > 0 ){
-            if( ((x-4+m) > 0) && ((x-4+m) < mis_cols) ){
-                n_hits += (ptr[(x-4+m) + (y-4)*mis_cols] > 0);
-            }else{
-                n_hits++;
-            }
-        }else{
-            n_hits++;
-        }
+	for (int m = 0; m < 9; m++) {
+		// Arriba:
+		if ((y - 4) > 0) {
+			if (((x - 4 + m) > 0) && ((x - 4 + m) < img_src->my_width)) {
+				n_hits += (*(img_src->my_img_data + (x - 4 + m) + (y - 4)*img_src->my_width) > 0);
+			}
+			else {
+				n_hits++;
+			}
+		}
+		else {
+			n_hits++;
+		}
 
-        // Abajo:
-        if( (y+4) < mis_rows ){
-            if( ((x-4+m) > 0) && ((x-4+m) < mis_cols) ){
-                n_hits += (ptr[(x-4+m) + (y+4)*mis_cols] > 0);
-            }else{
-                n_hits++;
-            }
-        }else{
-            n_hits++;
-        }
+		// Abajo:
+		if ((y + 4) < img_src->my_height) {
+			if (((x - 4 + m) > 0) && ((x - 4 + m) < img_src->my_width)) {
+				n_hits += (*(img_src->my_img_data + (x - 4 + m) + (y + 4)*img_src->my_width) > 0);
+			}
+			else {
+				n_hits++;
+			}
+		}
+		else {
+			n_hits++;
+		}
 
-        // Izquierda:
-        if( (x-4) > 0 ){
-            if( ((y-4+m) > 0) && ((y-4+m) < mis_rows) ){
-                n_hits += (ptr[(x-4) + (y-4+m)*mis_cols] > 0);
-            }else{
-                n_hits++;
-            }
-        }else{
-            n_hits++;
-        }
+		// Izquierda:
+		if ((x - 4) > 0) {
+			if (((y - 4 + m) > 0) && ((y - 4 + m) < img_src->my_height)) {
+				n_hits += (*(img_src->my_img_data + (x - 4) + (y - 4 + m)*img_src->my_width) > 0);
+			}
+			else {
+				n_hits++;
+			}
+		}
+		else {
+			n_hits++;
+		}
 
-        // Derecha:
-        if( (x+4) < mis_cols ){
-            if( ((y-4+m) > 0) && ((y-4+m) < mis_rows) ){
-                n_hits += (ptr[(x+4) + (y-4+m)*mis_cols] > 0);
-            }else{
-                n_hits++;
-            }
-        }else{
-            n_hits++;
-        }
-    }
-    return (n_hits == 36);
+		// Derecha:
+		if ((x + 4) < img_src->my_width) {
+			if (((y - 4 + m) > 0) && ((y - 4 + m) < img_src->my_height)) {
+				n_hits += (*(img_src->my_img_data + (x + 4) + (y - 4 + m)*img_src->my_width) > 0);
+			}
+			else {
+				n_hits++;
+			}
+		}
+		else {
+			n_hits++;
+		}
+	}
+	return (n_hits == 36);
 }
 
 
@@ -273,57 +270,66 @@ bool IMGVTK::regionFilling9( const double *ptr, const int x, const int y, const 
 /*  Metodo: regionFilling7
     Funcion: Rellena espacios vacios dentro del conjunto de pixeles resaltado.
 */
-bool IMGVTK::regionFilling7( const double*ptr, const int x, const int y, const int mis_cols, const int mis_rows){
+bool IMGVTK::regionFilling7(IMGCONT *img_src, const int x, const int y) 
+{
 
-    int n_hits = 0;
+	int n_hits = 0;
 
-    for( int m = 0; m < 7; m++){
-        // Arriba:
-        if( (y-3) > 0 ){
-            if( ((x-3+m) > 0) && ((x-3+m) < mis_cols) ){
-                n_hits += (ptr[(x-3+m) + (y-3)*mis_cols] > 0);
-            }else{
-                n_hits++;
-            }
-        }else{
-            n_hits++;
-        }
+	for (int m = 0; m < 7; m++) {
+		// Arriba:
+		if ((y - 3) > 0) {
+			if (((x - 3 + m) > 0) && ((x - 3 + m) < img_src->my_width)) {
+				n_hits += (*(img_src->my_img_data + (x - 3 + m) + (y - 3)*img_src->my_width) > 0);
+			}
+			else {
+				n_hits++;
+			}
+		}
+		else {
+			n_hits++;
+		}
 
-        // Abajo:
-        if( (y+3) < mis_rows ){
-            if( ((x-3+m) > 0) && ((x-3+m) < mis_cols) ){
-                n_hits += (ptr[(x-3+m) + (y+3)*mis_cols] > 0);
-            }else{
-                n_hits++;
-            }
-        }else{
-            n_hits++;
-        }
+		// Abajo:
+		if ((y + 3) < img_src->my_height) {
+			if (((x - 3 + m) > 0) && ((x - 3 + m) < img_src->my_width)) {
+				n_hits += (*(img_src->my_img_data + (x - 3 + m) + (y + 3)*img_src->my_width) > 0);
+			}
+			else {
+				n_hits++;
+			}
+		}
+		else {
+			n_hits++;
+		}
 
-        // Izquierda:
-        if( (x-3) > 0 ){
-            if( ((y-3+m) > 0) && ((y-3+m) < mis_rows) ){
-                n_hits += (ptr[(x-3) + (y-3+m)*mis_cols] > 0);
-            }else{
-                n_hits++;
-            }
-        }else{
-            n_hits++;
-        }
+		// Izquierda:
+		if ((x - 3) > 0) {
+			if (((y - 3 + m) > 0) && ((y - 3 + m) < img_src->my_height)) {
+				n_hits += (*(img_src->my_img_data + (x - 3) + (y - 3 + m)*img_src->my_width) > 0);
+			}
+			else {
+				n_hits++;
+			}
+		}
+		else {
+			n_hits++;
+		}
 
-        // Derecha:
-        if( (x+3) < mis_cols ){
-            if( ((y-3+m) > 0) && ((y-3+m) < mis_rows) ){
-                n_hits += (ptr[(x+3) + (y-3+m)*mis_cols] > 0);
-            }else{
-                n_hits++;
-            }
-        }else{
-            n_hits++;
-        }
-    }
+		// Derecha:
+		if ((x + 3) < img_src->my_width) {
+			if (((y - 3 + m) > 0) && ((y - 3 + m) < img_src->my_height)) {
+				n_hits += (*(img_src->my_img_data + (x + 3) + (y - 3 + m)*img_src->my_width) > 0);
+			}
+			else {
+				n_hits++;
+			}
+		}
+		else {
+			n_hits++;
+		}
+	}
 
-    return (n_hits == 28);
+	return (n_hits == 28);
 }
 
 
@@ -331,56 +337,65 @@ bool IMGVTK::regionFilling7( const double*ptr, const int x, const int y, const i
 /*  Metodo: regionFilling5
     Funcion: Rellena espacios vacios dentro del conjunto de pixeles resaltado.
 */
-bool IMGVTK::regionFilling5( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rows){
-    int n_hits = 0;
+bool IMGVTK::regionFilling5(IMGCONT *img_src, const int x, const int y)
+{
+	int n_hits = 0;
 
-    for( int m = 0; m < 5; m++){
-        // Arriba:
-        if( (y-2) > 0 ){
-            if( ((x-2+m) > 0) && ((x-2+m) < mis_cols) ){
-                n_hits += (ptr[(x-2+m) + (y-2)*mis_cols] > 0);
-            }else{
-                n_hits++;
-            }
-        }else{
-            n_hits++;
-        }
+	for (int m = 0; m < 5; m++) {
+		// Arriba:
+		if ((y - 2) > 0) {
+			if (((x - 2 + m) > 0) && ((x - 2 + m) < img_src->my_width)) {
+				n_hits += (*(img_src->my_img_data + (x - 2 + m) + (y - 2)*img_src->my_width) > 0);
+			}
+			else {
+				n_hits++;
+			}
+		}
+		else {
+			n_hits++;
+		}
 
-        // Abajo:
-        if( (y+2) < mis_rows ){
-            if( ((x-2+m) > 0) && ((x-2+m) < mis_cols) ){
-                n_hits += (ptr[(x-2+m) + (y+2)*mis_cols] > 0);
-            }else{
-                n_hits++;
-            }
-        }else{
-            n_hits++;
-        }
+		// Abajo:
+		if ((y + 2) < img_src->my_height) {
+			if (((x - 2 + m) > 0) && ((x - 2 + m) < img_src->my_width)) {
+				n_hits += (*(img_src->my_img_data + (x - 2 + m) + (y + 2)*img_src->my_width) > 0);
+			}
+			else {
+				n_hits++;
+			}
+		}
+		else {
+			n_hits++;
+		}
 
-        // Izquierda:
-        if( (x-2) > 0 ){
-            if( ((y-2+m) > 0) && ((y-2+m) < mis_rows) ){
-                n_hits += (ptr[(x-2) + (y-2+m)*mis_cols] > 0);
-            }else{
-                n_hits++;
-            }
-        }else{
-            n_hits++;
-        }
+		// Izquierda:
+		if ((x - 2) > 0) {
+			if (((y - 2 + m) > 0) && ((y - 2 + m) < img_src->my_height)) {
+				n_hits += (*(img_src->my_img_data + (x - 2) + (y - 2 + m)*img_src->my_width) > 0);
+			}
+			else {
+				n_hits++;
+			}
+		}
+		else {
+			n_hits++;
+		}
 
-        // Derecha:
-        if( (x+2) < mis_cols ){
-            if( ((y-2+m) > 0) && ((y-2+m) < mis_rows) ){
-                n_hits += (ptr[(x+2) + (y-2+m)*mis_cols] > 0);
-            }else{
-                n_hits++;
-            }
-        }else{
-            n_hits++;
-        }
-    }
+		// Derecha:
+		if ((x + 2) < img_src->my_width) {
+			if (((y - 2 + m) > 0) && ((y - 2 + m) < img_src->my_height)) {
+				n_hits += (*(img_src->my_img_data + (x + 2) + (y - 2 + m)*img_src->my_width) > 0);
+			}
+			else {
+				n_hits++;
+			}
+		}
+		else {
+			n_hits++;
+		}
+	}
 
-    return (n_hits == 20);
+	return (n_hits == 20);
 }
 
 
@@ -388,56 +403,65 @@ bool IMGVTK::regionFilling5( const double *ptr, const int x, const int y, const 
 /*  Metodo: regionFilling3
     Funcion: Rellena espacios vacios dentro del conjunto de pixeles resaltado.
 */
-bool IMGVTK::regionFilling3( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rows ){
-    int n_hits = 0;
+bool IMGVTK::regionFilling3(IMGCONT *img_src, const int x, const int y)
+{
+	int n_hits = 0;
 
-    for( int m = 0; m < 3; m++){
-        // Arriba:
-        if( (y-1) > 0 ){
-            if( ((x-1+m) > 0) && ((x-1+m) < mis_cols) ){
-                n_hits += (ptr[(x-1+m) + (y-1)*mis_cols] > 0);
-            }else{
-                n_hits++;
-            }
-        }else{
-            n_hits++;
-        }
+	for (int m = 0; m < 3; m++) {
+		// Arriba:
+		if ((y - 1) > 0) {
+			if (((x - 1 + m) > 0) && ((x - 1 + m) < img_src->my_width)) {
+				n_hits += (*(img_src->my_img_data + (x - 1 + m) + (y - 1)*img_src->my_width) > 0);
+			}
+			else {
+				n_hits++;
+			}
+		}
+		else {
+			n_hits++;
+		}
 
-        // Abajo:
-        if( (y+1) < mis_rows ){
-            if( ((x-1+m) > 0) && ((x-1+m) < mis_cols) ){
-                n_hits += (ptr[(x-1+m) + (y+1)*mis_cols] > 0);
-            }else{
-                n_hits++;
-            }
-        }else{
-            n_hits++;
-        }
+		// Abajo:
+		if ((y + 1) < img_src->my_height) {
+			if (((x - 1 + m) > 0) && ((x - 1 + m) < img_src->my_width)) {
+				n_hits += (*(img_src->my_img_data + (x - 1 + m) + (y + 1)*img_src->my_width) > 0);
+			}
+			else {
+				n_hits++;
+			}
+		}
+		else {
+			n_hits++;
+		}
 
-        // Izquierda:
-        if( (x-1) > 0 ){
-            if( ((y-1+m) > 0) && ((y-1+m) < mis_rows) ){
-                n_hits += (ptr[(x-1) + (y-1+m)*mis_cols] > 0);
-            }else{
-                n_hits++;
-            }
-        }else{
-            n_hits++;
-        }
+		// Izquierda:
+		if ((x - 1) > 0) {
+			if (((y - 1 + m) > 0) && ((y - 1 + m) < img_src->my_height)) {
+				n_hits += (*(img_src->my_img_data + (x - 1) + (y - 1 + m)*img_src->my_width) > 0);
+			}
+			else {
+				n_hits++;
+			}
+		}
+		else {
+			n_hits++;
+		}
 
-        // Derecha:
-        if( (x+1) < mis_cols ){
-            if( ((y-1+m) > 0) && ((y-1+m) < mis_rows) ){
-                n_hits += (ptr[(x+1) + (y-1+m)*mis_cols] > 0);
-            }else{
-                n_hits++;
-            }
-        }else{
-            n_hits++;
-        }
-    }
+		// Derecha:
+		if ((x + 1) < img_src->my_width) {
+			if (((y - 1 + m) > 0) && ((y - 1 + m) < img_src->my_height)) {
+				n_hits += (*(img_src->my_img_data + (x + 1) + (y - 1 + m)*img_src->my_width) > 0);
+			}
+			else {
+				n_hits++;
+			}
+		}
+		else {
+			n_hits++;
+		}
+	}
 
-    return (n_hits == 12);
+	return (n_hits == 12);
 }
 
 
@@ -445,76 +469,78 @@ bool IMGVTK::regionFilling3( const double *ptr, const int x, const int y, const 
 /*  Metodo: conexo
     Funcion: Metodo recursivo (dinamico) para encontrar los conjuntos conexos utilizando la conectividad 8.
 */
-void IMGVTK::conexo(const double *ptr, const int x, const int y, int *conjuntos, unsigned int* n_etiquetados, bool* visitados, const int num_etiquetas, const int mis_cols, const int mis_rows){
-    visitados[x + y*mis_cols] = true;
+void IMGVTK::conexo(IMGCONT *img_src, const int x, const int y, int *conjuntos, unsigned int* n_etiquetados, bool* visitados, const int num_etiquetas)
+{
+	*(visitados + x + y*img_src->my_width) = true;
 
-    // Si el pixel es parte del fondo, no se hace nada:
-    if( ptr[x + y*mis_cols] < 1.0){
-        return;
-    }else{
-        conjuntos[x + y*mis_cols] = num_etiquetas;
-        n_etiquetados[ num_etiquetas ] ++;
-    }
+	// Si el pixel es parte del fondo, no se hace nada:
+	if (*(img_src->my_img_data + x + y*img_src->my_width) < 1.0) {
+		return;
+	}
+	else {
+		*(conjuntos + x + y*img_src->my_width) = num_etiquetas;
+		*(n_etiquetados + num_etiquetas) = *(n_etiquetados + num_etiquetas) + 1;
+	}
 
-    // De lo contrario, se revisan los pixeles vecinos:
-    /// Superiores:
-    if( y > 0 ){
-        if( x > 0 ){
-            /// Ariba - Izquierda
-            if( ! visitados[x-1 + (y-1)*mis_cols] ){ // Si el pixel arriba-izquierda no ha sido visitado:
-                conexo( ptr, x-1, y-1, conjuntos, n_etiquetados, visitados, num_etiquetas, mis_cols, mis_rows );
-            }
-        }
+	// De lo contrario, se revisan los pixeles vecinos:
+	/// Superiores:
+	if (y > 0) {
+		if (x > 0) {
+			/// Ariba - Izquierda
+			if (!*(visitados + x - 1 + (y - 1)*img_src->my_width)) { // Si el pixel arriba-izquierda no ha sido visitado:
+				conexo(img_src, x - 1, y - 1, conjuntos, n_etiquetados, visitados, num_etiquetas);
+			}
+		}
 
-        /// Arriba
-        if( ! visitados[x + (y-1)*mis_cols] ){ // Si el pixel arriba no ha sido visitado:
-            conexo( ptr, x, y-1, conjuntos, n_etiquetados, visitados, num_etiquetas, mis_cols, mis_rows );
-        }
+		/// Arriba
+		if (!*(visitados + x + (y - 1)*img_src->my_width)) { // Si el pixel arriba no ha sido visitado:
+			conexo(img_src, x, y - 1, conjuntos, n_etiquetados, visitados, num_etiquetas);
+		}
 
-        /// Ariba - Derecha
-        if( x < (mis_cols-1) ){
-            if( ! visitados[x+1 + (y-1)*mis_cols] ){ // Si el pixel arriba-derecha no ha sido visitado:
-                conexo( ptr, x+1, y-1, conjuntos, n_etiquetados, visitados, num_etiquetas, mis_cols, mis_rows );
-            }
-        }
-    }
+		/// Ariba - Derecha
+		if (x < (img_src->my_width - 1)) {
+			if (!*(visitados + x + 1 + (y - 1)*img_src->my_width)) { // Si el pixel arriba-derecha no ha sido visitado:
+				conexo(img_src, x + 1, y - 1, conjuntos, n_etiquetados, visitados, num_etiquetas);
+			}
+		}
+	}
 
-    /// Centrales:
-    if( x > 0 ){
-        /// Centro - Izquierda
-        if( ! visitados[x-1 + y*mis_cols] ){ // Si el pixel centro-izquierda no ha sido visitado:
-            conexo( ptr, x-1, y, conjuntos, n_etiquetados, visitados, num_etiquetas, mis_cols, mis_rows );
-        }
-    }
+	/// Centrales:
+	if (x > 0) {
+		/// Centro - Izquierda
+		if (!*(visitados + x - 1 + y*img_src->my_width)) { // Si el pixel centro-izquierda no ha sido visitado:
+			conexo(img_src, x - 1, y, conjuntos, n_etiquetados, visitados, num_etiquetas);
+		}
+	}
 
-    /// Centro - Derecha
-    if( x < (mis_cols-1) ){
-        if( ! visitados[x+1 + y*mis_cols] ){ // Si el pixel arriba-izquierda no ha sido visitado:
-            conexo( ptr, x+1, y, conjuntos, n_etiquetados, visitados, num_etiquetas, mis_cols, mis_rows );
-        }
-    }
+	/// Centro - Derecha
+	if (x < (img_src->my_width - 1)) {
+		if (!*(visitados + x + 1 + y*img_src->my_width)) { // Si el pixel arriba-izquierda no ha sido visitado:
+			conexo(img_src, x + 1, y, conjuntos, n_etiquetados, visitados, num_etiquetas);
+		}
+	}
 
-    /// Inferiores:
-    if( y < (mis_rows-1) ){
-        if( x > 0 ){
-            /// Abajo - Izquierda
-            if( ! visitados[x-1 + (y+1)*mis_cols] ){ // Si el pixel arriba-izquierda no ha sido visitado:
-                conexo( ptr, x-1, y+1, conjuntos, n_etiquetados, visitados, num_etiquetas, mis_cols, mis_rows );
-            }
-        }
+	/// Inferiores:
+	if (y < (img_src->my_width - 1)) {
+		if (x > 0) {
+			/// Abajo - Izquierda
+			if (!*(visitados + x - 1 + (y + 1)*img_src->my_width)) { // Si el pixel arriba-izquierda no ha sido visitado:
+				conexo(img_src, x - 1, y + 1, conjuntos, n_etiquetados, visitados, num_etiquetas);
+			}
+		}
 
-        /// Abajo
-        if( ! visitados[x + (y+1)*mis_cols] ){ // Si el pixel arriba no ha sido visitado:
-            conexo( ptr, x, y+1, conjuntos, n_etiquetados, visitados, num_etiquetas, mis_cols, mis_rows );
-        }
+		/// Abajo
+		if (!*(visitados + x + (y + 1)*img_src->my_width)) { // Si el pixel arriba no ha sido visitado:
+			conexo(img_src, x, y + 1, conjuntos, n_etiquetados, visitados, num_etiquetas);
+		}
 
-        /// Abajo - Derecha
-        if( (x < (mis_cols-1)) ){
-            if( ! visitados[x+1 + (y+1)*mis_cols] ){ // Si el pixel arriba-derecha no ha sido visitado:
-                conexo( ptr, x+1, y+1, conjuntos, n_etiquetados, visitados, num_etiquetas, mis_cols, mis_rows );
-            }
-        }
-    }
+		/// Abajo - Derecha
+		if ((x < (img_src->my_width - 1))) {
+			if (!*(visitados + x + 1 + (y + 1)*img_src->my_width)) { // Si el pixel arriba-derecha no ha sido visitado:
+				conexo(img_src, x + 1, y + 1, conjuntos, n_etiquetados, visitados, num_etiquetas);
+			}
+		}
+	}
 }
 
 
@@ -522,10 +548,10 @@ void IMGVTK::conexo(const double *ptr, const int x, const int y, int *conjuntos,
 /*  Metodo: conjuntosConexos
     Funcion: Obtiene los conjuntos conexos de la imagen usando programacion dinamica (Llega a generar stackoverflow ... ).
 */
-unsigned int* IMGVTK::conjuntosConexosDinamico(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rows){
+unsigned int* IMGVTK::conjuntosConexosDinamico(IMGCONT *img_src, int *conjuntos){
     int num_etiquetas = 0;
 
-    const int mis_rows_cols = mis_cols*mis_rows;
+	const int mis_rows_cols = img_src->my_height * img_src->my_width;
 
     bool *visitados = new bool [mis_rows_cols];
     memset(visitados, 0, mis_rows_cols*sizeof(bool));
@@ -535,12 +561,12 @@ unsigned int* IMGVTK::conjuntosConexosDinamico(const double *ptr, int *conjuntos
 
     memset(conjuntos, -1, sizeof(int) * mis_rows_cols);
 
-    for( int y = 0; y< mis_rows; y++){
-        for( int x = 0; x < mis_cols; x++){
+    for( int y = 0; y< img_src->my_height; y++){
+        for( int x = 0; x < img_src->my_width; x++){
             /// Se mueve la etiqueta si el pixel es de un nuevo conjunto:
-            if( !visitados[x + y*mis_cols]) {
-                conexo( ptr, x, y, conjuntos, tmp, visitados, num_etiquetas, mis_cols, mis_rows );
-                if( ptr[x + y*mis_cols] > 0 ){
+            if( !visitados[x + y*img_src->my_width]) {
+                conexo( img_src, x, y, conjuntos, tmp, visitados, num_etiquetas);
+                if( *(img_src->my_img_data + x + y*img_src->my_width) > 0 ){
                     num_etiquetas++;
                 }
             }
@@ -591,33 +617,33 @@ inline void IMGVTK::ampliarConjunto( int *etiquetas, const int equiv_A, const in
 /*  Metodo: conjuntosConexos
     Funcion: Obtiene los conjuntos conexos de la imagen.
 */
-unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rows){
+unsigned int* IMGVTK::conjuntosConexos(IMGCONT *img_src, int *conjuntos){
 
     static int veces = 0;
 
-    const int mis_rows_cols = mis_cols*mis_rows;
+    const int mis_rows_cols = img_src->my_height*img_src->my_width;
 
     int max_etiquetas = mis_rows_cols;
     int *val_etiquetas = new int [max_etiquetas];
     memset( val_etiquetas, -1, max_etiquetas * sizeof(int));
 
-    int *pix_etq = new int [(mis_rows+2)*(mis_cols+2)];
-    memset( pix_etq, -1, (mis_rows+2)*(mis_cols+2) * sizeof(int));
+    int *pix_etq = new int [(img_src->my_height +2)*(img_src->my_width +2)];
+    memset( pix_etq, -1, (img_src->my_height +2)*(img_src->my_width +2) * sizeof(int));
 
     int n_conjunto = -1;
 
-    for( int y = 1; y <= mis_rows; y++){
-        for( int x = 1; x <= mis_cols; x++){
-            if( *(ptr + (y-1)*mis_cols + (x-1)) > 0.0 ){
+    for( int y = 1; y <= img_src->my_height; y++){
+        for( int x = 1; x <= img_src->my_width; x++){
+            if( *(img_src->my_img_data + (y-1)*img_src->my_width + (x-1)) > 0.0 ){
 
-                const int NO = *(pix_etq + (y-1)*(mis_cols+2) + (x-1));
-                const int N  = *(pix_etq + (y-1)*(mis_cols+2) +   x  );
-                const int NE = *(pix_etq + (y-1)*(mis_cols+2) + (x+1));
-                const int E  = *(pix_etq +   y  *(mis_cols+2) + (x+1));
-                const int SE = *(pix_etq + (y+1)*(mis_cols+2) + (x+1));
-                const int S  = *(pix_etq + (y+1)*(mis_cols+2) +   x  );
-                const int SO = *(pix_etq + (y+1)*(mis_cols+2) + (x-1));
-                const int O  = *(pix_etq +   y  *(mis_cols+2) + (x-1));
+                const int NO = *(pix_etq + (y-1)*(img_src->my_width +2) + (x-1));
+                const int N  = *(pix_etq + (y-1)*(img_src->my_width +2) +   x  );
+                const int NE = *(pix_etq + (y-1)*(img_src->my_width +2) + (x+1));
+                const int E  = *(pix_etq +   y  *(img_src->my_width +2) + (x+1));
+                const int SE = *(pix_etq + (y+1)*(img_src->my_width +2) + (x+1));
+                const int S  = *(pix_etq + (y+1)*(img_src->my_width +2) +   x  );
+                const int SO = *(pix_etq + (y+1)*(img_src->my_width +2) + (x-1));
+                const int O  = *(pix_etq +   y  *(img_src->my_width +2) + (x-1));
 
                 int base = -1;
 
@@ -690,11 +716,11 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
                 }
 
                 if( base >= 0 ){
-                    *(pix_etq + y*(mis_cols+2) + x) = base;
+                    *(pix_etq + y*(img_src->my_width +2) + x) = base;
                 }else{
                     n_conjunto++;
                     *(val_etiquetas + n_conjunto) = n_conjunto;
-                    *(pix_etq + y*(mis_cols+2) + x) = n_conjunto;
+                    *(pix_etq + y*(img_src->my_width +2) + x) = n_conjunto;
                 }
             }
         }
@@ -705,11 +731,11 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
 
     // Indicar a que conjunto pertenece cada pixel:
     memset( conjuntos, -1, mis_rows_cols*sizeof(int));
-    for( int y = 0; y < mis_rows; y++){
-        for( int x = 0; x < mis_cols; x++){
-            const int etiqueta = *(pix_etq + (y+1)*(mis_cols+2) + (x+1));
+    for( int y = 0; y < img_src->my_height; y++){
+        for( int x = 0; x < img_src->my_width; x++){
+            const int etiqueta = *(pix_etq + (y+1)*(img_src->my_width +2) + (x+1));
             if( etiqueta >= 0 ){
-                *(conjuntos + x + y*mis_cols) = *(val_etiquetas + etiqueta);
+                *(conjuntos + x + y*img_src->my_width) = *(val_etiquetas + etiqueta);
             }
         }
     }
@@ -728,9 +754,7 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
         }
     }
 
-
     return n_etiquetados;
-
 }
 
 
@@ -739,15 +763,15 @@ unsigned int* IMGVTK::conjuntosConexos(const double *ptr, int *conjuntos, const 
 /*  Metodo:  sklMask
     Funcion: Mascara usada para la extraccion del esqueleto.
 */
-inline unsigned char IMGVTK::sklMask( const double *skl_ptr, const int x, const int y, const int mis_cols, const int mis_rows ){
-    return   1*(skl_ptr[(x-1) + (y-1)*mis_cols] > 0) + /* P2 */
-             2*(skl_ptr[  x   + (y-1)*mis_cols] > 0) + /* P3 */
-             4*(skl_ptr[(x+1) + (y-1)*mis_cols] > 0) + /* P4 */
-             8*(skl_ptr[(x+1) +   y  *mis_cols] > 0) + /* P5 */
-            16*(skl_ptr[(x+1) + (y+1)*mis_cols] > 0) + /* P6 */
-            32*(skl_ptr[  x   + (y+1)*mis_cols] > 0) + /* P7*/
-            64*(skl_ptr[(x-1) + (y+1)*mis_cols] > 0) + /* P8 */
-           128*(skl_ptr[(x-1) +   y  *mis_cols] > 0);  /* P9 */
+inline unsigned char IMGVTK::sklMask(IMGCONT *img_src, const int x, const int y) {
+	return   1 * (*(img_src->my_img_data + (x - 1) + (y - 1)*img_src->my_width) > 0.0) + /* P2 */
+		2 * (*(img_src->my_img_data + x + (y - 1)*img_src->my_width) > 0.0) + /* P3 */
+		4 * (*(img_src->my_img_data + (x + 1) + (y - 1)*img_src->my_width) > 0.0) + /* P4 */
+		8 * (*(img_src->my_img_data + (x + 1) + y  *img_src->my_width) > 0.0) + /* P5 */
+		16 * (*(img_src->my_img_data + (x + 1) + (y + 1)*img_src->my_width) > 0.0) + /* P6 */
+		32 * (*(img_src->my_img_data + x + (y + 1)*img_src->my_width) > 0.0) + /* P7*/
+		64 * (*(img_src->my_img_data + (x - 1) + (y + 1)*img_src->my_width) > 0.0) + /* P8 */
+		128 * (*(img_src->my_img_data + (x - 1) + y  *img_src->my_width) > 0.0);  /* P9 */
 }
 
 
@@ -756,26 +780,24 @@ inline unsigned char IMGVTK::sklMask( const double *skl_ptr, const int x, const 
 /*  Metodo: lengthFiltering
     Funcion: Filtra los conjuntos con numero de pixeles menor a 'min_length'
 */
-void IMGVTK::lengthFilter(double *ptr, const unsigned int min_length, const int mis_cols, const int mis_rows , ALG_CONJUNTOS mi_alg){
-
-    const int mis_rows_cols = mis_cols*mis_rows;
-
-    int *mis_conjuntos = new int [mis_rows_cols];
+void IMGVTK::lengthFilter(IMGCONT *img_src, const unsigned int min_length, ALG_CONJUNTOS mi_alg)
+{
+    int *mis_conjuntos = new int [img_src->my_height * img_src->my_width];
 
     unsigned int *mis_n_etiquetados = NULL;
 
     switch (mi_alg) {
     case DINAMICO:
-        mis_n_etiquetados = conjuntosConexosDinamico(ptr, mis_conjuntos, mis_cols, mis_rows);
+        mis_n_etiquetados = conjuntosConexosDinamico(img_src, mis_conjuntos);
         break;
     case ITERATIVO:
-        mis_n_etiquetados = conjuntosConexos(ptr, mis_conjuntos, mis_cols, mis_rows);
+        mis_n_etiquetados = conjuntosConexos(img_src, mis_conjuntos);
         break;
     }
 
-    for( int xy = 0; xy < mis_rows_cols; xy++){
-        if( (mis_conjuntos[ xy ] >= 0) && (mis_n_etiquetados[ mis_conjuntos[ xy ]+1 ] < min_length)){
-            ptr[ xy ] = 0.0;
+    for( int xy = 0; xy < (img_src->my_height * img_src->my_width); xy++){
+        if( ( *(mis_conjuntos + xy) >= 0) && ( *(mis_n_etiquetados + *(mis_conjuntos + xy ) + 1 ) < min_length)){
+            *(img_src->my_img_data + xy) = 0.0;
         }
     }
 
@@ -790,60 +812,74 @@ void IMGVTK::lengthFilter(double *ptr, const unsigned int min_length, const int 
 */
 void IMGVTK::lengthFilter(IMG_IDX img_idx, const int min_length, ALG_CONJUNTOS mi_alg){
 
-    double *img_ptr = NULL;
-    switch( img_idx ){
-        case BASE:
-            img_ptr = base_ptr;
-            break;
-        case MASK:
-            img_ptr = mask_ptr;
-            break;
-        case SEGMENT:
-            img_ptr = segment_ptr;
-            break;
-        case THRESHOLD:
-            img_ptr = threshold_ptr;
-            break;
-    }
+    IMGCONT *img_tmp = NULL;
 
-    lengthFilter(img_ptr, min_length, cols, rows, mi_alg);
+	switch (img_idx) {
+	case BASE:
+		img_tmp = my_base;
+		break;
+	case GROUNDTRUTH:
+		img_tmp = my_groundtruth;
+		break;
+	case MASK:
+		img_tmp = my_mask;
+		break;
+	case SKELETON:
+		img_tmp = my_skeleton;
+		break;
+	case SEGMENT:
+		img_tmp = my_response;
+		break;
+	case THRESHOLD:
+		img_tmp = my_segmented;
+		break;
+	case BORDERS:
+		img_tmp = my_boundaries;
+		break;
+	case MAPDIST:
+		img_tmp = my_distmap;
+		break;
+	}
+
+    lengthFilter(img_tmp, min_length, mi_alg);
 }
 
 
 /*  Metodo: regionFill
     Funcion: Rellena vacios dentro del cuerpo de la arteria segmentada.
 */
-void IMGVTK::regionFill( double *ptr, const int mis_cols, const int mis_rows  ){
+void IMGVTK::regionFill( IMGCONT *img_src )
+{
     // -------- Mascara 9x9
-    for( int y = 0; y < mis_rows; y++){
-        for( int x = 0; x < mis_cols; x++){
-            if( ptr[x+y*mis_cols] < 1.0 ){
-                ptr[x+y*mis_cols] = (regionFilling9(ptr, x, y, mis_cols, mis_rows) ? 1.0 : 0.0);
+    for( int y = 0; y < img_src->my_height; y++){
+        for( int x = 0; x < img_src->my_width; x++){
+            if( *(img_src->my_img_data + x + y*img_src->my_width) < 1.0 ){
+				*(img_src->my_img_data + x + y*img_src->my_width) = (regionFilling9(img_src, x, y) ? 1.0 : 0.0);
             }
         }
     }
     // -------- Mascara 7x7
-    for( int y = 0; y < mis_rows; y++){
-        for( int x = 0; x < mis_cols; x++){
-            if( ptr[x+y*mis_cols] < 1.0 ){
-                ptr[x+y*mis_cols] = (regionFilling7(ptr, x, y, mis_cols, mis_rows) ? 1.0 : 0.0);
-            }
+    for( int y = 0; y < img_src->my_height; y++){
+        for( int x = 0; x < img_src->my_width; x++){
+			if (*(img_src->my_img_data + x + y*img_src->my_width) < 1.0) {
+				*(img_src->my_img_data + x + y*img_src->my_width) = (regionFilling7(img_src, x, y) ? 1.0 : 0.0);
+			}
         }
     }
     // -------- Mascara 5x5
-    for( int y = 0; y < mis_rows; y++){
-        for( int x = 0; x < mis_cols; x++){
-            if( ptr[x+y*mis_cols] < 1.0 ){
-                ptr[x+y*mis_cols] = (regionFilling5(ptr, x, y, mis_cols, mis_rows) ? 1.0 : 0.0);
-            }
+    for( int y = 0; y < img_src->my_height; y++){
+        for( int x = 0; x < img_src->my_width; x++){
+			if (*(img_src->my_img_data + x + y*img_src->my_width) < 1.0) {
+				*(img_src->my_img_data + x + y*img_src->my_width) = (regionFilling5(img_src, x, y) ? 1.0 : 0.0);
+			}
         }
     }
     // -------- Mascara 3x3
-    for( int y = 0; y < mis_rows; y++){
-        for( int x = 0; x < mis_cols; x++){
-            if( ptr[x+y*mis_cols] < 1.0 ){
-                ptr[x+y*mis_cols] = (regionFilling3(ptr, x, y, mis_cols, mis_rows) ? 1.0 : 0.0);
-            }
+    for( int y = 0; y < img_src->my_height; y++){
+        for( int x = 0; x < img_src->my_width; x++){
+			if (*(img_src->my_img_data + x + y*img_src->my_width) < 1.0) {
+				*(img_src->my_img_data + x + y*img_src->my_width) = (regionFilling3(img_src, x, y) ? 1.0 : 0.0);
+			}
         }
     }
 }
@@ -854,25 +890,38 @@ void IMGVTK::regionFill( double *ptr, const int mis_cols, const int mis_rows  ){
 /*  Metodo: regionFill (Publica)
     Funcion: Rellena vacios dentro del cuerpo de la arteria segmentada.
 */
-void IMGVTK::regionFill(IMG_IDX img_idx){
+void IMGVTK::regionFill(IMG_IDX img_idx) {
 
-    double *img_ptr = NULL;
-    switch( img_idx ){
-        case BASE:
-            img_ptr = base_ptr;
-            break;
-        case MASK:
-            img_ptr = mask_ptr;
-            break;
-        case SEGMENT:
-            img_ptr = segment_ptr;
-            break;
-        case THRESHOLD:
-            img_ptr = threshold_ptr;
-            break;
-    }
+	IMGCONT *img_tmp = NULL;
 
-    regionFill(img_ptr, cols, rows);
+	switch (img_idx) {
+	case BASE:
+		img_tmp = my_base;
+		break;
+	case GROUNDTRUTH:
+		img_tmp = my_groundtruth;
+		break;
+	case MASK:
+		img_tmp = my_mask;
+		break;
+	case SKELETON:
+		img_tmp = my_skeleton;
+		break;
+	case SEGMENT:
+		img_tmp = my_response;
+		break;
+	case THRESHOLD:
+		img_tmp = my_segmented;
+		break;
+	case BORDERS:
+		img_tmp = my_boundaries;
+		break;
+	case MAPDIST:
+		img_tmp = my_distmap;
+		break;
+	}
+
+	regionFill(img_tmp);
 }
 
 
@@ -880,11 +929,11 @@ void IMGVTK::regionFill(IMG_IDX img_idx){
 /*  Metodo:  dilMask
     Funcion: Mascara usada para dilatar unaimagen.
 */
-inline unsigned char IMGVTK::dilMask( const double *mask_dil, const int x, const int y, const int mis_cols, const int mis_rows){
-    return (mask_dil[( x ) + (y-1)*mis_cols] > 0) +
-           (mask_dil[(x+1) + ( y )*mis_cols] > 0) +
-           (mask_dil[( x ) + (y+1)*mis_cols] > 0) +
-           (mask_dil[(x-1) + ( y )*mis_cols] > 0);
+inline unsigned char IMGVTK::dilMask( IMGCONT *mask_dil, const int x, const int y){
+    return (*(mask_dil->my_img_data + ( x ) + (y-1)*mask_dil->my_width) > 0.0) +
+           (*(mask_dil->my_img_data + (x+1) + ( y )*mask_dil->my_width) > 0.0) +
+           (*(mask_dil->my_img_data + ( x ) + (y+1)*mask_dil->my_width) > 0.0) +
+           (*(mask_dil->my_img_data + (x-1) + ( y )*mask_dil->my_width) > 0.0);
 }
 
 
@@ -892,16 +941,76 @@ inline unsigned char IMGVTK::dilMask( const double *mask_dil, const int x, const
 /*  Metodo:  erosionMask
     Funcion: Mascara para erosion usando un disco de radio 5
 */
-inline unsigned char IMGVTK::erosionMask( const double *ptr_tmp, const int x, const int y, const int mis_cols, const int mis_rows ){
-    return                                                                                   (ptr_tmp[(x-2) + (y-4)*mis_cols] > 0) + (ptr_tmp[(x-1) + (y-4)*mis_cols] > 0) + (ptr_tmp[( x ) + (y-4)*mis_cols] > 0) + (ptr_tmp[(x+1) + (y-4)*mis_cols] > 0) + (ptr_tmp[(x+2) + (y-1)*mis_cols] > 0) +
-                                                     (ptr_tmp[(x-3) + (y-3)*mis_cols] > 0) + (ptr_tmp[(x-2) + (y-3)*mis_cols] > 0) + (ptr_tmp[(x-1) + (y-3)*mis_cols] > 0) + (ptr_tmp[( x ) + (y-3)*mis_cols] > 0) + (ptr_tmp[(x+1) + (y-3)*mis_cols] > 0) + (ptr_tmp[(x+2) + (y-2)*mis_cols] > 0) + (ptr_tmp[(x+3) + (y-3)*mis_cols] > 0) +
-             (ptr_tmp[(x-4) + (y-2)*mis_cols] > 0) + (ptr_tmp[(x-3) + (y-2)*mis_cols] > 0) + (ptr_tmp[(x-2) + (y-2)*mis_cols] > 0) + (ptr_tmp[(x-1) + (y-2)*mis_cols] > 0) + (ptr_tmp[( x ) + (y-2)*mis_cols] > 0) + (ptr_tmp[(x+1) + (y-2)*mis_cols] > 0) + (ptr_tmp[(x+2) + (y-3)*mis_cols] > 0) + (ptr_tmp[(x+3) + (y-2)*mis_cols] > 0) + (ptr_tmp[(x+4) + (y-2)*mis_cols] > 0) +
-             (ptr_tmp[(x-4) + (y-1)*mis_cols] > 0) + (ptr_tmp[(x-3) + (y-1)*mis_cols] > 0) + (ptr_tmp[(x-2) + (y-1)*mis_cols] > 0) + (ptr_tmp[(x-1) + (y-1)*mis_cols] > 0) + (ptr_tmp[( x ) + (y-1)*mis_cols] > 0) + (ptr_tmp[(x+1) + (y-1)*mis_cols] > 0) + (ptr_tmp[(x+2) + (y-4)*mis_cols] > 0) + (ptr_tmp[(x+3) + (y-1)*mis_cols] > 0) + (ptr_tmp[(x+4) + (y-1)*mis_cols] > 0) +
-             (ptr_tmp[(x-4) + ( y )*mis_cols] > 0) + (ptr_tmp[(x-3) + ( y )*mis_cols] > 0) + (ptr_tmp[(x-2) + ( y )*mis_cols] > 0) + (ptr_tmp[(x-1) + ( y )*mis_cols] > 0)                  +                        (ptr_tmp[(x+1) + ( y )*mis_cols] > 0) + (ptr_tmp[(x+2) + ( y )*mis_cols] > 0) + (ptr_tmp[(x+3) + ( y )*mis_cols] > 0) + (ptr_tmp[(x+4) + ( y )*mis_cols] > 0) +
-             (ptr_tmp[(x-4) + (y+1)*mis_cols] > 0) + (ptr_tmp[(x-3) + (y+1)*mis_cols] > 0) + (ptr_tmp[(x-2) + (y+1)*mis_cols] > 0) + (ptr_tmp[(x-1) + (y+1)*mis_cols] > 0) + (ptr_tmp[( x ) + (y+1)*mis_cols] > 0) + (ptr_tmp[(x+1) + (y+1)*mis_cols] > 0) + (ptr_tmp[(x+2) + (y+1)*mis_cols] > 0) + (ptr_tmp[(x+3) + (y+1)*mis_cols] > 0) + (ptr_tmp[(x+4) + (y+1)*mis_cols] > 0) +
-             (ptr_tmp[(x-4) + (y+2)*mis_cols] > 0) + (ptr_tmp[(x-3) + (y+2)*mis_cols] > 0) + (ptr_tmp[(x-2) + (y+2)*mis_cols] > 0) + (ptr_tmp[(x-1) + (y+2)*mis_cols] > 0) + (ptr_tmp[( x ) + (y+2)*mis_cols] > 0) + (ptr_tmp[(x+1) + (y+2)*mis_cols] > 0) + (ptr_tmp[(x+2) + (y+2)*mis_cols] > 0) + (ptr_tmp[(x+3) + (y+2)*mis_cols] > 0) + (ptr_tmp[(x+4) + (y+2)*mis_cols] > 0) +
-                                                     (ptr_tmp[(x-3) + (y+3)*mis_cols] > 0) + (ptr_tmp[(x-2) + (y+3)*mis_cols] > 0) + (ptr_tmp[(x-1) + (y+3)*mis_cols] > 0) + (ptr_tmp[( x ) + (y+3)*mis_cols] > 0) + (ptr_tmp[(x+1) + (y+3)*mis_cols] > 0) + (ptr_tmp[(x+2) + (y+3)*mis_cols] > 0) + (ptr_tmp[(x+3) + (y+3)*mis_cols] > 0) +
-                                                                                             (ptr_tmp[(x-2) + (y+4)*mis_cols] > 0) + (ptr_tmp[(x-1) + (y+4)*mis_cols] > 0) + (ptr_tmp[( x ) + (y+4)*mis_cols] > 0) + (ptr_tmp[(x+1) + (y+4)*mis_cols] > 0) + (ptr_tmp[(x+2) + (y+4)*mis_cols] > 0);
+inline unsigned char IMGVTK::erosionMask(IMGCONT *ptr_tmp, const int x, const int y)
+{
+	return (*(ptr_tmp->my_img_data + (x - 2) + (y - 4)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 1) + (y - 4)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x)+(y - 4)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 1) + (y - 4)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 2) + (y - 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 3) + (y - 3)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 2) + (y - 3)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 1) + (y - 3)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x)+(y - 3)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 1) + (y - 3)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 2) + (y - 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 3) + (y - 3)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 4) + (y - 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 3) + (y - 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 2) + (y - 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 1) + (y - 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x)+(y - 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 1) + (y - 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 2) + (y - 3)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 3) + (y - 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 4) + (y - 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 4) + (y - 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 3) + (y - 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 2) + (y - 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 1) + (y - 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x)+(y - 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 1) + (y - 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 2) + (y - 4)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 3) + (y - 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 4) + (y - 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 4) + (y)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 3) + (y)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 2) + (y)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 1) + (y)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 1) + (y)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 2) + (y)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 3) + (y)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 4) + (y)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 4) + (y + 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 3) + (y + 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 2) + (y + 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 1) + (y + 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x)+(y + 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 1) + (y + 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 2) + (y + 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 3) + (y + 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 4) + (y + 1)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 4) + (y + 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 3) + (y + 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 2) + (y + 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 1) + (y + 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x)+(y + 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 1) + (y + 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 2) + (y + 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 3) + (y + 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 4) + (y + 2)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 3) + (y + 3)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 2) + (y + 3)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 1) + (y + 3)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x)+(y + 3)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 1) + (y + 3)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 2) + (y + 3)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 3) + (y + 3)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 2) + (y + 4)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x - 1) + (y + 4)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x)+(y + 4)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 1) + (y + 4)*ptr_tmp->my_width) > 0.0) +
+		(*(ptr_tmp->my_img_data + (x + 2) + (y + 4)*ptr_tmp->my_width) > 0.0);
 }
 
 
@@ -909,29 +1018,23 @@ inline unsigned char IMGVTK::erosionMask( const double *ptr_tmp, const int x, co
 /*  Metodo: erosionar
     Funcion: Rellena vacios dentro del cuerpo de la arteria segmentada.
 */
-void IMGVTK::erosionar( double *ptr , const int mis_cols, const int mis_rows){
-    double *ptr_tmp = new double [(mis_rows+8)*(mis_cols+8)];
+void IMGVTK::erosionar( IMGCONT *img_src )
+{
+	IMGCONT *ptr_tmp = new IMGCONT(img_src->my_height, img_src->my_width, 4, 4, 1.0);
+	*ptr_tmp = *img_src;
 
-    for(int xy = 0; xy < (mis_rows+8)*(mis_cols+8); xy++){
-        ptr_tmp[xy] = 1.0;
-    }
-
-    for(int y = 0; y < mis_rows; y++){
-        memcpy( ptr_tmp + (y+4)*(mis_cols+8) + 4, ptr + y*mis_cols, mis_cols*sizeof(double));
-    }
-
-    for( int y = 0; y < mis_rows; y++){
-        for( int x = 0; x < mis_cols; x++){
-            if(ptr_tmp[(x+4)+(y+4)*(mis_cols+8)] > 0){
-                const unsigned char resp = erosionMask(ptr_tmp, x+4, y+4, mis_cols+8, mis_rows);
+    for( int y = 0; y < img_src->my_height; y++){
+        for( int x = 0; x < img_src->my_width; x++){
+            if (*(ptr_tmp->my_img_data + (x+4) + (y+4)*(ptr_tmp->my_width)) > 0){
+                const unsigned char resp = erosionMask(ptr_tmp, x+4, y+4);
                 if( (0 < resp) && (resp < 68) ){
-                    ptr[x+y*mis_cols] = 0.0;
+                    *(img_src->my_img_data + x + y*img_src->my_width) = 0.0;
                 }
             }
         }
     }
 
-    delete [] ptr_tmp;
+    delete ptr_tmp;
 }
 
 
@@ -939,48 +1042,50 @@ void IMGVTK::erosionar( double *ptr , const int mis_cols, const int mis_rows){
 /*  Metodo: maskFOV
     Funcion: Obtiene la mascara del contorno
 */
-void IMGVTK::maskFOV( double * img_tmp, double *mask_tmp, const int mis_cols, const int mis_rows){
+IMGVTK::IMGCONT * IMGVTK::maskFOV( IMGCONT *img_src )
+{
 
-    const int mis_rows_cols = mis_cols * mis_rows;
+	IMGCONT *new_mask = new IMGCONT(*img_src);
 
     // Se umbraliza al 0.1 la imagen original
-    for( int xy = 0; xy < mis_rows_cols; xy++){
-        mask_tmp[xy] = (img_tmp[xy] < 0.1) ? 0.0 : 1.0;
+    for( int xy = 0; xy < img_src->my_height * img_src->my_width; xy++){
+		*(new_mask->my_img_data + xy) = (*(new_mask->my_img_data + xy) < 0.1) ? 0.0 : 1.0;
     }
 
     // Se eliminan los conjuntos pequeños
-    lengthFilter(mask_tmp, 1000, mis_cols, mis_rows, ITERATIVO);
+    lengthFilter(new_mask, 1000, ITERATIVO);
 
     // Se erosiona la mascara:
-    erosionar(mask_tmp, mis_cols, mis_rows);
+    erosionar(new_mask);
 
     // Se eliminan los conjuntos grandes que no esten en las esquinas:
     // Se extraen las etiquetas de los conjuntos que se conectan a las esquinas:
-    for( int xy = 0; xy < mis_rows_cols; xy++){
-        *(mask_tmp + xy) = 1.0 - *(mask_tmp + xy);
+    for( int xy = 0; xy < new_mask->my_width * new_mask->my_height; xy++){
+        *(new_mask->my_img_data + xy) = 1.0 - *(new_mask->my_img_data + xy);
     }
 
-    int *mis_conjuntos = new int [mis_rows_cols];
+    int *mis_conjuntos = new int [new_mask->my_width * new_mask->my_height];
 
     // Se buscan los conjuntos que no esten en las esquinas para eliminarlos
-    unsigned int *mis_n_etiquetados = conjuntosConexos(mask_tmp, mis_conjuntos, mis_cols, mis_rows);
+	unsigned int *mis_n_etiquetados = conjuntosConexos(new_mask, mis_conjuntos);
     delete [] mis_n_etiquetados;
 
 
     //// etiqueta de los conjuntos donde existe una esquina
-    const int NO = mis_conjuntos[0], NE = mis_conjuntos[mis_cols-1], SO = mis_conjuntos[(mis_rows-1)*mis_cols], SE = mis_conjuntos[mis_rows_cols-1];
-    DEB_MSG("NO: " << NO);
-    DEB_MSG("NE: " << NE);
-    DEB_MSG("SO: " << SO);
-    DEB_MSG("SE: " << SE);
+	const int NO = *(mis_conjuntos);
+	const int NE = *(mis_conjuntos + new_mask->my_width - 1);
+	const int SO = *(mis_conjuntos + (new_mask->my_height - 1)*new_mask->my_width);
+	const int SE = *(mis_conjuntos + new_mask->my_height * new_mask->my_width - 1);
 
-    for( int xy = 0; xy < mis_rows_cols; xy++){
-        if( (mis_conjuntos[xy] >= 0) && ((mis_conjuntos[xy] == NO) || (mis_conjuntos[xy] == NE) || (mis_conjuntos[xy] == SO) || (mis_conjuntos[xy] == SE)) ){
-            mask_tmp[xy] = 0.0;
+    for( int xy = 0; xy < (new_mask->my_height * new_mask->my_width); xy++){
+        if( (*(mis_conjuntos + xy) >= 0) && ((mis_conjuntos[xy] == NO) || (mis_conjuntos[xy] == NE) || 
+			(mis_conjuntos[xy] == SO) || (mis_conjuntos[xy] == SE)) ){
+            *(new_mask->my_img_data + xy) = 0.0;
         }else{
-            mask_tmp[xy] = 1.0;
+			*(new_mask->my_img_data + xy) = 1.0;
         }
     }
+
     delete [] mis_conjuntos;
 }
 
@@ -989,31 +1094,25 @@ void IMGVTK::maskFOV( double * img_tmp, double *mask_tmp, const int mis_cols, co
 /*  Metodo: fillMask
     Funcion: Se llenan los espacios de la mascara con la media de la imagen circundante.
 */
-void IMGVTK::fillMask( double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rows ){
+void IMGVTK::fillMask( IMGCONT *img_src, IMGCONT *mask_src ){
 
     PIX_PAR par_tmp;
     par_tmp.pix_tipo = PIX_CROSS;
 
-    double *mask_dil = new double [(mis_rows+2)*(mis_cols+2)];
-    for( int xy = 0; xy < (mis_rows+2)*(mis_cols+2); xy++){
-        mask_dil[xy] = 0.0  ;
-    }
-
-    for( int y = 0; y < mis_rows; y++){
-        memcpy( mask_dil + (y+1)*(mis_cols+2) + 1, mask_tmp + y*mis_cols, mis_cols*sizeof(double));
-    }
+    IMGCONT *mask_dil = new IMGCONT(img_src->my_height+2, img_src->my_width+2, 1, 1);
+	*mask_dil = *mask_src;
 
     int iter = 0;
-    while( iter < mis_cols ){
+    while( iter < mask_src->my_width ){
         // Obtener el borde de la mascara realizando una dilatacion:
         std::vector< PIX_PAR > borde;
 
         // Si es la primer pasada, se verifican todos los pixeles para encontrar el borde
-        for( int y = 0; y < mis_rows; y++){
-            for( int x = 0; x < mis_cols; x++){
-                if( mask_dil[(x+1) + (y+1)*(mis_cols+2)] < 1.0 ){
+        for( int y = 0; y < mask_src->my_height; y++){
+            for( int x = 0; x < mask_src->my_width; x++){
+                if( *(mask_dil->my_img_data + (x+1) + (y+1)*(mask_dil->my_width)) < 1.0 ){
                     // Si es HIT se considera como borde, si es FIT no:
-                    const unsigned char resp = dilMask(mask_dil, x+1, y+1, mis_cols+2, mis_rows);
+					const unsigned char resp = dilMask(mask_dil, x + 1, y + 1);
                     if( resp > 0){
                         // Se guardan las coordenadas de los pixeles que forman el borde:
                         par_tmp.x = x;
@@ -1036,29 +1135,42 @@ void IMGVTK::fillMask( double *img_tmp, double *mask_tmp, const int mis_cols, co
         for( int b = 0; b < n_borde; b++ ){
             const int x_act = (int)borde[b].x;
             const int y_act = (int)borde[b].y;
-            const int offset_x_izq = (x_act < 10) ? 0 : (x_act - 10);
-            const int offset_x_der = (x_act >= (mis_cols - 10)) ? (mis_cols-1) : (x_act + 10);
-            const int offset_y_sup = (y_act < 10) ? 0 : (y_act - 10);
-            const int offset_y_inf = (y_act >= (mis_rows - 10)) ? (mis_rows-1) : (y_act + 10);
+
+            const int offset_x_izq = (x_act < 10) ?
+				0 :
+				(x_act - 10);
+
+            const int offset_x_der = (x_act >= (mask_src->my_width - 10)) ? 
+				(mask_src->my_width-1) : 
+				(x_act + 10);
+
+            const int offset_y_sup = (y_act < 10) ?
+				0 : 
+				(y_act - 10);
+
+            const int offset_y_inf = (y_act >= (mask_src->my_height - 10)) ?
+				(mask_src->my_height-1) :
+				(y_act + 10);
 
             double suma = 0.0;
             int n_vecinos = 0;
 
             for( int y = offset_y_sup; y <= offset_y_inf; y++){
                 for( int x = offset_x_izq; x <= offset_x_der; x++){
-                    if( mask_dil[(x+1) + (y+1)*(mis_cols+2)] > 0 ){
-                        suma += (double)img_tmp[ x + y*mis_cols ];
+                    if( *(mask_dil->my_img_data + (x+1) + (y+1)*(mask_dil->my_width)) > 0.0 ){
+                        suma += *(img_src->my_img_data + x + y*img_src->my_width);
                         n_vecinos++;
                     }
                 }
             }
 
-            img_tmp[x_act + y_act*mis_cols] = suma / n_vecinos;
-            mask_dil[(x_act+1) + (y_act+1)*(mis_cols+2)] = 1.0;
+            *(img_src->my_img_data + x_act + y_act*img_src->my_width) = suma / n_vecinos;
+            *(mask_dil->my_img_data + (x_act+1) + (y_act+1)*(mask_dil->my_width)) = 1.0;
         }
         iter++;
     }
-    delete [] mask_dil;
+
+    delete mask_dil;
 }
 
 
@@ -1263,7 +1375,7 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
     Funcion: Extrae los pixeles caracteristicos (end y branch points) a partir del esqueleot de la imagen.
 */
 void IMGVTK::extraerCaract( IMG_IDX img_idx ){
-    if( !borders_ptr ){
+    if( !my_boundaries ){
         detectarBorde( img_idx );
     }
 
@@ -1278,7 +1390,7 @@ void IMGVTK::extraerCaract( IMG_IDX img_idx ){
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     double *skl_tmp = new double [(rows+2)*(cols+2)];
-    memcpy( skl_tmp, skl_ptr, (rows+2)*(cols+2)*sizeof(double));
+    memcpy( skl_tmp, img_src, (rows+2)*(cols+2)*sizeof(double));
 
 
     /// Buscar un punto 'end' del esqueleto y empezar a generar el grafo a aprtir de ahi.
@@ -1291,7 +1403,7 @@ void IMGVTK::extraerCaract( IMG_IDX img_idx ){
         xy++;
         x_ini = xy % (cols+2);
         y_ini = (int)((double)xy / ((double)cols+2));
-        resp = sklMask( skl_ptr, x_ini, y_ini, cols+2, rows) * (*(skl_ptr + xy) > 0.0);
+        resp = sklMask( img_src, x_ini, y_ini, cols+2, rows) * (*(img_src + xy) > 0.0);
     }while( tabla[resp] != (unsigned char)1 );
 
     *(skl_tmp + xy ) = 2.0;
@@ -1336,100 +1448,89 @@ void IMGVTK::borrarSkeleton( PIX_PAR *raiz ){
 /*  Metodo: skeletonization
     Funcion: Obtiene el esqueleto de la imagen segmentada.
 */
-void IMGVTK::skeletonization(IMG_IDX img_idx){
+void IMGVTK::skeletonization(IMG_IDX img_idx) {
 
-    double *img_ptr = NULL;
+	IMGCONT *img_tmp = NULL;
 
-    switch( img_idx ){
-        case BASE:
-            img_ptr = base_ptr;
-            break;
-        case MASK:
-            img_ptr = mask_ptr;
-            break;
-        case SKELETON:
-            img_ptr = skl_ptr;
-            break;
-        case SEGMENT:
-            img_ptr = segment_ptr;
-            break;
-        case THRESHOLD:
-            img_ptr = threshold_ptr;
-            break;
-    }
+	switch (img_idx) {
+	case BASE:
+		img_tmp = my_base;
+		break;
+	case GROUNDTRUTH:
+		img_tmp = my_groundtruth;
+		break;
+	case MASK:
+		img_tmp = my_mask;
+		break;
+	case SEGMENT:
+		img_tmp = my_response;
+		break;
+	case MAPDIST:
+		img_tmp = my_distmap;
+		break;
+	case THRESHOLD:
+		img_tmp = my_segmented;
+		break;
+	case BORDERS:
+		img_tmp = my_boundaries;
+		break;
+	}
 
-    if( !skl_ptr ){
-#ifdef BUILD_VTK_VERSION
-        skeleton = vtkSmartPointer< vtkImageData >::New();
-        skeleton->SetExtent(0, cols + 1, 0, rows + 1, 0, 0);
-        skeleton->AllocateScalars(VTK_DOUBLE, 1);
-        skeleton->SetOrigin(0.0, 0.0, 0.0);
-        skeleton->SetSpacing(1.0, 1.0, 1.0);
+	if (!my_skeleton) {
+		my_skeleton = new IMGCONT(img_tmp->my_height, img_tmp->my_width, 1, 1);
+	}
+	*my_skeleton = *img_tmp;
 
-        skl_ptr = static_cast< double* >(skeleton->GetScalarPointer(0, 0, 0));
-#else
-        skl_ptr = new double [(rows+2)*(cols+2)];
-#endif
-    }
+	IMGCONT *skl_mark = new IMGCONT(*my_skeleton);
 
-    memset(skl_ptr, 0, (rows+2)*(cols+2)*sizeof(double));
+	const unsigned char tabla[] = {
+		0, 0, 0, 1, 0, 0, 1, 3, 0, 0, 3, 1, 1, 0, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 3, 0, 3, 3,
+		0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 3, 0, 2, 2,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 3, 0, 2, 0,
+		0, 0, 3, 1, 0, 0, 1, 3, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+		3, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		2, 3, 1, 3, 0, 0, 1, 3, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		2, 3, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 1, 0, 0, 0, 0, 2, 2, 0, 0, 2, 0, 0, 0 };
+	int n_borrado;
 
-    for( int y = 0; y < rows; y++ ){
-        memcpy( skl_ptr + (y+1)*(cols+2)+1, img_ptr + y*cols, cols*sizeof(double) );
-    }
+	do {
+		n_borrado = 0;
+		// Primer paso:
+		for (int y = 1; y <= my_skeleton->my_height; y++) {
+			for (int x = 1; x <= my_skeleton->my_width; x++) {
+				if (*(my_skeleton->my_img_data + x + y*my_skeleton->my_width) > 0.0) {
+					const unsigned char resp = *(tabla + sklMask(my_skeleton, x, y));
+					if ((resp == 1) || (resp == 3)) {
+						*(skl_mark->my_img_data + x + y * skl_mark->my_width) = 0.0;
+						n_borrado++;
+					}
+				}
+			}
+		}
 
-    double *skl_mark = new double [(rows+2)*(cols+2)];
-    memcpy(skl_mark, skl_ptr, (rows+2)*(cols+2)*sizeof(double));
+		*my_skeleton = *skl_mark;
 
-    const unsigned char tabla[] = {
-        0, 0, 0, 1, 0, 0, 1, 3, 0, 0, 3, 1, 1, 0, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 3, 0, 3, 3,
-        0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 3, 0, 2, 2,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 3, 0, 2, 0,
-        0, 0, 3, 1, 0, 0, 1, 3, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-        3, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        2, 3, 1, 3, 0, 0, 1, 3, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        2, 3, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 1, 0, 0, 0, 0, 2, 2, 0, 0, 2, 0, 0, 0};
-    int n_borrado;
+		// Segundo paso:
+		for (int y = 1; y <= rows; y++) {
+			for (int x = 1; x <= cols; x++) {
+				if (*(my_skeleton->my_img_data + x + y*my_skeleton->my_width) > 0.0) {
+					unsigned char resp = *(tabla + sklMask(my_skeleton, x, y));
+					if (resp == 2 || resp == 3) {
+						*(skl_mark->my_img_data + x + y*skl_mark->my_width) = 0.0;
+						n_borrado++;
+					}
+				}
+			}
+		}
 
-    do{
-        n_borrado = 0;
-        // Primer paso:
-        for(int y = 1; y <= rows; y++){
-            for(int x = 1; x <= cols; x++){
-                if(skl_ptr[x+y*(cols+2)] > 0){
-                    const unsigned char resp = tabla[ sklMask(skl_ptr, x, y, cols+2, rows) ];
-                    if(resp == 1 || resp == 3 ){
-                        skl_mark[x+y*(cols+2)] = 0.0;
-                        n_borrado++;
-                    }
-                }
-            }
-        }
 
-        memcpy(skl_ptr, skl_mark, (rows+2)*(cols+2)*sizeof(double));
+		*my_skeleton = *skl_mark;
 
-        // Segundo paso:
-        for(int y = 1; y <= rows; y++){
-            for(int x = 1; x <= cols; x++){
-                if(skl_ptr[x+y*(cols+2)] > 0){
-                    unsigned char resp = tabla[ sklMask(skl_ptr, x, y, cols+2, rows) ];
-                    if(resp == 2 || resp == 3 ){
-                        skl_mark[x+y*(cols+2)] = 0.0;
-                        n_borrado++;
-                    }
-                }
-            }
-        }
+	} while (n_borrado > 0);
 
-        memcpy(skl_ptr, skl_mark, (rows+1)*(cols+1)*sizeof(double));
-
-        DEB_MSG("Borrados: " << n_borrado);
-
-    }while( n_borrado > 0 );
-
-    delete [] skl_mark;
-    extraerCaract( img_idx );
+	delete skl_mark;
+	extraerCaract(img_idx);
 }
 
 
@@ -1438,12 +1539,15 @@ void IMGVTK::skeletonization(IMG_IDX img_idx){
 /*  Metodo: definirMask
     Funcion: Define una mascara para normalizar los pixeles de la imagen.
 */
-void IMGVTK::definirMask( double *img_src, double *mask_src, const int mis_rows, const int mis_cols ){
+IMGVTK::IMGCONT * IMGVTK::definirMask( IMGCONT * img_src )
+{
 
-    maskFOV( img_src, mask_src, mis_cols, mis_rows );
-    fillMask( img_src, mask_src, mis_cols, mis_rows );
+    IMGCONT *new_mask = maskFOV( img_src );
+    fillMask( img_src, new_mask );
 
     escribirLog( "Mascara generada exitosamente.\n" );
+
+	return new_mask;
 }
 
 
@@ -1506,7 +1610,7 @@ double IMGVTK::umbralizarOTSU( const double *img_ptr, const double min, const do
 */
 double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const double max){
     double umbral_nuevo = 0.0;
-    // Obtener la media de la intensidad de la imagen como primera aproximacion del umbral
+    // Obtener la media de la read_intensity de la imagen como primera aproximacion del umbral
     const double rango = 1.0 / (max - min);
     const double fraccion = 1.0 / (double)rows_cols;
 
@@ -1660,7 +1764,8 @@ double IMGVTK::medirExactitud(){
 *  Source: readpng.c form the libpng documentation
 *  
 */
-int IMGVTK::CargarPNG(const char *ruta_origen, double *img_src_ptr) {
+IMGVTK::IMGCONT* IMGVTK::CargarPNG(const char *ruta_origen)
+{
 	/* Open the file in binary mode */
 	FILE *img_file = fopen(ruta_origen, "b");
 
@@ -1671,14 +1776,14 @@ int IMGVTK::CargarPNG(const char *ruta_origen, double *img_src_ptr) {
 	if (png_sig_cmp(signature, 0, 8)) {
 		/* Incorrect signature */
 		fclose(img_file);
-		return 1;
+		return NULL;
 	}
 
 	static png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	if (!png_ptr) {
 		/* Out ot memory */
 		fclose(img_file);
-		return 4;
+		return NULL;
 	}
 
 	static png_infop info_ptr = png_create_info_struct(png_ptr);
@@ -1686,12 +1791,13 @@ int IMGVTK::CargarPNG(const char *ruta_origen, double *img_src_ptr) {
 		/* Out ot memory */
 		png_destroy_read_struct(&png_ptr, NULL, NULL);
 		fclose(img_file);
-		return 4;
+		return NULL;
 	}
 
 	if (setjmp(png_jmpbuf(png_ptr))) {
 		png_destroy_read_struct(&png_ptr, NULL, NULL);
-		return 2;
+		fclose(img_file);
+		return NULL;
 	}
 	png_init_io(png_ptr, img_file);
 
@@ -1704,13 +1810,14 @@ int IMGVTK::CargarPNG(const char *ruta_origen, double *img_src_ptr) {
 	png_uint_32 width, height;
 	png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type, NULL, NULL, NULL);
 
-	unsigned long my_height = (unsigned long)height;
-	unsigned long my_width = (unsigned long)width;
+	IMGCONT *new_img = new IMGCONT((unsigned int)height, (unsigned int)width);
 
 	/* Check if the image has background color */
 	if (setjmp(png_jmpbuf(png_ptr))) {
 		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-		return 2;
+		delete new_img;
+		fclose(img_file);
+		return NULL;
 	}
 
 	png_color_16p pBackground;
@@ -1744,17 +1851,16 @@ int IMGVTK::CargarPNG(const char *ruta_origen, double *img_src_ptr) {
 		}
 	}
 
-	unsigned char *image_data = (unsigned char*)malloc(height * width * sizeof(unsigned char));
-
 	double  gamma;
 	png_uint_32  i, rowbytes;
 	png_bytepp row_pointers = (png_bytepp)malloc(height * sizeof(png_bytep));
 
 	if (setjmp(png_jmpbuf(png_ptr))) {
-		free(image_data);
 		free(row_pointers);
 		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-		return 5;
+		delete new_img;
+		fclose(img_file);
+		return NULL;
 	}
 
 	/* expand palette images to RGB, low-bit-depth grayscale images to 8 bits,
@@ -1785,25 +1891,17 @@ int IMGVTK::CargarPNG(const char *ruta_origen, double *img_src_ptr) {
 		png_set_gray_to_rgb(png_ptr);
 	}
 
-	/* unlike the example in the libpng documentation, we have *no* idea where
-	*  this file may have come from--so if it doesn't have a file gamma, don't
-	*  do any correction ("do no harm")
-	*/
-
 	double display_exponent = 1.0;
 	if (png_get_gAMA(png_ptr, info_ptr, &gamma)) {
 		png_set_gamma(png_ptr, display_exponent, gamma);
 	}
 
-	/* all transformations have been registered; now update info_ptr data,
-	*  get rowbytes and channels, and allocate image memory 
-	*/
 	png_read_update_info(png_ptr, info_ptr);
 
 	unsigned long rowbytes = png_get_rowbytes(png_ptr, info_ptr);
 	int Channels = (int)png_get_channels(png_ptr, info_ptr);
 
-
+	unsigned char *image_data = (unsigned char*)malloc(height * width * sizeof(unsigned char));
 	/* set the individual row_pointers to point at the correct offsets */
 	for (unsigned int i = 0; i < (unsigned int)height; i++) {
 		*(row_pointers + i) = image_data + i*rowbytes;
@@ -1823,536 +1921,69 @@ int IMGVTK::CargarPNG(const char *ruta_origen, double *img_src_ptr) {
 
 	/* Pass the image to the image structure */
 	for (unsigned int i = 0; i < (unsigned int)(height * width); i++) {
-		*(img_src_ptr + i) = (double)*(image_data + i) / 255.0;
+		*(new_img->my_img_data + i) = (double)*(image_data + i) / 255.0;
 	}
 
-	if (png_ptr && info_ptr) {
-		free(image_data);
-		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-	}
+	free(image_data);
+	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+	fclose(img_file);
+	
+	return new_img;
 }
 
 
 
 
-/*  Metodo: Cargar
-    Funcion: Cargar desde un archivo DICOM/JPEG/PNG/BMP la imagen a formato VTK.
-*/
-#ifdef BUILD_VTK_VERSION
-void IMGVTK::Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel, const bool enmascarar){
-
-    const int ruta_l = strlen(ruta_origen);
-DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
-    bool esDICOM = true;
-    bool esPGM = !strcmp(ruta_origen + ruta_l - 3, "pgm");
-    esDICOM *=  strcmp(ruta_origen + ruta_l - 3, "png");
-    esDICOM *=  strcmp(ruta_origen + ruta_l - 3, "jpg");
-    esDICOM *=  strcmp(ruta_origen + ruta_l - 4, "jpeg");
-    esDICOM *=  strcmp(ruta_origen + ruta_l - 3, "bmp");
-    esDICOM *=  strcmp(ruta_origen + ruta_l - 3, "pgm");
-
-    int mis_cols, mis_rows;
-    double *img_tmp = NULL;
-
-    if( esDICOM ){
-        gdcm::ImageReader DICOMreader;
-        DICOMreader.SetFileName( ruta_origen );
-
-        DICOMreader.Read();
-
-        gdcm::File &file = DICOMreader.GetFile();
-        gdcm::DataSet &ds = file.GetDataSet();
-
-////---------- Extraer SID (Distancia de la fuente al detector): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1110) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-                SID = atof( strm.c_str() );
-            }
-        }
-////---------- Extraer SOD (Distancia de la fuente al paciente): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1111) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-                SOD = atof( strm.c_str() );
-            }
-        }
-////---------- Calcular el DDP (Distancia del detector al paciente): ---------------------------------------------------------------------
-        DDP = SID - SOD;
-////---------- Calcular el Magnification Factor: -----------------------------------------
-        const double Magnification = SID / SOD;
-
-////---------- Extraer pixY\pixX (Distancia entre el centro de los pixeles en el eje Y\X): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1164) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-DEB_MSG("pixXY: " << strm);
-                char *pixXYstr = new char [bv->GetLength()];
-                memcpy(pixXYstr, strm.c_str(), bv->GetLength() * sizeof(char ));
-                char *tmp = strchr(pixXYstr,'\\');
-                pixXYstr[ tmp - pixXYstr ] = '\0';
-                pixY = atof(pixXYstr);// / Magnification;
-                pixX = atof(tmp+1);// / Magnification;
-DEB_MSG("pixY: " << pixY << ", pixX: " << pixX);
-                delete [] pixXYstr;
-            }
-        }
-////---------- Extraer LAO/RAO (Angulo del detector en direccion izquierda(-) a derecha(+)): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1510) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-                LAORAO = atof( strm.c_str() );
-DEB_MSG("LAO: " << LAORAO);
-            }
-        }
-////---------- Extraer CRA/CAU (Angulo del detector en direccion cranial(-) a caudal(+)): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1511) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-                CRACAU = atof( strm.c_str() );
-DEB_MSG("CRA: " << CRACAU);
-            }
-        }
-
-////---------- Extraer Window Width (Ancho de la ventana donde se encuentran los valores de interes): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x7030) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-DEB_MSG("Field of view origin: " << strm);
-            }
-        }
-
-////---------- Extraer Source to Isocenter (Distancia de la fuente al isocentro): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x21, 0x1017) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                gdcm::Element<gdcm::VR::SL, gdcm::VM::VM1_n> el;
-                el.Set( de.GetValue() );
-                const double SISO = el.GetValue();
-                // Restar de la distancia de la fuente al detector (SID) la distancia del detector al isocentro para obtener la distancia del detector al isocentro (DISO).
-                DISO = SID - SISO;
-            }
-        }
-////---------- Extraer Window Center (Centro de los vlaores de interes): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x28, 0x1050) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-                WCenter = atof( strm.c_str() );
-DEB_MSG("Window Center: " << WCenter);
-            }
-        }
-////---------- Extraer Window Width (Ancho de la ventana donde se encuentran los valores de interes): -----------------------------------------
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x28, 0x1051) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-                WWidth = atof( strm.c_str() );
-DEB_MSG("Window Width: " << WWidth);
-            }
-        }
-////---------- Extraer el ECG: -----------------------------------------
-        int ecg_dim = 0, ecg_np = 0;
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x5000, 0x0005) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                gdcm::Element<gdcm::VR::US, gdcm::VM::VM1_n> el;
-                el.Set( de.GetValue() );
-                ecg_dim = el.GetValue();
-DEB_MSG("[ECG] Dimensiones: " << ecg_dim );
-            }
-        }
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x5000, 0x0010) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                gdcm::Element<gdcm::VR::US, gdcm::VM::VM1_n> el;
-                el.Set( de.GetValue() );
-                ecg_np = el.GetValue();
-DEB_MSG("[ECG] Numero de puntos: " << ecg_np );
-            }
-        }
-        int n_niveles = 1;
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x8, 0x2143) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                std::string strm(bv->GetPointer(), bv->GetLength());
-                n_niveles = atof( strm.c_str() );
-DEB_MSG("Numero de fotogramas: " << n_niveles);
-            }
-        }
-        {
-            const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x5000, 0x3000) );
-            const gdcm::ByteValue *bv = de.GetByteValue();
-            if( bv ){
-                gdcm::Element<gdcm::VR::OW, gdcm::VM::VM1_n> el;
-                el.Set( de.GetValue() );
-                char *nombre_ecg = new char [18];
-                strcpy(nombre_ecg, ruta_origen + ruta_l - 7);
-                sprintf( nombre_ecg, "%s_%i.dat", nombre_ecg, n_niveles);
-                FILE *fp = fopen(nombre_ecg, "w");
-
-
-
-                for( int i = 0; i < ecg_np; i++){
-                    fprintf(fp, "%i %i\n", i, el.GetValue(i));
-                }
-                fclose( fp );
-                delete [] nombre_ecg;
-            }
-        }
-/*
-            std::string num_points_str = file.GetEntryString(0x5000,0x0010);
-            unsigned short num_points;
-            convert.clear();
-            convert.str(num_points_str);
-            convert >> num_points;
-DEB_MSG("Number of Points: " << num_points);
-
-            std::string data_type = file.GetEntryString(0x5000,0x0020);
-DEB_MSG("Type of Data: " << data_type);
-
-            std::string curve_desc = file.GetEntryString(0x5000,0x0022);
-DEB_MSG("Curve Description: " << curve_desc);
-
-            std::string data_rep_str = file.GetEntryString(0x5000,0x0103);
-            unsigned short data_rep;
-            convert.clear();
-            convert.str(data_rep_str);
-            convert >> data_rep;
-
-            gdcm::DocEntry *pCurveDataDoc = file.GetDocEntry(0x5000, 0x3000);
-            gdcm::DataEntry *pCurveData = dynamic_cast<gdcm::DataEntry *>(pCurveDataDoc);
-            uint8_t *curve_data = pCurveData->GetBinArea();
-
-            for(int i = 0; i < num_points; i++){
-DEB_MSG("Pt(" << i <<  ") = " << ((unsigned short*)curve_data)[i]);
-            }
-*/
-
-        ///----------------------------------------------------- Leer imagenes
-        DICOMreader.Read();
-        const gdcm::Image &gimage = DICOMreader.GetImage();
-DEB_MSG("Buffer length: " << gimage.GetBufferLength());
-        char *buffer = new char[gimage.GetBufferLength()];
-        gimage.GetBuffer(buffer);
-
-        const unsigned int* dimension = gimage.GetDimensions();
-        mis_cols = dimension[0];
-        mis_rows = dimension[1];
-        const int mis_niveles = dimension[2];
-        const int mis_rows_cols = mis_rows*mis_cols;
-
-DEB_MSG("Cols: " << mis_cols << ", rens: " << mis_rows  << ", niveles: " << mis_niveles);
-
-        // Alojar memoria para la imagen:
-#ifdef BUILD_VTK_VERSION
-        img_src->SetExtent(0, mis_cols-1, 0, mis_rows-1, 0, 0);
-        img_src->AllocateScalars( VTK_DOUBLE, 1);
-        img_src->SetOrigin(0.0, 0.0, 0.0);
-        img_src->SetSpacing(1.0, 1.0, 1.0);
-
-        img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
+IMGVTK::IMGCONT * IMGVTK::CargarPGM(const char *ruta_origen)
+{
+#if defined(_WIN32) || defined(_WIN64)
+	FILE *img_file;
+	fopen_s(&img_file, ruta_origen, "r");
 #else
-        img_tmp = new double [mis_rows_cols];
-#endif
-        gdcm::PhotometricInterpretation scl_comps = gimage.GetPhotometricInterpretation();
-        gdcm::PixelFormat pix_format = gimage.GetPixelFormat();
-
-        switch(scl_comps){
-            case gdcm::PhotometricInterpretation::RGB:{
-DEB_MSG("Imagen DICOM en RGB...");
-                    if( pix_format == gdcm::PixelFormat::UINT8 ){
-                        for( int y = 0; y < mis_rows; y++){
-                            for( int x = 0; x < mis_cols; x++){
-                                const double pixR = (double)(unsigned char)*(buffer + 3*x   + y*mis_cols*3 + nivel*mis_rows_cols*3) - WCenter + 0.5;
-                                const double pixG = (double)(unsigned char)*(buffer + 3*x+1 + y*mis_cols*3 + nivel*mis_rows_cols*3) - WCenter + 0.5;
-                                const double pixB = (double)(unsigned char)*(buffer + 3*x+2 + y*mis_cols*3 + nivel*mis_rows_cols*3) - WCenter + 0.5;
-                                double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
-                                if( pix <= -((WWidth-1) / 2)){
-                                    pix = 0.0;
-                                }else if(pix > ((WWidth-1) / 2)){
-                                    pix = 0.0;
-                                }else{
-                                    pix = pix / (WWidth -1) + 0.5;
-                                }
-                                *(img_tmp + (mis_rows-y-1)*mis_rows + x ) = pix; // 255.0;
-                            }
-                        }
-                    }else{
-                        escribirLog(COLOR_RED"<<ERROR AL LEER ARCHIVO DICOM:" COLOR_BACK_YELLOW " Formato de imagen RGB no soportado>>" COLOR_RESET "\n");
-                    }
-                    break;
-                }
-            case gdcm::PhotometricInterpretation::MONOCHROME1:
-            case gdcm::PhotometricInterpretation::MONOCHROME2:{
-DEB_MSG("Imagen DICOM en escala de grises...");
-                    if( pix_format == gdcm::PixelFormat::UINT8 ){
-DEB_MSG("Tipo UINT8");
-                        for( int y = 0; y < mis_rows; y++){
-                            for( int x = 0; x < mis_cols; x++){
-                                double pix = (double)(unsigned char)*(buffer + nivel*mis_rows_cols + x + y*mis_cols) - WCenter + 0.5;
-
-                                if( pix <= -((WWidth-1) / 2)){
-                                    pix = 0.0;
-                                }else if(pix > ((WWidth-1) / 2)){
-                                    pix = 1.0;
-                                }else{
-                                    pix = pix / (WWidth -1) + 0.5;
-                                }
-                                *(img_tmp + (mis_rows-y-1)*mis_rows + x) = pix; // 255.0;
-                            }
-                        }
-
-                    }else if( pix_format == gdcm::PixelFormat::UINT16 ){
-DEB_MSG("Tipo UINT16");
-                        unsigned short *buffer16 = (unsigned short*)buffer;
-                        for( int y = 0; y < mis_rows; y++){
-                            for( int x = 0; x < mis_cols; x++){
-                                const double pixR = (double)((unsigned char)*(buffer16 + 3*x   + y*mis_cols*3 + nivel*mis_rows_cols*3) / 16)  - WCenter + 0.5;
-                                const double pixG = (double)((unsigned char)*(buffer16 + 3*x+1 + y*mis_cols*3 + nivel*mis_rows_cols*3) / 16)  - WCenter + 0.5;
-                                const double pixB = (double)((unsigned char)*(buffer16 + 3*x+2 + y*mis_cols*3 + nivel*mis_rows_cols*3) / 16)  - WCenter + 0.5;
-                                double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
-                                if( pix <= -((WWidth-1) / 2)){
-                                    pix = 0.0;
-                                }else if(pix > ((WWidth-1) / 2)){
-                                    pix = 0.0;
-                                }else{
-                                    pix = pix / (WWidth -1) + 0.5;
-                                }
-                                *(img_tmp + (mis_rows-y-1)*mis_rows + x) =  pix; // 255.0;
-                            }
-                        }
-
-                    }else{
-                        escribirLog(COLOR_RED"<<ERROR AL LEER ARCHIVO DICOM:" COLOR_BACK_YELLOW " Formato de imagen RGB no soportado>>" COLOR_RESET "\n");
-                    }
-                    break;
-                }
-        }
-        delete [] buffer;
-
-    }else if(esPGM){ ///------------------------------------------------------------------------------------------------
-        //// Cargar imagen formato PGM
-        FILE *fp_img = fopen( ruta_origen, "r" );
-
-        char temp_str[512] = "";
-        fgets(temp_str, 512, fp_img);  // Leer 'Magic number'
-    DEB_MSG("Magic number: " << temp_str);
-        fgets(temp_str, 512, fp_img);  // Leer Comentario
-    DEB_MSG("Comentarios: " << temp_str);
-
-        fscanf(fp_img, "%i", &mis_cols);    // Leer ancho
-    DEB_MSG("columnas: " << mis_cols);
-        fscanf(fp_img, "%i", &mis_rows);    // Leer alto
-    DEB_MSG("renglones: " << mis_rows);
-        int mis_rows_cols = mis_cols * mis_rows;
-
-        double max_intensidad;
-        fscanf(fp_img, "%lf", &max_intensidad);  // Leer la escala de intensidad maxima
-    DEB_MSG("max intensidad: " << max_intensidad);
-
-#ifdef BUILD_VTK_VERSION
-        img_src->SetExtent(0, mis_cols-1, 0, mis_rows-1, 0, 0);
-        img_src->AllocateScalars( VTK_DOUBLE, 1);
-        img_src->SetOrigin(0.0, 0.0, 0.0);
-        img_src->SetSpacing(1.0, 1.0, 1.0);
-
-        img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
-#else
-        img_tmp = new double [mis_rows_cols];
-#endif
-        int intensidad;
-        for( int xy = 0; xy < mis_rows_cols; xy++){
-            fscanf( fp_img, "%i", &intensidad );
-            *(img_tmp + xy) = (double)intensidad / max_intensidad;
-        }
-
-    }else{ ///------------------------------------------------------------------------------------------------
-#ifdef BUILD_VTK_VERSION
-        // Leer la imagen en RBG o Escala de Grises:
-        vtkSmartPointer<vtkImageReader2Factory> readerFactory = vtkSmartPointer<vtkImageReader2Factory>::New();
-        vtkSmartPointer<vtkImageReader2> imgReader = readerFactory->CreateImageReader2( ruta_origen );
-
-        imgReader->SetFileName( ruta_origen );
-        imgReader->Update();
-
-        // Pasar temporalmente la imagen de RGB a escala de grises en la imagen de entrada.
-        int dims[3];
-        imgReader->GetOutput()->GetDimensions( dims );
-
-        int scl_comps = imgReader->GetOutput()->GetNumberOfScalarComponents();
-
-        mis_cols = dims[0];
-        mis_rows = dims[1];
-        const int mis_rows_cols = mis_rows*mis_cols;
-
-        // Alojar memoria para la imagen:
-        img_src->SetExtent(0, mis_cols-1, 0, mis_rows-1, 0, 0);
-        img_src->AllocateScalars( VTK_DOUBLE, 1);
-        img_src->SetOrigin(0.0, 0.0, 0.0);
-        img_src->SetSpacing(1.0, 1.0, 1.0);
-
-        img_tmp = static_cast<double*>(img_src->GetScalarPointer(0,0,0));
-
-
-        switch(scl_comps){
-            // La imagen esta en escala de grises:
-            case 1:
-            case 2:{
-                DEB_MSG("La imagen esta en escala de grises");
-                vtkSmartPointer<vtkImageExtractComponents> extractGreyFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-                extractGreyFilter->SetInputConnection(imgReader->GetOutputPort());
-                extractGreyFilter->SetComponents(0);
-                extractGreyFilter->Update();
-
-                unsigned char *gris = static_cast<unsigned char*>(extractGreyFilter->GetOutput()->GetScalarPointer(0,0,0));
-
-                for( int xy = 0; xy < mis_rows_cols; xy++){
-                    *(img_tmp + xy) = (double)*(gris+xy) / 255.0;
-                }
-                break;
-            }
-            // La imagen esta en RGB:
-            case 3:{
-                DEB_MSG("La imagen esta en RGB");
-                vtkSmartPointer<vtkImageExtractComponents> extractRedFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-                extractRedFilter->SetInputConnection(imgReader->GetOutputPort());
-                extractRedFilter->SetComponents(0);
-                extractRedFilter->Update();
-
-                vtkSmartPointer<vtkImageExtractComponents> extractGreenFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-                extractGreenFilter->SetInputConnection(imgReader->GetOutputPort());
-                extractGreenFilter->SetComponents(1);
-                extractGreenFilter->Update();
-
-                vtkSmartPointer<vtkImageExtractComponents> extractBlueFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-                extractBlueFilter->SetInputConnection(imgReader->GetOutputPort());
-                extractBlueFilter->SetComponents(2);
-                extractBlueFilter->Update();
-
-                vtkImageData *ptR = extractRedFilter->GetOutput();
-                vtkImageData *ptG = extractGreenFilter->GetOutput();
-                vtkImageData *ptB = extractBlueFilter->GetOutput();
-
-                double color;
-
-                for( int i = 0 ; i < mis_rows; i++){
-                    for( int j = 0; j < mis_cols; j++ ){
-                        color = ((0.297)*ptR->GetScalarComponentAsDouble(j,i,0,0) +
-                                 (0.589)*ptG->GetScalarComponentAsDouble(j,i,0,0) +
-                                 (0.114)*ptB->GetScalarComponentAsDouble(j,i,0,0));
-
-                        *(img_tmp + j + i*mis_cols) = color / 255.0;
-                    }
-                }
-                break;
-            }
-            // La imagen esta en RGBA:
-            case 4:{
-                DEB_MSG("La Imagen esta en RGB{A}");
-                vtkSmartPointer<vtkImageExtractComponents> extractRedFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-                extractRedFilter->SetInputConnection(imgReader->GetOutputPort());
-                extractRedFilter->SetComponents(0);
-                extractRedFilter->Update();
-
-                vtkSmartPointer<vtkImageExtractComponents> extractGreenFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-                extractGreenFilter->SetInputConnection(imgReader->GetOutputPort());
-                extractGreenFilter->SetComponents(1);
-                extractGreenFilter->Update();
-
-                vtkSmartPointer<vtkImageExtractComponents> extractBlueFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-                extractBlueFilter->SetInputConnection(imgReader->GetOutputPort());
-                extractBlueFilter->SetComponents(2);
-                extractBlueFilter->Update();
-
-                vtkSmartPointer<vtkImageExtractComponents> extractAlphaFilter = vtkSmartPointer<vtkImageExtractComponents>::New();
-                extractAlphaFilter->SetInputConnection(imgReader->GetOutputPort());
-                extractAlphaFilter->SetComponents(3);
-                extractAlphaFilter->Update();
-
-                vtkImageData *ptR = extractRedFilter->GetOutput();
-                vtkImageData *ptG = extractGreenFilter->GetOutput();
-                vtkImageData *ptB = extractBlueFilter->GetOutput();
-                //vtkImageData *ptA = extractAlphaFilter->GetOutput();
-                double color;
-
-                for( int i = 0 ; i < mis_rows; i++){
-                    for( int j = 0; j < mis_cols; j++ ){
-                        color = ((0.297)*ptR->GetScalarComponentAsDouble(j,i,0,0) +
-                                 (0.589)*ptG->GetScalarComponentAsDouble(j,i,0,0) +
-                                 (0.114)*ptB->GetScalarComponentAsDouble(j,i,0,0));
-
-                        *(img_tmp + j + i*mis_cols) = color / 255.0;
-                    }
-                }
-                break;
-            }
-        }
-
-        imgReader->Delete();
-#else
-        escribirLog("\n" COLOR_RED "<<ERROR:" COLOR_BACK_YELLOW " Este tipo de archivo no se puede cargar sin la version VTK construida >>" COLOR_RESET "\n");
+	FILE *img_file = fopen(ruta_origen, "r");
 #endif
 
-    }
+	char temp_str[512] = "";
+	fgets(temp_str, 512, img_file);  // Leer 'Magic number'
+	fgets(temp_str, 512, img_file);  // Leer Comentario
 
-    if(enmascarar){
-#ifdef BUILD_VTK_VERSION
-        mask_src->SetExtent(0, mis_cols-1, 0, mis_rows-1, 0,0);
-        mask_src->AllocateScalars( VTK_DOUBLE, 1);
-        mask_src->SetOrigin(0.0, 0.0, 0.0);
-        mask_src->SetSpacing(1.0, 1.0, 1.0);
+	double max_intensity;
+	unsigned int height;
+	unsigned int width;
 
-        double *msk_tmp = static_cast<double*>(mask_src->GetScalarPointer(0,0,0));
+#if defined(_WIN32) || defined(_WIN64)
+	fscanf_s(img_file, "%i", &width);    // Leer ancho
+	fscanf_s(img_file, "%i", &height);    // Leer alto
+	fscanf_s(img_file, "%lf", &max_intensity);  // Leer la escala de read_intensity maxima
 #else
-        double *msk_tmp = new double [mis_rows * mis_cols];
+	fscanf(img_file, "%i", &width);    // Leer ancho
+	fscanf(img_file, "%i", &height);    // Leer alto
+	fscanf(img_file, "%lf", &max_intensity);  // Leer la escala de read_intensity maxima
 #endif
-        definirMask(img_tmp, msk_tmp, mis_rows, mis_cols);
-    }
+	
+	IMGCONT *new_img = new IMGCONT(height, width);
+
+	int read_intensity;
+	for (int xy = 0; xy < (height* width); xy++) {
+#if defined(_WIN32) || defined(_WIN64)
+		fscanf_s(img_file, "%i", &read_intensity);
+#else
+		fscanf(img_file, "%i", &read_intensity);
+#endif
+		*(new_img->my_img_data + xy) = (double)read_intensity / max_intensity;
+	}
+
+	fclose(img_file);
+
+	return new_img;
 }
-#endif
 
 
 
-
-
-/*  Metodo: Cargar
-    Funcion: Cargar desde un archivo DICOM/JPEG/PNG/BMP la imagen a formato VTK.
-*/
-int *IMGVTK::Cargar(const char *ruta_origen, double **img_src, double **mask_src, const int nivel, const bool enmascarar){
-
-    const int ruta_l = (int)strlen(ruta_origen);
-DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
-    int esDICOM = 1;
-    int esPGM = !strcmp(ruta_origen + ruta_l - 3, "pgm");
-    esDICOM *=  strcmp(ruta_origen + ruta_l - 3, "png");
-    esDICOM *=  strcmp(ruta_origen + ruta_l - 3, "jpg");
-    esDICOM *=  strcmp(ruta_origen + ruta_l - 4, "jpeg");
-    esDICOM *=  strcmp(ruta_origen + ruta_l - 3, "bmp");
-    esDICOM *=  strcmp(ruta_origen + ruta_l - 3, "pgm");
-
-    int mis_cols, mis_rows;
-
-    if( esDICOM ){
+/*  Metodo: CargarDICOM   */
 #ifdef BUILD_GDCM_VERSION
+IMGVTK::IMGCONT * IMGVTK::CargarDICOM(const char *ruta_origen, const unsigned int nivel)
+{
         gdcm::ImageReader DICOMreader;
         DICOMreader.SetFileName( ruta_origen );
 
@@ -2361,7 +1992,7 @@ DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
         gdcm::File &file = DICOMreader.GetFile();
         gdcm::DataSet &ds = file.GetDataSet();
 
-////---------- Extraer SID (Distancia de la fuente al detector): -----------------------------------------
+////---------- Extraer SID (Distancia de la fuente al detector):
         {
             const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1110) );
             const gdcm::ByteValue *bv = de.GetByteValue();
@@ -2370,7 +2001,7 @@ DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
                 SID = atof( strm.c_str() );
             }
         }
-////---------- Extraer SOD (Distancia de la fuente al paciente): -----------------------------------------
+////---------- Extraer SOD (Distancia de la fuente al paciente):
         {
             const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1111) );
             const gdcm::ByteValue *bv = de.GetByteValue();
@@ -2379,60 +2010,55 @@ DEB_MSG("Extension del archivo de entrada: " << (ruta_origen + ruta_l - 3));
                 SOD = atof( strm.c_str() );
             }
         }
-////---------- Calcular el DDP (Distancia del detector al paciente): ---------------------------------------------------------------------
+////---------- Calcular el DDP (Distancia del detector al paciente):
         DDP = SID - SOD;
-////---------- Calcular el Magnification Factor: -----------------------------------------
+////---------- Calcular el Magnification Factor:
         const double Magnification = SID / SOD;
 
-////---------- Extraer pixY\pixX (Distancia entre el centro de los pixeles en el eje Y\X): -----------------------------------------
+////---------- Extraer pixY\pixX (Distancia entre el centro de los pixeles en el eje Y\X): 
         {
             const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1164) );
             const gdcm::ByteValue *bv = de.GetByteValue();
             if( bv ){
                 std::string strm(bv->GetPointer(), bv->GetLength());
-DEB_MSG("pixXY: " << strm);
                 char *pixXYstr = new char [bv->GetLength()];
                 memcpy(pixXYstr, strm.c_str(), bv->GetLength() * sizeof(char ));
                 char *tmp = strchr(pixXYstr,'\\');
                 pixXYstr[ tmp - pixXYstr ] = '\0';
                 pixY = atof(pixXYstr);// / Magnification;
                 pixX = atof(tmp+1);// / Magnification;
-DEB_MSG("pixY: " << pixY << ", pixX: " << pixX);
                 delete [] pixXYstr;
             }
         }
-////---------- Extraer LAO/RAO (Angulo del detector en direccion izquierda(-) a derecha(+)): -----------------------------------------
+////---------- Extraer LAO/RAO (Angulo del detector en direccion izquierda(-) a derecha(+)):
         {
             const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1510) );
             const gdcm::ByteValue *bv = de.GetByteValue();
             if( bv ){
                 std::string strm(bv->GetPointer(), bv->GetLength());
                 LAORAO = atof( strm.c_str() );
-DEB_MSG("LAO: " << LAORAO);
             }
         }
-////---------- Extraer CRA/CAU (Angulo del detector en direccion cranial(-) a caudal(+)): -----------------------------------------
+////---------- Extraer CRA/CAU (Angulo del detector en direccion cranial(-) a caudal(+)):
         {
             const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x1511) );
             const gdcm::ByteValue *bv = de.GetByteValue();
             if( bv ){
                 std::string strm(bv->GetPointer(), bv->GetLength());
                 CRACAU = atof( strm.c_str() );
-DEB_MSG("CRA: " << CRACAU);
             }
         }
 
-////---------- Extraer Window Width (Ancho de la ventana donde se encuentran los valores de interes): -----------------------------------------
+////---------- Extraer Window Width (Ancho de la ventana donde se encuentran los valores de interes):
         {
             const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x18, 0x7030) );
             const gdcm::ByteValue *bv = de.GetByteValue();
             if( bv ){
                 std::string strm(bv->GetPointer(), bv->GetLength());
-DEB_MSG("Field of view origin: " << strm);
             }
         }
 
-////---------- Extraer Source to Isocenter (Distancia de la fuente al isocentro): -----------------------------------------
+////---------- Extraer Source to Isocenter (Distancia de la fuente al isocentro):
         {
             const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x21, 0x1017) );
             const gdcm::ByteValue *bv = de.GetByteValue();
@@ -2451,20 +2077,18 @@ DEB_MSG("Field of view origin: " << strm);
             if( bv ){
                 std::string strm(bv->GetPointer(), bv->GetLength());
                 WCenter = atof( strm.c_str() );
-DEB_MSG("Window Center: " << WCenter);
             }
         }
-////---------- Extraer Window Width (Ancho de la ventana donde se encuentran los valores de interes): -----------------------------------------
+////---------- Extraer Window Width (Ancho de la ventana donde se encuentran los valores de interes):
         {
             const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x28, 0x1051) );
             const gdcm::ByteValue *bv = de.GetByteValue();
             if( bv ){
                 std::string strm(bv->GetPointer(), bv->GetLength());
                 WWidth = atof( strm.c_str() );
-DEB_MSG("Window Width: " << WWidth);
             }
         }
-////---------- Extraer el ECG: -----------------------------------------
+////---------- Extraer el ECG:
         int ecg_dim = 0, ecg_np = 0;
         {
             const gdcm::DataElement &de = ds.GetDataElement( gdcm::Tag(0x5000, 0x0005) );
@@ -2473,7 +2097,6 @@ DEB_MSG("Window Width: " << WWidth);
                 gdcm::Element<gdcm::VR::US, gdcm::VM::VM1_n> el;
                 el.Set( de.GetValue() );
                 ecg_dim = el.GetValue();
-DEB_MSG("[ECG] Dimensiones: " << ecg_dim );
             }
         }
         {
@@ -2483,7 +2106,6 @@ DEB_MSG("[ECG] Dimensiones: " << ecg_dim );
                 gdcm::Element<gdcm::VR::US, gdcm::VM::VM1_n> el;
                 el.Set( de.GetValue() );
                 ecg_np = el.GetValue();
-DEB_MSG("[ECG] Numero de puntos: " << ecg_np );
             }
         }
         int n_niveles = 1;
@@ -2493,7 +2115,6 @@ DEB_MSG("[ECG] Numero de puntos: " << ecg_np );
             if( bv ){
                 std::string strm(bv->GetPointer(), bv->GetLength());
                 n_niveles = atof( strm.c_str() );
-DEB_MSG("Numero de fotogramas: " << n_niveles);
             }
         }
         {
@@ -2548,33 +2169,28 @@ DEB_MSG("Pt(" << i <<  ") = " << ((unsigned short*)curve_data)[i]);
         ///----------------------------------------------------- Leer imagenes
         DICOMreader.Read();
         const gdcm::Image &gimage = DICOMreader.GetImage();
-DEB_MSG("Buffer length: " << gimage.GetBufferLength());
         char *buffer = new char[gimage.GetBufferLength()];
         gimage.GetBuffer(buffer);
 
         const unsigned int* dimension = gimage.GetDimensions();
-        mis_cols = dimension[0];
-        mis_rows = dimension[1];
+        unsigned int width = dimension[0];
+        unsigned int height = dimension[1];
         const int mis_niveles = dimension[2];
-        const int mis_rows_cols = mis_rows*mis_cols;
-
-DEB_MSG("Cols: " << mis_cols << ", rens: " << mis_rows  << ", niveles: " << mis_niveles);
 
         // Alojar memoria para la imagen:
-        *img_src = new double [mis_rows_cols];
+		IMGCONT *new_img = new IMGCONT(height, width);
 
         gdcm::PhotometricInterpretation scl_comps = gimage.GetPhotometricInterpretation();
         gdcm::PixelFormat pix_format = gimage.GetPixelFormat();
 
         switch(scl_comps){
             case gdcm::PhotometricInterpretation::RGB:{
-DEB_MSG("Imagen DICOM en RGB...");
                     if( pix_format == gdcm::PixelFormat::UINT8 ){
-                        for( int y = 0; y < mis_rows; y++){
-                            for( int x = 0; x < mis_cols; x++){
-                                const double pixR = (double)(unsigned char)*(buffer + 3*x   + y*mis_cols*3 + nivel*mis_rows_cols*3) - WCenter + 0.5;
-                                const double pixG = (double)(unsigned char)*(buffer + 3*x+1 + y*mis_cols*3 + nivel*mis_rows_cols*3) - WCenter + 0.5;
-                                const double pixB = (double)(unsigned char)*(buffer + 3*x+2 + y*mis_cols*3 + nivel*mis_rows_cols*3) - WCenter + 0.5;
+                        for( int y = 0; y < my_height; y++){
+                            for( int x = 0; x < my_width; x++){
+                                const double pixR = (double)(unsigned char)*(buffer + 3*x   + y*my_width*3 + nivel*mis_rows_cols*3) - WCenter + 0.5;
+                                const double pixG = (double)(unsigned char)*(buffer + 3*x+1 + y*my_width*3 + nivel*mis_rows_cols*3) - WCenter + 0.5;
+                                const double pixB = (double)(unsigned char)*(buffer + 3*x+2 + y*my_width*3 + nivel*mis_rows_cols*3) - WCenter + 0.5;
                                 double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
                                 if( pix <= -((WWidth-1) / 2)){
                                     pix = 0.0;
@@ -2583,22 +2199,21 @@ DEB_MSG("Imagen DICOM en RGB...");
                                 }else{
                                     pix = pix / (WWidth -1) + 0.5;
                                 }
-                                *(*img_src + (mis_rows-y-1)*mis_rows + x ) = pix; // 255.0;
+                                *(new_img->my_img_data + (my_height-y-1)*my_height + x ) = pix; // 255.0;
                             }
                         }
                     }else{
                         escribirLog(COLOR_RED"<<ERROR AL LEER ARCHIVO DICOM:" COLOR_BACK_YELLOW " Formato de imagen RGB no soportado>>" COLOR_RESET "\n");
+						return NULL;
                     }
                     break;
                 }
             case gdcm::PhotometricInterpretation::MONOCHROME1:
             case gdcm::PhotometricInterpretation::MONOCHROME2:{
-DEB_MSG("Imagen DICOM en escala de grises...");
                     if( pix_format == gdcm::PixelFormat::UINT8 ){
-DEB_MSG("Tipo UINT8");
-                        for( int y = 0; y < mis_rows; y++){
-                            for( int x = 0; x < mis_cols; x++){
-                                double pix = (double)(unsigned char)*(buffer + nivel*mis_rows_cols + x + y*mis_cols) - WCenter + 0.5;
+                        for( int y = 0; y < my_height; y++){
+                            for( int x = 0; x < my_width; x++){
+                                double pix = (double)(unsigned char)*(buffer + nivel*mis_rows_cols + x + y*my_width) - WCenter + 0.5;
 
                                 if( pix <= -((WWidth-1) / 2)){
                                     pix = 0.0;
@@ -2607,18 +2222,17 @@ DEB_MSG("Tipo UINT8");
                                 }else{
                                     pix = pix / (WWidth -1) + 0.5;
                                 }
-                                *(*img_src + (mis_rows-y-1)*mis_rows + x) = pix; // 255.0;
+                                *(new_img->my_img_data + (my_height-y-1)*my_height + x) = pix; // 255.0;
                             }
                         }
 
                     }else if( pix_format == gdcm::PixelFormat::UINT16 ){
-DEB_MSG("Tipo UINT16");
                         unsigned short *buffer16 = (unsigned short*)buffer;
-                        for( int y = 0; y < mis_rows; y++){
-                            for( int x = 0; x < mis_cols; x++){
-                                const double pixR = (double)((unsigned char)*(buffer16 + 3*x   + y*mis_cols*3 + nivel*mis_rows_cols*3) / 16)  - WCenter + 0.5;
-                                const double pixG = (double)((unsigned char)*(buffer16 + 3*x+1 + y*mis_cols*3 + nivel*mis_rows_cols*3) / 16)  - WCenter + 0.5;
-                                const double pixB = (double)((unsigned char)*(buffer16 + 3*x+2 + y*mis_cols*3 + nivel*mis_rows_cols*3) / 16)  - WCenter + 0.5;
+                        for( int y = 0; y < my_height; y++){
+                            for( int x = 0; x < my_width; x++){
+                                const double pixR = (double)((unsigned char)*(buffer16 + 3*x   + y*my_width*3 + nivel*mis_rows_cols*3) / 16)  - WCenter + 0.5;
+                                const double pixG = (double)((unsigned char)*(buffer16 + 3*x+1 + y*my_width*3 + nivel*mis_rows_cols*3) / 16)  - WCenter + 0.5;
+                                const double pixB = (double)((unsigned char)*(buffer16 + 3*x+2 + y*my_width*3 + nivel*mis_rows_cols*3) / 16)  - WCenter + 0.5;
                                 double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
                                 if( pix <= -((WWidth-1) / 2)){
                                     pix = 0.0;
@@ -2627,7 +2241,7 @@ DEB_MSG("Tipo UINT16");
                                 }else{
                                     pix = pix / (WWidth -1) + 0.5;
                                 }
-                                *(*img_src + (mis_rows-y-1)*mis_rows + x) =  pix; // 255.0;
+                                *(new_img->my_img_data + (my_height-y-1)*my_height + x) =  pix; // 255.0;
                             }
                         }
 
@@ -2638,67 +2252,8 @@ DEB_MSG("Tipo UINT16");
                 }
         }
         delete [] buffer;
-#else
-        escribirLog("\n" COLOR_RED "<<ERROR:" COLOR_BACK_YELLOW " Este tipo de archivo no se puede cargar sin la version GDCM construida >>" COLOR_RESET "\n");
-#endif
-    }else if(esPGM){ ///------------------------------------------------------------------------------------------------
-        //// Cargar imagen formato PGM
-#if defined(_WIN32) || defined(_WIN64)
-		FILE *fp_img;
-		fopen_s(&fp_img, ruta_origen, "r");
-#else
-        FILE *fp_img = fopen( ruta_origen, "r" );
-#endif
-DEB_MSG("abriendo archivo: " << ruta_origen);
-        char temp_str[512] = "";
-        fgets(temp_str, 512, fp_img);  // Leer 'Magic number'
-    DEB_MSG("Magic number: " << temp_str);
-        fgets(temp_str, 512, fp_img);  // Leer Comentario
-    DEB_MSG("Comentarios: " << temp_str);
-        double max_intensidad;
-#if defined(_WIN32) || defined(_WIN64)
-		fscanf_s(fp_img, "%i", &mis_cols);    // Leer ancho
-		fscanf_s(fp_img, "%i", &mis_rows);    // Leer alto
-		fscanf_s(fp_img, "%lf", &max_intensidad);  // Leer la escala de intensidad maxima
-#else
-        fscanf(fp_img, "%i", &mis_cols);    // Leer ancho
-		fscanf(fp_img, "%i", &mis_rows);    // Leer alto
-		fscanf(fp_img, "%lf", &max_intensidad);  // Leer la escala de intensidad maxima
-#endif
-    DEB_MSG("columnas: " << mis_cols);
-    DEB_MSG("renglones: " << mis_rows);
-        int mis_rows_cols = mis_cols * mis_rows;
-
-    DEB_MSG("max intensidad: " << max_intensidad);
-
-    *img_src = new double [mis_rows_cols];
-
-        int intensidad;
-        for( int xy = 0; xy < mis_rows_cols; xy++){
-#if defined(_WIN32) || defined(_WIN64)
-			fscanf_s(fp_img, "%i", &intensidad);
-#else
-            fscanf( fp_img, "%i", &intensidad );
-#endif
-            *(*img_src + xy) = (double)intensidad / max_intensidad;
-        }
-
-    }else{ ///------------------------------------------------------------------------------------------------
-        escribirLog("\n" COLOR_RED "<<ERROR:" COLOR_BACK_YELLOW " Este tipo de archivo no se puede cargar sin la version VTK construida >>" COLOR_RESET "\n");
-    }
-
-    if(enmascarar){
-        *mask_src = new double [mis_rows * mis_cols];
-        definirMask(*img_src, *mask_src, mis_rows, mis_cols);
-    }
-
-    int *dims = new int [2];
-    dims[ 0 ] = mis_cols;
-    dims[ 1 ] = mis_rows;
-
-    return dims;
 }
-
+#endif
 
 
 
@@ -2707,274 +2262,291 @@ DEB_MSG("abriendo archivo: " << ruta_origen);
     Funcion: Cargar la imagen a formato VTK desde un archivo.
 */
 void IMGVTK::Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool enmascarar, const int nivel) {
-#ifdef BUILD_VTK_VERSION
-	vtkSmartPointer<vtkImageData> img_tmp = NULL;
-	vtkSmartPointer<vtkImageData> msk_tmp = NULL;
 
+	IMGCONT *img_tmp = NULL;
 
-	switch (img_idx) {
-	case BASE:
-		if (!base) {
-			base = vtkSmartPointer<vtkImageData>::New();
-		}
-		if (!mask) {
-			mask = vtkSmartPointer<vtkImageData>::New();
-		}
-		img_tmp = base;
-		msk_tmp = mask;
-		break;
-	case GROUNDTRUTH:
-		if (!ground) {
-			ground = vtkSmartPointer<vtkImageData>::New();
-		}
-		img_tmp = ground;
-		break;
-	case MASK:
-		if (!mask) {
-			mask = vtkSmartPointer<vtkImageData>::New();
-		}
-		img_tmp = mask;
-		break;
-	case SKELETON:
-		if (!skeleton) {
-			skeleton = vtkSmartPointer<vtkImageData>::New();
-		}
-		img_tmp = skeleton;
-		break;
-	case SEGMENT:
-		if (!segment) {
-			segment = vtkSmartPointer<vtkImageData>::New();
-		}
-		img_tmp = segment;
-		break;
-	case MAPDIST:
-		if (!mapa_dist) {
-			mapa_dist = vtkSmartPointer<vtkImageData>::New();
-		}
-		img_tmp = mapa_dist;
-		break;
-	case THRESHOLD:
-		if (!threshold) {
-			threshold = vtkSmartPointer<vtkImageData>::New();
-		}
-		img_tmp = threshold;
-		break;
-	case BORDERS:
-		if (!borders) {
-			borders = vtkSmartPointer<vtkImageData>::New();
-		}
-		img_tmp = borders;
-		break;
+	/* Verify the type of image to be read */
+	const unsigned int len_path = (unsigned int)strlen(ruta_origen);
+	if (strcmp(ruta_origen + len_path - 4, ".png")) {
+		img_tmp = CargarPGM(ruta_origen);
 	}
-
-	Cargar(ruta_origen, img_tmp, msk_tmp, nivel, enmascarar);
-
-	switch (img_idx) {
-	case BASE:
-		base_ptr = static_cast<double*>(base->GetScalarPointer(0, 0, 0));
-		mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
-		int dims[3];
-		base->GetDimensions(dims);
-
-		cols = dims[0];
-		rows = dims[1];
-		rows_cols = rows*cols;
-
-		if (!segment) {
-			segment = vtkSmartPointer<vtkImageData>::New();
-			segment->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-			segment->AllocateScalars(VTK_DOUBLE, 1);
-			segment->SetOrigin(0.0, 0.0, 0.0);
-			segment->SetSpacing(1.0, 1.0, 1.0);
-
-			segment_ptr = static_cast<double*>(segment->GetScalarPointer(0, 0, 0));
-		}
-
-		break;
-	case GROUNDTRUTH:
-		gt_ptr = static_cast<double*>(ground->GetScalarPointer(0, 0, 0));
-		break;
-	case MASK:
-		mask_ptr = static_cast<double*>(mask->GetScalarPointer(0, 0, 0));
-		break;
-	case SKELETON:
-		/** Requiere de modificarse el extent (cols+2, rows+2) **/
-		skl_ptr = static_cast<double*>(skeleton->GetScalarPointer(0, 0, 0));
-		break;
-	case SEGMENT:
-		segment_ptr = static_cast<double*>(segment->GetScalarPointer(0, 0, 0));
-		break;
-	case MAPDIST:
-		map_ptr = static_cast<double*>(mapa_dist->GetScalarPointer(0, 0, 0));
-		break;
-	case THRESHOLD:
-		threshold_ptr = static_cast<double*>(threshold->GetScalarPointer(0, 0, 0));
-		break;
-	case BORDERS:
-		borders_ptr = static_cast<double*>(borders->GetScalarPointer(0, 0, 0));
-		break;
+	else if (strcmp(ruta_origen + len_path - 4, ".pgm")) {
+		img_tmp = CargarPGM(ruta_origen);
 	}
+	else if (strcmp(ruta_origen + len_path - 4, ".dcm")) {
+		img_tmp = CargarDICOM(ruta_origen, nivel);
+	}
+	else {
+#if defined(_WIN32) || defined(_WIN64)
+		sprintf_s(err_msg, 512, "<<Error: Image format not supported in: \'%s\'>>\n", ruta_origen);
 #else
-	double **img_tmp = NULL;
-	double **msk_tmp = NULL;
-
+		sprintf(err_msg,  COLOR_BACK_RED "<<" COLOR_WHITE "Error: Image format not supported in: \'%s\'>>" COLOR_RESET "\n", ruta_origen);
+#endif
+		escribirLog(err_msg);
+	}
 
 	switch (img_idx) {
 	case BASE:
-		img_tmp = &base_ptr;
-		msk_tmp = &mask_ptr;
+		my_base = new IMGCONT(img_tmp->my_height, img_tmp->my_width);
+		*my_base = *img_tmp;
+
+		if (enmascarar) {
+			my_mask = definirMask(my_base);
+		}
+
 		break;
 	case GROUNDTRUTH:
-		img_tmp = &gt_ptr;
+		my_groundtruth = new IMGCONT(img_tmp->my_height, img_tmp->my_width);
+		*my_groundtruth = *img_tmp;
 		break;
 	case MASK:
-		img_tmp = &mask_ptr;
+		my_mask = new IMGCONT(img_tmp->my_height, img_tmp->my_width);
+		*my_mask = *img_tmp;
 		break;
 	case SKELETON:
-		img_tmp = &skl_ptr;
+		my_skeleton = new IMGCONT(img_tmp->my_height, img_tmp->my_width, 1, 1);
+		*my_skeleton = *img_tmp;
 		break;
 	case SEGMENT:
-		img_tmp = &segment_ptr;
+		my_response = new IMGCONT(img_tmp->my_height, img_tmp->my_width);
+		*my_response = *img_tmp;
 		break;
 	case MAPDIST:
-		img_tmp = &map_ptr;
+		my_distmap = new IMGCONT(img_tmp->my_height, img_tmp->my_width);
+		*my_distmap = *img_tmp;
 		break;
 	case THRESHOLD:
-		img_tmp = &threshold_ptr;
+		my_segmented = new IMGCONT(img_tmp->my_height, img_tmp->my_width);
+		*my_segmented = *img_tmp;
 		break;
 	case BORDERS:
-		img_tmp = &borders_ptr;
+		my_boundaries = new IMGCONT(img_tmp->my_height, img_tmp->my_width);
+		*my_boundaries = *img_tmp;
 		break;
 	}
 
-	int *dims = Cargar(ruta_origen, img_tmp, msk_tmp, nivel, enmascarar);
+	delete img_tmp;
 
-	cols = dims[0];
-	rows = dims[1];
-	delete[] dims;
+}
 
-	rows_cols = rows * cols;
 
-	if (!segment_ptr) {
-		segment_ptr = new double[rows_cols];
+
+
+/*  Metodo: GuardarPGM */
+void IMGVTK::GuardarPGM(IMGCONT *img_src, const char *ruta, const double min, const double max)
+{
+#if defined(_WIN32) || defined(_WIN64)
+	FILE *img_file;
+	fopen_s(&img_file, ruta, "w");
+#else
+	FILE *img_file = fopen(ruta, "w");
+#endif
+
+	fprintf(img_file, "P2\n");
+	fprintf(img_file, "# by FerCer\n");
+
+	fprintf(img_file, "%i %i\n", img_src->my_width, img_src->my_height);
+	fprintf(img_file, "255\n");
+
+	int intensity;
+	for (unsigned int y = 0; y < img_src->my_height; y++) {
+		for (unsigned int x = 0; x < img_src->my_width; x++) {
+			intensity = (unsigned char)(255.0 * (*(img_src->my_img_data + (x + img_src->my_offset_x) + (y + img_src->my_offset_y)*img_src->my_width) - min) / (max - min));
+			fprintf(img_file, "%i\n", intensity);
+		}
 	}
 
-#endif
+	fclose(img_file);
 }
+
+
+
+
+/*  Metodo: GuardarPNG */
+void IMGVTK::GuardarPNG(IMGCONT *img_src, const char *ruta, const double min, const double max)
+{	
+	mainprog_info *mainprog_ptr;
+
+	png_structp  png_ptr;       /* note:  temporary variables! */
+	png_infop  info_ptr;
+	int color_type, interlace_type;
+
+	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, mainprog_ptr, writepng_error_handler, NULL);
+	if (!png_ptr)
+		return;   /* out of memory */
+
+	info_ptr = png_create_info_struct(png_ptr);
+	if (!info_ptr) {
+		png_destroy_write_struct(&png_ptr, NULL);
+		return;   /* out of memory */
+	}
+
+	if (setjmp(mainprog_ptr->jmpbuf)) {
+		png_destroy_write_struct(&png_ptr, &info_ptr);
+		return;
+	}
+
+
+	png_init_io(png_ptr, mainprog_ptr->outfile);
+
+	png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
+
+	if (mainprog_ptr->pnmtype == 5)
+		color_type = PNG_COLOR_TYPE_GRAY;
+	else if (mainprog_ptr->pnmtype == 6)
+		color_type = PNG_COLOR_TYPE_RGB;
+	else if (mainprog_ptr->pnmtype == 8)
+		color_type = PNG_COLOR_TYPE_RGB_ALPHA;
+	else {
+		png_destroy_write_struct(&png_ptr, &info_ptr);
+		return;
+	}
+
+	interlace_type = mainprog_ptr->interlaced ? PNG_INTERLACE_ADAM7 :
+		PNG_INTERLACE_NONE;
+
+
+	png_set_IHDR(png_ptr, info_ptr, mainprog_ptr->width, mainprog_ptr->height,
+      mainprog_ptr->sample_depth, color_type, interlace_type,
+      PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+
+    if (mainprog_ptr->gamma > 0.0)
+        png_set_gAMA(png_ptr, info_ptr, mainprog_ptr->gamma);
+
+    if (mainprog_ptr->have_bg) {   /* we know it's RGBA, not gray+alpha */
+        png_color_16  background;
+
+        background.red = mainprog_ptr->bg_red;
+        background.green = mainprog_ptr->bg_green;
+        background.blue = mainprog_ptr->bg_blue;
+        png_set_bKGD(png_ptr, info_ptr, &background);
+    }
+
+	if (mainprog_ptr->have_time) {
+		png_time  modtime;
+
+		png_convert_from_time_t(&modtime, mainprog_ptr->modtime);
+		png_set_tIME(png_ptr, info_ptr, &modtime);
+	}
+
+
+	if (mainprog_ptr->have_text) {
+		png_text  text[6];
+		int  num_text = 0;
+
+		if (mainprog_ptr->have_text & TEXT_TITLE) {
+			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
+			text[num_text].key = "Title";
+			text[num_text].text = mainprog_ptr->title;
+			++num_text;
+		}
+		if (mainprog_ptr->have_text & TEXT_AUTHOR) {
+			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
+			text[num_text].key = "Author";
+			text[num_text].text = mainprog_ptr->author;
+			++num_text;
+		}
+		if (mainprog_ptr->have_text & TEXT_DESC) {
+			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
+			text[num_text].key = "Description";
+			text[num_text].text = mainprog_ptr->desc;
+			++num_text;
+		}
+		if (mainprog_ptr->have_text & TEXT_COPY) {
+			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
+			text[num_text].key = "Copyright";
+			text[num_text].text = mainprog_ptr->copyright;
+			++num_text;
+		}
+		if (mainprog_ptr->have_text & TEXT_EMAIL) {
+			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
+			text[num_text].key = "E-mail";
+			text[num_text].text = mainprog_ptr->email;
+			++num_text;
+		}
+		if (mainprog_ptr->have_text & TEXT_URL) {
+			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
+			text[num_text].key = "URL";
+			text[num_text].text = mainprog_ptr->url;
+			++num_text;
+		}
+		png_set_text(png_ptr, info_ptr, text, num_text);
+
+	}
+
+	png_write_info(png_ptr, info_ptr);
+
+	png_set_packing(png_ptr);
+
+	mainprog_ptr->png_ptr = png_ptr;
+
+	mainprog_ptr->info_ptr = info_ptr;
+}
+
+
 
 
 /*  Metodo: Guardar
     Funcion: Guarda la imagen en la ruta especificada con la extension especificada.
 */
-void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida ){
+void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida )
+{
 
-    double *img_ptr = NULL;
-#ifdef BUILD_VTK_VERSION
-    vtkSmartPointer<vtkImageData> img_out = vtkSmartPointer<vtkImageData>::New();
-
-    img_out->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-    img_out->AllocateScalars(VTK_UNSIGNED_CHAR, 1);
-    img_out->SetOrigin(0.0, 0.0, 0.0);
-    img_out->SetSpacing(1.0, 1.0, 1.0);
-
-    unsigned char *img_out_ptr = static_cast< unsigned char* >(img_out->GetScalarPointer(0, 0, 0));
-#endif
-
-    int offset_x = 0, offset_y = 0;
-
+    IMGCONT *img_tmp = NULL;
+	
     switch( img_idx ){
     case BASE:
-        img_ptr = base_ptr;
+        img_tmp = my_base;
         break;
     case GROUNDTRUTH:
-        img_ptr = gt_ptr;
+        img_tmp = my_groundtruth;
         break;
     case MASK:
-        img_ptr = mask_ptr;
+        img_tmp = my_mask;
         break;
     case SKELETON:
-        img_ptr = skl_ptr;
-        offset_x = 1;
-        offset_y = 1;
+        img_tmp = my_skeleton;
         break;
     case SEGMENT:
-        img_ptr = segment_ptr;
+        img_tmp = my_response;
         break;
     case MAPDIST:
-        img_ptr = map_ptr;
+        img_tmp = my_distmap;
         break;
     case THRESHOLD:
-        img_ptr = threshold_ptr;
+        img_tmp = my_segmented;
         break;
     case BORDERS:
-        img_ptr = borders_ptr;
+        img_tmp = my_boundaries;
         break;
     }
 
     double min = MY_INF;
     double max =-MY_INF;
 
-    for( int y = 0; y < rows; y++ ){
-        for( int x = 0; x < cols; x++ ){
-            if( min > *(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) ){
-                min = *(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2));
-            }
-            if( max < *(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) ){
-                max = *(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2));
-            }
-        }
-    }
+	for (int y = 0; y < img_tmp->my_height; y++) {
+		for (int x = 0; x < img_tmp->my_width; x++) {
+			if (min > *(img_tmp->my_img_data + (x + img_tmp->my_offset_x) + (y + img_tmp->my_offset_y)*(img_tmp->my_width))) {
+				min = *(img_tmp->my_img_data + (x + img_tmp->my_offset_x) + (y + img_tmp->my_offset_y)*(img_tmp->my_width));
+			}
+			if (max < *(img_tmp->my_img_data + (x + img_tmp->my_offset_x) + (y + img_tmp->my_offset_y)*(img_tmp->my_width))) {
+				max = *(img_tmp->my_img_data + (x + img_tmp->my_offset_x) + (y + img_tmp->my_offset_y)*(img_tmp->my_width));
+			}
+		}
+	}
 
     if( fabs(max - min) < 1e-12 ){
         max = 1.0;
         min = 0.0;
     }
 
-    DEB_MSG(COLOR_BACK_GREEN COLOR_BACK_BLACK "GUARDAR" COLOR_NORMAL " min: " << min << ", " << max);
-
     switch(tipo_salida){
         case PGM:{
-#if defined(_WIN32) || defined(_WIN64)
-			FILE *fp_out;
-			fopen_s(&fp_out, ruta, "w");
-#else
-            FILE *fp_out = fopen( ruta, "w");
-#endif
-
-            fprintf(fp_out, "P2\n");
-            fprintf(fp_out, "# by FerCer\n");
-
-            fprintf(fp_out, "%i %i\n", cols, rows);
-            fprintf(fp_out, "255\n");
-
-            int intensidad;
-			for (int y = 0; y < rows; y++) {
-				for (int x = 0; x < cols; x++) {
-					intensidad = (unsigned char)(255.0 * (*(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x * 2)) - min) / (max - min));
-					fprintf(fp_out, "%i\n", intensidad);
-				}
-			}
-
-            fclose( fp_out );
-            break;
-        }
-
+			GuardarPGM(img_tmp, ruta, min, max);
+			break;
         case PNG:{
-#ifdef BUILD_VTK_VERSION
-            for( int y = 0; y < rows; y++ ){
-                for( int x = 0; x < cols; x++ ){
-                    *(img_out_ptr + x + y*cols) = (unsigned char)(255.0 * (*(img_ptr + (x + offset_x) + (y + offset_y)*(cols + offset_x*2)) - min) / (max - min));
-                }
-            }
 
-            vtkSmartPointer<vtkPNGWriter> png_output = vtkSmartPointer<vtkPNGWriter>::New();
-            png_output->SetFileName( ruta );
-            png_output->SetInputData( img_out );
-            png_output->Write();
-#else
-            escribirLog("\n" COLOR_RED "<<ERROR:" COLOR_BACK_YELLOW " Este tipo de archivo no se puede guardar sin la version VTK construida >>" COLOR_RESET "\n");
-#endif
-            break;
+			break;
         }
     }
 }
@@ -2990,26 +2562,16 @@ IMGVTK::IMGVTK(){
     rows = 0;
     max_dist = 0;
 
-    base_ptr = NULL;
-    gt_ptr = NULL;
-    skl_ptr = NULL;
-    mask_ptr = NULL;
-    map_ptr = NULL;
-    borders_ptr = NULL;
+    my_base = NULL;
+    my_groundtruth = NULL;
+    my_skeleton = NULL;
+    my_mask = NULL;
+    my_distmap = NULL;
+    my_boundaries = NULL;
+    my_response = NULL;
+    my_segmented = NULL;
+	
     pix_caract = NULL;
-    segment_ptr = NULL;
-    threshold_ptr = NULL;
-
-#ifdef BUILD_VTK_VERSION
-	base = NULL;
-	ground = NULL;
-	skeleton = NULL;
-	mask = NULL;
-	mapa_dist = NULL;
-	borders = NULL;
-	segment = NULL;
-	threshold = NULL;
-#endif
 
     // Defaults:
     SID = 0.0;
@@ -3026,165 +2588,68 @@ IMGVTK::IMGVTK(){
 
 
 
-IMGVTK::IMGVTK( const IMGVTK &origen ){
-    max_dist = origen.max_dist;
+IMGVTK::IMGVTK(const IMGVTK &origen) {
+	max_dist = origen.max_dist;
 
-    base_ptr = NULL;
-    gt_ptr = NULL;
-    skl_ptr = NULL;
-    mask_ptr = NULL;
-    map_ptr = NULL;
-    borders_ptr = NULL;
-    pix_caract = NULL;
-    segment_ptr = NULL;
-    threshold_ptr = NULL;
+	my_base = NULL;
+	my_groundtruth = NULL;
+	my_skeleton = NULL;
+	my_mask = NULL;
+	my_distmap = NULL;
+	my_boundaries = NULL;
+	my_response = NULL;
+	my_segmented = NULL;
 
-#ifdef BUILD_VTK_VERSION
-	base = NULL;
-	ground = NULL;
-	skeleton = NULL;
-	mask = NULL;
-	mapa_dist = NULL;
-	borders = NULL;
-	segment = NULL;
-	threshold = NULL;
-#endif
+	pix_caract = NULL;
 
-    // Defaults:
-    SID = origen.SID;
-    SOD = origen.SOD;
-    DDP = SID - SOD;
-    DISO = origen.DISO;
-    LAORAO = origen.LAORAO;
-    CRACAU = origen.CRACAU;
-    pixX = origen.pixX;
-    pixY = origen.pixY;
-    WCenter = origen.WCenter;
-    WWidth = origen.WWidth;
+	// Defaults:
+	SID = origen.SID;
+	SOD = origen.SOD;
+	DDP = SID - SOD;
+	DISO = origen.DISO;
+	LAORAO = origen.LAORAO;
+	CRACAU = origen.CRACAU;
+	pixX = origen.pixX;
+	pixY = origen.pixY;
+	WCenter = origen.WCenter;
+	WWidth = origen.WWidth;
 
 
-    cols = origen.cols;
-    rows = origen.rows;
-    rows_cols = rows * cols;
+	cols = origen.cols;
+	rows = origen.rows;
+	rows_cols = rows * cols;
 
-    if(origen.base_ptr){
-#ifdef BUILD_VTK_VERSION
-        base = vtkSmartPointer< vtkImageData >::New();
-        base->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-        base->AllocateScalars(VTK_DOUBLE, 1);
-        base->SetOrigin(0.0, 0.0, 0.0);
-        base->SetSpacing(1.0, 1.0, 1.0);
-        base_ptr = static_cast< double* >(base->GetScalarPointer(0,0,0));
-#else
-        base_ptr = new double [rows_cols];
-#endif
-        memcpy(base_ptr, origen.base_ptr, rows_cols*sizeof(double));
+	if (origen.my_base) {
+		*my_base = *origen.my_base;
+	}
 
-        if(origen.gt_ptr){
-#ifdef BUILD_VTK_VERSION
-            ground = vtkSmartPointer< vtkImageData >::New();
-            ground->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-            ground->AllocateScalars(VTK_DOUBLE, 1);
-            ground->SetOrigin(0.0, 0.0, 0.0);
-            ground->SetSpacing(1.0, 1.0, 1.0);
+	if (origen.my_groundtruth) {
+		*my_groundtruth = *origen.my_groundtruth;
+	}
 
-            gt_ptr = static_cast< double* >(ground->GetScalarPointer(0,0,0));
-#else
-            gt_ptr = new double [rows_cols];
-#endif
-            memcpy(gt_ptr, origen.gt_ptr, rows_cols*sizeof(double));
-        }
+	if (origen.my_mask) {
+		*my_mask = *origen.my_mask;
+	}
 
-        if(origen.mask_ptr){
-#ifdef BUILD_VTK_VERSION
-            mask = vtkSmartPointer< vtkImageData >::New();
-            mask->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-            mask->AllocateScalars(VTK_DOUBLE, 1);
-            mask->SetOrigin(0.0, 0.0, 0.0);
-            mask->SetSpacing(1.0, 1.0, 1.0);
+	if (origen.my_response) {
+		*my_response = *origen.my_response;
+	}
 
-            mask_ptr = static_cast< double* >(mask->GetScalarPointer(0,0,0));
-#else
-            mask_ptr = new double [rows_cols];
-#endif
-            memcpy(mask_ptr, origen.mask_ptr, rows_cols*sizeof(double));
-        }
+	if (origen.my_skeleton) {
+		*my_skeleton = *origen.my_skeleton;
+	}
 
-        if(origen.segment_ptr){
-#ifdef BUILD_VTK_VERSION
-            segment = vtkSmartPointer< vtkImageData >::New();
-            segment->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-            segment->AllocateScalars(VTK_DOUBLE, 1);
-            segment->SetOrigin(0.0, 0.0, 0.0);
-            segment->SetSpacing(1.0, 1.0, 1.0);
+	if (origen.my_distmap) {
+		*my_distmap = *origen.my_distmap;
+	}
 
-            segment_ptr = static_cast< double* >(segment->GetScalarPointer(0,0,0));
-#else
-            segment_ptr = new double [rows_cols];
-#endif
-            memcpy(segment_ptr, origen.segment_ptr, rows_cols*sizeof(double));
-        }
+	if (origen.my_boundaries) {
+		*my_boundaries = *origen.my_boundaries;
+	}
 
-        if(origen.skl_ptr){
-#ifdef BUILD_VTK_VERSION
-            skeleton = vtkSmartPointer< vtkImageData >::New();
-            skeleton->SetExtent(0, cols + 1, 0, rows + 1, 0, 0);
-            skeleton->AllocateScalars(VTK_DOUBLE, 1);
-            skeleton->SetOrigin(0.0, 0.0, 0.0);
-            skeleton->SetSpacing(1.0, 1.0, 1.0);
-
-            skl_ptr = static_cast< double* >(skeleton->GetScalarPointer(0,0,0));
-#else
-            skl_ptr = new double [(rows+2) * (cols+2)];
-#endif
-            memcpy(skl_ptr, origen.skl_ptr, (cols+2)*(rows+2)*sizeof(double));
-        }
-
-        if(origen.map_ptr){
-#ifdef BUILD_VTK_VERSION
-            mapa_dist = vtkSmartPointer< vtkImageData >::New();
-            mapa_dist->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-            mapa_dist->AllocateScalars(VTK_DOUBLE, 1);
-            mapa_dist->SetOrigin(0.0, 0.0, 0.0);
-            mapa_dist->SetSpacing(1.0, 1.0, 1.0);
-
-            map_ptr = static_cast< double* >(mapa_dist->GetScalarPointer(0,0,0));
-#else
-            map_ptr = new double [rows_cols];
-#endif
-            memcpy(map_ptr, origen.map_ptr, rows_cols*sizeof(double));
-        }
-
-        if(origen.borders_ptr){
-#ifdef BUILD_VTK_VERSION
-            borders = vtkSmartPointer< vtkImageData >::New();
-            borders->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-            borders->AllocateScalars(VTK_DOUBLE, 1);
-            borders->SetOrigin(0.0, 0.0, 0.0);
-            borders->SetSpacing(1.0, 1.0, 1.0);
-
-            borders_ptr = static_cast< double* >(borders->GetScalarPointer(0,0,0));
-#else
-            borders_ptr = new double [rows_cols];
-#endif
-            memcpy(borders_ptr, origen.borders_ptr, rows_cols*sizeof(double));
-        }
-
-        if (origen.threshold_ptr) {
-#ifdef BUILD_VTK_VERSION
-            threshold = vtkSmartPointer< vtkImageData >::New();
-            threshold->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-            threshold->AllocateScalars(VTK_DOUBLE, 1);
-            threshold->SetOrigin(0.0, 0.0, 0.0);
-            threshold->SetSpacing(1.0, 1.0, 1.0);
-
-            threshold_ptr = static_cast< double* >(threshold->GetScalarPointer(0, 0, 0));
-#else
-            threshold_ptr = new double [rows_cols];
-#endif
-            memcpy(threshold_ptr, origen.threshold_ptr, rows_cols * sizeof(double));
-        }
-    }
+	if (origen.my_segmented) {
+		*my_segmented = *origen.my_segmented;
+	}
 }
 
 
@@ -3193,26 +2658,16 @@ IMGVTK::IMGVTK( const IMGVTK &origen ){
 IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel){
     max_dist = 0;
 
-    base_ptr = NULL;
-    gt_ptr = NULL;
-    skl_ptr = NULL;
-    mask_ptr = NULL;
-    map_ptr = NULL;
-    borders_ptr = NULL;
-    pix_caract = NULL;
-    segment_ptr = NULL;
-    threshold_ptr = NULL;
+	my_base = NULL;
+	my_groundtruth = NULL;
+	my_skeleton = NULL;
+	my_mask = NULL;
+	my_distmap = NULL;
+	my_boundaries = NULL;
+	my_response = NULL;
+	my_segmented = NULL;
 
-#ifdef BUILD_VTK_VERSION
-	base = NULL;
-	ground = NULL;
-	skeleton = NULL;
-	mask = NULL;
-	mapa_dist = NULL;
-	borders = NULL;
-	segment = NULL;
-	threshold = NULL;
-#endif
+	pix_caract = NULL;
 
     // Defaults:
     SID = 0.0;
@@ -3239,78 +2694,45 @@ IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel)
 
 
 /* DESTRUCTOR */
-IMGVTK::~IMGVTK(){
-    if(pix_caract){
-        /// Liberar memoria recursivamente:
-        borrarSkeleton( pix_caract );
-        delete pix_caract;
-    }
-
-#ifndef BUILD_VTK_VERSION
-        if( base_ptr ){
-            delete [] base_ptr;
-        }
-
-        if( gt_ptr ){
-            delete [] gt_ptr;
-        }
-
-        if(mask_ptr){
-            delete [] mask_ptr;
-        }
-
-        if(segment_ptr){
-            delete [] segment_ptr;
-        }
-
-        if(skl_ptr){
-            delete [] skl_ptr;
-        }
-
-        if(map_ptr){
-            delete [] map_ptr;
-        }
-
-        if(borders_ptr){
-            delete [] borders_ptr;
-        }
-
-        if(threshold_ptr){
-            delete [] threshold_ptr;
-        }
-#else
-	if (base) {
-		base->Delete();
+IMGVTK::~IMGVTK() {
+	if (pix_caract) {
+		/// Liberar memoria recursivamente:
+		borrarSkeleton(pix_caract);
+		delete pix_caract;
 	}
 
-	if (ground) {
-		ground->Delete();
+
+	if (my_base) {
+		delete my_base;
 	}
 
-	if (mask) {
-		mask->Delete();
+	if (my_groundtruth) {
+		delete my_groundtruth;
 	}
 
-	if (segment) {
-		segment->Delete();
+	if (my_mask) {
+		delete my_mask;
 	}
 
-	if (skeleton) {
-		skeleton->Delete();
+	if (my_response) {
+		delete my_response;
 	}
 
-	if (mapa_dist) {
-		mapa_dist->Delete();
+	if (my_skeleton) {
+		delete my_skeleton;
 	}
 
-	if (borders) {
-		borders->Delete();
+	if (my_distmap) {
+		delete my_distmap;
 	}
 
-	if (threshold) {
-		threshold->Delete();
+	if (my_boundaries) {
+		delete my_boundaries;
 	}
-#endif
+
+	if (my_segmented) {
+		delete my_segmented;
+	}
 }
 
 
@@ -3321,26 +2743,17 @@ IMGVTK::~IMGVTK(){
 IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
     max_dist = origen.max_dist;
 
-    base_ptr = NULL;
-    gt_ptr = NULL;
-    skl_ptr = NULL;
-    mask_ptr = NULL;
-    map_ptr = NULL;
-    borders_ptr = NULL;
-    pix_caract = NULL;
-    segment_ptr = NULL;
-    threshold_ptr = NULL;
+	my_base = NULL;
+	my_groundtruth = NULL;
+	my_skeleton = NULL;
+	my_mask = NULL;
+	my_distmap = NULL;
+	my_boundaries = NULL;
+	my_response = NULL;
+	my_segmented = NULL;
 
-#ifdef BUILD_VTK_VERSION
-	base = NULL;
-	ground = NULL;
-	skeleton = NULL;
-	mask = NULL;
-	mapa_dist = NULL;
-	borders = NULL;
-	segment = NULL;
-	threshold = NULL;
-#endif
+	pix_caract = NULL;
+
 
     // Defaults:
     SID = origen.SID;
@@ -3359,124 +2772,37 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
     rows = origen.rows;
     rows_cols = rows * cols;
 
-    if(origen.base_ptr){
-#ifdef BUILD_VTK_VERSION
-        base = vtkSmartPointer< vtkImageData >::New();
-        base->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-        base->AllocateScalars(VTK_DOUBLE, 1);
-        base->SetOrigin(0.0, 0.0, 0.0);
-        base->SetSpacing(1.0, 1.0, 1.0);
-        base_ptr = static_cast< double* >(base->GetScalarPointer(0,0,0));
-#else
-        base_ptr = new double [rows_cols];
-#endif
-        memcpy(base_ptr, origen.base_ptr, rows_cols*sizeof(double));
+	if (origen.my_base) {
+		*my_base = *origen.my_base;
+	}
 
-        if(origen.gt_ptr){
-#ifdef BUILD_VTK_VERSION
-            ground = vtkSmartPointer< vtkImageData >::New();
-            ground->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-            ground->AllocateScalars(VTK_DOUBLE, 1);
-            ground->SetOrigin(0.0, 0.0, 0.0);
-            ground->SetSpacing(1.0, 1.0, 1.0);
+	if (origen.my_groundtruth) {
+		*my_groundtruth = *origen.my_groundtruth;
+	}
 
-            gt_ptr = static_cast< double* >(ground->GetScalarPointer(0,0,0));
-#else
-            gt_ptr = new double [rows_cols];
-#endif
-            memcpy(gt_ptr, origen.gt_ptr, rows_cols*sizeof(double));
-        }
+	if (origen.my_mask) {
+		*my_mask = *origen.my_mask;
+	}
 
-        if(origen.mask_ptr){
-#ifdef BUILD_VTK_VERSION
-            mask = vtkSmartPointer< vtkImageData >::New();
-            mask->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-            mask->AllocateScalars(VTK_DOUBLE, 1);
-            mask->SetOrigin(0.0, 0.0, 0.0);
-            mask->SetSpacing(1.0, 1.0, 1.0);
+	if (origen.my_response) {
+		*my_response = *origen.my_response;
+	}
 
-            mask_ptr = static_cast< double* >(mask->GetScalarPointer(0,0,0));
-#else
-            mask_ptr = new double [rows_cols];
-#endif
-            memcpy(mask_ptr, origen.mask_ptr, rows_cols*sizeof(double));
-        }
+	if (origen.my_skeleton) {
+		*my_skeleton = *origen.my_skeleton;
+	}
 
-        if(origen.segment_ptr){
-#ifdef BUILD_VTK_VERSION
-            segment = vtkSmartPointer< vtkImageData >::New();
-            segment->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-            segment->AllocateScalars(VTK_DOUBLE, 1);
-            segment->SetOrigin(0.0, 0.0, 0.0);
-            segment->SetSpacing(1.0, 1.0, 1.0);
+	if (origen.my_distmap) {
+		*my_distmap = *origen.my_distmap;
+	}
 
-            segment_ptr = static_cast< double* >(segment->GetScalarPointer(0,0,0));
-#else
-            segment_ptr = new double [rows_cols];
-#endif
-            memcpy(segment_ptr, origen.segment_ptr, rows_cols*sizeof(double));
-        }
+	if (origen.my_boundaries) {
+		*my_boundaries = *origen.my_boundaries;
+	}
 
-        if(origen.skl_ptr){
-#ifdef BUILD_VTK_VERSION
-            skeleton = vtkSmartPointer< vtkImageData >::New();
-            skeleton->SetExtent(0, cols + 1, 0, rows + 1, 0, 0);
-            skeleton->AllocateScalars(VTK_DOUBLE, 1);
-            skeleton->SetOrigin(0.0, 0.0, 0.0);
-            skeleton->SetSpacing(1.0, 1.0, 1.0);
-
-            skl_ptr = static_cast< double* >(skeleton->GetScalarPointer(0,0,0));
-#else
-            skl_ptr = new double [(rows+2) * (cols+2)];
-#endif
-            memcpy(skl_ptr, origen.skl_ptr, (cols+2)*(rows+2)*sizeof(double));
-        }
-
-        if(origen.map_ptr){
-#ifdef BUILD_VTK_VERSION
-            mapa_dist = vtkSmartPointer< vtkImageData >::New();
-            mapa_dist->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-            mapa_dist->AllocateScalars(VTK_DOUBLE, 1);
-            mapa_dist->SetOrigin(0.0, 0.0, 0.0);
-            mapa_dist->SetSpacing(1.0, 1.0, 1.0);
-
-            map_ptr = static_cast< double* >(mapa_dist->GetScalarPointer(0,0,0));
-#else
-            map_ptr = new double [rows_cols];
-#endif
-            memcpy(map_ptr, origen.map_ptr, rows_cols*sizeof(double));
-        }
-
-        if(origen.borders_ptr){
-#ifdef BUILD_VTK_VERSION
-            borders = vtkSmartPointer< vtkImageData >::New();
-            borders->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-            borders->AllocateScalars(VTK_DOUBLE, 1);
-            borders->SetOrigin(0.0, 0.0, 0.0);
-            borders->SetSpacing(1.0, 1.0, 1.0);
-
-            borders_ptr = static_cast< double* >(borders->GetScalarPointer(0,0,0));
-#else
-            borders_ptr = new double [rows_cols];
-#endif
-            memcpy(borders_ptr, origen.borders_ptr, rows_cols*sizeof(double));
-        }
-
-        if (origen.threshold_ptr) {
-#ifdef BUILD_VTK_VERSION
-            threshold = vtkSmartPointer< vtkImageData >::New();
-            threshold->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-            threshold->AllocateScalars(VTK_DOUBLE, 1);
-            threshold->SetOrigin(0.0, 0.0, 0.0);
-            threshold->SetSpacing(1.0, 1.0, 1.0);
-
-            threshold_ptr = static_cast< double* >(threshold->GetScalarPointer(0, 0, 0));
-#else
-            threshold_ptr = new double [rows_cols];
-#endif
-            memcpy(threshold_ptr, origen.threshold_ptr, rows_cols * sizeof(double));
-        }
-    }
+	if (origen.my_segmented) {
+		*my_segmented = *origen.my_segmented;
+	}
 
 	return *this;
 }
@@ -3498,6 +2824,45 @@ char* IMGVTK::setRuta( const char *ruta_input ){
 	strcpy(mi_ruta, ruta_input);
 #endif
     return mi_ruta;
+}
+
+
+
+
+
+/* Source libpng writepng.c */
+void IMGVTK::writepng_error_handler(png_structp png_ptr, png_const_charp msg)
+{
+	mainprog_info  *mainprog_ptr;
+
+	/* This function, aside from the extra step of retrieving the "error
+	* pointer" (below) and the fact that it exists within the application
+	* rather than within libpng, is essentially identical to libpng's
+	* default error handler.  The second point is critical:  since both
+	* setjmp() and longjmp() are called from the same code, they are
+	* guaranteed to have compatible notions of how big a jmp_buf is,
+	* regardless of whether _BSD_SOURCE or anything else has (or has not)
+	* been defined. */
+
+	fprintf(stderr, "writepng libpng error: %s\n", msg);
+	fflush(stderr);
+
+	mainprog_ptr = png_get_error_ptr(png_ptr);
+	if (mainprog_ptr == NULL) {         /* we are completely hosed now */
+		fprintf(stderr,
+			"writepng severe error:  jmpbuf not recoverable; terminating.\n");
+		fflush(stderr);
+		exit(99);
+	}
+
+	/* Now we have our data structure we can use the information in it
+	* to return control to our own higher level code (all the points
+	* where 'setjmp' is called in this file.)  This will work with other
+	* error handling mechanisms as well - libpng always calls png_error
+	* when it can proceed no further, thus, so long as the error handler
+	* is intercepted, application code can do its own error recovery.
+	*/
+	longjmp(mainprog_ptr->jmpbuf, 1);
 }
 
 // C L A S E: IMGVTK  ------------------------------------------------------------------------------------------------- ^

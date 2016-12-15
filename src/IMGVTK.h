@@ -33,6 +33,7 @@
 #endif
 
 #if defined(_WIN32)
+	#include MY_ZLIB
 	#include MY_PNG
 #else
 	#include <png.h>
@@ -142,6 +143,22 @@
 #define MY_INF 179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368.0
 
 
+/* Source libpng writepng.h */
+#define TEXT_TITLE    0x01
+#define TEXT_AUTHOR   0x02
+#define TEXT_DESC     0x04
+#define TEXT_COPY     0x08
+#define TEXT_EMAIL    0x10
+#define TEXT_URL      0x20
+
+#define TEXT_TITLE_OFFSET        0
+#define TEXT_AUTHOR_OFFSET      72
+#define TEXT_COPY_OFFSET     (2*72)
+#define TEXT_EMAIL_OFFSET    (3*72)
+#define TEXT_URL_OFFSET      (4*72)
+#define TEXT_DESC_OFFSET (5*72)
+
+
 // C L A S E: IMGVTK  ---------------------------------------------------------------------------------------------- v
 class IMGVTK{
     public: //----------------------------------------------------------------------------- PUBLIC ------- v
@@ -160,6 +177,120 @@ class IMGVTK{
 
         /** ALG_CONJUNTOS:    **/
         typedef enum ALG_CONJUNTOS { DINAMICO, ITERATIVO} ALG_CONJUNTOS;
+		
+
+		/* Source: libpng  writepng.c */
+		typedef struct _mainprog_info {
+			double gamma;
+			long width;
+			long height;
+			time_t modtime;
+			FILE *infile;
+			FILE *outfile;
+			void *png_ptr;
+			void *info_ptr;
+			unsigned char *image_data;
+			unsigned char **row_pointers;
+			char *title;
+			char *author;
+			char *desc;
+			char *copyright;
+			char *email;
+			char *url;
+			int filter;    /* command-line-filter flag, not PNG row filter! */
+			int pnmtype;
+			int sample_depth;
+			int interlaced;
+			int have_bg;
+			int have_time;
+			int have_text;
+			jmp_buf jmpbuf;
+			unsigned char bg_red;
+			unsigned char bg_green;
+			unsigned char bg_blue;
+		} mainprog_info;
+
+
+
+		/** IMGCONT: IMaGe CONTainer  **/
+		typedef struct IMGCONT {
+			unsigned int my_height;    /* Height of the image */
+			unsigned int my_width;     /* Width of the image */
+			unsigned int my_offset_x;  /* Offset in X axis */
+			unsigned int my_offset_y;  /* Offset in Y axis */
+			double *my_img_data;       /* The array where the image is contained */
+
+			IMGCONT(const unsigned int new_height, const unsigned int new_width, const unsigned int new_off_x = 0,
+				const unsigned int new_off_y = 0, const double init_val = 0.0) {
+				my_height = new_height ;
+				my_width = new_width;
+				my_offset_x = new_off_x;
+				my_offset_y = new_off_y;
+				my_img_data = (double *)malloc((my_height + 2 * my_offset_y) * (my_width + 2 * my_offset_x)
+					* sizeof(double));
+
+				for (unsigned int xy = 0; xy < (my_height + 2 * my_offset_y)*(my_width + 2 * my_offset_x); xy++) {
+					*(my_img_data + xy) = init_val;
+				}
+			}
+			
+			IMGCONT( const IMGCONT& img_src) {
+				my_height = img_src.my_height;
+				my_width = img_src.my_width;
+				my_offset_x = img_src.my_offset_x;
+				my_offset_y = img_src.my_offset_y;
+
+				if (my_img_data) {
+					free(my_img_data);
+				}
+
+				my_img_data = (double*)malloc(my_height * my_width * sizeof(double));
+
+				memcpy(my_img_data, img_src.my_img_data, my_height * my_width * sizeof(double));
+			}
+
+			~IMGCONT() {
+				free(my_img_data);
+			}
+
+			IMGCONT & operator= (const IMGCONT & img_src) {
+
+				if ((my_height > img_src.my_height) || (my_width > img_src.my_width)) {
+
+					my_offset_x = (my_width - img_src.my_width) / 2;
+					my_offset_y = (my_height - img_src.my_height) / 2;
+
+					for (unsigned int y = 0; y = img_src.my_height; y++) {
+						for (unsigned int x = 0; x = img_src.my_width; x++) {
+							*(my_img_data + (y + my_offset_y)*my_width + x + my_offset_x) = 
+								*(img_src.my_img_data + y*img_src.my_width + x);
+						}
+					}
+
+					my_offset_x += img_src.my_offset_x;
+					my_offset_y += img_src.my_offset_y;
+
+				}
+				else if ((my_height < img_src.my_height) || (my_width < img_src.my_width)) {
+					my_height = img_src.my_height;
+					my_width = img_src.my_width;
+					if (my_img_data) {
+						free(my_img_data);
+					}
+
+					my_offset_x = img_src.my_offset_x;
+					my_offset_y = img_src.my_offset_y;
+
+					my_img_data = (double*)malloc(my_height * my_width * sizeof(double));
+				}
+				else {
+					my_offset_x = img_src.my_offset_x;
+					my_offset_y = img_src.my_offset_y;
+
+					memcpy(my_img_data, img_src.my_img_data, my_height * my_width * sizeof(double));
+				}
+			}
+		} IMGCONT;
 
         /** PIX_PAR:   **/
         typedef struct PIX_PAR {
@@ -173,7 +304,7 @@ class IMGVTK{
 
 
         // M E T O D O S      P U B L I C O S
-        void definirMask(double *img_src, double *mask_src , const int mis_rens, const int mis_cols);
+		IMGCONT * definirMask( IMGCONT *img_src);
         void skeletonization(IMG_IDX img_idx);
         void umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const double nivel);
 
@@ -184,8 +315,6 @@ class IMGVTK{
         double medirExactitud();
 
         void Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool enmascarar, const int nivel);
-
-
 		void Guardar( IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida );
 
 //        void setLog( QPlainTextEdit *log );
@@ -200,85 +329,80 @@ class IMGVTK{
         IMGVTK& operator= ( const IMGVTK &origen );
 
         // M I E M B R O S      P U B L I C O S
-#ifdef BUILD_VTK_VERSION
-        vtkSmartPointer<vtkImageData> base;
-        vtkSmartPointer<vtkImageData> ground;
-        vtkSmartPointer<vtkImageData> mask;
-        vtkSmartPointer<vtkImageData> skeleton;
-        vtkSmartPointer<vtkImageData> segment;
-        vtkSmartPointer<vtkImageData> threshold;
-        vtkSmartPointer<vtkImageData> mapa_dist;
-        vtkSmartPointer<vtkImageData> borders;
-#endif
-
-        int rows, cols, rows_cols;
-        int n_niveles;
-        double *base_ptr;
-        double *gt_ptr;
-        double *mask_ptr;
-        double *skl_ptr;
-        double *segment_ptr;
-        double *threshold_ptr;
-        double *map_ptr;
-        double *borders_ptr;
-
-        //// Datos extraidos del archivo DICOM:
-        double SID, SOD, DDP, DISO;
-        double LAORAO, CRACAU;
-        double WCenter, WWidth;
-        double pixX, pixY, cenX, cenY;
-
-        PIX_PAR *pix_caract;
-
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
         // T I P O S        D E     D A T O S      P R I V A D O S
-        /** ####:   **/
+
         // M E T O D O S      P R I V A D O S
         void escribirLog( const char *mensaje );
-#ifdef BUILD_VTK_VERSION
-        void Cargar(const char *ruta_origen, vtkSmartPointer<vtkImageData> img_src, vtkSmartPointer<vtkImageData> mask_src, const int nivel, const bool enmascarar);
-#endif
 
-		int CargarPNG(const char * ruta_origen, double *img_src_ptr);
+		IMGCONT* CargarPNG(const char *ruta_origen);
+		IMGCONT* CargarPGM(const char *ruta_origen);
+		IMGCONT* CargarDICOM(const char *ruta_origen, const unsigned int nivel);
 
+		static void writepng_error_handler(png_structp png_ptr, png_const_charp msg);
 
-        int *Cargar(const char *ruta_origen, double **img_src, double **mask_src, const int nivel, const bool enmascarar);
+		void GuardarPGM(IMGCONT *img_src, const char *ruta, const double min, const double max);
+		void GuardarPNG(IMGCONT *img_src, const char *ruta, const double min, const double max);
 
-        void maskFOV(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
-        void fillMask(double *img_tmp, double *mask_tmp, const int mis_cols, const int mis_rens);
+		IMGCONT* maskFOV(IMGCONT * img_src);
+		void fillMask(IMGCONT *img_src, IMGCONT *mask_src);
 
         PIX_PAR *grafoSkeleton(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, bool *visitados);
         void extraerCaract(IMG_IDX img_idx);
         void borrarSkeleton( PIX_PAR *raiz );
 
         // ---------------- Mascaras para region filling
-        bool regionFilling9( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
-        bool regionFilling7( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
-        bool regionFilling5( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
-        bool regionFilling3( const double *ptr, const int x, const int y, const int mis_cols, const int mis_rens);
-        void regionFill( double *ptr, const int mis_cols, const int mis_rens);
+		bool regionFilling9(IMGCONT *img_src, const int x, const int y);
+        bool regionFilling7(IMGCONT *img_src, const int x, const int y);
+        bool regionFilling5(IMGCONT *img_src, const int x, const int y);
+        bool regionFilling3(IMGCONT *img_src, const int x, const int y);
+		void regionFill(IMGCONT *img_src);
 
         double umbralizarOTSU(const double *img_ptr, const double min, const double max);
         double umbralizarRIDCAL( const double *img_ptr, const double min, const double max);
 
-        inline unsigned char sklMask(const double *skl_ptr, const int x, const int y, const int mis_cols, const int mis_rens);
+        inline unsigned char sklMask(IMGCONT *skl_ptr, const int x, const int y);
 
-        inline unsigned char dilMask(const double *mask_dil, const int x, const int y , const int mis_cols, const int mis_rens);
-        inline unsigned char erosionMask(const double *ptr_tmp, const int x, const int y, const int mis_cols, const int mis_rens);
-        void erosionar(double *ptr, const int mis_cols, const int mis_rens);
+		inline unsigned char dilMask(IMGCONT *mask_dil, const int x, const int y);
 
-        void conexo(const double *ptr, const int x, const int y, int *conjuntos, unsigned int* n_etiquetados, bool* visitados, const int num_etiquetas, const int mis_cols, const int mis_rens);
-        unsigned int *conjuntosConexosDinamico(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens);
+        inline unsigned char erosionMask(IMGCONT *ptr_tmp, const int x, const int y);
+        void erosionar(IMGCONT *img_src);
+
+		void conexo(IMGCONT *img_src, const int x, const int y, int *conjuntos, unsigned int* n_etiquetados, bool* visitados, const int num_etiquetas);
+
+		unsigned int *conjuntosConexosDinamico(IMGCONT *img_src, int *conjuntos);
 
         inline void ampliarConjunto(int *etiquetas, const int equiv_A, const int equiv_B, const int max_etiquetas);
-        unsigned int *conjuntosConexos(const double *ptr, int *conjuntos, const int mis_cols, const int mis_rens);
-        void lengthFilter(double *ptr, const unsigned int min_length , const int mis_cols, const int mis_rens, ALG_CONJUNTOS mi_alg);
+
+        unsigned int *conjuntosConexos(IMGCONT *img_src, int *conjuntos);
+
+		void lengthFilter(IMGCONT *img_src, const unsigned int min_length, ALG_CONJUNTOS mi_alg);
 
         char* setRuta( const char *ruta_input );
 		
         // M I E M B R O S      P R I V A D O S
         //QPlainTextEdit *mi_log;
         int max_dist;
+		char err_msg[512];
+
+		int rows, cols, rows_cols;
+		int n_niveles;
+		IMGCONT *my_base;
+		IMGCONT *my_groundtruth;
+		IMGCONT *my_mask;
+		IMGCONT *my_skeleton;
+		IMGCONT *my_response;
+		IMGCONT *my_segmented;
+		IMGCONT *my_distmap;
+		IMGCONT *my_boundaries;
+
+		//// Datos extraidos del archivo DICOM:
+		double SID, SOD, DDP, DISO;
+		double LAORAO, CRACAU;
+		double WCenter, WWidth;
+		double pixX, pixY, cenX, cenY;
+
+		PIX_PAR *pix_caract;
 };
 // C L A S E: IMGVTK  ---------------------------------------------------------------------------------------------- ^
 
