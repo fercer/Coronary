@@ -1099,7 +1099,7 @@ void RECONS3D::Guardar(const char *ruta, IMGVTK::IMG_IDX img_idx, IMGVTK::TIPO_I
     Funcion:
 */
 int RECONS3D::getRows( const int angios_ID ){
-    return (*(imgs_base + angios_ID))->rows;
+	return 0;//imgs_base + angios_ID))->rows;
 }
 
 
@@ -1109,7 +1109,7 @@ int RECONS3D::getRows( const int angios_ID ){
     Funcion:
 */
 int RECONS3D::getCols( const int angios_ID ){
-    return (*(imgs_base + angios_ID))->cols;
+	return 0;//imgs_base + angios_ID))->cols;
 }
 
 
@@ -1119,38 +1119,40 @@ int RECONS3D::getCols( const int angios_ID ){
 
     Funcion: Retorna el apuntador a la informacion de la imagen seleccionada con img_idx
 */
-double* RECONS3D::get_pixelData(const int angios_ID, IMGVTK::IMG_IDX img_idx){
+double* RECONS3D::get_pixelData(const int angios_ID, IMGVTK::IMG_IDX img_idx) {
+	/*
+	double *img_ptr = NULL;
 
-    double *img_ptr = NULL;
+	switch(img_idx){
+	case IMGVTK::BASE:
+		img_ptr = (*(imgs_base + angios_ID))->base_ptr;
+		break;
+	case IMGVTK::GROUNDTRUTH:
+		img_ptr = (*(imgs_base + angios_ID))->gt_ptr;
+		break;
+	case IMGVTK::MASK:
+		img_ptr = (*(imgs_base + angios_ID))->mask_ptr;
+		break;
+	case IMGVTK::SKELETON:
+		img_ptr = (*(imgs_base + angios_ID))->skl_ptr;
+		break;
+	case IMGVTK::SEGMENT:
+		img_ptr = (*(imgs_base + angios_ID))->segment_ptr;
+		break;
+	case IMGVTK::THRESHOLD:
+		img_ptr = (*(imgs_base + angios_ID))->threshold_ptr;
+		break;
+	case IMGVTK::MAPDIST:
+		img_ptr = (*(imgs_base + angios_ID))->map_ptr;
+		break;
+	case IMGVTK::BORDERS:
+		img_ptr = (*(imgs_base + angios_ID))->borders_ptr;
+		break;
+	}
 
-    switch(img_idx){
-    case IMGVTK::BASE:
-        img_ptr = (*(imgs_base + angios_ID))->base_ptr;
-        break;
-    case IMGVTK::GROUNDTRUTH:
-        img_ptr = (*(imgs_base + angios_ID))->gt_ptr;
-        break;
-    case IMGVTK::MASK:
-        img_ptr = (*(imgs_base + angios_ID))->mask_ptr;
-        break;
-    case IMGVTK::SKELETON:
-        img_ptr = (*(imgs_base + angios_ID))->skl_ptr;
-        break;
-    case IMGVTK::SEGMENT:
-        img_ptr = (*(imgs_base + angios_ID))->segment_ptr;
-        break;
-    case IMGVTK::THRESHOLD:
-        img_ptr = (*(imgs_base + angios_ID))->threshold_ptr;
-        break;
-    case IMGVTK::MAPDIST:
-        img_ptr = (*(imgs_base + angios_ID))->map_ptr;
-        break;
-    case IMGVTK::BORDERS:
-        img_ptr = (*(imgs_base + angios_ID))->borders_ptr;
-        break;
-    }
-
-    return img_ptr;
+	return img_ptr;
+	*/
+	return NULL;
 }
 
 
@@ -1632,7 +1634,8 @@ void RECONS3D::clasAnchos(IMGVTK::PIX_PAR *grafo, const int angios_ID){
     Funcion: Obtiene el esqueleto de la imagen y genera el histograma de los anchos
 */
 void RECONS3D::skeletonize(const int angios_ID){
-    DEB_MSG("Extrayendo esquelto a " << angios_ID);
+	/*
+	DEB_MSG("Extrayendo esquelto a " << angios_ID);
     if( !(*(imgs_base + angios_ID))->skl_ptr ){
 
 		(*(imgs_base + angios_ID))->skeletonization(IMGVTK::THRESHOLD);
@@ -1719,6 +1722,7 @@ void RECONS3D::skeletonize(const int angios_ID){
         line->SetInputData(table, 0, 1);
 #endif
     }
+	*/
 }
 
 
@@ -1730,7 +1734,7 @@ void RECONS3D::skeletonize(const int angios_ID){
     Funcion: Obtiene el esqueleto de la imagen y muestra los puntos de interes.
 */
 void RECONS3D::skeletonize(const int angios_ID, const int nivel_detalle){
-
+	/*
     skeletonize(angios_ID);
 
     if( !(*(imgs_base + angios_ID))->pix_caract ){
@@ -1801,6 +1805,7 @@ DEB_MSG("Mostrando los radios de cada " << nivel_detalle << " pixeles del esquel
 
     renderizar( renderer_global );
 #endif
+*/
 }
 
 

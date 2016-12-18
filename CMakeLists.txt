@@ -8,8 +8,8 @@ endif()
 
 
 SET(SRC_DIR "./src")
-SET(HEADERS ${SRC_DIR}/reconstructor_3D.h ${SRC_DIR}/filtros.h ${SRC_DIR}/IMGVTK.h ${SRC_DIR}/args_fercer.h)
-SET(SOURCES ${SRC_DIR}/reconstructor_3D.cpp ${SRC_DIR}/filtros.cpp ${SRC_DIR}/IMGVTK.cpp ${SRC_DIR}/args_fercer.cpp)
+SET(HEADERS ${SRC_DIR}/reconstructor_3D.h ${SRC_DIR}/filtros.h ${SRC_DIR}/IMGVTK.h ${SRC_DIR}/args_fercer.h ${SRC_DIR}/libpng_src/readpng.h ${SRC_DIR}/libpng_src/writepng.h)
+SET(SOURCES ${SRC_DIR}/reconstructor_3D.cpp ${SRC_DIR}/filtros.cpp ${SRC_DIR}/IMGVTK.cpp ${SRC_DIR}/args_fercer.cpp ${SRC_DIR}/libpng_src/readpng.c ${SRC_DIR}/libpng_src/writepng.c)
 
 # The GUI version is going to be build?
 OPTION(BUILD_GUI "Build gui version." OFF)
@@ -99,7 +99,7 @@ TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${PNG_LIBRARIES})
 SET(ZLIB_INCLUDES_PATH "D:/Apps/libpng/include" CACHE PATH "Set ZLIB include path")
 SET(ZLIB_LIBRARIES_PATH "D:/Apps/libpng/lib" CACHE PATH "Set ZLIB libraries path")
 ADD_DEFINITIONS(-DMY_ZLIB="${ZLIB_INCLUDES_PATH}/zlib.h")
-SET(ZLIB_LIBRARIES "${ZLIB_LIBRARIES_PATH}/zdll.lib")
+SET(ZLIB_LIBRARIES "${ZLIB_LIBRARIES_PATH}/zlibd.lib")
 TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${ZLIB_LIBRARIES}) 
 
 

@@ -289,6 +289,8 @@ class IMGVTK{
 
 					memcpy(my_img_data, img_src.my_img_data, my_height * my_width * sizeof(double));
 				}
+
+				return *this;
 			}
 		} IMGCONT;
 
@@ -315,7 +317,7 @@ class IMGVTK{
         double medirExactitud();
 
         void Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool enmascarar, const int nivel);
-		void Guardar( IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida );
+		void Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida);
 
 //        void setLog( QPlainTextEdit *log );
 
@@ -338,8 +340,6 @@ class IMGVTK{
 		IMGCONT* CargarPNG(const char *ruta_origen);
 		IMGCONT* CargarPGM(const char *ruta_origen);
 		IMGCONT* CargarDICOM(const char *ruta_origen, const unsigned int nivel);
-
-		static void writepng_error_handler(png_structp png_ptr, png_const_charp msg);
 
 		void GuardarPGM(IMGCONT *img_src, const char *ruta, const double min, const double max);
 		void GuardarPNG(IMGCONT *img_src, const char *ruta, const double min, const double max);

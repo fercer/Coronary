@@ -1087,6 +1087,8 @@ IMGVTK::IMGCONT * IMGVTK::maskFOV( IMGCONT *img_src )
     }
 
     delete [] mis_conjuntos;
+
+	return new_mask;
 }
 
 
@@ -1179,201 +1181,205 @@ void IMGVTK::fillMask( IMGCONT *img_src, IMGCONT *mask_src ){
 
 /*  Metodo: grafoSkeleton
     Funcion: Genera un grafo a partir del esqueleto.
-*//*
-IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, bool *visitados){
-    if( *(visitados + x + y*cols) ){
-        return NULL;
-    }
+*/
+IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, bool *visitados) {
+	/*
+	if( *(visitados + x + y*cols) ){
+		return NULL;
+	}
 
-    PIX_PAR *temp = new PIX_PAR;
+	PIX_PAR *temp = new PIX_PAR;
 
-    const unsigned char resp = sklMask( skl_tmp, x, y, cols+2, rows);
+	const unsigned char resp = sklMask( skl_tmp, x, y, cols+2, rows);
 
-    temp->x = (x-1 - (double)cols/2)*pixX;
-    temp->y = (y-1 - (double)rows/2)*pixY;
+	temp->x = (x-1 - (double)cols/2)*pixX;
+	temp->y = (y-1 - (double)rows/2)*pixY;
 
-    temp->n_hijos = 0;
+	temp->n_hijos = 0;
 
-    temp->hijos[0] = NULL;
-    temp->hijos[1] = NULL;
-    temp->hijos[2] = NULL;
+	temp->hijos[0] = NULL;
+	temp->hijos[1] = NULL;
+	temp->hijos[2] = NULL;
 
-    temp->nivel = *nivel;
+	temp->nivel = *nivel;
 
-    /// Calcular el radio de la arteria en el pixel actual:
-    const int min_x = ((x - max_dist - 1) < 0) ? 0 : (x - max_dist - 1);
-    const int max_x = ((x + max_dist - 1) > cols) ? cols : (x + max_dist - 1);
-    const int min_y = ((y - max_dist - 1) < 0) ? 0 : (y - max_dist - 1);
-    const int max_y = ((y + max_dist - 1) > rows) ? rows : (y + max_dist - 1);
+	/// Calcular el radio de la arteria en el pixel actual:
+	const int min_x = ((x - max_dist - 1) < 0) ? 0 : (x - max_dist - 1);
+	const int max_x = ((x + max_dist - 1) > cols) ? cols : (x + max_dist - 1);
+	const int min_y = ((y - max_dist - 1) < 0) ? 0 : (y - max_dist - 1);
+	const int max_y = ((y + max_dist - 1) > rows) ? rows : (y + max_dist - 1);
 
-    double dist, radio = MY_INF;
-    bool visitado = false;
-    double x_r, y_r;
-    for( int yy = min_y; yy < max_y; yy++){
-        for( int xx = min_x; xx < max_x; xx++){
-            dist = (double)(yy - y + 0.5)*(double)(yy - y + 0.5) + (double)(xx - x + 0.5)*(double)(xx - x + 0.5);
-            if( (borders_ptr[xx + yy*cols] > 0.0) && (dist < radio) ){
-                radio = dist;
-                x_r = (double)xx;
-                y_r = (double)yy;
-                visitado = true;
-            }
-        }
-    }
+	double dist, radio = MY_INF;
+	bool visitado = false;
+	double x_r, y_r;
+	for( int yy = min_y; yy < max_y; yy++){
+		for( int xx = min_x; xx < max_x; xx++){
+			dist = (double)(yy - y + 0.5)*(double)(yy - y + 0.5) + (double)(xx - x + 0.5)*(double)(xx - x + 0.5);
+			if( (borders_ptr[xx + yy*cols] > 0.0) && (dist < radio) ){
+				radio = dist;
+				x_r = (double)xx;
+				y_r = (double)yy;
+				visitado = true;
+			}
+		}
+	}
 
-    if( !visitado ){
-        char mensaje[512] = "\nEl pixel [XXX, YYY] no tiene vecinos en la imagen de bordes a: DDD pixeles a la redonda\n";
+	if( !visitado ){
+		char mensaje[512] = "\nEl pixel [XXX, YYY] no tiene vecinos en la imagen de bordes a: DDD pixeles a la redonda\n";
 #if defined(_WIN32) || defined(_WIN64)
 		sprintf_s(mensaje, 512 * sizeof(char), "\nEl pixel [%i, %i] no tiene vecinos en la imagen de bordes a: %i pixeles a la redonda\n", x, y, max_dist);
 #else
-        sprintf( mensaje, "\nEl pixel [%i, %i] no tiene vecinos en la imagen de bordes a: %i pixeles a la redonda\n", x, y, max_dist);
+		sprintf( mensaje, "\nEl pixel [%i, %i] no tiene vecinos en la imagen de bordes a: %i pixeles a la redonda\n", x, y, max_dist);
 #endif
-        escribirLog(mensaje);
-    }
+		escribirLog(mensaje);
+	}
 
-    temp->radio = sqrt(radio) * pixX;
-    temp->y_r = (y_r - (double)rows/2)*pixY;
-    temp->x_r = (x_r - (double)cols/2)*pixX;
-    temp->alpha = atan2(temp->y_r - temp->y, temp->x_r - temp->x);// + MY_PI / 2.0;
+	temp->radio = sqrt(radio) * pixX;
+	temp->y_r = (y_r - (double)rows/2)*pixY;
+	temp->x_r = (x_r - (double)cols/2)*pixX;
+	temp->alpha = atan2(temp->y_r - temp->y, temp->x_r - temp->x);// + MY_PI / 2.0;
 
-    switch( lutabla[ resp ] ){
-        case (unsigned char)1:{ /* END point*
-            temp->pix_tipo = PIX_END;
-            break;
-        }
-        case (unsigned char)2:{ /* BRANCH point *
-            temp->pix_tipo = PIX_BRANCH;
-            break;
-        }
-        case (unsigned char)3:{ /* CROSS point *
-            temp->pix_tipo = PIX_CROSS;
-            break;
-        }
-        default:{
-            temp->pix_tipo = PIX_SKL;
-            break;
-        }
-    }
+	switch( lutabla[ resp ] ){
+		case (unsigned char)1:{ /* END point*
+			temp->pix_tipo = PIX_END;
+			break;
+		}
+		case (unsigned char)2:{ /* BRANCH point *
+			temp->pix_tipo = PIX_BRANCH;
+			break;
+		}
+		case (unsigned char)3:{ /* CROSS point *
+			temp->pix_tipo = PIX_CROSS;
+			break;
+		}
+		default:{
+			temp->pix_tipo = PIX_SKL;
+			break;
+		}
+	}
 
-    *(visitados + x + y*cols) = true;
+	*(visitados + x + y*cols) = true;
 
-    /// NO
-    if( (resp & (unsigned char)1) && (*(skl_tmp + (x-1) + (y-1)*(cols+2)) < 2.0)){
-        if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
-            *nivel = *nivel + 1;
-        }
-        temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y-1, nivel, lutabla, visitados);
+	/// NO
+	if( (resp & (unsigned char)1) && (*(skl_tmp + (x-1) + (y-1)*(cols+2)) < 2.0)){
+		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
+			*nivel = *nivel + 1;
+		}
+		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y-1, nivel, lutabla, visitados);
 
-        if( temp->hijos[temp->n_hijos] ){
-            temp->n_hijos++;
-        }
-    }
+		if( temp->hijos[temp->n_hijos] ){
+			temp->n_hijos++;
+		}
+	}
 
-    /// N
-    if( (resp & (unsigned char)2) && (*(skl_tmp + x + (y-1)*(cols+2)) < 2.0) ){
-        if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
-            *nivel = *nivel + 1;
-        }
-        temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y-1, nivel, lutabla, visitados);
-        if( temp->hijos[temp->n_hijos] ){
-            temp->n_hijos++;
-        }
-    }
+	/// N
+	if( (resp & (unsigned char)2) && (*(skl_tmp + x + (y-1)*(cols+2)) < 2.0) ){
+		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
+			*nivel = *nivel + 1;
+		}
+		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y-1, nivel, lutabla, visitados);
+		if( temp->hijos[temp->n_hijos] ){
+			temp->n_hijos++;
+		}
+	}
 
-    /// NE
-    if( (resp & (unsigned char)4) && (*(skl_tmp + (x+1) + (y-1)*(cols+2)) < 2.0) ){
-        if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
-            *nivel = *nivel + 1;
-        }
-        temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y-1, nivel, lutabla, visitados);
+	/// NE
+	if( (resp & (unsigned char)4) && (*(skl_tmp + (x+1) + (y-1)*(cols+2)) < 2.0) ){
+		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
+			*nivel = *nivel + 1;
+		}
+		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y-1, nivel, lutabla, visitados);
 
-        if( temp->hijos[temp->n_hijos] ){
-            temp->n_hijos++;
-        }
-    }
+		if( temp->hijos[temp->n_hijos] ){
+			temp->n_hijos++;
+		}
+	}
 
-    /// E
-    if( (resp & (unsigned char)8) && (*(skl_tmp + (x+1) + y*(cols+2)) < 2.0) ){
-        if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
-            *nivel = *nivel + 1;
-        }
-        temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y, nivel, lutabla, visitados);
+	/// E
+	if( (resp & (unsigned char)8) && (*(skl_tmp + (x+1) + y*(cols+2)) < 2.0) ){
+		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
+			*nivel = *nivel + 1;
+		}
+		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y, nivel, lutabla, visitados);
 
-        if( temp->hijos[temp->n_hijos] ){
-            temp->n_hijos++;
-        }
-    }
+		if( temp->hijos[temp->n_hijos] ){
+			temp->n_hijos++;
+		}
+	}
 
-    /// SE
-    if( (resp & (unsigned char)16) && (*(skl_tmp + (x+1) + (y+1)*(cols+2)) < 2.0) ){
-        if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
-            *nivel = *nivel + 1;
-        }
-        temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y+1, nivel, lutabla, visitados);
+	/// SE
+	if( (resp & (unsigned char)16) && (*(skl_tmp + (x+1) + (y+1)*(cols+2)) < 2.0) ){
+		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
+			*nivel = *nivel + 1;
+		}
+		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y+1, nivel, lutabla, visitados);
 
-        if( temp->hijos[temp->n_hijos] ){
-            temp->n_hijos++;
-        }
-    }
+		if( temp->hijos[temp->n_hijos] ){
+			temp->n_hijos++;
+		}
+	}
 
-    /// S
-    if( (resp & (unsigned char)32) && (*(skl_tmp + x + (y+1)*(cols+2)) < 2.0) ){
-        if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
-            *nivel = *nivel + 1;
-        }
-        temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y+1, nivel, lutabla, visitados);
+	/// S
+	if( (resp & (unsigned char)32) && (*(skl_tmp + x + (y+1)*(cols+2)) < 2.0) ){
+		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
+			*nivel = *nivel + 1;
+		}
+		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y+1, nivel, lutabla, visitados);
 
-        if( temp->hijos[temp->n_hijos] ){
-            temp->n_hijos++;
-        }
-    }
+		if( temp->hijos[temp->n_hijos] ){
+			temp->n_hijos++;
+		}
+	}
 
-    /// SO
-    if( (resp & (unsigned char)64) && (*(skl_tmp + (x-1) + (y+1)*(cols+2)) < 2.0) ){
-        if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
-            *nivel = *nivel + 1;
-        }
-        temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y+1, nivel, lutabla, visitados);
+	/// SO
+	if( (resp & (unsigned char)64) && (*(skl_tmp + (x-1) + (y+1)*(cols+2)) < 2.0) ){
+		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
+			*nivel = *nivel + 1;
+		}
+		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y+1, nivel, lutabla, visitados);
 
-        if( temp->hijos[temp->n_hijos] ){
-            temp->n_hijos++;
-        }
-    }
+		if( temp->hijos[temp->n_hijos] ){
+			temp->n_hijos++;
+		}
+	}
 
-    /// O
-    if( (resp & (unsigned char)128) && (*(skl_tmp + (x-1) + y*(cols+2)) < 2.0)){
-        if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
-            *nivel = *nivel + 1;
-        }
-        temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y, nivel, lutabla, visitados);
+	/// O
+	if( (resp & (unsigned char)128) && (*(skl_tmp + (x-1) + y*(cols+2)) < 2.0)){
+		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
+			*nivel = *nivel + 1;
+		}
+		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y, nivel, lutabla, visitados);
 
-        if( temp->hijos[temp->n_hijos] ){
-            temp->n_hijos++;
-        }
-    }
+		if( temp->hijos[temp->n_hijos] ){
+			temp->n_hijos++;
+		}
+	}
 
-    /// Revisar si en verdad sigue siendo del tipo que creia ser:
-    switch( temp->n_hijos ){
-        case 0: temp->pix_tipo = PIX_END;
-                break;
-        case 1: temp->pix_tipo = PIX_SKL;
-                break;
-        case 2: temp->pix_tipo = PIX_BRANCH;
-                break;
-        case 3: temp->pix_tipo = PIX_CROSS;
-                break;
-    }
+	/// Revisar si en verdad sigue siendo del tipo que creia ser:
+	switch( temp->n_hijos ){
+		case 0: temp->pix_tipo = PIX_END;
+				break;
+		case 1: temp->pix_tipo = PIX_SKL;
+				break;
+		case 2: temp->pix_tipo = PIX_BRANCH;
+				break;
+		case 3: temp->pix_tipo = PIX_CROSS;
+				break;
+	}
 
-    return temp;
+	return temp;
+	*/
+	return NULL;
 }
-*/
+
 
 
 
 /*  Metodo: extraerCaract
     Funcion: Extrae los pixeles caracteristicos (end y branch points) a partir del esqueleot de la imagen.
-*//*
+*/
 void IMGVTK::extraerCaract( IMG_IDX img_idx ){
+	/*
     if( !my_boundaries ){
         detectarBorde( img_idx );
     }
@@ -1416,8 +1422,9 @@ void IMGVTK::extraerCaract( IMG_IDX img_idx ){
 
     delete [] visitados;
     delete [] skl_tmp;
+	*/
 }
-*/
+
 
 
 /*  Metodo: borrarSkeleton
@@ -1656,9 +1663,9 @@ double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const 
 
 /*  Metodo: umbralizar
     Funcion: Utiliza el metodo de Otsu o Ridler & Calvard para umbralizar la imagen y separar el fondo y el primer plano de la imagen.
-*//*
+*/
 void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const double nivel){
-
+	/*
     if( !threshold_ptr ){
 #ifdef BUILD_VTK_VERSION
         threshold = vtkSmartPointer< vtkImageData >::New();
@@ -1718,17 +1725,18 @@ void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const doubl
     for( int xy = 0; xy < rows_cols; xy++){
         *(threshold_ptr + xy) = ( ((*(img_ptr + xy) - min) / (max - min)) >= umbral) ? 1.0 : 0.0;
     }
+	*/
 }
-*/
+
 
 
 
 
 /*  Metodo: Cargar
     Funcion: Retorna la exactitud del clasificador resultante contra el ground-truth
-*//*
+*/
 double IMGVTK::medirExactitud(){
-
+	/*
     if( !gt_ptr ){
         char mensaje_error[] = "<<ERROR: No se cargo la imagen ground-truth\n";
         escribirLog( mensaje_error);
@@ -1756,8 +1764,10 @@ double IMGVTK::medirExactitud(){
     }
 
     return (double)(TP + TN) / (double)(TP + TN + FP + FN);
+	*/
+	return 0.0;
 }
-*/
+
 
 /*
 *  Source: readpng.c form the libpng documentation
@@ -1765,169 +1775,7 @@ double IMGVTK::medirExactitud(){
 */
 IMGVTK::IMGCONT* IMGVTK::CargarPNG(const char *ruta_origen)
 {
-	/* Open the file in binary mode */
-	FILE *img_file = fopen(ruta_origen, "b");
-
-	/* Read PNG signature */
-	unsigned char signature[8];
-	fread(signature, 1, 8, img_file);
-
-	if (png_sig_cmp(signature, 0, 8)) {
-		/* Incorrect signature */
-		fclose(img_file);
-		return NULL;
-	}
-
-	static png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-	if (!png_ptr) {
-		/* Out ot memory */
-		fclose(img_file);
-		return NULL;
-	}
-
-	static png_infop info_ptr = png_create_info_struct(png_ptr);
-	if (!info_ptr) {
-		/* Out ot memory */
-		png_destroy_read_struct(&png_ptr, NULL, NULL);
-		fclose(img_file);
-		return NULL;
-	}
-
-	if (setjmp(png_jmpbuf(png_ptr))) {
-		png_destroy_read_struct(&png_ptr, NULL, NULL);
-		fclose(img_file);
-		return NULL;
-	}
-	png_init_io(png_ptr, img_file);
-
-	png_set_sig_bytes(png_ptr, 8);
-
-	/* read all PNG info up to image data */
-	png_read_info(png_ptr, info_ptr);
-
-	int bit_depth, color_type;
-	png_uint_32 width, height;
-	png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type, NULL, NULL, NULL);
-
-	IMGCONT *new_img = new IMGCONT((unsigned int)height, (unsigned int)width);
-
-	/* Check if the image has background color */
-	if (setjmp(png_jmpbuf(png_ptr))) {
-		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-		delete new_img;
-		fclose(img_file);
-		return NULL;
-	}
-
-	png_color_16p pBackground;
-	unsigned char red_ch = 0;
-	unsigned char green_ch = 0;
-	unsigned char blue_ch = 0;
-
-	if (png_get_valid(png_ptr, info_ptr, PNG_INFO_bKGD)) {
-		png_get_bKGD(png_ptr, info_ptr, &pBackground);
-
-		if (bit_depth == 16) {
-			red_ch = pBackground->red >> 8;
-			green_ch = pBackground->green >> 8;
-			blue_ch = pBackground->blue >> 8;
-		}
-		else if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) {
-			if (bit_depth == 1) {
-				red_ch = green_ch = blue_ch = pBackground->gray ? 255 : 0;
-			}
-			else if (bit_depth == 2) {
-				red_ch = green_ch = blue_ch = (255 / 3) * pBackground->gray;
-			}
-			else { /* bit_depth == 4 */
-				red_ch = green_ch = blue_ch = (255 / 15) * pBackground->gray;
-			}
-		}
-		else {
-			red_ch = (unsigned char)pBackground->red;
-			green_ch = (unsigned char)pBackground->green;
-			blue_ch = (unsigned char)pBackground->blue;
-		}
-	}
-
-	double  gamma;
-	png_uint_32  i, rowbytes;
-	png_bytepp row_pointers = (png_bytepp)malloc(height * sizeof(png_bytep));
-
-	if (setjmp(png_jmpbuf(png_ptr))) {
-		free(row_pointers);
-		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-		delete new_img;
-		fclose(img_file);
-		return NULL;
-	}
-
-	/* expand palette images to RGB, low-bit-depth grayscale images to 8 bits,
-	*  transparency chunks to full alpha channel; strip 16-bit-per-sample
-	*  images to 8 bits per sample; and convert grayscale to RGB[A]
-	*/
-
-	if (color_type == PNG_COLOR_TYPE_PALETTE) {
-		png_set_expand(png_ptr);
-	}
-	if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) {
-		png_set_expand(png_ptr);
-	}
-	if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
-		png_set_expand(png_ptr);
-	}
-#ifdef PNG_READ_16_TO_8_SUPPORTED
-	if (bit_depth == 16) {
-#ifdef PNG_READ_SCALE_16_TO_8_SUPPORTED
-		png_set_scale_16(png_ptr);
-#else
-		png_set_strip_16(png_ptr);
-#endif
-	}
-#endif
-
-	if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
-		png_set_gray_to_rgb(png_ptr);
-	}
-
-	double display_exponent = 1.0;
-	if (png_get_gAMA(png_ptr, info_ptr, &gamma)) {
-		png_set_gamma(png_ptr, display_exponent, gamma);
-	}
-
-	png_read_update_info(png_ptr, info_ptr);
-
-	unsigned long rowbytes = png_get_rowbytes(png_ptr, info_ptr);
-	int Channels = (int)png_get_channels(png_ptr, info_ptr);
-
-	unsigned char *image_data = (unsigned char*)malloc(height * width * sizeof(unsigned char));
-	/* set the individual row_pointers to point at the correct offsets */
-	for (unsigned int i = 0; i < (unsigned int)height; i++) {
-		*(row_pointers + i) = image_data + i*rowbytes;
-	}
-
-
-	/* now we can go ahead and just read the whole image */
-	png_read_image(png_ptr, row_pointers);
-
-	/* and we're done!  (png_read_end() can be omitted if no processing of
-	* post-IDAT text/time/etc. is desired) */
-
-	free(row_pointers);
-	row_pointers = NULL;
-
-	png_read_end(png_ptr, NULL);
-
-	/* Pass the image to the image structure */
-	for (unsigned int i = 0; i < (unsigned int)(height * width); i++) {
-		*(new_img->my_img_data + i) = (double)*(image_data + i) / 255.0;
-	}
-
-	free(image_data);
-	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-	fclose(img_file);
-	
-	return new_img;
+	return NULL;
 }
 
 
@@ -1980,9 +1828,9 @@ IMGVTK::IMGCONT * IMGVTK::CargarPGM(const char *ruta_origen)
 
 
 /*  Metodo: CargarDICOM   */
-#ifdef BUILD_GDCM_VERSION
 IMGVTK::IMGCONT * IMGVTK::CargarDICOM(const char *ruta_origen, const unsigned int nivel)
 {
+#ifdef BUILD_GDCM_VERSION
         gdcm::ImageReader DICOMreader;
         DICOMreader.SetFileName( ruta_origen );
 
@@ -2251,8 +2099,10 @@ DEB_MSG("Pt(" << i <<  ") = " << ((unsigned short*)curve_data)[i]);
                 }
         }
         delete [] buffer;
-}
+#else
+		return NULL;
 #endif
+}
 
 
 
@@ -2364,122 +2214,6 @@ void IMGVTK::GuardarPGM(IMGCONT *img_src, const char *ruta, const double min, co
 /*  Metodo: GuardarPNG */
 void IMGVTK::GuardarPNG(IMGCONT *img_src, const char *ruta, const double min, const double max)
 {	
-	mainprog_info *mainprog_ptr;
-
-	png_structp  png_ptr;       /* note:  temporary variables! */
-	png_infop  info_ptr;
-	int color_type, interlace_type;
-
-	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, mainprog_ptr, writepng_error_handler, NULL);
-	if (!png_ptr)
-		return;   /* out of memory */
-
-	info_ptr = png_create_info_struct(png_ptr);
-	if (!info_ptr) {
-		png_destroy_write_struct(&png_ptr, NULL);
-		return;   /* out of memory */
-	}
-
-	if (setjmp(mainprog_ptr->jmpbuf)) {
-		png_destroy_write_struct(&png_ptr, &info_ptr);
-		return;
-	}
-
-
-	png_init_io(png_ptr, mainprog_ptr->outfile);
-
-	png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
-
-	if (mainprog_ptr->pnmtype == 5)
-		color_type = PNG_COLOR_TYPE_GRAY;
-	else if (mainprog_ptr->pnmtype == 6)
-		color_type = PNG_COLOR_TYPE_RGB;
-	else if (mainprog_ptr->pnmtype == 8)
-		color_type = PNG_COLOR_TYPE_RGB_ALPHA;
-	else {
-		png_destroy_write_struct(&png_ptr, &info_ptr);
-		return;
-	}
-
-	interlace_type = mainprog_ptr->interlaced ? PNG_INTERLACE_ADAM7 :
-		PNG_INTERLACE_NONE;
-
-
-	png_set_IHDR(png_ptr, info_ptr, mainprog_ptr->width, mainprog_ptr->height,
-      mainprog_ptr->sample_depth, color_type, interlace_type,
-      PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-
-    if (mainprog_ptr->gamma > 0.0)
-        png_set_gAMA(png_ptr, info_ptr, mainprog_ptr->gamma);
-
-    if (mainprog_ptr->have_bg) {   /* we know it's RGBA, not gray+alpha */
-        png_color_16  background;
-
-        background.red = mainprog_ptr->bg_red;
-        background.green = mainprog_ptr->bg_green;
-        background.blue = mainprog_ptr->bg_blue;
-        png_set_bKGD(png_ptr, info_ptr, &background);
-    }
-
-	if (mainprog_ptr->have_time) {
-		png_time  modtime;
-
-		png_convert_from_time_t(&modtime, mainprog_ptr->modtime);
-		png_set_tIME(png_ptr, info_ptr, &modtime);
-	}
-
-
-	if (mainprog_ptr->have_text) {
-		png_text  text[6];
-		int  num_text = 0;
-
-		if (mainprog_ptr->have_text & TEXT_TITLE) {
-			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
-			text[num_text].key = "Title";
-			text[num_text].text = mainprog_ptr->title;
-			++num_text;
-		}
-		if (mainprog_ptr->have_text & TEXT_AUTHOR) {
-			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
-			text[num_text].key = "Author";
-			text[num_text].text = mainprog_ptr->author;
-			++num_text;
-		}
-		if (mainprog_ptr->have_text & TEXT_DESC) {
-			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
-			text[num_text].key = "Description";
-			text[num_text].text = mainprog_ptr->desc;
-			++num_text;
-		}
-		if (mainprog_ptr->have_text & TEXT_COPY) {
-			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
-			text[num_text].key = "Copyright";
-			text[num_text].text = mainprog_ptr->copyright;
-			++num_text;
-		}
-		if (mainprog_ptr->have_text & TEXT_EMAIL) {
-			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
-			text[num_text].key = "E-mail";
-			text[num_text].text = mainprog_ptr->email;
-			++num_text;
-		}
-		if (mainprog_ptr->have_text & TEXT_URL) {
-			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
-			text[num_text].key = "URL";
-			text[num_text].text = mainprog_ptr->url;
-			++num_text;
-		}
-		png_set_text(png_ptr, info_ptr, text, num_text);
-
-	}
-
-	png_write_info(png_ptr, info_ptr);
-
-	png_set_packing(png_ptr);
-
-	mainprog_ptr->png_ptr = png_ptr;
-
-	mainprog_ptr->info_ptr = info_ptr;
 }
 
 
@@ -2540,9 +2274,10 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
     }
 
     switch(tipo_salida){
-        case PGM:{
-			GuardarPGM(img_tmp, ruta, min, max);
-			break;
+	case PGM: {
+		GuardarPGM(img_tmp, ruta, min, max);
+		break;
+	}
         case PNG:{
 
 			break;
@@ -2557,8 +2292,6 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
 
 /* CONSTRUCTORES */
 IMGVTK::IMGVTK(){
-    cols = 0;
-    rows = 0;
     max_dist = 0;
 
     my_base = NULL;
@@ -2765,12 +2498,7 @@ IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
     pixY = origen.pixY;
     WCenter = origen.WCenter;
     WWidth = origen.WWidth;
-
-
-    cols = origen.cols;
-    rows = origen.rows;
-    rows_cols = rows * cols;
-
+	
 	if (origen.my_base) {
 		*my_base = *origen.my_base;
 	}
@@ -2823,45 +2551,6 @@ char* IMGVTK::setRuta( const char *ruta_input ){
 	strcpy(mi_ruta, ruta_input);
 #endif
     return mi_ruta;
-}
-
-
-
-
-
-/* Source libpng writepng.c */
-void IMGVTK::writepng_error_handler(png_structp png_ptr, png_const_charp msg)
-{
-	mainprog_info  *mainprog_ptr;
-
-	/* This function, aside from the extra step of retrieving the "error
-	* pointer" (below) and the fact that it exists within the application
-	* rather than within libpng, is essentially identical to libpng's
-	* default error handler.  The second point is critical:  since both
-	* setjmp() and longjmp() are called from the same code, they are
-	* guaranteed to have compatible notions of how big a jmp_buf is,
-	* regardless of whether _BSD_SOURCE or anything else has (or has not)
-	* been defined. */
-
-	fprintf(stderr, "writepng libpng error: %s\n", msg);
-	fflush(stderr);
-
-	mainprog_ptr = png_get_error_ptr(png_ptr);
-	if (mainprog_ptr == NULL) {         /* we are completely hosed now */
-		fprintf(stderr,
-			"writepng severe error:  jmpbuf not recoverable; terminating.\n");
-		fflush(stderr);
-		exit(99);
-	}
-
-	/* Now we have our data structure we can use the information in it
-	* to return control to our own higher level code (all the points
-	* where 'setjmp' is called in this file.)  This will work with other
-	* error handling mechanisms as well - libpng always calls png_error
-	* when it can proceed no further, thus, so long as the error handler
-	* is intercepted, application code can do its own error recovery.
-	*/
-	longjmp(mainprog_ptr->jmpbuf, 1);
 }
 
 // C L A S E: IMGVTK  ------------------------------------------------------------------------------------------------- ^
