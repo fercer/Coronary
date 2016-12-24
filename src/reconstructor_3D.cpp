@@ -662,7 +662,7 @@ double RECONS3D::medirExactitud(const int angios_ID)
 #if defined(_WIN32) || defined(_WIN64)
 	sprintf_s(mensaje, 512 * sizeof(char), "%1.16f\n", acc);
 #else
-    sprintf_s(mensaje, "%1.16f\n", acc);
+    sprintf(mensaje, "%1.16f\n", acc);
 #endif
     escribirLog(mensaje);
 
@@ -687,10 +687,10 @@ int RECONS3D::getNangios(){
 
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
-void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar){
-    DEB_MSG("Ruta ground: " << rutaground_input);
+void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar) {
+	DEB_MSG("Ruta ground: " << rutaground_input);
 
-    if( nivel_u > nivel_l ){ // Si hay varios niveles:
+	if (nivel_u > nivel_l) { // Si hay varios niveles:
 
 		IMGVTK **swap = imgs_base;
 		imgs_base = (IMGVTK**)malloc((n_angios + (nivel_u - nivel_l + 1) + 1) * sizeof(IMGVTK*));
@@ -701,33 +701,35 @@ void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const
 			free(swap);
 		}
 
-        for( int i = nivel_l; i <= nivel_u; i++){
-            n_angios++;
+		for (int i = nivel_l; i <= nivel_u; i++) {
+			n_angios++;
 
 			*(imgs_base + n_angios) = new IMGVTK(rutabase_input, enmascarar, i);
-            existe_ground.push_back( false );
+			existe_ground.push_back(false);
 
 #ifdef BUILD_VTK_VERSION
-            NORCEN norcen_temp;
+			NORCEN norcen_temp;
 			mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
-            puntos.push_back(vtkSmartPointer<vtkPoints>::New());
-            pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
+			puntos.push_back(vtkSmartPointer<vtkPoints>::New());
+			pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
 
-            view.push_back(vtkSmartPointer<vtkContextView>::New());
+			view.push_back(vtkSmartPointer<vtkContextView>::New());
 
-            normal_centros.push_back( norcen_temp );
-            /// Mover el detector a su posicion definida por el archivo DICOM:
-            mallarPuntos(n_angios);
-            isoCentro(n_angios);
+			normal_centros.push_back(norcen_temp);
+			/// Mover el detector a su posicion definida por el archivo DICOM:
+			mallarPuntos(n_angios);
+			isoCentro(n_angios);
 #endif
-            hist.push_back( NULL );
-            h_suma.push_back(0.0);
-            h_media.push_back(0.0);
-            h_desvest.push_back(0.0);
-        }
+			hist.push_back(NULL);
+			h_suma.push_back(0.0);
+			h_media.push_back(0.0);
+			h_desvest.push_back(0.0);
+		}
 
-    }else{
-        n_angios++;
+	}
+	else
+	{
+		n_angios++;
 
 		IMGVTK **swap = imgs_base;
 		imgs_base = (IMGVTK**)malloc((n_angios + 1) * sizeof(IMGVTK*));
@@ -739,35 +741,35 @@ void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const
 		}
 
 		*(imgs_base + n_angios) = new IMGVTK(rutabase_input, enmascarar, nivel_l);
-        existe_ground.push_back( false );
+		existe_ground.push_back(false);
 
 #ifdef BUILD_VTK_VERSION
-        NORCEN norcen_temp;
+		NORCEN norcen_temp;
 
-        mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
-        puntos.push_back(vtkSmartPointer<vtkPoints>::New());
-        pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
-        normal_centros.push_back( norcen_temp );
+		mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
+		puntos.push_back(vtkSmartPointer<vtkPoints>::New());
+		pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
+		normal_centros.push_back(norcen_temp);
 
-        view.push_back(vtkSmartPointer<vtkContextView>::New());
+		view.push_back(vtkSmartPointer<vtkContextView>::New());
 
-        /// Mover el detector a su posicion definida por el archivo DICOM:
-        mallarPuntos(n_angios);
-        isoCentro(n_angios);
+		/// Mover el detector a su posicion definida por el archivo DICOM:
+		mallarPuntos(n_angios);
+		isoCentro(n_angios);
 #endif
 
-        hist.push_back( NULL );
-        h_suma.push_back(0.0);
-        h_media.push_back(0.0);
-        h_desvest.push_back(0.0);
+		hist.push_back(NULL);
+		h_suma.push_back(0.0);
+		h_media.push_back(0.0);
+		h_desvest.push_back(0.0);
 
-        if( strcmp(rutaground_input, "NULL") ){
-            DEB_MSG("Abriendo " << rutaground_input << " como ground truth");
+		if (strcmp(rutaground_input, "NULL")) {
+			DEB_MSG("Abriendo " << rutaground_input << " como ground truth");
 			(*(imgs_base + n_angios))->Cargar(IMGVTK::GROUNDTRUTH, rutaground_input, false, 0);
-            existe_ground[ n_angios ] = true;
-        }
+			existe_ground[n_angios] = true;
+		}
 
-    }
+	}
 
 	//mostrarImagen(IMGVTK::BASE, mis_renderers.at(n_angios), n_angios);
 }

@@ -1783,20 +1783,34 @@ IMGVTK::IMGCONT* IMGVTK::CargarPNG(const char *ruta_origen)
 
 IMGVTK::IMGCONT * IMGVTK::CargarPGM(const char *ruta_origen)
 {
+	FILE *img_file = NULL;
 #if defined(_WIN32) || defined(_WIN64)
-	FILE *img_file;
 	fopen_s(&img_file, ruta_origen, "r");
 #else
-	FILE *img_file = fopen(ruta_origen, "r");
+	img_file = fopen(ruta_origen, "r");
 #endif
 
 	char temp_str[512] = "";
 	fgets(temp_str, 512, img_file);  // Leer 'Magic number'
-	fgets(temp_str, 512, img_file);  // Leer Comentario
+	DEB_MSG("Magic number: " << temp_str);
+
+	/* Leer comentario: */
+	fpos_t position;
+	fgetpos(img_file, &position);
+
+	temp_str[0] = getc(img_file);
+	if (temp_str[0] == '#') {
+		/* Leer el resto del comentario:  */
+		fgets(temp_str, 512, img_file);
+		fgetpos(img_file, &position);
+		DEB_MSG("Commentary: " << temp_str);
+	}
 
 	double max_intensity;
 	unsigned int height;
 	unsigned int width;
+
+	fsetpos(img_file, &position);
 
 #if defined(_WIN32) || defined(_WIN64)
 	fscanf_s(img_file, "%i", &width);    // Leer ancho
@@ -2184,12 +2198,15 @@ void IMGVTK::Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool e
 /*  Metodo: GuardarPGM */
 void IMGVTK::GuardarPGM(IMGCONT *img_src, const char *ruta, const double min, const double max)
 {
+	FILE *img_file = NULL;
+
 #if defined(_WIN32) || defined(_WIN64)
-	FILE *img_file;
 	fopen_s(&img_file, ruta, "w");
 #else
-	FILE *img_file = fopen(ruta, "w");
+	img_file = fopen(ruta, "w");
 #endif
+
+	DEB_MSG("File ptr:" << img_file );
 
 	fprintf(img_file, "P2\n");
 	fprintf(img_file, "# by FerCer\n");
@@ -2222,40 +2239,40 @@ void IMGVTK::GuardarPNG(IMGCONT *img_src, const char *ruta, const double min, co
 /*  Metodo: Guardar
     Funcion: Guarda la imagen en la ruta especificada con la extension especificada.
 */
-void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida )
+void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida)
 {
 
-    IMGCONT *img_tmp = NULL;
-	
-    switch( img_idx ){
-    case BASE:
-        img_tmp = my_base;
-        break;
-    case GROUNDTRUTH:
-        img_tmp = my_groundtruth;
-        break;
-    case MASK:
-        img_tmp = my_mask;
-        break;
-    case SKELETON:
-        img_tmp = my_skeleton;
-        break;
-    case SEGMENT:
-        img_tmp = my_response;
-        break;
-    case MAPDIST:
-        img_tmp = my_distmap;
-        break;
-    case THRESHOLD:
-        img_tmp = my_segmented;
-        break;
-    case BORDERS:
-        img_tmp = my_boundaries;
-        break;
-    }
+	IMGCONT *img_tmp = NULL;
 
-    double min = MY_INF;
-    double max =-MY_INF;
+	switch (img_idx) {
+	case BASE:
+		img_tmp = my_base;
+		break;
+	case GROUNDTRUTH:
+		img_tmp = my_groundtruth;
+		break;
+	case MASK:
+		img_tmp = my_mask;
+		break;
+	case SKELETON:
+		img_tmp = my_skeleton;
+		break;
+	case SEGMENT:
+		img_tmp = my_response;
+		break;
+	case MAPDIST:
+		img_tmp = my_distmap;
+		break;
+	case THRESHOLD:
+		img_tmp = my_segmented;
+		break;
+	case BORDERS:
+		img_tmp = my_boundaries;
+		break;
+	}
+
+	double min = MY_INF;
+	double max = -MY_INF;
 
 	for (int y = 0; y < img_tmp->my_height; y++) {
 		for (int x = 0; x < img_tmp->my_width; x++) {
@@ -2268,21 +2285,22 @@ void IMGVTK::Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_sali
 		}
 	}
 
-    if( fabs(max - min) < 1e-12 ){
-        max = 1.0;
-        min = 0.0;
-    }
+	if (fabs(max - min) < 1e-12) {
+		max = 1.0;
+		min = 0.0;
+	}
 
-    switch(tipo_salida){
+	switch (tipo_salida) {
 	case PGM: {
+		DEB_MSG("As pgm");
 		GuardarPGM(img_tmp, ruta, min, max);
 		break;
 	}
-        case PNG:{
-
-			break;
-        }
-    }
+	case PNG: {
+		DEB_MSG("As png");
+		break;
+	}
+	}
 }
 
 
@@ -2417,7 +2435,7 @@ IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel)
     rows = 0;
     max_dist = 0;
 
-    DEB_MSG("Cargando imagen desde: " COLOR_GREEN << ruta_origen COLOR_NORMAL);
+    DEB_MSG("Cargando imagen desde: " COLOR_GREEN << ruta_origen << COLOR_NORMAL);
 
     Cargar(BASE, ruta_origen, enmascarar, nivel);
 }

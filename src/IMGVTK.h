@@ -178,75 +178,47 @@ class IMGVTK{
         /** ALG_CONJUNTOS:    **/
         typedef enum ALG_CONJUNTOS { DINAMICO, ITERATIVO} ALG_CONJUNTOS;
 		
-
-		/* Source: libpng  writepng.c */
-		typedef struct _mainprog_info {
-			double gamma;
-			long width;
-			long height;
-			time_t modtime;
-			FILE *infile;
-			FILE *outfile;
-			void *png_ptr;
-			void *info_ptr;
-			unsigned char *image_data;
-			unsigned char **row_pointers;
-			char *title;
-			char *author;
-			char *desc;
-			char *copyright;
-			char *email;
-			char *url;
-			int filter;    /* command-line-filter flag, not PNG row filter! */
-			int pnmtype;
-			int sample_depth;
-			int interlaced;
-			int have_bg;
-			int have_time;
-			int have_text;
-			jmp_buf jmpbuf;
-			unsigned char bg_red;
-			unsigned char bg_green;
-			unsigned char bg_blue;
-		} mainprog_info;
-
-
-
 		/** IMGCONT: IMaGe CONTainer  **/
 		typedef struct IMGCONT {
-			unsigned int my_height;    /* Height of the image */
-			unsigned int my_width;     /* Width of the image */
-			unsigned int my_offset_x;  /* Offset in X axis */
-			unsigned int my_offset_y;  /* Offset in Y axis */
-			double *my_img_data;       /* The array where the image is contained */
+			unsigned int my_height;       /* Height of the image */
+			unsigned int my_width;        /* Width of the image */
+			unsigned int my_total_height; /* The sum of the height and 2 times the offset in y */
+			unsigned int my_total_width;  /* The sum of the width and 2 times the offset in x */
+			unsigned int my_offset_x;     /* Offset in X axis */
+			unsigned int my_offset_y;     /* Offset in Y axis */
+			double *my_img_data;          /* The array where the image is contained */
 
 			IMGCONT(const unsigned int new_height, const unsigned int new_width, const unsigned int new_off_x = 0,
 				const unsigned int new_off_y = 0, const double init_val = 0.0) {
-				my_height = new_height ;
-				my_width = new_width;
 				my_offset_x = new_off_x;
 				my_offset_y = new_off_y;
-				my_img_data = (double *)malloc((my_height + 2 * my_offset_y) * (my_width + 2 * my_offset_x)
-					* sizeof(double));
 
-				for (unsigned int xy = 0; xy < (my_height + 2 * my_offset_y)*(my_width + 2 * my_offset_x); xy++) {
+				my_height = new_height;
+				my_width = new_width;
+
+				DEB_MSG("my_height: " << my_height << ", my_width: " << my_width);
+
+				my_img_data = (double *)malloc((my_height + 2 * my_offset_y) * (my_width + 2 * my_offset_x) * sizeof(double));
+
+				for (unsigned int xy = 0; xy < (my_height + 2 * my_offset_y) * (my_width + 2 * my_offset_x); xy++)
+				{
 					*(my_img_data + xy) = init_val;
 				}
 			}
-			
-			IMGCONT( const IMGCONT& img_src) {
-				my_height = img_src.my_height;
-				my_width = img_src.my_width;
+
+			IMGCONT(const IMGCONT& img_src) {
 				my_offset_x = img_src.my_offset_x;
 				my_offset_y = img_src.my_offset_y;
+				my_height = img_src.my_height;
+				my_width = img_src.my_width;
 
 				if (my_img_data) {
 					free(my_img_data);
 				}
 
-				my_img_data = (double*)malloc(my_height * my_width * sizeof(double));
+				my_img_data = (double*)malloc((my_height + 2 * my_offset_y) * (my_width + 2 * my_offset_x) * sizeof(double));
 
-				memcpy(my_img_data, img_src.my_img_data, my_height * my_width * sizeof(double));
+				memcpy(my_img_data, img_src.my_img_data, (my_height + 2 * my_offset_y) * (my_width + 2 * my_offset_x) * sizeof(double));
 			}
 
 			~IMGCONT() {
@@ -257,19 +229,15 @@ class IMGVTK{
 
 				if ((my_height > img_src.my_height) || (my_width > img_src.my_width)) {
 
-					my_offset_x = (my_width - img_src.my_width) / 2;
-					my_offset_y = (my_height - img_src.my_height) / 2;
+					my_offset_x += (my_width - img_src.my_width) / 2;
+					my_offset_y += (my_height - img_src.my_height) / 2;
 
 					for (unsigned int y = 0; y = img_src.my_height; y++) {
 						for (unsigned int x = 0; x = img_src.my_width; x++) {
-							*(my_img_data + (y + my_offset_y)*my_width + x + my_offset_x) = 
+							*(my_img_data + (y + my_offset_y)*(my_width + x + my_offset_x) =
 								*(img_src.my_img_data + y*img_src.my_width + x);
 						}
 					}
-
-					my_offset_x += img_src.my_offset_x;
-					my_offset_y += img_src.my_offset_y;
-
 				}
 				else if ((my_height < img_src.my_height) || (my_width < img_src.my_width)) {
 					my_height = img_src.my_height;

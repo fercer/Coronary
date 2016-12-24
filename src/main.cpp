@@ -50,7 +50,10 @@ int main(int argc, char** argv ){
 	if ((strcmp(parametros.getArgumentCHAR("-b"), "NULL") != 0) &&
 		(strcmp(parametros.getArgumentCHAR("-g"), "NULL") != 0)) {
 		/// Reconstruir arteria:
-		mi_reconstructor.agregarInput(parametros.getArgumentCHAR("-b"),parametros.getArgumentINT("-bl"), parametros.getArgumentINT("-bu"), parametros.getArgumentCHAR("-g"), true);
+		mi_reconstructor.agregarInput(parametros.getArgumentCHAR("-b"),parametros.getArgumentINT("-bl"), parametros.getArgumentINT("-bu"), parametros.getArgumentCHAR("-g"), false);
+
+		DEB_MSG("Saving image...");
+		mi_reconstructor.Guardar("img.pgm", IMGVTK::BASE, IMGVTK::PGM, 0);
 	}
 
 	if ((strcmp(parametros.getArgumentCHAR("-dsb"), "NULL") != 0) &&
