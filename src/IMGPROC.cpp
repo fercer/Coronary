@@ -1,80 +1,65 @@
-/******
-    CENTRO DE INVESTIGACION EN MATEMATICAS
-    MAESTRIA EN COMPUTACION Y MATEMATICAS INDUSTRIALES
+/************************************************************************************************************
+*                                                                                                           *
+* CENTRO DE INVESTIGACION EN MATEMATICAS                                                                    *
+* DOCTORADO EN CIENCIAS DE LA COMPUTACION                                                                   *
+* FERNANDO CERVANTES SANCHEZ                                                                                *
+*                                                                                                           *
+* FILE NAME: IMGPROC.cpp                                                                                    *
+*                                                                                                           *
+* PURPOSE: Implementation of the IMGCONT class for image loading and processing.                            *
+*                                                                                                           *
+* DEVELOPMENT HISTORY:                                                                                      *
+* Date           Author        Change Id    Release    Description Of Change                                *
+* 25/Dic/2016    Fernando C.   0            1.0        Creation                                             *
+*                                                                                                           *
+************************************************************************************************************/
 
-    FERNANDO CERVANTES SANCHEZ
-    ### - 20##
-*****/
+
+#include "IMGPROC.h"
 
 
-#include "IMGVTK.h"
-
-// C L A S E: IMGVTK  ---------------------------------------------------------------------------------------------- v
-//----------------------------------------------------------------------------- PRIVATE ------- v
-    // M E T O D O S      P R I V A D O S
 
 
-/*  Metodo: escribirLog
 
-    Funcion: Escribe un mensaje en el log.
-*/
-void IMGVTK::escribirLog( const char *mensaje ){
-    std::cout << mensaje;
+/************************************************************************************************************
+*                                                                                                           *
+* VOID CONSTRUCTOR                                                                                          *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* --------                  ----                       -   ----                                             *
+*                                                                                                           *
+************************************************************************************************************/
+IMGPROC::IMGPROC()
+{
+	max_dist = 0;
+	pix_caract = 0;
+
+	my_dist_map = NULL;
 }
 
 
 
-//****************************************************************************************************************************************
-//                              H E R R A M I E N T A S     D E     P R O C E S A M I E N T O       D E     I M A G E N E S
-//****************************************************************************************************************************************
-/*  Metodo: mapaDistancias
-    Funcion: Obtiene el mapa de distancias de los pixeles a los bordes.
-*/
-void IMGVTK::mapaDistancias(IMG_IDX img_idx) {
-	IMGCONT *img_tmp = NULL;
 
-	switch (img_idx) {
-	case BASE:
-		img_tmp = my_base;
-		break;
-	case GROUNDTRUTH:
-		img_tmp = my_groundtruth;
-		break;
-	case MASK:
-		img_tmp = my_mask;
-		break;
-	case SKELETON:
-		img_tmp = my_skeleton;
-		break;
-	case SEGMENT:
-		img_tmp = my_response;
-		break;
-	case THRESHOLD:
-		img_tmp = my_segmented;
-		break;
+void IMGPROC::calcDistancesMap()
+{
+
+	my_dist_map = (double *)malloc(my_height * my_width * sizeof(double));
+
+
+	for (int xy = 0; xy < (my_height * my_width); xy++) {
+		*(my_dist_map + xy) = (*(my_img_data + xy) < 1.0) ? 0.0 : MY_INF;
 	}
 
-
-	if (!my_distmap) {
-		my_distmap = new IMGCONT(img_tmp->my_height, img_tmp->my_width);
-	}
-
-	for (int xy = 0; xy < (my_distmap->my_height * my_distmap->my_width); xy++) {
-		*(my_distmap->my_img_data + xy) = (*(img_tmp->my_img_data + xy) < 1.0) ? 0.0 : MY_INF;
-	}
-
-	double *f = new double[my_distmap->my_height > my_distmap->my_width ?
-		my_distmap->my_height :
-		my_distmap->my_width];
-
-	double *dh = new double[my_distmap->my_height];
-	int *vh = new int[my_distmap->my_height];
-	double *zh = new double[my_distmap->my_height + 1];
+	double *f = new double[my_height > my_width ? my_height : my_width];
+	double *dh = new double[my_height];
+	int *vh = new int[my_height];
+	double *zh = new double[my_height + 1];
 
 	// transform along columns
-	for (int x = 0; x < cols; x++) {
-		for (int y = 0; y < my_distmap->my_height; y++) {
-			f[y] = *(my_distmap->my_img_data + y*my_distmap->my_width + x);
+	for (int x = 0; x < my_width; x++) {
+		for (int y = 0; y < my_height; y++) {
+			f[y] = *(my_dist_map + y*my_width + x);
 		}
 
 		int k = 0;
@@ -82,7 +67,7 @@ void IMGVTK::mapaDistancias(IMG_IDX img_idx) {
 		zh[0] = -MY_INF;
 		zh[1] = MY_INF;
 
-		for (int q = 1; q < my_distmap->my_height; q++) {
+		for (int q = 1; q < my_height; q++) {
 			double s = ((f[q] + (q*q)) - (f[vh[k]] + (vh[k] * vh[k]))) / (2 * q - 2 * vh[k]);
 
 			while (s <= zh[k]) {
@@ -97,33 +82,32 @@ void IMGVTK::mapaDistancias(IMG_IDX img_idx) {
 		}
 
 		k = 0;
-		for (int y = 0; y < my_distmap->my_height; y++) {
+		for (int y = 0; y < my_height; y++) {
 			while (zh[k + 1] < y) {
 				k++;
 			}
-			*(my_distmap->my_img_data + y*my_distmap->my_width + x) = ((y - vh[k])*(y - vh[k])) + f[vh[k]];
+			*(my_dist_map + y*my_width + x) = ((y - vh[k])*(y - vh[k])) + f[vh[k]];
 		}
-
 	}
 	delete[] dh;
 	delete[] vh;
 	delete[] zh;
 
-	double *dw = new double[my_distmap->my_width];
-	int *vw = new int[my_distmap->my_width];
-	double *zw = new double[my_distmap->my_width + 1];
+	double *dw = new double[my_width];
+	int *vw = new int[my_width];
+	double *zw = new double[my_width + 1];
 
 	// transform along rows
-	for (int y = 0; y < rows; y++) {
-		for (int x = 0; x < my_distmap->my_width; x++) {
-			f[x] = *(my_distmap->my_img_data + y*my_distmap->my_width + x);
+	for (int y = 0; y < my_height; y++) {
+		for (int x = 0; x < my_width; x++) {
+			f[x] = *(my_dist_map + y*my_width + x);
 		}
 		int k = 0;
 		vw[0] = 0;
 		zw[0] = -MY_INF;
 		zw[1] = +MY_INF;
 
-		for (int q = 1; q < my_distmap->my_width; q++) {
+		for (int q = 1; q < my_width; q++) {
 			double s = ((f[q] + (q*q)) - (f[vw[k]] + (vw[k] * vw[k]))) / (2 * q - 2 * vw[k]);
 			while (s <= zw[k]) {
 				k--;
@@ -136,14 +120,14 @@ void IMGVTK::mapaDistancias(IMG_IDX img_idx) {
 		}
 
 		k = 0;
-		for (int x = 0; x < my_distmap->my_width; x++) {
+		for (int x = 0; x < my_width; x++) {
 			while (zw[k + 1] < x) {
 				k++;
 			}
-			*(my_distmap->my_img_data + y*my_distmap->my_width + x) = sqrt(((x - vw[k])*(x - vw[k])) + f[vw[k]]);
+			*(my_dist_map + y*my_width + x) = sqrt(((x - vw[k])*(x - vw[k])) + f[vw[k]]);
 
-			if (((int)*(my_distmap->my_img_data + y*my_distmap->my_width + x) + 1) > max_dist) {
-				max_dist = (int)*(my_distmap->my_img_data + y*my_distmap->my_width + x) + 1;
+			if (((int)*(my_dist_map + y*my_width + x) + 1) > max_dist) {
+				max_dist = (int)*(my_dist_map + y*my_width + x) + 1;
 			}
 		}
 	}
@@ -152,6 +136,18 @@ void IMGVTK::mapaDistancias(IMG_IDX img_idx) {
 	delete[] vw;
 	delete[] zw;
 	delete[] f;
+}
+
+
+
+
+IMGCONT & IMGPROC::getDistancesMap()
+{
+	if (!my_dist_map) {
+		calcDistancesMap();
+	}
+
+	return IMGCONT(my_height, my_width, my_dist_map);
 }
 
 

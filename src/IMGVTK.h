@@ -53,6 +53,7 @@
 #include <omp.h>
 
 #include "args_fercer.h"
+#include "IMGCONT.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 	#include <time.h>
@@ -142,125 +143,21 @@
 #define Mi_PI 3.14159265
 #define MY_INF 179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368.0
 
-
-/* Source libpng writepng.h */
-#define TEXT_TITLE    0x01
-#define TEXT_AUTHOR   0x02
-#define TEXT_DESC     0x04
-#define TEXT_COPY     0x08
-#define TEXT_EMAIL    0x10
-#define TEXT_URL      0x20
-
-#define TEXT_TITLE_OFFSET        0
-#define TEXT_AUTHOR_OFFSET      72
-#define TEXT_COPY_OFFSET     (2*72)
-#define TEXT_EMAIL_OFFSET    (3*72)
-#define TEXT_URL_OFFSET      (4*72)
-#define TEXT_DESC_OFFSET (5*72)
-
-
 // C L A S E: IMGVTK  ---------------------------------------------------------------------------------------------- v
 class IMGVTK{
     public: //----------------------------------------------------------------------------- PUBLIC ------- v
         // T I P O S        D E     D A T O S       Y       E S T R U C T U R A S      P U B L I C A S        // IMG_IDX
-        /** IMG_IDX:   **/
+        /** IMG_IDX: **/
         typedef enum IMG_IDX { BASE, GROUNDTRUTH, MASK, SKELETON, SEGMENT, THRESHOLD, MAPDIST, BORDERS } IMG_IDX;
-
-        /** TIPO_IMG:   **/
-        typedef enum TIPO_IMG { PNG, PGM } TIPO_IMG;
-
-        /** TIPO_CARACT:   **/
+		
+        /** TIPO_CARACT: **/
         typedef enum TIPO_CARACT { PIX_SKL, PIX_END, PIX_BRANCH, PIX_CROSS } TIPO_CARACT;
 
-        /** TIPO_UMBRAL:    **/
-        typedef enum TIPO_UMBRAL { NIVEL, OTSU, RIDLER_CALVARD} TIPO_UMBRAL;
+		/** THRESHOLD_TYPE: **/
+		typedef enum THRESHOLD_TYPE { TRESH_LEVEL, TRESH_OTSU, TRESH_RIDLER_CALVARD } THRESHOLD_TYPE;
 
-        /** ALG_CONJUNTOS:    **/
-        typedef enum ALG_CONJUNTOS { DINAMICO, ITERATIVO} ALG_CONJUNTOS;
-		
-		/** IMGCONT: IMaGe CONTainer  **/
-		typedef struct IMGCONT {
-			unsigned int my_height;       /* Height of the image */
-			unsigned int my_width;        /* Width of the image */
-			unsigned int my_total_height; /* The sum of the height and 2 times the offset in y */
-			unsigned int my_total_width;  /* The sum of the width and 2 times the offset in x */
-			unsigned int my_offset_x;     /* Offset in X axis */
-			unsigned int my_offset_y;     /* Offset in Y axis */
-			double *my_img_data;          /* The array where the image is contained */
-
-			IMGCONT(const unsigned int new_height, const unsigned int new_width, const unsigned int new_off_x = 0,
-				const unsigned int new_off_y = 0, const double init_val = 0.0) {
-				my_offset_x = new_off_x;
-				my_offset_y = new_off_y;
-
-				my_height = new_height;
-				my_width = new_width;
-
-				DEB_MSG("my_height: " << my_height << ", my_width: " << my_width);
-
-				my_img_data = (double *)malloc((my_height + 2 * my_offset_y) * (my_width + 2 * my_offset_x) * sizeof(double));
-
-				for (unsigned int xy = 0; xy < (my_height + 2 * my_offset_y) * (my_width + 2 * my_offset_x); xy++)
-				{
-					*(my_img_data + xy) = init_val;
-				}
-			}
-
-			IMGCONT(const IMGCONT& img_src) {
-				my_offset_x = img_src.my_offset_x;
-				my_offset_y = img_src.my_offset_y;
-				my_height = img_src.my_height;
-				my_width = img_src.my_width;
-
-				if (my_img_data) {
-					free(my_img_data);
-				}
-
-				my_img_data = (double*)malloc((my_height + 2 * my_offset_y) * (my_width + 2 * my_offset_x) * sizeof(double));
-
-				memcpy(my_img_data, img_src.my_img_data, (my_height + 2 * my_offset_y) * (my_width + 2 * my_offset_x) * sizeof(double));
-			}
-
-			~IMGCONT() {
-				free(my_img_data);
-			}
-
-			IMGCONT & operator= (const IMGCONT & img_src) {
-
-				if ((my_height > img_src.my_height) || (my_width > img_src.my_width)) {
-
-					my_offset_x += (my_width - img_src.my_width) / 2;
-					my_offset_y += (my_height - img_src.my_height) / 2;
-
-					for (unsigned int y = 0; y = img_src.my_height; y++) {
-						for (unsigned int x = 0; x = img_src.my_width; x++) {
-							*(my_img_data + (y + my_offset_y)*(my_width + x + my_offset_x) =
-								*(img_src.my_img_data + y*img_src.my_width + x);
-						}
-					}
-				}
-				else if ((my_height < img_src.my_height) || (my_width < img_src.my_width)) {
-					my_height = img_src.my_height;
-					my_width = img_src.my_width;
-					if (my_img_data) {
-						free(my_img_data);
-					}
-
-					my_offset_x = img_src.my_offset_x;
-					my_offset_y = img_src.my_offset_y;
-
-					my_img_data = (double*)malloc(my_height * my_width * sizeof(double));
-				}
-				else {
-					my_offset_x = img_src.my_offset_x;
-					my_offset_y = img_src.my_offset_y;
-
-					memcpy(my_img_data, img_src.my_img_data, my_height * my_width * sizeof(double));
-				}
-
-				return *this;
-			}
-		} IMGCONT;
+		/** CONNECTED_ALG: **/
+		typedef enum CONNECTED_ALG { CONN_DYN, CONN_ITER } CONNECTED_ALG;
 
         /** PIX_PAR:   **/
         typedef struct PIX_PAR {
@@ -272,22 +169,19 @@ class IMGVTK{
             TIPO_CARACT pix_tipo;
         } PIX_PAR;
 
-
-        // M E T O D O S      P U B L I C O S
-		IMGCONT * definirMask( IMGCONT *img_src);
+		IMGCONT * definirMask(IMGCONT *img_src);
         void skeletonization(IMG_IDX img_idx);
         void umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const double nivel);
 
-        void lengthFilter(IMG_IDX img_idx, const int min_length, ALG_CONJUNTOS mi_alg);
+        void lengthFilter(IMG_IDX img_idx, const int min_length, CONNECTED_ALG mi_alg);
         void regionFill(IMG_IDX img_idx);
         void mapaDistancias(IMG_IDX img_idx);
         void detectarBorde(IMG_IDX img_idx);
+
         double medirExactitud();
 
-        void Cargar(const IMG_IDX img_idx, const char *ruta_origen, const bool enmascarar, const int nivel);
-		void Guardar(IMG_IDX img_idx, const char *ruta, const TIPO_IMG tipo_salida);
-
-//        void setLog( QPlainTextEdit *log );
+        void Cargar(const IMG_IDX img_idx, const char *src_path, const int level = 0);
+		void Guardar(IMG_IDX img_idx, const char *output_path, const IMGCONT::IMG_TYPE output_type = IMGCONT::IMGPGM);
 
         IMGVTK();
 		IMGVTK(const IMGVTK &origen );
@@ -295,19 +189,13 @@ class IMGVTK{
 
         ~IMGVTK();
 
-        // O P E R A D O R E S  S O B R E C A R G A D O S
         IMGVTK& operator= ( const IMGVTK &origen );
 
-        // M I E M B R O S      P U B L I C O S
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
         // T I P O S        D E     D A T O S      P R I V A D O S
 
         // M E T O D O S      P R I V A D O S
         void escribirLog( const char *mensaje );
-
-		IMGCONT* CargarPNG(const char *ruta_origen);
-		IMGCONT* CargarPGM(const char *ruta_origen);
-		IMGCONT* CargarDICOM(const char *ruta_origen, const unsigned int nivel);
 
 		void GuardarPGM(IMGCONT *img_src, const char *ruta, const double min, const double max);
 		void GuardarPNG(IMGCONT *img_src, const char *ruta, const double min, const double max);
@@ -349,26 +237,17 @@ class IMGVTK{
         char* setRuta( const char *ruta_input );
 		
         // M I E M B R O S      P R I V A D O S
-        //QPlainTextEdit *mi_log;
         int max_dist;
 		char err_msg[512];
 
-		int rows, cols, rows_cols;
-		int n_niveles;
-		IMGCONT *my_base;
-		IMGCONT *my_groundtruth;
-		IMGCONT *my_mask;
-		IMGCONT *my_skeleton;
-		IMGCONT *my_response;
-		IMGCONT *my_segmented;
-		IMGCONT *my_distmap;
-		IMGCONT *my_boundaries;
-
-		//// Datos extraidos del archivo DICOM:
-		double SID, SOD, DDP, DISO;
-		double LAORAO, CRACAU;
-		double WCenter, WWidth;
-		double pixX, pixY, cenX, cenY;
+		IMGCONT my_base;
+		IMGCONT my_groundtruth;
+		IMGCONT my_mask;
+		IMGCONT my_skeleton;
+		IMGCONT my_response;
+		IMGCONT my_segmented;
+		IMGCONT my_distmap;
+		IMGCONT my_boundaries;
 
 		PIX_PAR *pix_caract;
 };

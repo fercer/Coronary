@@ -1701,10 +1701,6 @@ void FILTROS::generarPob(INDIV *poblacion, const double *probs, const double *de
             }
             // Asignar el valor segun la cadena formada para el atributo 'k':
             (poblacion + i)->vars[k] = *(deltas_var + k) * cadena_val + lim_inf[k];
-			DEB_MSG(COLOR_GREEN "[" COLOR_BLUE << k << COLOR_GREEN "] cadena: " COLOR_BACK_WHITE COLOR_BLACK
-				<< cadena_val << "/" << (poblacion + i)->vars[k] << " :: " COLOR_BACK_BLACK COLOR_BLUE
-				<< "delta: " << *(deltas_var + k) << " :: lim_inf: " << lim_inf[k] << " :: lim_sup: "
-				<< lim_sup[k] << COLOR_NORMAL);
         }
 
         switch( fitness_elegido ){
@@ -1972,10 +1968,6 @@ double FILTROS::generarPob(INDIV *poblacion, const INDIV *cruza, const INDIV *se
             }
             // Asignar el valor segun la cadena formada para el atributo 'k':
             (poblacion + i)->vars[ k ] = *(deltas_var + k) * cadena_val + lim_inf[k];
-			DEB_MSG(COLOR_GREEN "[" COLOR_BLUE << k << COLOR_GREEN "] cadena: " COLOR_BACK_WHITE COLOR_BLACK
-				<< cadena_val << "/" << (poblacion + i)->vars[k] << " :: " COLOR_BACK_BLACK COLOR_BLUE
-				<< "delta: " << *(deltas_var + k) << " :: lim_inf: " << lim_inf[k] << " :: lim_sup: "
-				<< lim_sup[k] << COLOR_NORMAL);
         }
         switch( fitness_elegido ){
         case ROC:

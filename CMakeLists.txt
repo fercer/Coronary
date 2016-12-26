@@ -8,8 +8,12 @@ endif()
 
 
 SET(SRC_DIR "./src")
-SET(HEADERS ${SRC_DIR}/reconstructor_3D.h ${SRC_DIR}/filtros.h ${SRC_DIR}/IMGVTK.h ${SRC_DIR}/args_fercer.h ${SRC_DIR}/libpng_src/readpng.h ${SRC_DIR}/libpng_src/writepng.h)
-SET(SOURCES ${SRC_DIR}/reconstructor_3D.cpp ${SRC_DIR}/filtros.cpp ${SRC_DIR}/IMGVTK.cpp ${SRC_DIR}/args_fercer.cpp ${SRC_DIR}/libpng_src/readpng.c ${SRC_DIR}/libpng_src/writepng.c)
+
+FILE(GLOB HEADERS ${SRC_DIR}/*.h)
+FILE(GLOB HEADERS_PNG ${SRC_DIR}/libpng_src/*.h)
+
+FILE(GLOB SOURCES ${SRC_DIR}/*.cpp)
+FILE(GLOB SOURCES_PNG ${SRC_DIR}/libpng_src/*.cpp)
 
 # The GUI version is going to be build?
 OPTION(BUILD_GUI "Build gui version." OFF)
@@ -58,7 +62,7 @@ IF(BUILD_VTK)
 			ENDIF(BUILD_GUI)
 			
 			# Add the sources to the project:
-			ADD_EXECUTABLE(${NOMBRE_PROYECTO} MACOSX_BUNDLE ${CXX_FILES} ${UISrcs} ${QT_WRAP} ${SOURCES} ${HEADERS})
+			ADD_EXECUTABLE(${NOMBRE_PROYECTO} MACOSX_BUNDLE ${CXX_FILES} ${UISrcs} ${QT_WRAP} ${SOURCES} ${SOURCES_PNG} ${HEADERS} ${HEADERS_PNG})
 			
 			TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${VTK_LIBRARIES})
 		ELSE()
@@ -70,7 +74,7 @@ IF(BUILD_VTK)
 			ENDIF(BUILD_GUI)
 			
 			# Add the sources to the project:
-			ADD_EXECUTABLE(${NOMBRE_PROYECTO} MACOSX_BUNDLE ${CXX_FILES} ${UISrcs} ${MOCSrcs} ${SOURCES} ${HEADERS})
+			ADD_EXECUTABLE(${NOMBRE_PROYECTO} MACOSX_BUNDLE ${CXX_FILES} ${UISrcs} ${MOCSrcs} ${SOURCES} ${SOURCES_PNG} ${HEADERS} ${HEADERS_PNG})
 			
 			IF(${VTK_VERSION} VERSION_LESS "6")
 				TARGET_LINK_LIBRARIES(${NOMBRE_PROYECTO} ${VTK_LIBRARIES} QVTK)
@@ -81,10 +85,10 @@ IF(BUILD_VTK)
 	ELSE(VTK_LIBRARIES)
 		MESSAGE("VTK libraries could not be found, a No-VTK version will be built")
 		# Add the sources to the project:
-		ADD_EXECUTABLE(${NOMBRE_PROYECTO} MACOSX_BUNDLE ${CXX_FILES} ${UISrcs} ${QT_WRAP} ${SOURCES} ${HEADERS})
+		ADD_EXECUTABLE(${NOMBRE_PROYECTO} MACOSX_BUNDLE ${CXX_FILES} ${UISrcs} ${QT_WRAP} ${SOURCES} ${SOURCES_PNG} ${HEADERS} ${HEADERS_PNG})
 	ENDIF(VTK_LIBRARIES)
 ELSE(BUILD_VTK)
-	ADD_EXECUTABLE(${NOMBRE_PROYECTO} MACOSX_BUNDLE ${SOURCES} ${HEADERS})
+	ADD_EXECUTABLE(${NOMBRE_PROYECTO} MACOSX_BUNDLE ${SOURCES} ${SOURCES_PNG} ${HEADERS} ${HEADERS_PNG})
 ENDIF(BUILD_VTK)
 
 # Add PNG libraries:
