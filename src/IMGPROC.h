@@ -35,26 +35,19 @@
 
 class IMGPROC : public IMGCONT{
     public:
-        /** PIX_TYPE: **/
-        typedef enum PIX_TYPE { PIX_SKL, PIX_END, PIX_BRANCH, PIX_CROSS } PIX_TYPE;
 
-		/** THRESHOLD_TYPE: **/
-		typedef enum THRESHOLD_TYPE { TRESH_LEVEL, TRESH_OTSU, TRESH_RIDLER_CALVARD } THRESHOLD_TYPE;
 
-		/** CONNECTED_ALG: **/
-		typedef enum CONNECTED_ALG { CONN_DYN, CONN_ITER } CONNECTED_ALG;
-
-        /** PIX_PAR:   **/
-        typedef struct PIX_PAR {
+        /** PIX_PAIR:   **/
+        typedef struct PIX_PAIR {
             double x, y, x_r, y_r;
-            double radio, alpha;
-            int nivel;
-            int n_hijos;
-            PIX_PAR *hijos[3];
-			PIX_TYPE pix_tipo;
-        } PIX_PAR;
+            double radious, alpha;
+            int deep_level;
+            int n_childs;
+            PIX_PAIR *childs[3];
+			PIX_TYPE pix_type;
+        } PIX_PAIR;
 
-		IMGCONT * definirMask(IMGCONT *img_src);
+
         void skeletonization(IMG_IDX img_idx);
         void umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const double nivel);
 
@@ -68,8 +61,8 @@ class IMGPROC : public IMGCONT{
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
 		void calcDistancesMap();
 
-		IMGCONT* maskFOV(IMGCONT * img_src);
-		void fillMask(IMGCONT *img_src, IMGCONT *mask_src);
+		void maskFOV();
+		void fillMask();
 
         PIX_PAR *grafoSkeleton(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, bool *visitados);
         void extraerCaract(IMG_IDX img_idx);
@@ -106,6 +99,9 @@ class IMGPROC : public IMGCONT{
 		PIX_PAR *pix_caract;
 
 		double *my_dist_map;
+
+		IMGCONT auxiliary_img;
+		IMGCONT my_FOV_mask;
 };
 
 #endif // IMGPROC_H_INCLUDED

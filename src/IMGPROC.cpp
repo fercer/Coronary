@@ -465,75 +465,63 @@ bool IMGVTK::regionFilling3(IMGCONT *img_src, const int x, const int y)
 /*  Metodo: conexo
     Funcion: Metodo recursivo (dinamico) para encontrar los conjuntos conexos utilizando la conectividad 8.
 */
-void IMGVTK::conexo(IMGCONT *img_src, const int x, const int y, int *conjuntos, unsigned int* n_etiquetados, bool* visitados, const int num_etiquetas)
+void IMGCONT::computeConnected(double * img_ptr, const int x, const int y, int *my_sets, unsigned int* number_of_labeled, bool* was_visited, const int number_of_labels)
 {
-	*(visitados + x + y*img_src->my_width) = true;
+	*(was_visited + x + y*my_width) = true;
 
-	// Si el pixel es parte del fondo, no se hace nada:
-	if (*(img_src->my_img_data + x + y*img_src->my_width) < 1.0) {
+	/* If the pixel is part of the background, it is ignored */
+	if (*(img_ptr + x + y*my_width) < 1.0) {
 		return;
 	}
 	else {
-		*(conjuntos + x + y*img_src->my_width) = num_etiquetas;
-		*(n_etiquetados + num_etiquetas) = *(n_etiquetados + num_etiquetas) + 1;
+		*(my_sets + x + y*my_width) = number_of_labels;
+		*(number_of_labeled + number_of_labels) = *(number_of_labeled + number_of_labels) + 1;
 	}
 
-	// De lo contrario, se revisan los pixeles vecinos:
-	/// Superiores:
+	/* Otherwise, the neigthbors are checked */
 	if (y > 0) {
 		if (x > 0) {
-			/// Ariba - Izquierda
-			if (!*(visitados + x - 1 + (y - 1)*img_src->my_width)) { // Si el pixel arriba-izquierda no ha sido visitado:
-				conexo(img_src, x - 1, y - 1, conjuntos, n_etiquetados, visitados, num_etiquetas);
+			if (!*(was_visited + x - 1 + (y - 1)*my_width)) {
+				computeConnected(img_ptr, x - 1, y - 1, my_sets, number_of_labeled, was_visited, number_of_labels);
 			}
 		}
 
-		/// Arriba
-		if (!*(visitados + x + (y - 1)*img_src->my_width)) { // Si el pixel arriba no ha sido visitado:
-			conexo(img_src, x, y - 1, conjuntos, n_etiquetados, visitados, num_etiquetas);
+		if (!*(was_visited + x + (y - 1)*my_width)) {
+			computeConnected(img_ptr, x, y - 1, my_sets, number_of_labeled, was_visited, number_of_labels);
 		}
-
-		/// Ariba - Derecha
-		if (x < (img_src->my_width - 1)) {
-			if (!*(visitados + x + 1 + (y - 1)*img_src->my_width)) { // Si el pixel arriba-derecha no ha sido visitado:
-				conexo(img_src, x + 1, y - 1, conjuntos, n_etiquetados, visitados, num_etiquetas);
+		if (x < (my_width - 1)) {
+			if (!*(was_visited + x + 1 + (y - 1)*my_width)) {
+				computeConnected(img_ptr, x + 1, y - 1, my_sets, number_of_labeled, was_visited, number_of_labels);
 			}
 		}
 	}
 
-	/// Centrales:
 	if (x > 0) {
-		/// Centro - Izquierda
-		if (!*(visitados + x - 1 + y*img_src->my_width)) { // Si el pixel centro-izquierda no ha sido visitado:
-			conexo(img_src, x - 1, y, conjuntos, n_etiquetados, visitados, num_etiquetas);
+		if (!*(was_visited + x - 1 + y*my_width)) {
+			computeConnected(img_ptr, x - 1, y, my_sets, number_of_labeled, was_visited, number_of_labels);
 		}
 	}
 
-	/// Centro - Derecha
-	if (x < (img_src->my_width - 1)) {
-		if (!*(visitados + x + 1 + y*img_src->my_width)) { // Si el pixel arriba-izquierda no ha sido visitado:
-			conexo(img_src, x + 1, y, conjuntos, n_etiquetados, visitados, num_etiquetas);
+	if (x < (my_width - 1)) {
+		if (!*(was_visited + x + 1 + y*my_width)) {
+			computeConnected(img_ptr, x + 1, y, my_sets, number_of_labeled, was_visited, number_of_labels);
 		}
 	}
 
-	/// Inferiores:
-	if (y < (img_src->my_width - 1)) {
+	if (y < (my_height - 1)) {
 		if (x > 0) {
-			/// Abajo - Izquierda
-			if (!*(visitados + x - 1 + (y + 1)*img_src->my_width)) { // Si el pixel arriba-izquierda no ha sido visitado:
-				conexo(img_src, x - 1, y + 1, conjuntos, n_etiquetados, visitados, num_etiquetas);
+			if (!*(was_visited + x - 1 + (y + 1)*my_width)) {
+				computeConnected(img_ptr, x - 1, y + 1, my_sets, number_of_labeled, was_visited, number_of_labels);
 			}
 		}
-
-		/// Abajo
-		if (!*(visitados + x + (y + 1)*img_src->my_width)) { // Si el pixel arriba no ha sido visitado:
-			conexo(img_src, x, y + 1, conjuntos, n_etiquetados, visitados, num_etiquetas);
+		
+		if (!*(was_visited + x + (y + 1)*my_width)) {
+			computeConnected(img_ptr, x, y + 1, my_sets, number_of_labeled, was_visited, number_of_labels);
 		}
 
-		/// Abajo - Derecha
-		if ((x < (img_src->my_width - 1))) {
-			if (!*(visitados + x + 1 + (y + 1)*img_src->my_width)) { // Si el pixel arriba-derecha no ha sido visitado:
-				conexo(img_src, x + 1, y + 1, conjuntos, n_etiquetados, visitados, num_etiquetas);
+		if ((x < (my_width - 1))) {
+			if (!*(was_visited + x + 1 + (y + 1)*my_width)) {
+				computeConnected(img_ptr, x + 1, y + 1, my_sets, number_of_labeled, was_visited, number_of_labels);
 			}
 		}
 	}
@@ -541,216 +529,261 @@ void IMGVTK::conexo(IMGCONT *img_src, const int x, const int y, int *conjuntos, 
 
 
 
-/*  Metodo: conjuntosConexos
-    Funcion: Obtiene los conjuntos conexos de la imagen usando programacion dinamica (Llega a generar stackoverflow ... ).
-*/
-unsigned int* IMGVTK::conjuntosConexosDinamico(IMGCONT *img_src, int *conjuntos){
-    int num_etiquetas = 0;
 
-	const int mis_rows_cols = img_src->my_height * img_src->my_width;
 
-    bool *visitados = new bool [mis_rows_cols];
-    memset(visitados, 0, mis_rows_cols*sizeof(bool));
 
-    unsigned int *tmp = new unsigned int [mis_rows_cols];
-    memset(tmp, 0, sizeof(unsigned int)*mis_rows_cols);
 
-    memset(conjuntos, -1, sizeof(int) * mis_rows_cols);
 
-    for( int y = 0; y< img_src->my_height; y++){
-        for( int x = 0; x < img_src->my_width; x++){
-            /// Se mueve la etiqueta si el pixel es de un nuevo conjunto:
-            if( !visitados[x + y*img_src->my_width]) {
-                conexo( img_src, x, y, conjuntos, tmp, visitados, num_etiquetas);
-                if( *(img_src->my_img_data + x + y*img_src->my_width) > 0 ){
-                    num_etiquetas++;
-                }
-            }
-        }
-    }
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: connectedSets_Dynamic                                                                      *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* img_ptr                   double *                   I   An array to be filtered by its set's length      *
+* my_sets                   int *                      O   An array with the different sets found           *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The number of pixels that belong to each set                                                              *
+*                                                                                                           *
+************************************************************************************************************/
+unsigned int* IMGCONT::connectedSets_Dynamic(double * img_ptr, int * my_sets) {
+	int number_of_labels = 0;
 
-    unsigned int *n_etiquetados = new unsigned int [num_etiquetas+1];
-    memcpy(n_etiquetados + 1, tmp, num_etiquetas*sizeof(unsigned int) );
-    n_etiquetados[0] = num_etiquetas;
+	bool *was_visited = new bool[my_height * my_width];
+	memset(was_visited, 0, my_height * my_width * sizeof(bool));
 
-    delete [] tmp;
-    delete [] visitados;
+	unsigned int *temp_labels = new unsigned int[my_height * my_width];
+	memset(temp_labels, 0, sizeof(unsigned int)*my_height * my_width);
 
-    DEB_MSG( "Numero de etiquetas puestas: " << num_etiquetas);
+	memset(my_sets, -1, sizeof(int) * my_height * my_width);
 
-    return n_etiquetados;
+	for (int y = 0; y < my_height; y++) {
+		for (int x = 0; x < my_width; x++) {
+			/// Se mueve la etiqueta si el pixel es de un nuevo conjunto:
+			if (!was_visited[x + y*my_width]) {
+				computeConnected(img_ptr, x, y, my_sets, temp_labels, was_visited, number_of_labels);
+				if (*(img_ptr + x + y*my_width) > 0) {
+					number_of_labels++;
+				}
+			}
+		}
+	}
+
+	unsigned int *sets_length = new unsigned int[number_of_labels + 1];
+	memcpy(sets_length + 1, temp_labels, number_of_labels * sizeof(unsigned int));
+	sets_length[0] = number_of_labels;
+
+	delete[] temp_labels;
+	delete[] was_visited;
+
+	return sets_length;
 }
 
 
 
 
-/*  Metodo: ampliarConjunto
-    Funcion: Amplia la memoria requerida para las etiqeutas de conjuntos equivalentes.
-*/
-inline void IMGVTK::ampliarConjunto( int *etiquetas, const int equiv_A, const int equiv_B, const int max_etiquetas){
-    int base, base_ant;
 
-    if( equiv_A > equiv_B ){
-        base = equiv_A;
-        base_ant = equiv_B;
-    }else{
-        base = equiv_B;
-        base_ant = equiv_A;
-    }
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: increaseSetSize                                                                            *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* my_labels                 int *                      O   An array with the different labels defined       *
+* equiv_A                   const int                  I   A label equivalent to the label B                *
+* equiv_B                   const int                  I   A label equivalent to the label A                *
+* max_number_of_labels      const int                  I   The maximum number of labels to be set as equiv. *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Creates a new equivalency between the label A and B.                                                      *
+*                                                                                                           *
+************************************************************************************************************/
+inline void IMGCONT::increaseSetSize(int * my_labels, const int equiv_A, const int equiv_B, const int max_number_of_labels) {
+	int default_label, previous_label;
 
-    for(int i = 0; i < max_etiquetas; i++){
-        if(*(etiquetas + i) == -1){
-            break;
-        }else if( *(etiquetas + i) == base_ant ){
-            *(etiquetas + i) = base;
-        }
-    }
+	if (equiv_A > equiv_B) {
+		default_label = equiv_A;
+		previous_label = equiv_B;
+	}
+	else {
+		default_label = equiv_B;
+		previous_label = equiv_A;
+	}
+
+	for (int i = 0; i < max_number_of_labels; i++) {
+		if (*(my_labels + i) == -1) {
+			break;
+		}
+		else if (*(my_labels + i) == previous_label) {
+			*(my_labels + i) = default_label;
+		}
+	}
 }
 
 
 
 
-/*  Metodo: conjuntosConexos
-    Funcion: Obtiene los conjuntos conexos de la imagen.
-*/
-unsigned int* IMGVTK::conjuntosConexos(IMGCONT *img_src, int *conjuntos){
-
-    static int veces = 0;
-
-    const int mis_rows_cols = img_src->my_height*img_src->my_width;
-
-    int max_etiquetas = mis_rows_cols;
-    int *val_etiquetas = new int [max_etiquetas];
-    memset( val_etiquetas, -1, max_etiquetas * sizeof(int));
-
-    int *pix_etq = new int [(img_src->my_height +2)*(img_src->my_width +2)];
-    memset( pix_etq, -1, (img_src->my_height +2)*(img_src->my_width +2) * sizeof(int));
-
-    int n_conjunto = -1;
-
-    for( int y = 1; y <= img_src->my_height; y++){
-        for( int x = 1; x <= img_src->my_width; x++){
-            if( *(img_src->my_img_data + (y-1)*img_src->my_width + (x-1)) > 0.0 ){
-
-                const int NO = *(pix_etq + (y-1)*(img_src->my_width +2) + (x-1));
-                const int N  = *(pix_etq + (y-1)*(img_src->my_width +2) +   x  );
-                const int NE = *(pix_etq + (y-1)*(img_src->my_width +2) + (x+1));
-                const int E  = *(pix_etq +   y  *(img_src->my_width +2) + (x+1));
-                const int SE = *(pix_etq + (y+1)*(img_src->my_width +2) + (x+1));
-                const int S  = *(pix_etq + (y+1)*(img_src->my_width +2) +   x  );
-                const int SO = *(pix_etq + (y+1)*(img_src->my_width +2) + (x-1));
-                const int O  = *(pix_etq +   y  *(img_src->my_width +2) + (x-1));
-
-                int base = -1;
-
-                /// NO
-                if( NO >= 0 ){
-                    base = NO;
-                }
-
-                /// N
-                if( N >= 0 ){
-                    if( (base >= 0) && (base != N) ){
-                        ampliarConjunto( val_etiquetas, base, N, max_etiquetas);
-                    }else{
-                        base = N;
-                    }
-                }
-
-                /// NE
-                if( NE >= 0 ){
-                    if( (base >= 0) && (base != NE) ){
-                        ampliarConjunto( val_etiquetas, base, NE, max_etiquetas);
-                    }else{
-                        base = NE;
-                    }
-                }
-
-                /// E
-                if( E >= 0){
-                    if( (base >= 0) && (base != E) ){
-                        ampliarConjunto( val_etiquetas, base, E, max_etiquetas);
-                    }else{
-                        base = E;
-                    }
-                }
-
-                /// SE
-                if( SE >= 0 ){
-                    if( (base >= 0) && (base != SE) ){
-                        ampliarConjunto( val_etiquetas, base, SE, max_etiquetas);
-                    }else{
-                        base = SE;
-                    }
-                }
-
-                /// S
-                if( S >= 0 ){
-                    if( (base >= 0) && (base != S) ){
-                        ampliarConjunto( val_etiquetas, base, S, max_etiquetas);
-                    }else{
-                        base = S;
-                    }
-                }
-
-                /// SO
-                if( SO >= 0 ){
-                    if( (base >= 0) && (base != SO) ){
-                        ampliarConjunto( val_etiquetas, base, SO, max_etiquetas);
-                    }else{
-                        base = SO;
-                    }
-                }
-
-                /// O
-                if( O >= 0 ){
-                    if( (base >= 0) && (base != O) ){
-                        ampliarConjunto( val_etiquetas, base, O, max_etiquetas);
-                    }else{
-                        base = O;
-                    }
-                }
-
-                if( base >= 0 ){
-                    *(pix_etq + y*(img_src->my_width +2) + x) = base;
-                }else{
-                    n_conjunto++;
-                    *(val_etiquetas + n_conjunto) = n_conjunto;
-                    *(pix_etq + y*(img_src->my_width +2) + x) = n_conjunto;
-                }
-            }
-        }
-    }
-
-    DEB_MSG("Quedaron " << n_conjunto << " activados");
-    n_conjunto++;
-
-    // Indicar a que conjunto pertenece cada pixel:
-    memset( conjuntos, -1, mis_rows_cols*sizeof(int));
-    for( int y = 0; y < img_src->my_height; y++){
-        for( int x = 0; x < img_src->my_width; x++){
-            const int etiqueta = *(pix_etq + (y+1)*(img_src->my_width +2) + (x+1));
-            if( etiqueta >= 0 ){
-                *(conjuntos + x + y*img_src->my_width) = *(val_etiquetas + etiqueta);
-            }
-        }
-    }
-    delete [] val_etiquetas;
-    delete [] pix_etq;
 
 
-    /// Contar cuantos elementos hay en cada grupo:
-    unsigned int *n_etiquetados = new unsigned int [n_conjunto+1];
-    memset(n_etiquetados + 1, 0, n_conjunto*sizeof(unsigned int));
-    n_etiquetados[0] = n_conjunto;
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: connectedSets_Iterative                                                                    *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* img_ptr                   double *                   I   An array to be filtered by its set's length      *
+* my_sets                   int *                      O   An array with the different sets found           *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The number of pixels that belong to each set                                                              *
+*                                                                                                           *
+************************************************************************************************************/
+unsigned int* IMGCONT::connectedSets_Iterative(double * img_ptr, int * my_sets) {
 
-    for( int xy = 0; xy < mis_rows_cols; xy++){
-        if( *(conjuntos + xy) >= 0 ){
-            *(n_etiquetados + 1 + *(conjuntos + xy)) = *(n_etiquetados + 1 + *(conjuntos + xy)) + 1;
-        }
-    }
+	int max_number_of_labels = my_height * my_width;
+	int * labels_values = new int[max_number_of_labels];
+	memset(labels_values, -1, max_number_of_labels * sizeof(int));
 
-    return n_etiquetados;
+	int *pix_labels = new int[(my_height + 2)*(my_width + 2)];
+	memset(pix_labels, -1, (my_height + 2)*(my_width + 2) * sizeof(int));
+
+	int number_of_sets = -1;
+
+	for (int y = 1; y <= my_height; y++) {
+		for (int x = 1; x <= my_width; x++) {
+			if (*(img_ptr + (y - 1)*my_width + (x - 1)) > 0.0) {
+
+				const int NorthWest = *(pix_labels + (y - 1)*(my_width + 2) + (x - 1));
+				const int North = *(pix_labels + (y - 1)*(my_width + 2) + x);
+				const int NorthEast = *(pix_labels + (y - 1)*(my_width + 2) + (x + 1));
+				const int East = *(pix_labels + y  *(my_width + 2) + (x + 1));
+				const int SouthEast = *(pix_labels + (y + 1)*(my_width + 2) + (x + 1));
+				const int South = *(pix_labels + (y + 1)*(my_width + 2) + x);
+				const int SouthWest = *(pix_labels + (y + 1)*(my_width + 2) + (x - 1));
+				const int West = *(pix_labels + y  *(my_width + 2) + (x - 1));
+
+				int default_label = -1;
+
+				/* North West */
+				if (NorthWest >= 0) {
+					default_label = NorthWest;
+				}
+
+				/// North
+				if (North >= 0) {
+					if ((default_label >= 0) && (default_label != North)) {
+						increaseSetSize(labels_values, default_label, North, max_number_of_labels);
+					}
+					else {
+						default_label = North;
+					}
+				}
+
+				/// NorthEast
+				if (NorthEast >= 0) {
+					if ((default_label >= 0) && (default_label != NorthEast)) {
+						increaseSetSize(labels_values, default_label, NorthEast, max_number_of_labels);
+					}
+					else {
+						default_label = NorthEast;
+					}
+				}
+
+				/// East
+				if (East >= 0) {
+					if ((default_label >= 0) && (default_label != East)) {
+						increaseSetSize(labels_values, default_label, East, max_number_of_labels);
+					}
+					else {
+						default_label = East;
+					}
+				}
+
+				/// SouthEast
+				if (SouthEast >= 0) {
+					if ((default_label >= 0) && (default_label != SouthEast)) {
+						increaseSetSize(labels_values, default_label, SouthEast, max_number_of_labels);
+					}
+					else {
+						default_label = SouthEast;
+					}
+				}
+
+				/// South
+				if (South >= 0) {
+					if ((default_label >= 0) && (default_label != South)) {
+						increaseSetSize(labels_values, default_label, South, max_number_of_labels);
+					}
+					else {
+						default_label = South;
+					}
+				}
+
+				/// SouthWest
+				if (SouthWest >= 0) {
+					if ((default_label >= 0) && (default_label != SouthWest)) {
+						increaseSetSize(labels_values, default_label, SouthWest, max_number_of_labels);
+					}
+					else {
+						default_label = SouthWest;
+					}
+				}
+
+				/// West
+				if (West >= 0) {
+					if ((default_label >= 0) && (default_label != West)) {
+						increaseSetSize(labels_values, default_label, West, max_number_of_labels);
+					}
+					else {
+						default_label = West;
+					}
+				}
+
+				if (default_label >= 0) {
+					*(pix_labels + y*(my_width + 2) + x) = default_label;
+				}
+				else {
+					number_of_sets++;
+					*(labels_values + number_of_sets) = number_of_sets;
+					*(pix_labels + y*(my_width + 2) + x) = number_of_sets;
+				}
+			}
+		}
+	}
+
+	number_of_sets++;
+
+	// Indicar a que conjunto pertenece cada pixel:
+	memset(my_sets, -1, my_height * my_width * sizeof(int));
+	for (int y = 0; y < my_height; y++) {
+		for (int x = 0; x < my_width; x++) {
+			const int pixel_label = *(pix_labels + (y + 1)*(my_width + 2) + (x + 1));
+			if (pixel_label >= 0) {
+				*(my_sets + x + y*my_width) = *(labels_values + pixel_label);
+			}
+		}
+	}
+
+	delete[] labels_values;
+	delete[] pix_labels;
+
+
+	/// Contar cuantos elementos hay en cada grupo:
+	unsigned int *sets_length = new unsigned int[number_of_sets + 1];
+	memset(sets_length + 1, 0, number_of_sets * sizeof(unsigned int));
+	sets_length[0] = number_of_sets;
+
+	for (int xy = 0; xy < my_height * my_width; xy++) {
+		if (*(my_sets + xy) >= 0) {
+			*(sets_length + 1 + *(my_sets + xy)) = *(sets_length + 1 + *(my_sets + xy)) + 1;
+		}
+	}
+
+	return sets_length;
 }
 
 
@@ -773,72 +806,72 @@ inline unsigned char IMGVTK::sklMask(IMGCONT *img_src, const int x, const int y)
 
 
 
-/*  Metodo: lengthFiltering
-    Funcion: Filtra los conjuntos con numero de pixeles menor a 'min_length'
-*/
-void IMGVTK::lengthFilter(IMGCONT *img_src, const unsigned int min_length, ALG_CONJUNTOS mi_alg)
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: lengthFilter                                                                               *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* img_ptr                   double *                   I   An array to be filtered by its set's length      *
+* threshold_length          const unsigned int         I   The minimum length of a set must have to remain  *
+* my_connected_algorithm    CONNECTED_ALG              I   The algorithm to be used in the length filtering *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The array in 'img_ptr' filtered by the length of its sets.                                                *
+*                                                                                                           *
+************************************************************************************************************/
+void IMGCONT::lengthFilter(double *img_ptr, const unsigned int threshold_length, CONNECTED_ALG  my_connected_algorithm)
 {
-    int *mis_conjuntos = new int [img_src->my_height * img_src->my_width];
+    int *my_sets = new int [my_height * my_width];
 
-    unsigned int *mis_n_etiquetados = NULL;
+	unsigned int *my_sets_lengths = NULL;
 
-    switch (mi_alg) {
-    case DINAMICO:
-        mis_n_etiquetados = conjuntosConexosDinamico(img_src, mis_conjuntos);
+    switch (my_connected_algorithm) {
+    case CONN_DYN:
+		my_sets_lengths = connectedSets_Dynamic(img_ptr, my_sets);
         break;
-    case ITERATIVO:
-        mis_n_etiquetados = conjuntosConexos(img_src, mis_conjuntos);
+    case CONN_ITER:
+        my_sets_lengths = connectedSets_Iterative(img_ptr, my_sets);
         break;
     }
 
-    for( int xy = 0; xy < (img_src->my_height * img_src->my_width); xy++){
-        if( ( *(mis_conjuntos + xy) >= 0) && ( *(mis_n_etiquetados + *(mis_conjuntos + xy ) + 1 ) < min_length)){
-            *(img_src->my_img_data + xy) = 0.0;
+    for( int xy = 0; xy < (my_height * my_width); xy++){
+        if( ( *(my_sets + xy) >= 0) && ( *(my_sets_lengths + *(my_sets + xy ) + 1 ) < threshold_length)){
+            *(img_ptr + xy) = 0.0;
         }
     }
 
-    delete [] mis_conjuntos;
-    delete [] mis_n_etiquetados;
+    delete [] my_sets;
+    delete [] my_sets_lengths;
 }
 
 
 
-/*  Metodo: lengthFiltering (Publica)
-    Funcion: Filtra los conjuntos con numero de pixeles menor a 'min_length'
-*/
-void IMGVTK::lengthFilter(IMG_IDX img_idx, const int min_length, ALG_CONJUNTOS mi_alg){
 
-    IMGCONT *img_tmp = NULL;
 
-	switch (img_idx) {
-	case BASE:
-		img_tmp = my_base;
-		break;
-	case GROUNDTRUTH:
-		img_tmp = my_groundtruth;
-		break;
-	case MASK:
-		img_tmp = my_mask;
-		break;
-	case SKELETON:
-		img_tmp = my_skeleton;
-		break;
-	case SEGMENT:
-		img_tmp = my_response;
-		break;
-	case THRESHOLD:
-		img_tmp = my_segmented;
-		break;
-	case BORDERS:
-		img_tmp = my_boundaries;
-		break;
-	case MAPDIST:
-		img_tmp = my_distmap;
-		break;
-	}
-
-    lengthFilter(img_tmp, min_length, mi_alg);
+/************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
+* FUNCTION NAME: lengthFilter                                                                               *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* threshold_length          const unsigned int         I   The minimum length of a set must have to remain  *
+* my_connected_algorithm    CONNECTED_ALG              I   The algorithm to be used in the length filtering *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The image contained in the 'my_img_data' array filtered by length.                                        *
+*                                                                                                           *
+************************************************************************************************************/
+void IMGCONT::lengthFilter(const unsigned int threshold_length, CONNECTED_ALG  my_connected_algorithm)
+{
+    lengthFilter(my_img_data, threshold_length, my_connected_algorithm);
 }
+
+
+
 
 
 /*  Metodo: regionFill
@@ -937,119 +970,171 @@ inline unsigned char IMGVTK::dilMask( IMGCONT *mask_dil, const int x, const int 
 /*  Metodo:  erosionMask
     Funcion: Mascara para erosion usando un disco de radio 5
 */
-inline unsigned char IMGVTK::erosionMask(IMGCONT *ptr_tmp, const int x, const int y)
+inline unsigned char IMGCONT::erosionMask(double * ptr_tmp, const int x, const int y)
 {
-	return (*(ptr_tmp->my_img_data + (x - 2) + (y - 4)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 1) + (y - 4)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x)+(y - 4)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 1) + (y - 4)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 2) + (y - 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 3) + (y - 3)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 2) + (y - 3)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 1) + (y - 3)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x)+(y - 3)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 1) + (y - 3)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 2) + (y - 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 3) + (y - 3)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 4) + (y - 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 3) + (y - 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 2) + (y - 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 1) + (y - 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x)+(y - 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 1) + (y - 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 2) + (y - 3)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 3) + (y - 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 4) + (y - 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 4) + (y - 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 3) + (y - 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 2) + (y - 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 1) + (y - 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x)+(y - 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 1) + (y - 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 2) + (y - 4)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 3) + (y - 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 4) + (y - 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 4) + (y)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 3) + (y)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 2) + (y)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 1) + (y)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 1) + (y)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 2) + (y)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 3) + (y)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 4) + (y)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 4) + (y + 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 3) + (y + 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 2) + (y + 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 1) + (y + 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x)+(y + 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 1) + (y + 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 2) + (y + 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 3) + (y + 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 4) + (y + 1)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 4) + (y + 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 3) + (y + 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 2) + (y + 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 1) + (y + 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x)+(y + 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 1) + (y + 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 2) + (y + 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 3) + (y + 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 4) + (y + 2)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 3) + (y + 3)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 2) + (y + 3)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 1) + (y + 3)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x)+(y + 3)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 1) + (y + 3)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 2) + (y + 3)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 3) + (y + 3)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 2) + (y + 4)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x - 1) + (y + 4)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x)+(y + 4)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 1) + (y + 4)*ptr_tmp->my_width) > 0.0) +
-		(*(ptr_tmp->my_img_data + (x + 2) + (y + 4)*ptr_tmp->my_width) > 0.0);
+	return (*(ptr_tmp + (x - 2) + (y - 4)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 1) + (y - 4)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x)+(y - 4)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 1) + (y - 4)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 2) + (y - 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 3) + (y - 3)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 2) + (y - 3)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 1) + (y - 3)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x)+(y - 3)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 1) + (y - 3)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 2) + (y - 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 3) + (y - 3)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 4) + (y - 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 3) + (y - 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 2) + (y - 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 1) + (y - 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x)+(y - 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 1) + (y - 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 2) + (y - 3)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 3) + (y - 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 4) + (y - 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 4) + (y - 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 3) + (y - 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 2) + (y - 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 1) + (y - 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x)+(y - 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 1) + (y - 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 2) + (y - 4)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 3) + (y - 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 4) + (y - 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 4) + (y)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 3) + (y)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 2) + (y)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 1) + (y)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 1) + (y)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 2) + (y)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 3) + (y)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 4) + (y)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 4) + (y + 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 3) + (y + 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 2) + (y + 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 1) + (y + 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x)+(y + 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 1) + (y + 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 2) + (y + 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 3) + (y + 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 4) + (y + 1)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 4) + (y + 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 3) + (y + 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 2) + (y + 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 1) + (y + 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x)+(y + 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 1) + (y + 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 2) + (y + 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 3) + (y + 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 4) + (y + 2)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 3) + (y + 3)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 2) + (y + 3)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 1) + (y + 3)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x)+(y + 3)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 1) + (y + 3)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 2) + (y + 3)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 3) + (y + 3)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 2) + (y + 4)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x - 1) + (y + 4)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x)+(y + 4)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 1) + (y + 4)*(my_width + 8)) > 0.0) +
+		(*(ptr_tmp + (x + 2) + (y + 4)*(my_width + 8)) > 0.0);
 }
 
 
 
-/*  Metodo: erosionar
-    Funcion: Rellena vacios dentro del cuerpo de la arteria segmentada.
-*/
-void IMGVTK::erosionar( IMGCONT *img_src )
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: computeMaskFOV                                                                             *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* --------                  ------------               -   ------------------------------------------       *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Estimates the field of view of the image and stores it in the 'img_FOV_mask' array.                       *
+*                                                                                                           *
+************************************************************************************************************/
+void IMGCONT::erode(double * img_ptr)
 {
-	IMGCONT *ptr_tmp = new IMGCONT(img_src->my_height, img_src->my_width, 4, 4, 1.0);
-	*ptr_tmp = *img_src;
+	double *erosion_temp = new double[(my_height + 8) *  (my_width + 8)];
 
-    for( int y = 0; y < img_src->my_height; y++){
-        for( int x = 0; x < img_src->my_width; x++){
-            if (*(ptr_tmp->my_img_data + (x+4) + (y+4)*(ptr_tmp->my_width)) > 0){
-                const unsigned char resp = erosionMask(ptr_tmp, x+4, y+4);
-                if( (0 < resp) && (resp < 68) ){
-                    *(img_src->my_img_data + x + y*img_src->my_width) = 0.0;
-                }
-            }
-        }
-    }
+	/* Copy the image in 'img_src' to 'ptr_tmp' */
+	for (unsigned int x = 0; x < (my_width + 8); x++) {
+		*(erosion_temp + x) = 1.0;
+		*(erosion_temp + (my_width + 8) + x) = 1.0;
+		*(erosion_temp + 2 * (my_width + 8) + x) = 1.0;
+		*(erosion_temp + 3 * (my_width + 8) + x) = 1.0;
+		*(erosion_temp + (my_height + 4)*(my_width + 8) + x) = 1.0;
+		*(erosion_temp + (my_height + 5)*(my_width + 8) + x) = 1.0;
+		*(erosion_temp + (my_height + 6)*(my_width + 8) + x) = 1.0;
+		*(erosion_temp + (my_height + 7)*(my_width + 8) + x) = 1.0;
+	}
 
-    delete ptr_tmp;
+	for (unsigned int y = 0; y < my_height; y++) {
+		*(erosion_temp + (y+4) * (my_width + 8)) = 1.0;
+		*(erosion_temp + (y+4) * (my_width + 8) + 1) = 1.0;
+		*(erosion_temp + (y+4) * (my_width + 8) + 2) = 1.0;
+		*(erosion_temp + (y+4) * (my_width + 8) + 3) = 1.0;
+
+		memcpy(erosion_temp + (y+4) * (my_width + 8) + 4, img_ptr + y * my_width, my_width * sizeof(double));
+
+		*(erosion_temp + (y+4) * (my_width + 8) + my_width + 4) = 1.0;
+		*(erosion_temp + (y+4) * (my_width + 8) + my_width + 5) = 1.0;
+		*(erosion_temp + (y+4) * (my_width + 8) + my_width + 6) = 1.0;
+		*(erosion_temp + (y+4) * (my_width + 8) + my_width + 7) = 1.0;
+	}
+
+	for (int y = 0; y < my_height; y++) {
+		for (int x = 0; x < my_width; x++) {
+			if (*(erosion_temp + (x + 4) + (y + 4)*(my_width + 8)) > 0) {
+				const unsigned char resp = erosionMask(erosion_temp, x + 4, y + 4);
+				if ((0 < resp) && (resp < 68)) {
+					*(img_ptr + x + y*my_width) = 0.0;
+				}
+			}
+		}
+	}
+
+	delete [] erosion_temp;
 }
 
 
 
-/*  Metodo: maskFOV
-    Funcion: Obtiene la mascara del contorno
-*/
-IMGVTK::IMGCONT * IMGVTK::maskFOV( IMGCONT *img_src )
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: computeMaskFOV                                                                             *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* --------                  ------------               -   ------------------------------------------       *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Estimates the field of view of the image and stores it in the 'img_FOV_mask' array.                       *
+*                                                                                                           *
+************************************************************************************************************/
+void IMGCONT::computeMaskFOV()
 {
-
-	IMGCONT *new_mask = new IMGCONT(*img_src);
-
-    // Se umbraliza al 0.1 la imagen original
-    for( int xy = 0; xy < img_src->my_height * img_src->my_width; xy++){
-		*(new_mask->my_img_data + xy) = (*(new_mask->my_img_data + xy) < 0.1) ? 0.0 : 1.0;
+    /* Threshold the image */
+    for( unsigned int y = 0; y < my_height; y++){
+		for (unsigned int x = 0; x < my_width; x++) {
+			*(my_FOV_mask + x + y * my_width) = (this->getPix(y, x) < 0.1) ? 0.0 : 1.0;
+		}
     }
 
-    // Se eliminan los conjuntos pequeños
-    lengthFilter(new_mask, 1000, ITERATIVO);
+    /* Remove the small connected sets */
+    lengthFilter(my_FOV_mask, 1000);
 
     // Se erosiona la mascara:
     erosionar(new_mask);
@@ -1092,13 +1177,12 @@ IMGVTK::IMGCONT * IMGVTK::maskFOV( IMGCONT *img_src )
 /*  Metodo: fillMask
     Funcion: Se llenan los espacios de la mascara con la media de la imagen circundante.
 */
-void IMGVTK::fillMask( IMGCONT *img_src, IMGCONT *mask_src ){
+void IMGPROC::fillMask(){
 
-    PIX_PAR par_tmp;
-    par_tmp.pix_tipo = PIX_CROSS;
+	PIX_PAIR par_tmp;
+    par_tmp.pix_type = PIX_CROSS;
 
-    IMGCONT *mask_dil = new IMGCONT(img_src->my_height+2, img_src->my_width+2, 1, 1);
-	*mask_dil = *mask_src;
+	auxiliary_img.setDimensions(my_height + 2, my_width + 2);
 
     int iter = 0;
     while( iter < mask_src->my_width ){
@@ -1178,9 +1262,9 @@ void IMGVTK::fillMask( IMGCONT *img_src, IMGCONT *mask_src ){
 /*  Metodo: grafoSkeleton
     Funcion: Genera un grafo a partir del esqueleto.
 */
-IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, bool *visitados) {
+IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, bool *was_visited) {
 	/*
-	if( *(visitados + x + y*cols) ){
+	if( *(was_visited + x + y*cols) ){
 		return NULL;
 	}
 
@@ -1254,97 +1338,97 @@ IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y
 		}
 	}
 
-	*(visitados + x + y*cols) = true;
+	*(was_visited + x + y*cols) = true;
 
-	/// NO
+	/// NorthWest
 	if( (resp & (unsigned char)1) && (*(skl_tmp + (x-1) + (y-1)*(cols+2)) < 2.0)){
 		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
 			*nivel = *nivel + 1;
 		}
-		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y-1, nivel, lutabla, visitados);
+		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y-1, nivel, lutabla, was_visited);
 
 		if( temp->hijos[temp->n_hijos] ){
 			temp->n_hijos++;
 		}
 	}
 
-	/// N
+	/// North
 	if( (resp & (unsigned char)2) && (*(skl_tmp + x + (y-1)*(cols+2)) < 2.0) ){
 		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
 			*nivel = *nivel + 1;
 		}
-		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y-1, nivel, lutabla, visitados);
+		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y-1, nivel, lutabla, was_visited);
 		if( temp->hijos[temp->n_hijos] ){
 			temp->n_hijos++;
 		}
 	}
 
-	/// NE
+	/// NorthEast
 	if( (resp & (unsigned char)4) && (*(skl_tmp + (x+1) + (y-1)*(cols+2)) < 2.0) ){
 		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
 			*nivel = *nivel + 1;
 		}
-		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y-1, nivel, lutabla, visitados);
+		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y-1, nivel, lutabla, was_visited);
 
 		if( temp->hijos[temp->n_hijos] ){
 			temp->n_hijos++;
 		}
 	}
 
-	/// E
+	/// East
 	if( (resp & (unsigned char)8) && (*(skl_tmp + (x+1) + y*(cols+2)) < 2.0) ){
 		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
 			*nivel = *nivel + 1;
 		}
-		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y, nivel, lutabla, visitados);
+		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y, nivel, lutabla, was_visited);
 
 		if( temp->hijos[temp->n_hijos] ){
 			temp->n_hijos++;
 		}
 	}
 
-	/// SE
+	/// SouthEast
 	if( (resp & (unsigned char)16) && (*(skl_tmp + (x+1) + (y+1)*(cols+2)) < 2.0) ){
 		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
 			*nivel = *nivel + 1;
 		}
-		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y+1, nivel, lutabla, visitados);
+		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y+1, nivel, lutabla, was_visited);
 
 		if( temp->hijos[temp->n_hijos] ){
 			temp->n_hijos++;
 		}
 	}
 
-	/// S
+	/// South
 	if( (resp & (unsigned char)32) && (*(skl_tmp + x + (y+1)*(cols+2)) < 2.0) ){
 		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
 			*nivel = *nivel + 1;
 		}
-		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y+1, nivel, lutabla, visitados);
+		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y+1, nivel, lutabla, was_visited);
 
 		if( temp->hijos[temp->n_hijos] ){
 			temp->n_hijos++;
 		}
 	}
 
-	/// SO
+	/// SouthWest
 	if( (resp & (unsigned char)64) && (*(skl_tmp + (x-1) + (y+1)*(cols+2)) < 2.0) ){
 		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
 			*nivel = *nivel + 1;
 		}
-		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y+1, nivel, lutabla, visitados);
+		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y+1, nivel, lutabla, was_visited);
 
 		if( temp->hijos[temp->n_hijos] ){
 			temp->n_hijos++;
 		}
 	}
 
-	/// O
+	/// West
 	if( (resp & (unsigned char)128) && (*(skl_tmp + (x-1) + y*(cols+2)) < 2.0)){
 		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
 			*nivel = *nivel + 1;
 		}
-		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y, nivel, lutabla, visitados);
+		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y, nivel, lutabla, was_visited);
 
 		if( temp->hijos[temp->n_hijos] ){
 			temp->n_hijos++;
@@ -1395,8 +1479,8 @@ void IMGVTK::extraerCaract( IMG_IDX img_idx ){
 
 
     /// Buscar un punto 'end' del esqueleto y empezar a generar el grafo a aprtir de ahi.
-    bool *visitados = new bool [rows_cols];
-    memset(visitados, 0, rows_cols*sizeof(bool));
+    bool *was_visited = new bool [rows_cols];
+    memset(was_visited, 0, rows_cols*sizeof(bool));
 
     int x_ini, y_ini, xy = cols+2;
     unsigned char resp;
@@ -1410,13 +1494,13 @@ void IMGVTK::extraerCaract( IMG_IDX img_idx ){
     *(skl_tmp + xy ) = 2.0;
     int nivel = 0;
 
-    pix_caract = grafoSkeleton(skl_tmp, x_ini, y_ini, &nivel, tabla, visitados);
+    pix_caract = grafoSkeleton(skl_tmp, x_ini, y_ini, &nivel, tabla, was_visited);
 
     n_niveles = nivel;
 
     DEB_MSG("Encontrados " << n_niveles << " niveles");
 
-    delete [] visitados;
+    delete [] was_visited;
     delete [] skl_tmp;
 	*/
 }
@@ -1538,20 +1622,31 @@ void IMGVTK::skeletonization(IMG_IDX img_idx) {
 
 
 
-/*  Metodo: definirMask
-    Funcion: Define una mascara para normalizar los pixeles de la imagen.
-*/
-IMGVTK::IMGCONT * IMGVTK::definirMask( IMGCONT * img_src )
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: computeMask                                                                                *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* --------                  ------------               -   ------------------------------------------       *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Defines the mask from the image data.                                                                     *
+*                                                                                                           *
+************************************************************************************************************/
+void IMGCONT::computeMask()
 {
 
-    IMGCONT *new_mask = maskFOV( img_src );
-    fillMask( img_src, new_mask );
+	my_FOV_mask = (double*)malloc(my_height * my_width * sizeof(double));
 
-    escribirLog( "Mascara generada exitosamente.\n" );
+	computeMaskFOV();
 
-	return new_mask;
+
 }
-
 
 
 

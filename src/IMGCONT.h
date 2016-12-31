@@ -135,6 +135,15 @@ public:
 	/** IMG_TYPE: **/
 	typedef enum IMG_TYPE { IMGPNG, IMGPGM } IMG_TYPE;
 
+	/** PIX_TYPE: **/
+	typedef enum PIX_TYPE { PIX_SKL, PIX_END, PIX_BRANCH, PIX_CROSS } PIX_TYPE;
+
+	/** THRESHOLD_TYPE: **/
+	typedef enum THRESHOLD_TYPE { TRESH_LEVEL, TRESH_OTSU, TRESH_RIDLER_CALVARD } THRESHOLD_TYPE;
+
+	/** CONNECTED_ALG: **/
+	typedef enum CONNECTED_ALG { CONN_DYN, CONN_ITER } CONNECTED_ALG;
+
 	IMGCONT();
 
 	IMGCONT(const unsigned int new_height, const unsigned int new_width, const double init_val = 0.0);
@@ -151,24 +160,20 @@ public:
 
 	double getPix(const unsigned int row_y, const unsigned int col_x);
 	void setPix(const unsigned int row_y, const unsigned int col_x, const double new_val);
+	void setDimensions(const unsigned int new_height, const unsigned int new_width, const double init_val = 0.0);
+
 
 	int getHeight();
 	int getWidth();
+
+	void lengthFilter(const unsigned int threshold_length, CONNECTED_ALG  my_connected_algorithm = CONN_DYN);
 
 	/*----------------------------------------------------------------------------- PUBLIC ^ ------------- */
 
 protected:
 	/*----------------------------------------------------------------------------- PROTECTED v ---------- */
 
-	void writeLog(const char *message);
 
-	int LoadPNG(const char *src_path, const unsigned int level = 0);
-	int LoadPGM(const char *src_path, const unsigned int level = 0);
-	int LoadDICOM(const char *src_path, const unsigned int level = 0);
-
-	void SavePGM(const char *out_path, const double my_min, const double my_max);
-	void SavePNG(const char *out_path, const double my_min, const double my_max);
-	
 	unsigned int my_height;       /* Height of the image */
 	unsigned int my_width;        /* Width of the image */
 
@@ -181,6 +186,30 @@ protected:
 	double LAORAO, CRACAU;
 	double WCenter, WWidth;
 	double pixX, pixY, cenX, cenY;
+
+	double * my_FOV_mask;
+
+	void writeLog(const char *message);
+
+	int LoadPNG(const char *src_path, const unsigned int level = 0);
+	int LoadPGM(const char *src_path, const unsigned int level = 0);
+	int LoadDICOM(const char *src_path, const unsigned int level = 0);
+
+	void SavePGM(const char *out_path, const double my_min, const double my_max);
+	void SavePNG(const char *out_path, const double my_min, const double my_max);
+
+	void computeConnected(double * img_ptr, const int x, const int y, int *my_sets, unsigned int* number_of_labeled, bool* was_visited, const int number_of_labels);
+	inline void increaseSetSize(int * my_labels, const int equiv_A, const int equiv_B, const int max_number_of_labels);
+	unsigned int * connectedSets_Iterative(double * img_ptr, int * my_sets);
+	unsigned int * connectedSets_Dynamic(double * img_ptr, int * my_sets);
+
+	void lengthFilter(double * img_ptr, const unsigned int threshold_length, CONNECTED_ALG my_connected_algorithm = CONN_ITER);
+
+	inline unsigned char erosionMask(double * ptr_tmp, const int x, const int y);
+	void erode(double * img_src);
+
+	void computeMaskFOV();
+	void computeMask();
 	/*----------------------------------------------------------------------------- PROTECTED ^ ---------- */
 };
 

@@ -720,7 +720,6 @@ void IMGCONT::SavePNG(const char * out_path, const double my_min, const double m
 
 
 
-
 /************************************************************************************************************
 * IMGCONT::PUBLIC                                                                                           *
 *                                                                                                           *
@@ -816,6 +815,21 @@ double IMGCONT::getPix(const unsigned int row_y, const unsigned int col_x)
 void IMGCONT::setPix(const unsigned int row_y, const unsigned int col_x, const double new_val)
 {
 	*(my_img_data + row_y + col_x) = new_val;
+}
+
+void IMGCONT::setDimensions(const unsigned int new_height, const unsigned int new_width, const double init_val)
+{
+	my_height = new_height;
+	my_width = new_width;
+
+	if (my_img_data) {
+		free(my_img_data);
+	}
+	my_img_data = (double *)malloc((my_height * my_width) * sizeof(double));
+
+	for (unsigned int xy = 0; xy < (my_height * my_width); xy++) {
+		*(my_img_data + xy) = init_val;
+	}
 }
 
 

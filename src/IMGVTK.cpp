@@ -1039,60 +1039,6 @@ void IMGVTK::erosionar( IMGCONT *img_src )
 
 
 
-/*  Metodo: maskFOV
-    Funcion: Obtiene la mascara del contorno
-*/
-IMGVTK::IMGCONT * IMGVTK::maskFOV( IMGCONT *img_src )
-{
-
-	IMGCONT *new_mask = new IMGCONT(*img_src);
-
-    // Se umbraliza al 0.1 la imagen original
-    for( int xy = 0; xy < img_src->my_height * img_src->my_width; xy++){
-		*(new_mask->my_img_data + xy) = (*(new_mask->my_img_data + xy) < 0.1) ? 0.0 : 1.0;
-    }
-
-    // Se eliminan los conjuntos pequeños
-    lengthFilter(new_mask, 1000, ITERATIVO);
-
-    // Se erosiona la mascara:
-    erosionar(new_mask);
-
-    // Se eliminan los conjuntos grandes que no esten en las esquinas:
-    // Se extraen las etiquetas de los conjuntos que se conectan a las esquinas:
-    for( int xy = 0; xy < new_mask->my_width * new_mask->my_height; xy++){
-        *(new_mask->my_img_data + xy) = 1.0 - *(new_mask->my_img_data + xy);
-    }
-
-    int *mis_conjuntos = new int [new_mask->my_width * new_mask->my_height];
-
-    // Se buscan los conjuntos que no esten en las esquinas para eliminarlos
-	unsigned int *mis_n_etiquetados = conjuntosConexos(new_mask, mis_conjuntos);
-    delete [] mis_n_etiquetados;
-
-
-    //// etiqueta de los conjuntos donde existe una esquina
-	const int NO = *(mis_conjuntos);
-	const int NE = *(mis_conjuntos + new_mask->my_width - 1);
-	const int SO = *(mis_conjuntos + (new_mask->my_height - 1)*new_mask->my_width);
-	const int SE = *(mis_conjuntos + new_mask->my_height * new_mask->my_width - 1);
-
-    for( int xy = 0; xy < (new_mask->my_height * new_mask->my_width); xy++){
-        if( (*(mis_conjuntos + xy) >= 0) && ((mis_conjuntos[xy] == NO) || (mis_conjuntos[xy] == NE) || 
-			(mis_conjuntos[xy] == SO) || (mis_conjuntos[xy] == SE)) ){
-            *(new_mask->my_img_data + xy) = 0.0;
-        }else{
-			*(new_mask->my_img_data + xy) = 1.0;
-        }
-    }
-
-    delete [] mis_conjuntos;
-
-	return new_mask;
-}
-
-
-
 /*  Metodo: fillMask
     Funcion: Se llenan los espacios de la mascara con la media de la imagen circundante.
 */
