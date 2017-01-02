@@ -37,17 +37,6 @@ class IMGPROC : public IMGCONT{
     public:
 
 
-        /** PIX_PAIR:   **/
-        typedef struct PIX_PAIR {
-            double x, y, x_r, y_r;
-            double radious, alpha;
-            int deep_level;
-            int n_childs;
-            PIX_PAIR *childs[3];
-			PIX_TYPE pix_type;
-        } PIX_PAIR;
-
-
         void skeletonization(IMG_IDX img_idx);
         void umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const double nivel);
 
@@ -64,7 +53,7 @@ class IMGPROC : public IMGCONT{
 		void maskFOV();
 		void fillMask();
 
-        PIX_PAR *grafoSkeleton(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, bool *visitados);
+        PIX_PAR *computeSkeletonGraph(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, bool *visitados);
         void extraerCaract(IMG_IDX img_idx);
         void borrarSkeleton( PIX_PAR *raiz );
 

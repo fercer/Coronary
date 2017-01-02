@@ -6,7 +6,7 @@
 *                                                                                                           *
 * FILE NAME: IMGPROC.cpp                                                                                    *
 *                                                                                                           *
-* PURPOSE: Implementation of the IMGCONT class for image loading and processing.                            *
+* PURPOSE: Implementation of the image processing routines of the IMGCONT class.                            *
 *                                                                                                           *
 * DEVELOPMENT HISTORY:                                                                                      *
 * Date           Author        Change Id    Release    Description Of Change                                *
@@ -15,37 +15,24 @@
 ************************************************************************************************************/
 
 
-#include "IMGPROC.h"
-
-
-
-
+#include "IMGCONT.h"
 
 /************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
 *                                                                                                           *
-* VOID CONSTRUCTOR                                                                                          *
+* FUNCTION NAME: computeDistancesMap                                                                        *
 *                                                                                                           *
 * ARGUMENTS:                                                                                                *
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
-* --------                  ----                       -   ----                                             *
+* -------                   --------                   -   -------------------------------------------      *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Calculates the distances map of the image data (a black and white image is required).                     *
 *                                                                                                           *
 ************************************************************************************************************/
-IMGPROC::IMGPROC()
+void IMGCONT::computeDistancesMap()
 {
-	max_dist = 0;
-	pix_caract = 0;
-
-	my_dist_map = NULL;
-}
-
-
-
-
-void IMGPROC::calcDistancesMap()
-{
-
-	my_dist_map = (double *)malloc(my_height * my_width * sizeof(double));
-
+	my_dist_map = new double[my_height * my_width];
 
 	for (int xy = 0; xy < (my_height * my_width); xy++) {
 		*(my_dist_map + xy) = (*(my_img_data + xy) < 1.0) ? 0.0 : MY_INF;
@@ -97,7 +84,7 @@ void IMGPROC::calcDistancesMap()
 	int *vw = new int[my_width];
 	double *zw = new double[my_width + 1];
 
-	// transform along rows
+	// transform along my_height
 	for (int y = 0; y < my_height; y++) {
 		for (int x = 0; x < my_width; x++) {
 			f[x] = *(my_dist_map + y*my_width + x);
@@ -126,8 +113,8 @@ void IMGPROC::calcDistancesMap()
 			}
 			*(my_dist_map + y*my_width + x) = sqrt(((x - vw[k])*(x - vw[k])) + f[vw[k]]);
 
-			if (((int)*(my_dist_map + y*my_width + x) + 1) > max_dist) {
-				max_dist = (int)*(my_dist_map + y*my_width + x) + 1;
+			if (((int)*(my_dist_map + y*my_width + x) + 1) > my_max_distance) {
+				my_max_distance = (int)*(my_dist_map + y*my_width + x) + 1;
 			}
 		}
 	}
@@ -141,75 +128,125 @@ void IMGPROC::calcDistancesMap()
 
 
 
-IMGCONT & IMGPROC::getDistancesMap()
+
+
+
+/************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
+* FUNCTION NAME: getDistancesMap                                                                            *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* -------                   --------                   -   -------------------------------------------      *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The pointer to the distances map array.                                                                   *
+*                                                                                                           *
+************************************************************************************************************/
+double * IMGCONT::getDistancesMap()
 {
+
+	/* If the distances map has not been computed, it is calculated */
 	if (!my_dist_map) {
-		calcDistancesMap();
+		computeDistancesMap();
 	}
 
-	return IMGCONT(my_height, my_width, my_dist_map);
+	return my_dist_map;
 }
 
 
 
-/*  Metodo: detectarBorde
-	Funcion: Detecta los bordes de la imagen en base a la transformada de la distancia.
-*/
-void IMGVTK::detectarBorde(IMG_IDX img_idx)
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: computeBoundaries                                                                          *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* -------                   --------                   -   -------------------------------------------      *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Computes the boudaries of the image data (a black and white image is required).                           *
+*                                                                                                           *
+************************************************************************************************************/
+void IMGCONT::computeBoundaries()
 {
-
-	if (!my_distmap) {
-		mapaDistancias(img_idx);
+	/* If the distances map has not been computed, it is calculated */
+	if (!my_dist_map) {
+		computeDistancesMap();
 	}
 
-	IMGCONT *img_tmp = NULL;
-
-	switch (img_idx) {
-	case BASE:
-		img_tmp = my_base;
-		break;
-	case GROUNDTRUTH:
-		img_tmp = my_groundtruth;
-		break;
-	case MASK:
-		img_tmp = my_mask;
-		break;
-	case SKELETON:
-		img_tmp = my_skeleton;
-		break;
-	case SEGMENT:
-		img_tmp = my_response;
-		break;
-	case THRESHOLD:
-		img_tmp = my_segmented;
-		break;
-	}
-
-	if (!my_boundaries) {
-		my_boundaries = new IMGCONT(img_tmp->my_height, img_tmp->my_width);
-	}
-
-	for (int xy = 0; xy < (img_tmp->my_height * img_tmp->my_width); xy++) {
-		if ((*(img_tmp->my_img_data + xy) > 0.5) && (*(my_distmap->my_img_data + xy) < 2.0)) {
-			*(my_boundaries->my_img_data + xy) = 1.0;
+	for (int xy = 0; xy < (my_height * my_width); xy++) {
+		if ((*(my_img_data + xy) > 0.5) && (*(my_dist_map + xy) < 2.0)) {
+			*(my_boundaries + xy) = 1.0;
 		}
 	}
 }
 
 
 
-/*  Metodo: regionFilling9
-    Funcion: Rellena espacios vacios dentro del conjunto de pixeles resaltado.
-*/
-bool IMGVTK::regionFilling9(IMGCONT *img_src, const int x, const int y)
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
+* FUNCTION NAME: getBoundaries                                                                              *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* -------                   --------                   -   -------------------------------------------      *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The pointer to the boundaries array.                                                                      *
+*                                                                                                           *
+************************************************************************************************************/
+double * IMGCONT::getBoundaries()
+{
+	/* If the boundaries have not been computed, their are calculated */
+	if (!my_boundaries) {
+		my_boundaries = new double[my_height * my_width];
+		memset(my_boundaries, 0, my_height * my_width * sizeof(double));
+	}
+
+	return my_boundaries;
+}
+
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: regionFilling9                                                                             *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* pos_x                     const unsigned int         I   Postion in the X-axis in the image.              *
+* pos_y                     const unsigned int         I   Maximum intensity in the image.                  *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The fit, hit or miss response of a square shaped mask of 9x9 pixels.                                      *
+*                                                                                                           *
+************************************************************************************************************/
+bool IMGCONT::regionFilling9(const unsigned int pos_x, const unsigned int pos_y)
 {
 	int n_hits = 0;
 
 	for (int m = 0; m < 9; m++) {
 		// Arriba:
-		if ((y - 4) > 0) {
-			if (((x - 4 + m) > 0) && ((x - 4 + m) < img_src->my_width)) {
-				n_hits += (*(img_src->my_img_data + (x - 4 + m) + (y - 4)*img_src->my_width) > 0);
+		if ((pos_y - 4) > 0) {
+			if (((pos_x - 4 + m) > 0) && ((pos_x - 4 + m) < my_width)) {
+				n_hits += (*(my_img_data + (pos_x - 4 + m) + (pos_y - 4)*my_width) > 0);
 			}
 			else {
 				n_hits++;
@@ -220,9 +257,9 @@ bool IMGVTK::regionFilling9(IMGCONT *img_src, const int x, const int y)
 		}
 
 		// Abajo:
-		if ((y + 4) < img_src->my_height) {
-			if (((x - 4 + m) > 0) && ((x - 4 + m) < img_src->my_width)) {
-				n_hits += (*(img_src->my_img_data + (x - 4 + m) + (y + 4)*img_src->my_width) > 0);
+		if ((pos_y + 4) < my_height) {
+			if (((pos_x - 4 + m) > 0) && ((pos_x - 4 + m) < my_width)) {
+				n_hits += (*(my_img_data + (pos_x - 4 + m) + (pos_y + 4)*my_width) > 0);
 			}
 			else {
 				n_hits++;
@@ -233,9 +270,9 @@ bool IMGVTK::regionFilling9(IMGCONT *img_src, const int x, const int y)
 		}
 
 		// Izquierda:
-		if ((x - 4) > 0) {
-			if (((y - 4 + m) > 0) && ((y - 4 + m) < img_src->my_height)) {
-				n_hits += (*(img_src->my_img_data + (x - 4) + (y - 4 + m)*img_src->my_width) > 0);
+		if ((pos_x - 4) > 0) {
+			if (((pos_y - 4 + m) > 0) && ((pos_y - 4 + m) < my_height)) {
+				n_hits += (*(my_img_data + (pos_x - 4) + (pos_y - 4 + m)*my_width) > 0);
 			}
 			else {
 				n_hits++;
@@ -246,9 +283,9 @@ bool IMGVTK::regionFilling9(IMGCONT *img_src, const int x, const int y)
 		}
 
 		// Derecha:
-		if ((x + 4) < img_src->my_width) {
-			if (((y - 4 + m) > 0) && ((y - 4 + m) < img_src->my_height)) {
-				n_hits += (*(img_src->my_img_data + (x + 4) + (y - 4 + m)*img_src->my_width) > 0);
+		if ((pos_x + 4) < my_width) {
+			if (((pos_y - 4 + m) > 0) && ((pos_y - 4 + m) < my_height)) {
+				n_hits += (*(my_img_data + (pos_x + 4) + (pos_y - 4 + m)*my_width) > 0);
 			}
 			else {
 				n_hits++;
@@ -263,19 +300,34 @@ bool IMGVTK::regionFilling9(IMGCONT *img_src, const int x, const int y)
 
 
 
-/*  Metodo: regionFilling7
-    Funcion: Rellena espacios vacios dentro del conjunto de pixeles resaltado.
-*/
-bool IMGVTK::regionFilling7(IMGCONT *img_src, const int x, const int y) 
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: regionFilling7                                                                             *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* pos_x                     const unsigned int         I   Postion in the X-axis in the image.              *
+* pos_y                     const unsigned int         I   Maximum intensity in the image.                  *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The fit, hit or miss response of a square shaped mask of 7x7 pixels.                                      *
+*                                                                                                           *
+************************************************************************************************************/
+bool IMGCONT::regionFilling7(const unsigned int pos_x, const unsigned int pos_y)
 {
 
 	int n_hits = 0;
 
 	for (int m = 0; m < 7; m++) {
 		// Arriba:
-		if ((y - 3) > 0) {
-			if (((x - 3 + m) > 0) && ((x - 3 + m) < img_src->my_width)) {
-				n_hits += (*(img_src->my_img_data + (x - 3 + m) + (y - 3)*img_src->my_width) > 0);
+		if ((pos_y - 3) > 0) {
+			if (((pos_x - 3 + m) > 0) && ((pos_x - 3 + m) < my_width)) {
+				n_hits += (*(my_img_data + (pos_x - 3 + m) + (pos_y - 3)*my_width) > 0);
 			}
 			else {
 				n_hits++;
@@ -286,9 +338,9 @@ bool IMGVTK::regionFilling7(IMGCONT *img_src, const int x, const int y)
 		}
 
 		// Abajo:
-		if ((y + 3) < img_src->my_height) {
-			if (((x - 3 + m) > 0) && ((x - 3 + m) < img_src->my_width)) {
-				n_hits += (*(img_src->my_img_data + (x - 3 + m) + (y + 3)*img_src->my_width) > 0);
+		if ((pos_y + 3) < my_height) {
+			if (((pos_x - 3 + m) > 0) && ((pos_x - 3 + m) < my_width)) {
+				n_hits += (*(my_img_data + (pos_x - 3 + m) + (pos_y + 3)*my_width) > 0);
 			}
 			else {
 				n_hits++;
@@ -299,9 +351,9 @@ bool IMGVTK::regionFilling7(IMGCONT *img_src, const int x, const int y)
 		}
 
 		// Izquierda:
-		if ((x - 3) > 0) {
-			if (((y - 3 + m) > 0) && ((y - 3 + m) < img_src->my_height)) {
-				n_hits += (*(img_src->my_img_data + (x - 3) + (y - 3 + m)*img_src->my_width) > 0);
+		if ((pos_x - 3) > 0) {
+			if (((pos_y - 3 + m) > 0) && ((pos_y - 3 + m) < my_height)) {
+				n_hits += (*(my_img_data + (pos_x - 3) + (pos_y - 3 + m)*my_width) > 0);
 			}
 			else {
 				n_hits++;
@@ -312,9 +364,9 @@ bool IMGVTK::regionFilling7(IMGCONT *img_src, const int x, const int y)
 		}
 
 		// Derecha:
-		if ((x + 3) < img_src->my_width) {
-			if (((y - 3 + m) > 0) && ((y - 3 + m) < img_src->my_height)) {
-				n_hits += (*(img_src->my_img_data + (x + 3) + (y - 3 + m)*img_src->my_width) > 0);
+		if ((pos_x + 3) < my_width) {
+			if (((pos_y - 3 + m) > 0) && ((pos_y - 3 + m) < my_height)) {
+				n_hits += (*(my_img_data + (pos_x + 3) + (pos_y - 3 + m)*my_width) > 0);
 			}
 			else {
 				n_hits++;
@@ -330,18 +382,33 @@ bool IMGVTK::regionFilling7(IMGCONT *img_src, const int x, const int y)
 
 
 
-/*  Metodo: regionFilling5
-    Funcion: Rellena espacios vacios dentro del conjunto de pixeles resaltado.
-*/
-bool IMGVTK::regionFilling5(IMGCONT *img_src, const int x, const int y)
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: regionFilling5                                                                             *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* pos_x                     const unsigned int         I   Postion in the X-axis in the image.              *
+* pos_y                     const unsigned int         I   Maximum intensity in the image.                  *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The fit, hit or miss response of a square shaped mask of 5x5 pixels.                                      *
+*                                                                                                           *
+************************************************************************************************************/
+bool IMGCONT::regionFilling5(const unsigned int pos_x, const unsigned int pos_y)
 {
 	int n_hits = 0;
 
 	for (int m = 0; m < 5; m++) {
 		// Arriba:
-		if ((y - 2) > 0) {
-			if (((x - 2 + m) > 0) && ((x - 2 + m) < img_src->my_width)) {
-				n_hits += (*(img_src->my_img_data + (x - 2 + m) + (y - 2)*img_src->my_width) > 0);
+		if ((pos_y - 2) > 0) {
+			if (((pos_x - 2 + m) > 0) && ((pos_x - 2 + m) < my_width)) {
+				n_hits += (*(my_img_data + (pos_x - 2 + m) + (pos_y - 2)*my_width) > 0);
 			}
 			else {
 				n_hits++;
@@ -352,9 +419,9 @@ bool IMGVTK::regionFilling5(IMGCONT *img_src, const int x, const int y)
 		}
 
 		// Abajo:
-		if ((y + 2) < img_src->my_height) {
-			if (((x - 2 + m) > 0) && ((x - 2 + m) < img_src->my_width)) {
-				n_hits += (*(img_src->my_img_data + (x - 2 + m) + (y + 2)*img_src->my_width) > 0);
+		if ((pos_y + 2) < my_height) {
+			if (((pos_x - 2 + m) > 0) && ((pos_x - 2 + m) < my_width)) {
+				n_hits += (*(my_img_data + (pos_x - 2 + m) + (pos_y + 2)*my_width) > 0);
 			}
 			else {
 				n_hits++;
@@ -365,9 +432,9 @@ bool IMGVTK::regionFilling5(IMGCONT *img_src, const int x, const int y)
 		}
 
 		// Izquierda:
-		if ((x - 2) > 0) {
-			if (((y - 2 + m) > 0) && ((y - 2 + m) < img_src->my_height)) {
-				n_hits += (*(img_src->my_img_data + (x - 2) + (y - 2 + m)*img_src->my_width) > 0);
+		if ((pos_x - 2) > 0) {
+			if (((pos_y - 2 + m) > 0) && ((pos_y - 2 + m) < my_height)) {
+				n_hits += (*(my_img_data + (pos_x - 2) + (pos_y - 2 + m)*my_width) > 0);
 			}
 			else {
 				n_hits++;
@@ -378,9 +445,9 @@ bool IMGVTK::regionFilling5(IMGCONT *img_src, const int x, const int y)
 		}
 
 		// Derecha:
-		if ((x + 2) < img_src->my_width) {
-			if (((y - 2 + m) > 0) && ((y - 2 + m) < img_src->my_height)) {
-				n_hits += (*(img_src->my_img_data + (x + 2) + (y - 2 + m)*img_src->my_width) > 0);
+		if ((pos_x + 2) < my_width) {
+			if (((pos_y - 2 + m) > 0) && ((pos_y - 2 + m) < my_height)) {
+				n_hits += (*(my_img_data + (pos_x + 2) + (pos_y - 2 + m)*my_width) > 0);
 			}
 			else {
 				n_hits++;
@@ -396,18 +463,33 @@ bool IMGVTK::regionFilling5(IMGCONT *img_src, const int x, const int y)
 
 
 
-/*  Metodo: regionFilling3
-    Funcion: Rellena espacios vacios dentro del conjunto de pixeles resaltado.
-*/
-bool IMGVTK::regionFilling3(IMGCONT *img_src, const int x, const int y)
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: regionFilling3                                                                             *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* pos_x                     const unsigned int         I   Postion in the X-axis in the image.              *
+* pos_y                     const unsigned int         I   Maximum intensity in the image.                  *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The fit, hit or miss response of a square shaped mask of 3x3 pixels.                                      *
+*                                                                                                           *
+************************************************************************************************************/
+bool IMGCONT::regionFilling3(const unsigned int pos_x, const unsigned int pos_y)
 {
 	int n_hits = 0;
 
 	for (int m = 0; m < 3; m++) {
 		// Arriba:
-		if ((y - 1) > 0) {
-			if (((x - 1 + m) > 0) && ((x - 1 + m) < img_src->my_width)) {
-				n_hits += (*(img_src->my_img_data + (x - 1 + m) + (y - 1)*img_src->my_width) > 0);
+		if ((pos_y - 1) > 0) {
+			if (((pos_x - 1 + m) > 0) && ((pos_x - 1 + m) < my_width)) {
+				n_hits += (*(my_img_data + (pos_x - 1 + m) + (pos_y - 1)*my_width) > 0);
 			}
 			else {
 				n_hits++;
@@ -418,9 +500,9 @@ bool IMGVTK::regionFilling3(IMGCONT *img_src, const int x, const int y)
 		}
 
 		// Abajo:
-		if ((y + 1) < img_src->my_height) {
-			if (((x - 1 + m) > 0) && ((x - 1 + m) < img_src->my_width)) {
-				n_hits += (*(img_src->my_img_data + (x - 1 + m) + (y + 1)*img_src->my_width) > 0);
+		if ((pos_y + 1) < my_height) {
+			if (((pos_x - 1 + m) > 0) && ((pos_x - 1 + m) < my_width)) {
+				n_hits += (*(my_img_data + (pos_x - 1 + m) + (pos_y + 1)*my_width) > 0);
 			}
 			else {
 				n_hits++;
@@ -431,9 +513,9 @@ bool IMGVTK::regionFilling3(IMGCONT *img_src, const int x, const int y)
 		}
 
 		// Izquierda:
-		if ((x - 1) > 0) {
-			if (((y - 1 + m) > 0) && ((y - 1 + m) < img_src->my_height)) {
-				n_hits += (*(img_src->my_img_data + (x - 1) + (y - 1 + m)*img_src->my_width) > 0);
+		if ((pos_x - 1) > 0) {
+			if (((pos_y - 1 + m) > 0) && ((pos_y - 1 + m) < my_height)) {
+				n_hits += (*(my_img_data + (pos_x - 1) + (pos_y - 1 + m)*my_width) > 0);
 			}
 			else {
 				n_hits++;
@@ -444,9 +526,9 @@ bool IMGVTK::regionFilling3(IMGCONT *img_src, const int x, const int y)
 		}
 
 		// Derecha:
-		if ((x + 1) < img_src->my_width) {
-			if (((y - 1 + m) > 0) && ((y - 1 + m) < img_src->my_height)) {
-				n_hits += (*(img_src->my_img_data + (x + 1) + (y - 1 + m)*img_src->my_width) > 0);
+		if ((pos_x + 1) < my_width) {
+			if (((pos_y - 1 + m) > 0) && ((pos_y - 1 + m) < my_height)) {
+				n_hits += (*(my_img_data + (pos_x + 1) + (pos_y - 1 + m)*my_width) > 0);
 			}
 			else {
 				n_hits++;
@@ -462,9 +544,85 @@ bool IMGVTK::regionFilling3(IMGCONT *img_src, const int x, const int y)
 
 
 
-/*  Metodo: conexo
-    Funcion: Metodo recursivo (dinamico) para encontrar los conjuntos conexos utilizando la conectividad 8.
-*/
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
+* FUNCTION NAME: regionFill                                                                                 *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* --------                  ------------               -   ------------------------------------------       *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Fills the blank space inside the image data (a black and white image is required).                        *
+*                                                                                                           *
+************************************************************************************************************/
+void IMGCONT::regionFill()
+{
+	// -------- Mascara 9x9
+	for (unsigned int y = 0; y < my_height; y++) {
+		for (unsigned int x = 0; x < my_width; x++) {
+			if (*(my_img_data + x + y*my_width) < 1.0) {
+				*(my_img_data + x + y*my_width) = (regionFilling9(x, y) ? 1.0 : 0.0);
+			}
+		}
+	}
+	// -------- Mascara 7x7
+	for (unsigned int y = 0; y < my_height; y++) {
+		for (unsigned int x = 0; x < my_width; x++) {
+			if (*(my_img_data + x + y*my_width) < 1.0) {
+				*(my_img_data + x + y*my_width) = (regionFilling7(x, y) ? 1.0 : 0.0);
+			}
+		}
+	}
+	// -------- Mascara 5x5
+	for (unsigned int y = 0; y < my_height; y++) {
+		for (unsigned int x = 0; x < my_width; x++) {
+			if (*(my_img_data + x + y*my_width) < 1.0) {
+				*(my_img_data + x + y*my_width) = (regionFilling5(x, y) ? 1.0 : 0.0);
+			}
+		}
+	}
+	// -------- Mascara 3x3
+	for (unsigned int y = 0; y < my_height; y++) {
+		for (unsigned int x = 0; x < my_width; x++) {
+			if (*(my_img_data + x + y*my_width) < 1.0) {
+				*(my_img_data + x + y*my_width) = (regionFilling3(x, y) ? 1.0 : 0.0);
+			}
+		}
+	}
+}
+
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: computeConnected                                                                           *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* img_ptr                   double *                   I   An image data array.                             *
+* pos_x                     const unsigned int         I   The position in the X-axis                       *
+* pos_y                     const unsigned int         I   Yhe position in the Y-axis                       *
+* my_sets                   int *                      O   The connected sets in the image data             *
+* number_of_labeled         unsigned int *             O   An array to store the number of pixels labeled   *
+*                                                          in each set.                                     *
+* was_visited               bool *                     O   Indicates if a pixel was visited already         *
+* number_of_labels          conts int                  I   The current label identifier                     *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The label of the current pixel's set                                                                      *
+*                                                                                                           *
+************************************************************************************************************/
 void IMGCONT::computeConnected(double * img_ptr, const int x, const int y, int *my_sets, unsigned int* number_of_labeled, bool* was_visited, const int number_of_labels)
 {
 	*(was_visited + x + y*my_width) = true;
@@ -789,23 +947,6 @@ unsigned int* IMGCONT::connectedSets_Iterative(double * img_ptr, int * my_sets) 
 
 
 
-/*  Metodo:  sklMask
-    Funcion: Mascara usada para la extraccion del esqueleto.
-*/
-inline unsigned char IMGVTK::sklMask(IMGCONT *img_src, const int x, const int y) {
-	return   1 * (*(img_src->my_img_data + (x - 1) + (y - 1)*img_src->my_width) > 0.0) + /* P2 */
-		2 * (*(img_src->my_img_data + x + (y - 1)*img_src->my_width) > 0.0) + /* P3 */
-		4 * (*(img_src->my_img_data + (x + 1) + (y - 1)*img_src->my_width) > 0.0) + /* P4 */
-		8 * (*(img_src->my_img_data + (x + 1) + y  *img_src->my_width) > 0.0) + /* P5 */
-		16 * (*(img_src->my_img_data + (x + 1) + (y + 1)*img_src->my_width) > 0.0) + /* P6 */
-		32 * (*(img_src->my_img_data + x + (y + 1)*img_src->my_width) > 0.0) + /* P7*/
-		64 * (*(img_src->my_img_data + (x - 1) + (y + 1)*img_src->my_width) > 0.0) + /* P8 */
-		128 * (*(img_src->my_img_data + (x - 1) + y  *img_src->my_width) > 0.0);  /* P9 */
-}
-
-
-
-
 
 /************************************************************************************************************
 * IMGCONT::PRIVATE                                                                                          *
@@ -874,172 +1015,93 @@ void IMGCONT::lengthFilter(const unsigned int threshold_length, CONNECTED_ALG  m
 
 
 
-/*  Metodo: regionFill
-    Funcion: Rellena vacios dentro del cuerpo de la arteria segmentada.
-*/
-void IMGVTK::regionFill( IMGCONT *img_src )
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: erosionMask                                                                                *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* erode_ptr                 double *                   I   An auxiliary array for the mask dilatation       *
+* pos_x                     const unsigned int         I   Postion in the X-axis in the image.              *
+* pos_y                     const unsigned int         I   Maximum intensity in the image.                  *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* A fit hit or miss response for the erosion of a 8x8 disk shaped mask.                                     *
+*                                                                                                           *
+************************************************************************************************************/
+inline unsigned char IMGCONT::erosionMask(double * erode_ptr, const int pos_x, const int pos_y)
 {
-    // -------- Mascara 9x9
-    for( int y = 0; y < img_src->my_height; y++){
-        for( int x = 0; x < img_src->my_width; x++){
-            if( *(img_src->my_img_data + x + y*img_src->my_width) < 1.0 ){
-				*(img_src->my_img_data + x + y*img_src->my_width) = (regionFilling9(img_src, x, y) ? 1.0 : 0.0);
-            }
-        }
-    }
-    // -------- Mascara 7x7
-    for( int y = 0; y < img_src->my_height; y++){
-        for( int x = 0; x < img_src->my_width; x++){
-			if (*(img_src->my_img_data + x + y*img_src->my_width) < 1.0) {
-				*(img_src->my_img_data + x + y*img_src->my_width) = (regionFilling7(img_src, x, y) ? 1.0 : 0.0);
-			}
-        }
-    }
-    // -------- Mascara 5x5
-    for( int y = 0; y < img_src->my_height; y++){
-        for( int x = 0; x < img_src->my_width; x++){
-			if (*(img_src->my_img_data + x + y*img_src->my_width) < 1.0) {
-				*(img_src->my_img_data + x + y*img_src->my_width) = (regionFilling5(img_src, x, y) ? 1.0 : 0.0);
-			}
-        }
-    }
-    // -------- Mascara 3x3
-    for( int y = 0; y < img_src->my_height; y++){
-        for( int x = 0; x < img_src->my_width; x++){
-			if (*(img_src->my_img_data + x + y*img_src->my_width) < 1.0) {
-				*(img_src->my_img_data + x + y*img_src->my_width) = (regionFilling3(img_src, x, y) ? 1.0 : 0.0);
-			}
-        }
-    }
-}
-
-
-
-
-/*  Metodo: regionFill (Publica)
-    Funcion: Rellena vacios dentro del cuerpo de la arteria segmentada.
-*/
-void IMGVTK::regionFill(IMG_IDX img_idx) {
-
-	IMGCONT *img_tmp = NULL;
-
-	switch (img_idx) {
-	case BASE:
-		img_tmp = my_base;
-		break;
-	case GROUNDTRUTH:
-		img_tmp = my_groundtruth;
-		break;
-	case MASK:
-		img_tmp = my_mask;
-		break;
-	case SKELETON:
-		img_tmp = my_skeleton;
-		break;
-	case SEGMENT:
-		img_tmp = my_response;
-		break;
-	case THRESHOLD:
-		img_tmp = my_segmented;
-		break;
-	case BORDERS:
-		img_tmp = my_boundaries;
-		break;
-	case MAPDIST:
-		img_tmp = my_distmap;
-		break;
-	}
-
-	regionFill(img_tmp);
-}
-
-
-
-/*  Metodo:  dilMask
-    Funcion: Mascara usada para dilatar unaimagen.
-*/
-inline unsigned char IMGVTK::dilMask( IMGCONT *mask_dil, const int x, const int y){
-    return (*(mask_dil->my_img_data + ( x ) + (y-1)*mask_dil->my_width) > 0.0) +
-           (*(mask_dil->my_img_data + (x+1) + ( y )*mask_dil->my_width) > 0.0) +
-           (*(mask_dil->my_img_data + ( x ) + (y+1)*mask_dil->my_width) > 0.0) +
-           (*(mask_dil->my_img_data + (x-1) + ( y )*mask_dil->my_width) > 0.0);
-}
-
-
-
-/*  Metodo:  erosionMask
-    Funcion: Mascara para erosion usando un disco de radio 5
-*/
-inline unsigned char IMGCONT::erosionMask(double * ptr_tmp, const int x, const int y)
-{
-	return (*(ptr_tmp + (x - 2) + (y - 4)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 1) + (y - 4)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x)+(y - 4)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 1) + (y - 4)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 2) + (y - 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 3) + (y - 3)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 2) + (y - 3)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 1) + (y - 3)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x)+(y - 3)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 1) + (y - 3)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 2) + (y - 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 3) + (y - 3)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 4) + (y - 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 3) + (y - 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 2) + (y - 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 1) + (y - 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x)+(y - 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 1) + (y - 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 2) + (y - 3)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 3) + (y - 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 4) + (y - 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 4) + (y - 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 3) + (y - 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 2) + (y - 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 1) + (y - 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x)+(y - 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 1) + (y - 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 2) + (y - 4)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 3) + (y - 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 4) + (y - 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 4) + (y)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 3) + (y)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 2) + (y)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 1) + (y)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 1) + (y)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 2) + (y)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 3) + (y)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 4) + (y)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 4) + (y + 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 3) + (y + 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 2) + (y + 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 1) + (y + 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x)+(y + 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 1) + (y + 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 2) + (y + 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 3) + (y + 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 4) + (y + 1)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 4) + (y + 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 3) + (y + 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 2) + (y + 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 1) + (y + 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x)+(y + 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 1) + (y + 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 2) + (y + 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 3) + (y + 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 4) + (y + 2)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 3) + (y + 3)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 2) + (y + 3)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 1) + (y + 3)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x)+(y + 3)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 1) + (y + 3)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 2) + (y + 3)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 3) + (y + 3)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 2) + (y + 4)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x - 1) + (y + 4)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x)+(y + 4)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 1) + (y + 4)*(my_width + 8)) > 0.0) +
-		(*(ptr_tmp + (x + 2) + (y + 4)*(my_width + 8)) > 0.0);
+	return (*(erode_ptr + (pos_x - 2) + (pos_y - 4)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 1) + (pos_y - 4)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x)+(pos_y - 4)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 1) + (pos_y - 4)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 2) + (pos_y - 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 3) + (pos_y - 3)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 2) + (pos_y - 3)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 1) + (pos_y - 3)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x)+(pos_y - 3)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 1) + (pos_y - 3)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 2) + (pos_y - 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 3) + (pos_y - 3)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 4) + (pos_y - 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 3) + (pos_y - 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 2) + (pos_y - 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 1) + (pos_y - 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x)+(pos_y - 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 1) + (pos_y - 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 2) + (pos_y - 3)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 3) + (pos_y - 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 4) + (pos_y - 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 4) + (pos_y - 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 3) + (pos_y - 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 2) + (pos_y - 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 1) + (pos_y - 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x)+(pos_y - 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 1) + (pos_y - 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 2) + (pos_y - 4)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 3) + (pos_y - 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 4) + (pos_y - 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 4) + (pos_y)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 3) + (pos_y)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 2) + (pos_y)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 1) + (pos_y)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 1) + (pos_y)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 2) + (pos_y)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 3) + (pos_y)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 4) + (pos_y)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 4) + (pos_y + 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 3) + (pos_y + 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 2) + (pos_y + 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 1) + (pos_y + 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x)+(pos_y + 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 1) + (pos_y + 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 2) + (pos_y + 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 3) + (pos_y + 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 4) + (pos_y + 1)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 4) + (pos_y + 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 3) + (pos_y + 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 2) + (pos_y + 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 1) + (pos_y + 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x)+(pos_y + 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 1) + (pos_y + 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 2) + (pos_y + 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 3) + (pos_y + 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 4) + (pos_y + 2)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 3) + (pos_y + 3)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 2) + (pos_y + 3)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 1) + (pos_y + 3)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x)+(pos_y + 3)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 1) + (pos_y + 3)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 2) + (pos_y + 3)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 3) + (pos_y + 3)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 2) + (pos_y + 4)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x - 1) + (pos_y + 4)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x)+(pos_y + 4)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 1) + (pos_y + 4)*(my_width + 8)) > 0.0) +
+		(*(erode_ptr + (pos_x + 2) + (pos_y + 4)*(my_width + 8)) > 0.0);
 }
 
 
@@ -1065,7 +1127,7 @@ void IMGCONT::erode(double * img_ptr)
 {
 	double *erosion_temp = new double[(my_height + 8) *  (my_width + 8)];
 
-	/* Copy the image in 'img_src' to 'ptr_tmp' */
+	/* Copy the image in 'skl_temp' to 'ptr_tmp' */
 	for (unsigned int x = 0; x < (my_width + 8); x++) {
 		*(erosion_temp + x) = 1.0;
 		*(erosion_temp + (my_width + 8) + x) = 1.0;
@@ -1136,440 +1198,512 @@ void IMGCONT::computeMaskFOV()
     /* Remove the small connected sets */
     lengthFilter(my_FOV_mask, 1000);
 
-    // Se erosiona la mascara:
-    erosionar(new_mask);
-
-    // Se eliminan los conjuntos grandes que no esten en las esquinas:
-    // Se extraen las etiquetas de los conjuntos que se conectan a las esquinas:
-    for( int xy = 0; xy < new_mask->my_width * new_mask->my_height; xy++){
-        *(new_mask->my_img_data + xy) = 1.0 - *(new_mask->my_img_data + xy);
+    /*  Erode the FOV mask*/
+    erode(my_FOV_mask);
+	
+	/* Identify the connected sets of the corners of the image */
+    for( int xy = 0; xy < my_width * my_height; xy++){
+        *(my_FOV_mask + xy) = 1.0 - *(my_FOV_mask + xy);
     }
 
-    int *mis_conjuntos = new int [new_mask->my_width * new_mask->my_height];
-
-    // Se buscan los conjuntos que no esten en las esquinas para eliminarlos
-	unsigned int *mis_n_etiquetados = conjuntosConexos(new_mask, mis_conjuntos);
-    delete [] mis_n_etiquetados;
+    int *my_sets = new int [my_width * my_height];
+	unsigned int *my_sets_lengths = connectedSets_Iterative(my_FOV_mask, my_sets);
+    delete [] my_sets_lengths;
 
 
     //// etiqueta de los conjuntos donde existe una esquina
-	const int NO = *(mis_conjuntos);
-	const int NE = *(mis_conjuntos + new_mask->my_width - 1);
-	const int SO = *(mis_conjuntos + (new_mask->my_height - 1)*new_mask->my_width);
-	const int SE = *(mis_conjuntos + new_mask->my_height * new_mask->my_width - 1);
+	const int NorthWest = *(my_sets);
+	const int NorthEast = *(my_sets + my_width - 1);
+	const int SouthWest = *(my_sets + (my_height - 1)*my_width);
+	const int SouthEast = *(my_sets + my_height * my_width - 1);
 
-    for( int xy = 0; xy < (new_mask->my_height * new_mask->my_width); xy++){
-        if( (*(mis_conjuntos + xy) >= 0) && ((mis_conjuntos[xy] == NO) || (mis_conjuntos[xy] == NE) || 
-			(mis_conjuntos[xy] == SO) || (mis_conjuntos[xy] == SE)) ){
-            *(new_mask->my_img_data + xy) = 0.0;
+    for( int xy = 0; xy < (my_height * my_width); xy++){
+        if( (*(my_sets + xy) >= 0) && ((*(my_sets + xy) == NorthWest) || (*(my_sets + xy) == NorthEast) ||
+			(*(my_sets + xy) == SouthWest) || (*(my_sets + xy) == SouthEast)) ){
+            *(my_FOV_mask + xy) = 0.0;
         }else{
-			*(new_mask->my_img_data + xy) = 1.0;
+			*(my_FOV_mask + xy) = 1.0;
         }
     }
 
-    delete [] mis_conjuntos;
-
-	return new_mask;
+    delete [] my_sets;
 }
 
 
 
-/*  Metodo: fillMask
-    Funcion: Se llenan los espacios de la mascara con la media de la imagen circundante.
-*/
-void IMGPROC::fillMask(){
 
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: dilMask                                                                                    *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* mask_dil_ptr              double *                   I   An auxiliary array for the mask dilatation       *
+* pos_x                     const unsigned int         I   Postion in the X-axis in the image.              *
+* pos_y                     const unsigned int         I   Maximum intensity in the image.                  *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* A hit, fit or miss response for an 1x1 dilatation mask.                                                   *
+*                                                                                                           *
+************************************************************************************************************/
+inline unsigned char IMGCONT::dilMask(double * mask_dil_ptr, const unsigned int pos_x, const unsigned int pos_y)
+{
+	return (*(mask_dil_ptr + (pos_x)+(pos_y - 1)*(my_width + 2)) > 0.0) +
+		(*(mask_dil_ptr + (pos_x + 1) + (pos_y)*(my_width + 2)) > 0.0) +
+		(*(mask_dil_ptr + (pos_x)+(pos_y + 1)*(my_width + 2)) > 0.0) +
+		(*(mask_dil_ptr + (pos_x - 1) + (pos_y)*(my_width + 2)) > 0.0);
+}
+
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: fillMask                                                                                   *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* --------                  ------------               -   ------------------------------------------       *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The FOVin the image data with the area out of the FOV filled with the average intensity of the neighbor-  *
+* hood values in a mask of 21x21 pixels.                                                                    *
+*                                                                                                           *
+************************************************************************************************************/
+void IMGCONT::fillMask()
+{
 	PIX_PAIR par_tmp;
-    par_tmp.pix_type = PIX_CROSS;
+	par_tmp.pix_type = PIX_CROSS;
 
-	auxiliary_img.setDimensions(my_height + 2, my_width + 2);
+	double * fill_temp = new double[(my_height + 2) * (my_width + 2)];
 
-    int iter = 0;
-    while( iter < mask_src->my_width ){
-        // Obtener el borde de la mascara realizando una dilatacion:
-        std::vector< PIX_PAR > borde;
+	int iter = 0;
+	while (iter < my_width) {
+		std::vector< PIX_PAIR > boundaries;
 
-        // Si es la primer pasada, se verifican todos los pixeles para encontrar el borde
-        for( int y = 0; y < mask_src->my_height; y++){
-            for( int x = 0; x < mask_src->my_width; x++){
-                if( *(mask_dil->my_img_data + (x+1) + (y+1)*(mask_dil->my_width)) < 1.0 ){
-                    // Si es HIT se considera como borde, si es FIT no:
-					const unsigned char resp = dilMask(mask_dil, x + 1, y + 1);
-                    if( resp > 0){
-                        // Se guardan las coordenadas de los pixeles que forman el borde:
-                        par_tmp.x = x;
-                        par_tmp.y = y;
-                        borde.push_back( par_tmp );
-                    }
-                }
-            }
-        }
+		/* Find the boundaries of the mask at the current iteration */
+		for (unsigned int y = 0; y < my_height; y++) {
+			for (unsigned int x = 0; x < my_width; x++) {
+				if (*(fill_temp + (x + 1) + (y + 1)*(my_width + 2)) < 1.0) {
+					if (dilMask(fill_temp, x + 1, y + 1) > 0) {
+						par_tmp.x = x;
+						par_tmp.y = y;
+						boundaries.push_back(par_tmp);
+					}
+				}
+			}
+		}
 
-        const int n_borde = (int)borde.size();
-        DEB_MSG("Iter: " << iter << ", pixeles en el borde: " <<  n_borde);
+		const int n_pixels_in_boundary = (int)boundaries.size();
 
-        //// Si ya no existen pixeles en el borde, se termina el ciclo:
-        if( n_borde == 0){
-            break;
-        }
+		/* If there are no more pixels in the boundaries: Exit */
+		if (n_pixels_in_boundary == 0) {
+			break;
+		}
 
-        // Para cada pixel en el borde, se calcula la media usando una ventana de 21 x 21 pixeles.
-        for( int b = 0; b < n_borde; b++ ){
-            const int x_act = (int)borde[b].x;
-            const int y_act = (int)borde[b].y;
+		/* For each pixel in the boundary, its value in the FOV mask is defined as the average intensity of an 21x21 mask */
+		for (int b = 0; b < n_pixels_in_boundary; b++) {
+			const int curr_x = (int)boundaries[b].x;
+			const int curr_y = (int)boundaries[b].y;
 
-            const int offset_x_izq = (x_act < 10) ?
-				0 :
-				(x_act - 10);
+			const int offset_x_left = (curr_x < 10) ?
+				0 : (curr_x - 10);
 
-            const int offset_x_der = (x_act >= (mask_src->my_width - 10)) ? 
-				(mask_src->my_width-1) : 
-				(x_act + 10);
+			const int offset_x_right = (curr_x >= (my_width - 10)) ?
+				(my_width - 1) : (curr_x + 10);
 
-            const int offset_y_sup = (y_act < 10) ?
-				0 : 
-				(y_act - 10);
+			const int offset_y_upper = (curr_y < 10) ?
+				0 : (curr_y - 10);
 
-            const int offset_y_inf = (y_act >= (mask_src->my_height - 10)) ?
-				(mask_src->my_height-1) :
-				(y_act + 10);
+			const int offset_y_lower = (curr_y >= (my_height - 10)) ?
+				(my_height - 1) : (curr_y + 10);
 
-            double suma = 0.0;
-            int n_vecinos = 0;
+			double intensities_sum = 0.0;
+			int n_in_neighborhood = 0;
 
-            for( int y = offset_y_sup; y <= offset_y_inf; y++){
-                for( int x = offset_x_izq; x <= offset_x_der; x++){
-                    if( *(mask_dil->my_img_data + (x+1) + (y+1)*(mask_dil->my_width)) > 0.0 ){
-                        suma += *(img_src->my_img_data + x + y*img_src->my_width);
-                        n_vecinos++;
-                    }
-                }
-            }
+			for (int y = offset_y_upper; y <= offset_y_lower; y++) {
+				for (int x = offset_x_left; x <= offset_x_right; x++) {
+					if (*(fill_temp + (x + 1) + (y + 1)*(my_width + 2)) > 0.0) {
+						intensities_sum += *(my_img_data + x + y*my_width);
+						n_in_neighborhood++;
+					}
+				}
+			}
 
-            *(img_src->my_img_data + x_act + y_act*img_src->my_width) = suma / n_vecinos;
-            *(mask_dil->my_img_data + (x_act+1) + (y_act+1)*(mask_dil->my_width)) = 1.0;
-        }
-        iter++;
-    }
+			*(my_img_data + curr_x + curr_y*my_width) = intensities_sum / n_in_neighborhood;
+			*(fill_temp + (curr_x + 1) + (curr_y + 1)*(my_width + 2)) = 1.0;
+		}
+		iter++;
+	}
 
-    delete mask_dil;
+	delete[] fill_temp;
 }
 
 
 
 
 
-/*  Metodo: grafoSkeleton
-    Funcion: Genera un grafo a partir del esqueleto.
-*/
-IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, bool *was_visited) {
-	/*
-	if( *(was_visited + x + y*cols) ){
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: extractSkeletonFeatures                                                                    *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* skl_temp                  double *                   I   An array whith the temporary skeleton            *
+* pos_x                     const unsigned int         I   The position in the X-axis.                      *
+* pos_y                     const unsigned int         I   The position in the Y-axis.                      *
+* deep_level                int *                      O   The current deep level of the graph.             *
+* lutable                   const unsigned char *      I   A look up table with the response codes          *
+* was_visited               bool *                     I   An array of identifiers                          *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* A graph with the pixles of the skeleton characterized by its pixel type.                                  *
+*                                                                                                           *
+************************************************************************************************************/
+IMGCONT::PIX_PAIR * IMGCONT::computeSkeletonGraph(double * skl_temp, const unsigned int pos_x, const unsigned int pos_y, int *deep_level, const unsigned char *lutable, bool *was_visited)
+{
+	if( *(was_visited + pos_x + pos_y*my_width) ){
 		return NULL;
 	}
 
-	PIX_PAR *temp = new PIX_PAR;
+	PIX_PAIR *pix_feratures_temp = new PIX_PAIR;
 
-	const unsigned char resp = sklMask( skl_tmp, x, y, cols+2, rows);
+	const unsigned char resp = sklMask(skl_temp, pos_x, pos_y);
 
-	temp->x = (x-1 - (double)cols/2)*pixX;
-	temp->y = (y-1 - (double)rows/2)*pixY;
+	pix_feratures_temp->my_pos_x = (pos_x-1 - (double)my_width/2)*pixX;
+	pix_feratures_temp->my_pos_y = (pos_y-1 - (double)my_height/2)*pixY;
 
-	temp->n_hijos = 0;
+	pix_feratures_temp->my_n_children = 0;
 
-	temp->hijos[0] = NULL;
-	temp->hijos[1] = NULL;
-	temp->hijos[2] = NULL;
+	pix_feratures_temp->my_children[0] = NULL;
+	pix_feratures_temp->my_children[1] = NULL;
+	pix_feratures_temp->my_children[2] = NULL;
 
-	temp->nivel = *nivel;
+	pix_feratures_temp->my_deep_level = *deep_level;
 
-	/// Calcular el radio de la arteria en el pixel actual:
-	const int min_x = ((x - max_dist - 1) < 0) ? 0 : (x - max_dist - 1);
-	const int max_x = ((x + max_dist - 1) > cols) ? cols : (x + max_dist - 1);
-	const int min_y = ((y - max_dist - 1) < 0) ? 0 : (y - max_dist - 1);
-	const int max_y = ((y + max_dist - 1) > rows) ? rows : (y + max_dist - 1);
+	/// Calcular el curr_radious de la arteria en el pixel actual:
+	const int min_x = ((pos_x - my_max_distance - 1) < 0) ? 0 : (pos_x - my_max_distance - 1);
+	const int max_x = ((pos_x + my_max_distance - 1) > my_width) ? my_width : (pos_x + my_max_distance - 1);
+	const int min_y = ((pos_y - my_max_distance - 1) < 0) ? 0 : (pos_y - my_max_distance - 1);
+	const int max_y = ((pos_y + my_max_distance - 1) > my_height) ? my_height : (pos_y + my_max_distance - 1);
 
-	double dist, radio = MY_INF;
-	bool visitado = false;
-	double x_r, y_r;
+	double curr_distance;
+	double curr_radious = MY_INF;
+	bool already_visited = false;
+	double curr_x_r;
+	double curr_y_r;
 	for( int yy = min_y; yy < max_y; yy++){
 		for( int xx = min_x; xx < max_x; xx++){
-			dist = (double)(yy - y + 0.5)*(double)(yy - y + 0.5) + (double)(xx - x + 0.5)*(double)(xx - x + 0.5);
-			if( (borders_ptr[xx + yy*cols] > 0.0) && (dist < radio) ){
-				radio = dist;
-				x_r = (double)xx;
-				y_r = (double)yy;
-				visitado = true;
+			curr_distance = (double)(yy - pos_y + 0.5)*(double)(yy - pos_y + 0.5) + (double)(xx - pos_x + 0.5)*(double)(xx - pos_x + 0.5);
+			if( (*(my_boundaries + xx + yy*my_width) > 0.0) && (curr_distance < curr_radious) ){
+				curr_radious = curr_distance;
+				curr_x_r = (double)xx;
+				curr_y_r = (double)yy;
+				already_visited = true;
 			}
 		}
 	}
+	
+	pix_feratures_temp->my_radious = sqrt(curr_radious) * pixX;
+	pix_feratures_temp->my_y_r = (curr_y_r - (double)my_height/2)*pixY;
+	pix_feratures_temp->my_x_r = (curr_x_r - (double)my_width/2)*pixX;
+	pix_feratures_temp->my_angle_alpha = atan2(pix_feratures_temp->my_y_r - pix_feratures_temp->my_pos_y, pix_feratures_temp->my_x_r - pix_feratures_temp->my_pos_x);// + MY_PI / 2.0;
 
-	if( !visitado ){
-		char mensaje[512] = "\nEl pixel [XXX, YYY] no tiene vecinos en la imagen de bordes a: DDD pixeles a la redonda\n";
-#if defined(_WIN32) || defined(_WIN64)
-		sprintf_s(mensaje, 512 * sizeof(char), "\nEl pixel [%i, %i] no tiene vecinos en la imagen de bordes a: %i pixeles a la redonda\n", x, y, max_dist);
-#else
-		sprintf( mensaje, "\nEl pixel [%i, %i] no tiene vecinos en la imagen de bordes a: %i pixeles a la redonda\n", x, y, max_dist);
-#endif
-		escribirLog(mensaje);
-	}
-
-	temp->radio = sqrt(radio) * pixX;
-	temp->y_r = (y_r - (double)rows/2)*pixY;
-	temp->x_r = (x_r - (double)cols/2)*pixX;
-	temp->alpha = atan2(temp->y_r - temp->y, temp->x_r - temp->x);// + MY_PI / 2.0;
-
-	switch( lutabla[ resp ] ){
-		case (unsigned char)1:{ /* END point*
-			temp->pix_tipo = PIX_END;
+	switch( lutable[ resp ] ){
+		case (unsigned char)1:{ /* END point*/
+			pix_feratures_temp->my_pix_type = PIX_END;
 			break;
 		}
-		case (unsigned char)2:{ /* BRANCH point *
-			temp->pix_tipo = PIX_BRANCH;
+		case (unsigned char)2:{ /* BRANCH point */
+			pix_feratures_temp->my_pix_type = PIX_BRANCH;
 			break;
 		}
-		case (unsigned char)3:{ /* CROSS point *
-			temp->pix_tipo = PIX_CROSS;
+		case (unsigned char)3:{ /* CROSS point */
+			pix_feratures_temp->my_pix_type = PIX_CROSS;
 			break;
 		}
 		default:{
-			temp->pix_tipo = PIX_SKL;
+			pix_feratures_temp->my_pix_type = PIX_SKL;
 			break;
 		}
 	}
 
-	*(was_visited + x + y*cols) = true;
+	*(was_visited + pos_x + pos_y*my_width) = true;
 
-	/// NorthWest
-	if( (resp & (unsigned char)1) && (*(skl_tmp + (x-1) + (y-1)*(cols+2)) < 2.0)){
-		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
-			*nivel = *nivel + 1;
+	/* NorthWest */
+	if( (resp & (unsigned char)1) && (*(skl_temp + (pos_x-1) + (pos_y-1)*(my_width+2)) < 2.0)){
+		if( pix_feratures_temp->my_pix_type == PIX_CROSS || pix_feratures_temp->my_pix_type == PIX_BRANCH ){
+			*deep_level = *deep_level + 1;
 		}
-		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y-1, nivel, lutabla, was_visited);
+		pix_feratures_temp->my_children[pix_feratures_temp->my_n_children] = computeSkeletonGraph(skl_temp, pos_x-1, pos_y-1, deep_level, lutable, was_visited);
 
-		if( temp->hijos[temp->n_hijos] ){
-			temp->n_hijos++;
-		}
-	}
-
-	/// North
-	if( (resp & (unsigned char)2) && (*(skl_tmp + x + (y-1)*(cols+2)) < 2.0) ){
-		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
-			*nivel = *nivel + 1;
-		}
-		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y-1, nivel, lutabla, was_visited);
-		if( temp->hijos[temp->n_hijos] ){
-			temp->n_hijos++;
+		if( pix_feratures_temp->my_children[pix_feratures_temp->my_n_children] ){
+			pix_feratures_temp->my_n_children++;
 		}
 	}
 
-	/// NorthEast
-	if( (resp & (unsigned char)4) && (*(skl_tmp + (x+1) + (y-1)*(cols+2)) < 2.0) ){
-		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
-			*nivel = *nivel + 1;
+	/* North */
+	if( (resp & (unsigned char)2) && (*(skl_temp + pos_x + (pos_y-1)*(my_width+2)) < 2.0) ){
+		if( pix_feratures_temp->my_pix_type == PIX_CROSS || pix_feratures_temp->my_pix_type == PIX_BRANCH ){
+			*deep_level = *deep_level + 1;
 		}
-		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y-1, nivel, lutabla, was_visited);
-
-		if( temp->hijos[temp->n_hijos] ){
-			temp->n_hijos++;
-		}
-	}
-
-	/// East
-	if( (resp & (unsigned char)8) && (*(skl_tmp + (x+1) + y*(cols+2)) < 2.0) ){
-		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
-			*nivel = *nivel + 1;
-		}
-		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y, nivel, lutabla, was_visited);
-
-		if( temp->hijos[temp->n_hijos] ){
-			temp->n_hijos++;
+		pix_feratures_temp->my_children[pix_feratures_temp->my_n_children] = computeSkeletonGraph(skl_temp, pos_x, pos_y-1, deep_level, lutable, was_visited);
+		if( pix_feratures_temp->my_children[pix_feratures_temp->my_n_children] ){
+			pix_feratures_temp->my_n_children++;
 		}
 	}
 
-	/// SouthEast
-	if( (resp & (unsigned char)16) && (*(skl_tmp + (x+1) + (y+1)*(cols+2)) < 2.0) ){
-		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
-			*nivel = *nivel + 1;
+	/* NorthEast */
+	if( (resp & (unsigned char)4) && (*(skl_temp + (pos_x+1) + (pos_y-1)*(my_width+2)) < 2.0) ){
+		if( pix_feratures_temp->my_pix_type == PIX_CROSS || pix_feratures_temp->my_pix_type == PIX_BRANCH ){
+			*deep_level = *deep_level + 1;
 		}
-		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x+1, y+1, nivel, lutabla, was_visited);
+		pix_feratures_temp->my_children[pix_feratures_temp->my_n_children] = computeSkeletonGraph(skl_temp, pos_x+1, pos_y-1, deep_level, lutable, was_visited);
 
-		if( temp->hijos[temp->n_hijos] ){
-			temp->n_hijos++;
-		}
-	}
-
-	/// South
-	if( (resp & (unsigned char)32) && (*(skl_tmp + x + (y+1)*(cols+2)) < 2.0) ){
-		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
-			*nivel = *nivel + 1;
-		}
-		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x, y+1, nivel, lutabla, was_visited);
-
-		if( temp->hijos[temp->n_hijos] ){
-			temp->n_hijos++;
+		if( pix_feratures_temp->my_children[pix_feratures_temp->my_n_children] ){
+			pix_feratures_temp->my_n_children++;
 		}
 	}
 
-	/// SouthWest
-	if( (resp & (unsigned char)64) && (*(skl_tmp + (x-1) + (y+1)*(cols+2)) < 2.0) ){
-		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
-			*nivel = *nivel + 1;
+	/* East */
+	if( (resp & (unsigned char)8) && (*(skl_temp + (pos_x+1) + pos_y*(my_width+2)) < 2.0) ){
+		if( pix_feratures_temp->my_pix_type == PIX_CROSS || pix_feratures_temp->my_pix_type == PIX_BRANCH ){
+			*deep_level = *deep_level + 1;
 		}
-		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y+1, nivel, lutabla, was_visited);
+		pix_feratures_temp->my_children[pix_feratures_temp->my_n_children] = computeSkeletonGraph(skl_temp, pos_x+1, pos_y, deep_level, lutable, was_visited);
 
-		if( temp->hijos[temp->n_hijos] ){
-			temp->n_hijos++;
-		}
-	}
-
-	/// West
-	if( (resp & (unsigned char)128) && (*(skl_tmp + (x-1) + y*(cols+2)) < 2.0)){
-		if( temp->pix_tipo == PIX_CROSS || temp->pix_tipo == PIX_BRANCH ){
-			*nivel = *nivel + 1;
-		}
-		temp->hijos[temp->n_hijos] = grafoSkeleton(skl_tmp, x-1, y, nivel, lutabla, was_visited);
-
-		if( temp->hijos[temp->n_hijos] ){
-			temp->n_hijos++;
+		if( pix_feratures_temp->my_children[pix_feratures_temp->my_n_children] ){
+			pix_feratures_temp->my_n_children++;
 		}
 	}
 
-	/// Revisar si en verdad sigue siendo del tipo que creia ser:
-	switch( temp->n_hijos ){
-		case 0: temp->pix_tipo = PIX_END;
+	/* SouthEast */
+	if( (resp & (unsigned char)16) && (*(skl_temp + (pos_x+1) + (pos_y+1)*(my_width+2)) < 2.0) ){
+		if( pix_feratures_temp->my_pix_type == PIX_CROSS || pix_feratures_temp->my_pix_type == PIX_BRANCH ){
+			*deep_level = *deep_level + 1;
+		}
+		pix_feratures_temp->my_children[pix_feratures_temp->my_n_children] = computeSkeletonGraph(skl_temp, pos_x+1, pos_y+1, deep_level, lutable, was_visited);
+
+		if( pix_feratures_temp->my_children[pix_feratures_temp->my_n_children] ){
+			pix_feratures_temp->my_n_children++;
+		}
+	}
+
+	/* South */
+	if( (resp & (unsigned char)32) && (*(skl_temp + pos_x + (pos_y+1)*(my_width+2)) < 2.0) ){
+		if( pix_feratures_temp->my_pix_type == PIX_CROSS || pix_feratures_temp->my_pix_type == PIX_BRANCH ){
+			*deep_level = *deep_level + 1;
+		}
+		pix_feratures_temp->my_children[pix_feratures_temp->my_n_children] = computeSkeletonGraph(skl_temp, pos_x, pos_y+1, deep_level, lutable, was_visited);
+
+		if( pix_feratures_temp->my_children[pix_feratures_temp->my_n_children] ){
+			pix_feratures_temp->my_n_children++;
+		}
+	}
+
+	/* SouthWest */
+	if( (resp & (unsigned char)64) && (*(skl_temp + (pos_x-1) + (pos_y+1)*(my_width+2)) < 2.0) ){
+		if( pix_feratures_temp->my_pix_type == PIX_CROSS || pix_feratures_temp->my_pix_type == PIX_BRANCH ){
+			*deep_level = *deep_level + 1;
+		}
+		pix_feratures_temp->my_children[pix_feratures_temp->my_n_children] = computeSkeletonGraph(skl_temp, pos_x-1, pos_y+1, deep_level, lutable, was_visited);
+
+		if( pix_feratures_temp->my_children[pix_feratures_temp->my_n_children] ){
+			pix_feratures_temp->my_n_children++;
+		}
+	}
+
+	/* West */
+	if( (resp & (unsigned char)128) && (*(skl_temp + (pos_x-1) + pos_y*(my_width+2)) < 2.0)){
+		if( pix_feratures_temp->my_pix_type == PIX_CROSS || pix_feratures_temp->my_pix_type == PIX_BRANCH ){
+			*deep_level = *deep_level + 1;
+		}
+		pix_feratures_temp->my_children[pix_feratures_temp->my_n_children] = computeSkeletonGraph(skl_temp, pos_x-1, pos_y, deep_level, lutable, was_visited);
+
+		if( pix_feratures_temp->my_children[pix_feratures_temp->my_n_children] ){
+			pix_feratures_temp->my_n_children++;
+		}
+	}
+
+	/* Check the final status of the current pixel: */
+	switch( pix_feratures_temp->n_hijos ){
+		case 0: pix_feratures_temp->my_pix_type = PIX_END;
 				break;
-		case 1: temp->pix_tipo = PIX_SKL;
+		case 1: pix_feratures_temp->my_pix_type = PIX_SKL;
 				break;
-		case 2: temp->pix_tipo = PIX_BRANCH;
+		case 2: pix_feratures_temp->my_pix_type = PIX_BRANCH;
 				break;
-		case 3: temp->pix_tipo = PIX_CROSS;
+		case 3: pix_feratures_temp->my_pix_type = PIX_CROSS;
 				break;
 	}
 
-	return temp;
-	*/
-	return NULL;
+	return pix_feratures_temp;
 }
 
 
 
 
-/*  Metodo: extraerCaract
-    Funcion: Extrae los pixeles caracteristicos (end y branch points) a partir del esqueleot de la imagen.
-*/
-void IMGVTK::extraerCaract( IMG_IDX img_idx ){
-	/*
-    if( !my_boundaries ){
-        detectarBorde( img_idx );
-    }
 
-    const unsigned char tabla[] = {
-        0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        1, 0, 0, 0, 0, 2, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        1, 0, 0, 0, 0, 2, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 2, 0, 2, 0, 0, 0, 2, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
-    double *skl_tmp = new double [(rows+2)*(cols+2)];
-    memcpy( skl_tmp, img_src, (rows+2)*(cols+2)*sizeof(double));
-
-
-    /// Buscar un punto 'end' del esqueleto y empezar a generar el grafo a aprtir de ahi.
-    bool *was_visited = new bool [rows_cols];
-    memset(was_visited, 0, rows_cols*sizeof(bool));
-
-    int x_ini, y_ini, xy = cols+2;
-    unsigned char resp;
-    do{
-        xy++;
-        x_ini = xy % (cols+2);
-        y_ini = (int)((double)xy / ((double)cols+2));
-        resp = sklMask( img_src, x_ini, y_ini, cols+2, rows) * (*(img_src + xy) > 0.0);
-    }while( tabla[resp] != (unsigned char)1 );
-
-    *(skl_tmp + xy ) = 2.0;
-    int nivel = 0;
-
-    pix_caract = grafoSkeleton(skl_tmp, x_ini, y_ini, &nivel, tabla, was_visited);
-
-    n_niveles = nivel;
-
-    DEB_MSG("Encontrados " << n_niveles << " niveles");
-
-    delete [] was_visited;
-    delete [] skl_tmp;
-	*/
-}
-
-
-
-/*  Metodo: borrarSkeleton
-    Funcion: Borra todos los nodos hijo de este nodo.
-*/
-void IMGVTK::borrarSkeleton( PIX_PAR *raiz ){
-
-    if( raiz->n_hijos ){
-        for( int i = 0; i < raiz->n_hijos; i++ ){
-            borrarSkeleton( raiz->hijos[i] );
-            delete raiz->hijos[i];
-        }
-    }
-}
-
-
-
-
-// C L A S E: IMGVTK  ---------------------------------------------------------------------------------------------- v
-//----------------------------------------------------------------------------- PUBLIC ------- v
-    // M E T O D O S      P U B L I C O S
-/*
- *  Fuente: A Fast Parallel Algorithm for thinning digital patterns
- *  De:    T. Y. ZHANG and C. Y. SUEN
- *
-*/
-/*  Metodo: skeletonization
-    Funcion: Obtiene el esqueleto de la imagen segmentada.
-*/
-void IMGVTK::skeletonization(IMG_IDX img_idx) {
-
-	IMGCONT *img_tmp = NULL;
-
-	switch (img_idx) {
-	case BASE:
-		img_tmp = my_base;
-		break;
-	case GROUNDTRUTH:
-		img_tmp = my_groundtruth;
-		break;
-	case MASK:
-		img_tmp = my_mask;
-		break;
-	case SEGMENT:
-		img_tmp = my_response;
-		break;
-	case MAPDIST:
-		img_tmp = my_distmap;
-		break;
-	case THRESHOLD:
-		img_tmp = my_segmented;
-		break;
-	case BORDERS:
-		img_tmp = my_boundaries;
-		break;
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: extractSkeletonFeatures                                                                    *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* ----------                --------                   -   -------------------------------------            *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The features of each pixel in the skeleton.                                                               *
+*                                                                                                           *
+************************************************************************************************************/
+void IMGCONT::extractSkeletonFeatures()
+{
+	if (!my_boundaries) {
+		computeBoundaries();
 	}
 
+	const unsigned char reference_table[] = {
+		0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		1, 0, 0, 0, 0, 2, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		1, 0, 0, 0, 0, 2, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 2, 0, 2, 0, 0, 0, 2, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+	double *skl_temp = new double[(my_height + 2)*(my_width + 2)];
+	memcpy(skl_temp, my_skeleton, (my_height + 2)*(my_width + 2) * sizeof(double));
+
+	/* Look for a ending point inside the skeleton */
+	bool *was_visited = new bool[my_height*my_width];
+	memset(was_visited, 0, my_height*my_width * sizeof(bool));
+
+	int start_x, start_y, xy = my_width + 2;
+	unsigned char resp;
+	do {
+		xy++;
+		start_x = xy % (my_width + 2);
+		start_y = (int)((double)xy / ((double)my_width + 2.0));
+		resp = sklMask(skl_temp, start_x, start_y);
+	} while (reference_table[resp] != (unsigned char)1);
+
+	*(skl_temp + xy) = 2.0;
+	int deep_level = 0;
+
+	my_skeleton_features = computeSkeletonGraph(skl_temp, start_x, start_y, &deep_level, reference_table, was_visited);
+	my_skeleton_graph_deep = deep_level;
+
+
+	delete[] was_visited;
+	delete[] skl_temp;
+}
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: deleteSkeletonGraph                                                                        *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* graph_root                PIX_PAIR                   I   The realtive root of a PIX_PAIR graph.           *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Nothing.                                                                                                  *
+*                                                                                                           *
+************************************************************************************************************/
+void IMGCONT::deleteSkeletonGraph(PIX_PAIR *graph_root)
+{
+	if (graph_root->my_n_children > 0) {
+		deleteSkeletonGraph(graph_root->my_children[0]);
+		delete graph_root->my_children[0];
+
+		if (graph_root->my_n_children > 1) {
+			deleteSkeletonGraph(graph_root->my_children[1]);
+			delete graph_root->my_children[1];
+
+			if (graph_root->my_n_children > 2) {
+				deleteSkeletonGraph(graph_root->my_children[2]);
+				delete graph_root->my_children[2];
+			}
+		}
+	}
+}
+
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: sklMask                                                                                    *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* skl_temp                  double *                   I   An array whith the temporary skeleton            *
+* pos_x                     const unsigned int         I   The position in the X-axis.                      *
+* pos_y                     const unsigned int         I   The position in the Y-axis.                      *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The fit, hit or miss response of the skeleton mask                                                        *
+*                                                                                                           *
+************************************************************************************************************/
+inline unsigned char IMGCONT::sklMask(double * skl_temp, const unsigned int pos_x, const unsigned int pos_y) {
+	return   1 * (*(skl_temp + (pos_x - 1) + (pos_y - 1)*my_width) > 0.0) + /* P2 */
+		2 * (*(skl_temp + pos_x + (pos_y - 1)*(my_width + 2)) > 0.0) + /* P3 */
+		4 * (*(skl_temp + (pos_x + 1) + (pos_y - 1)*(my_width + 2)) > 0.0) + /* P4 */
+		8 * (*(skl_temp + (pos_x + 1) + pos_y  *(my_width + 2)) > 0.0) + /* P5 */
+		16 * (*(skl_temp + (pos_x + 1) + (pos_y + 1)*(my_width + 2)) > 0.0) + /* P6 */
+		32 * (*(skl_temp + pos_x + (pos_y + 1)*(my_width + 2)) > 0.0) + /* P7*/
+		64 * (*(skl_temp + (pos_x - 1) + (pos_y + 1)*(my_width + 2)) > 0.0) + /* P8 */
+		128 * (*(skl_temp + (pos_x - 1) + pos_y  *(my_width + 2)) > 0.0);  /* P9 */
+}
+
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: computeSkeleton                                                                            *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* --------                  ------------               -   ------------------------------------------       *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Extracts the morphologic skeleton of the image and stores it in the same image data (a black and white    *
+* image is required).                                                                                       *
+*                                                                                                           *
+************************************************************************************************************/
+void IMGCONT::computeSkeleton()
+{
 	if (!my_skeleton) {
-		my_skeleton = new IMGCONT(img_tmp->my_height, img_tmp->my_width, 1, 1);
+		my_skeleton = new double[(my_height + 2)*(my_width + 2)];
 	}
-	*my_skeleton = *img_tmp;
 
-	IMGCONT *skl_mark = new IMGCONT(*my_skeleton);
+	double * skl_temp = new double[(my_height + 2)*(my_width + 2)];
+	double * swap_temp;
 
-	const unsigned char tabla[] = {
+	const unsigned char reference_table[] = {
 		0, 0, 0, 1, 0, 0, 1, 3, 0, 0, 3, 1, 1, 0, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 3, 0, 3, 3,
 		0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 3, 0, 2, 2,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1578,45 +1712,131 @@ void IMGVTK::skeletonization(IMG_IDX img_idx) {
 		3, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		2, 3, 1, 3, 0, 0, 1, 3, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		2, 3, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 1, 0, 0, 0, 0, 2, 2, 0, 0, 2, 0, 0, 0 };
-	int n_borrado;
+	int n_erased;
 
 	do {
-		n_borrado = 0;
-		// Primer paso:
-		for (int y = 1; y <= my_skeleton->my_height; y++) {
-			for (int x = 1; x <= my_skeleton->my_width; x++) {
-				if (*(my_skeleton->my_img_data + x + y*my_skeleton->my_width) > 0.0) {
-					const unsigned char resp = *(tabla + sklMask(my_skeleton, x, y));
+		n_erased = 0;
+		for (unsigned int y = 1; y <= (my_height + 1); y++) {
+			for (unsigned int x = 1; x <= (my_width + 1); x++) {
+				if (*(my_skeleton + x + y*(my_width + 2)) > 0.0) {
+					const unsigned char resp = *(reference_table + sklMask(my_skeleton, x, y));
 					if ((resp == 1) || (resp == 3)) {
-						*(skl_mark->my_img_data + x + y * skl_mark->my_width) = 0.0;
-						n_borrado++;
+						*(skl_temp + x + y * (my_width + 2)) = 0.0;
+						n_erased++;
 					}
 				}
 			}
 		}
 
-		*my_skeleton = *skl_mark;
+		swap_temp = skl_temp;
+		skl_temp = my_skeleton;
+		my_skeleton = swap_temp;
 
 		// Segundo paso:
-		for (int y = 1; y <= rows; y++) {
-			for (int x = 1; x <= cols; x++) {
-				if (*(my_skeleton->my_img_data + x + y*my_skeleton->my_width) > 0.0) {
-					unsigned char resp = *(tabla + sklMask(my_skeleton, x, y));
+		for (unsigned int y = 1; y <= (my_height + 1); y++) {
+			for (unsigned int x = 1; x <= (my_width + 1); x++) {
+				if (*(my_skeleton + x + y*(my_width + 2)) > 0.0) {
+					unsigned char resp = *(reference_table + sklMask(my_skeleton, x, y));
 					if (resp == 2 || resp == 3) {
-						*(skl_mark->my_img_data + x + y*skl_mark->my_width) = 0.0;
-						n_borrado++;
+						*(skl_temp + x + y*(my_width + 2)) = 0.0;
+						n_erased++;
 					}
 				}
 			}
 		}
 
+		swap_temp = skl_temp;
+		skl_temp = my_skeleton;
+		my_skeleton = swap_temp;
 
-		*my_skeleton = *skl_mark;
+	} while (n_erased > 0);
 
-	} while (n_borrado > 0);
+	delete[] skl_temp;
 
-	delete skl_mark;
-	extraerCaract(img_idx);
+}
+
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
+* FUNCTION NAME: getSkeleton                                                                                *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* --------                  ------------               -   ------------------------------------------       *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Returns a pointer to the skeleton of the image data.                                                      *
+*                                                                                                           *
+************************************************************************************************************/
+double * IMGCONT::getSkeleton()
+{
+	if (!my_skeleton) {
+		computeSkeleton();
+	}
+
+	return my_skeleton;
+}
+
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
+* FUNCTION NAME: getSkeletonFeatures                                                                        *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* --------                  ------------               -   ------------------------------------------       *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Returns a pointer to the skeleton features of each pixel in a graph structure.                            *
+*                                                                                                           *
+************************************************************************************************************/
+IMGCONT::PIX_PAIR * IMGCONT::getSkeletonFeatures()
+{
+	if (!my_skeleton_features) {
+		extractSkeletonFeatures();
+	}
+
+	return my_skeleton_features;
+}
+
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
+* FUNCTION NAME: getSkeletonFeatures                                                                        *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* --------                  ------------               -   ------------------------------------------       *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Returns a pointer to the skeleton features of each pixel in a graph structure.                            *
+*                                                                                                           *
+************************************************************************************************************/
+int IMGCONT::getSkeletonFeaturesDeep()
+{
+	if (!my_skeleton_features) {
+		extractSkeletonFeatures();
+	}
+
+	return my_skeleton_graph_deep;
 }
 
 
@@ -1644,391 +1864,191 @@ void IMGCONT::computeMask()
 	my_FOV_mask = (double*)malloc(my_height * my_width * sizeof(double));
 
 	computeMaskFOV();
-
-
-}
-
-
-
-
-/*  Metodo: umbralizarOTSU
-    Funcion: Utiliza el metodo de Otsu para umbralizar la imagen y separar el fondo y el primer plano de la imagen.
-*/
-double IMGVTK::umbralizarOTSU( const double *img_ptr, const double min, const double max){
-    const int clases = 256;//(int)(1.0 + 3.322*log10(rens_cols));
-    double *histograma_frecuencias = (double*) calloc(clases, sizeof(double));
-
-    // Obtener el histograma de frecuencias a cada nivel de grises de la imagen y las frecuencias acumuladas:
-    double suma = 0.0;
-    const double fraccion = 1.0 / (double)rows_cols;
-
-    for( int xy = 0; xy < rows_cols; xy ++){
-        const int clase_i = (int)((clases-1) * (*(img_ptr + xy) - min)/(max - min + 1e-12));
-        histograma_frecuencias[ clase_i ] += fraccion;
-        suma += (double)(clase_i+1);
-    }
-
-    suma *= fraccion;
-
-    double suma_back = 0;
-    double peso_back = 0.0;
-    double varianza_entre, max_varianza_entre = -1.0;
-    double umbral;
-
-    for( int k = 0; k < clases; k++){
-        // Calcular el peso del back y fore-ground:
-        peso_back += (double)histograma_frecuencias[k];
-
-        // Calcular la media del back y fore-ground:
-        suma_back += (double)(histograma_frecuencias[k]*(k+1));
-
-        // Calcular la varianza entre el fore y back ground:
-        varianza_entre = (suma*peso_back - suma_back);
-        varianza_entre *= varianza_entre;
-        varianza_entre /= (peso_back*(1.0 - peso_back));
-
-        if( varianza_entre > max_varianza_entre ){
-            max_varianza_entre = varianza_entre;
-            umbral = ((double)k / (double)(clases-1));
-        }
-    }
-
-    free( histograma_frecuencias );
-
-    return umbral;
-}
-
-
-
-
-
-/*  Metodo: umbralizarRIDCAL
-    Funcion: Utiliza el metodo de Otsu para umbralizar la imagen y separar el fondo y el primer plano de la imagen.
-*/
-double IMGVTK::umbralizarRIDCAL( const double *img_ptr, const double min, const double max){
-    double umbral_nuevo = 0.0;
-    // Obtener la media de la read_intensity de la imagen como primera aproximacion del umbral
-    const double rango = 1.0 / (max - min);
-    const double fraccion = 1.0 / (double)rows_cols;
-
-    for( int xy = 0; xy < rows_cols; xy ++){
-        umbral_nuevo += (*(img_ptr + xy) - min) * rango;
-    }
-    umbral_nuevo *= fraccion;
-
-    double umbral;
-    while( 1 ){
-        const double umbral_previo = umbral_nuevo;
-        umbral = umbral_previo;
-
-        double m_abajo = 0.0;
-        double m_arriba = 0.0;
-        int n_abajo = 0, n_arriba = 0;
-
-        for( int xy = 0; xy < rows_cols; xy++){
-
-            if( (*(img_ptr + xy) - min) * rango <= umbral ){
-                m_abajo += (*(img_ptr + xy) - min) * rango;
-                n_abajo++;
-            }else{
-                m_arriba += (*(img_ptr + xy) - min) * rango;
-                n_arriba++;
-            }
-        }
-
-        m_abajo /= (double)n_abajo;
-        m_arriba /= (double)n_arriba;
-
-        umbral_nuevo = (m_arriba + m_abajo) / 2.0;
-
-        if( fabs(umbral_nuevo - umbral_previo) < 1e-5 ){
-            break;
-        }
-    }
-
-    return umbral;
-}
-
-
-
-
-/*  Metodo: umbralizar
-    Funcion: Utiliza el metodo de Otsu o Ridler & Calvard para umbralizar la imagen y separar el fondo y el primer plano de la imagen.
-*/
-void IMGVTK::umbralizar(IMG_IDX img_idx, const TIPO_UMBRAL tipo_umb, const double nivel){
-	/*
-    if( !threshold_ptr ){
-#ifdef BUILD_VTK_VERSION
-        threshold = vtkSmartPointer< vtkImageData >::New();
-        threshold->SetExtent(0, cols - 1, 0, rows - 1, 0, 0);
-        threshold->AllocateScalars(VTK_DOUBLE, 1);
-        threshold->SetOrigin(0.0, 0.0, 0.0);
-        threshold->SetSpacing(1.0, 1.0, 1.0);
-
-        threshold_ptr = static_cast< double* >(threshold->GetScalarPointer(0, 0, 0));
-#else
-        threshold_ptr = new double [rows_cols];
-#endif
-    }
-
-    double *img_ptr = NULL;
-    switch( img_idx ){
-        case BASE:
-            img_ptr = base_ptr;
-            break;
-        case MASK:
-            img_ptr = mask_ptr;
-            break;
-        case SEGMENT:
-            img_ptr = segment_ptr;
-            break;
-    }
-
-    double max =-1e100;
-    double min = 1e100;
-
-    for( int xy = 0; xy < rows_cols; xy++){
-        if( *(img_ptr + xy) < min){
-            min = *(img_ptr + xy);
-        }
-        if( *(img_ptr + xy) > max){
-            max = *(img_ptr + xy);
-        }
-    }
-
-    double umbral = 0.0;
-
-    switch( tipo_umb ){
-        case NIVEL:
-            umbral = nivel;
-            break;
-        case OTSU:
-            umbral = umbralizarOTSU( img_ptr, min, max);
-            break;
-        case RIDLER_CALVARD:
-            umbral = umbralizarRIDCAL( img_ptr, min, max);
-            break;
-    }
-
-    DEB_MSG("Umbral: " << umbral);
-
-    // Se umbraliza la imagen con el valor optimo encontrado:
-    for( int xy = 0; xy < rows_cols; xy++){
-        *(threshold_ptr + xy) = ( ((*(img_ptr + xy) - min) / (max - min)) >= umbral) ? 1.0 : 0.0;
-    }
-	*/
-}
-
-
-
-
-
-/*  Metodo: Cargar
-    Funcion: Retorna la exactitud del clasificador resultante contra el ground-truth
-*/
-double IMGVTK::medirExactitud(){
-	/*
-    if( !gt_ptr ){
-        char mensaje_error[] = "<<ERROR: No se cargo la imagen ground-truth\n";
-        escribirLog( mensaje_error);
-        return 0.0;
-    }
-
-    int FP = 0, FN = 0, TP = 0, TN = 0;
-
-    for( int xy = 0; xy < rows_cols; xy++){
-        if( *(mask_ptr + xy) > 0.5 ){
-            if( *(gt_ptr + xy) > 0.5 ){
-                if( *(threshold_ptr + xy) > 0.5 ){
-                    TP++;
-                }else{
-                    FN++;
-                }
-            }else{
-                if( *(threshold_ptr + xy) < 0.5 ){
-                    TN++;
-                }else{
-                    FP++;
-                }
-            }
-        }
-    }
-
-    return (double)(TP + TN) / (double)(TP + TN + FP + FN);
-	*/
-	return 0.0;
-}
-
-
-
-
-/*  Metodo: Cargar
-    Funcion: Cargar la imagen a formato VTK desde un archivo.
-*/
-void IMGVTK::Cargar(const IMG_IDX img_idx, const char *src_path, const int level) {
-
-	IMGCONT *img_tmp = NULL;
-
-	switch (img_idx) {
-	case BASE:
-		img_tmp = &my_base;
-		break;
-	case GROUNDTRUTH:
-		img_tmp = &my_groundtruth;
-		break;
-	case MASK:
-		img_tmp = &my_mask;
-		break;
-	case SKELETON:
-		img_tmp = &my_skeleton;
-		break;
-	case SEGMENT:
-		img_tmp = &my_response;
-		break;
-	case MAPDIST:
-		img_tmp = &my_distmap;
-		break;
-	case THRESHOLD:
-		img_tmp = &my_segmented;
-		break;
-	case BORDERS:
-		img_tmp = &my_boundaries;
-		break;
-	}
-	
-	img_tmp->Load(src_path, level);
+	fillMask();
 
 }
 
 
 
 
-/*  Metodo: Guardar
-    Funcion: Guarda la imagen en la ruta especificada con la extension especificada.
-*/
-void IMGVTK::Guardar(IMG_IDX img_idx, const char *output_path, const IMGCONT::IMG_TYPE output_type)
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: threshold_by_Otsu                                                                          *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* min_intensity             const double               I   The threshold algorithm                          *
+* max_intensity             const double               I   A defined threshold value                        *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The threshold value estimated by the Otsu's thresholding method.                                          *
+*                                                                                                           *
+************************************************************************************************************/
+double IMGCONT::threshold_by_Otsu( const double *img_ptr, const double min, const double max)
 {
-	IMGCONT *img_tmp = NULL;
+    const int n_classes = 256;
+    double * freq_histogram = new double[n_classes];
+	memset(freq_histogram, 0, n_classes*sizeof(double));
 
-	switch (img_idx) {
-	case BASE:
-		img_tmp = &my_base;
+    /* Calculate the frequencies histogram */
+    double intensities_sum = 0.0;
+    const double fraction = 1.0 / (double)(my_height * my_width);
+
+    for( int xy = 0; xy < my_height * my_width; xy ++){
+        const int class_i = (int)((n_classes-1) * (*(img_ptr + xy) - min)/(max - min + 1e-12));
+        freq_histogram[class_i] += fraction;
+        intensities_sum += (double)(class_i +1);
+    }
+
+    intensities_sum *= fraction;
+
+    double background_intensities_sum = 0;
+    double background_weight = 0.0;
+    double between_var, max_between_var = -1.0;
+    double threshold_value;
+
+    for( int k = 0; k < n_classes; k++){
+        background_weight += (double)freq_histogram[k];
+		background_intensities_sum += (double)(freq_histogram[k]*(k+1));
+
+        // Calcular la varianza entre el fore pos_y back ground:
+        between_var = (intensities_sum*background_weight - background_intensities_sum);
+        between_var *= between_var;
+        between_var /= (background_weight*(1.0 - background_weight));
+
+        if( between_var > max_between_var ){
+            max_between_var = between_var;
+            threshold_value = ((double)k / (double)(n_classes-1));
+        }
+    }
+
+    delete[] freq_histogram;
+
+    return threshold_value;
+}
+
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: threshold_by_Ridler_and_Calvard                                                            *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* min_intensity             const double               I   The threshold algorithm                          *
+* max_intensity             const double               I   A defined threshold value                        *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The threshold value estimated by the Ridler and Calvard's method.                                         *
+*                                                                                                           *
+************************************************************************************************************/
+double IMGCONT::threshold_by_Ridler_and_Calvard(const double min_intensity, const double max_intensity)
+{
+	double new_threshold_value = 0.0;
+	const double range = 1.0 / (max_intensity - min_intensity);
+	const double fraction = 1.0 / (double)(my_height * my_width);
+
+	for (int xy = 0; xy < my_height * my_width; xy++) {
+		new_threshold_value += (*(my_img_data + xy) - min_intensity) * range;
+	}
+	new_threshold_value *= fraction;
+
+	double threshold_value;
+	while (1) {
+		const double previous_threshold_value = new_threshold_value;
+		threshold_value = previous_threshold_value;
+
+		double upper_mean = 0.0;
+		double lower_mean = 0.0;
+		int upper_count = 0;
+		int lower_count = 0;
+
+		for (int xy = 0; xy < my_height * my_width; xy++) {
+
+			if ((*(my_img_data + xy) - min_intensity) * range <= threshold_value) {
+				upper_mean += (*(my_img_data + xy) - min_intensity) * range;
+				upper_count++;
+			}
+			else {
+				lower_mean += (*(my_img_data + xy) - min_intensity) * range;
+				lower_count++;
+			}
+		}
+
+		upper_mean /= (double)upper_count;
+		lower_mean /= (double)lower_count;
+
+		new_threshold_value = (upper_mean + upper_mean) / 2.0;
+
+		if (fabs(new_threshold_value - previous_threshold_value) < 1e-5) {
+			break;
+		}
+	}
+
+	return threshold_value;
+}
+
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
+* FUNCTION NAME: threshold                                                                                  *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* my_threshold_alg          const THRESHOLD_ALG        I   The threshold algorithm                          *
+* threshold_value           const double               I   A defined threshold value                        *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The trhesholded image inside the same image data array.                                                   *
+*                                                                                                           *
+************************************************************************************************************/
+void IMGCONT::threshold(const THRESHOLD_ALG my_threshold_alg, const double threshold_value)
+{
+	double my_max_intensity = -MY_INF;
+	double my_min_intensity = MY_INF;
+
+	for (int xy = 0; xy < my_height * my_width; xy++) {
+		if (*(my_img_data + xy) < my_min_intensity) {
+			my_min_intensity = *(my_img_data + xy);
+		}
+		if (*(my_img_data + xy) > my_max_intensity) {
+			my_max_intensity = *(my_img_data + xy);
+		}
+	}
+
+	double threshold_estimated_value = 0.0;
+
+	switch (my_threshold_alg) {
+	case THRESH_LEVEL:
+		threshold_estimated_value = threshold_value;
 		break;
-	case GROUNDTRUTH:
-		img_tmp = &my_groundtruth;
+	case THRESH_OTSU:
+		threshold_estimated_value = threshold_by_Otsu(my_min_intensity, my_max_intensity);
 		break;
-	case MASK:
-		img_tmp = &my_mask;
-		break;
-	case SKELETON:
-		img_tmp = &my_skeleton;
-		break;
-	case SEGMENT:
-		img_tmp = &my_response;
-		break;
-	case MAPDIST:
-		img_tmp = &my_distmap;
-		break;
-	case THRESHOLD:
-		img_tmp = &my_segmented;
-		break;
-	case BORDERS:
-		img_tmp = &my_boundaries;
+	case THRESH_RIDLER_CALVARD:
+		threshold_estimated_value = threshold_by_Ridler_and_Calvard(my_min_intensity, my_max_intensity);
 		break;
 	}
 
-	img_tmp->Save(output_path, output_type);
-}
-
-
-
-
-
-
-/* CONSTRUCTORES */
-IMGVTK::IMGVTK(){
-    max_dist = 0;
-    pix_caract = NULL;
-}
-
-
-
-IMGVTK::IMGVTK(const IMGVTK &origen) {
-	max_dist = origen.max_dist;
-
-	pix_caract = NULL;
-
-	my_base = origen.my_base;
-	my_groundtruth = origen.my_groundtruth;
-	my_mask = origen.my_mask;
-	my_response = origen.my_response;
-	my_skeleton = origen.my_skeleton;
-	my_distmap = origen.my_distmap;
-	my_boundaries = origen.my_boundaries;
-	my_segmented = origen.my_segmented;
-}
-
-
-
-IMGVTK::IMGVTK( const char *ruta_origen, const bool enmascarar, const int nivel){
-    max_dist = 0;
-	
-	pix_caract = NULL;
-
-    Cargar(BASE, ruta_origen, enmascarar, nivel);
-}
-
-
-
-
-/* DESTRUCTOR */
-IMGVTK::~IMGVTK() {
-	if (pix_caract) {
-		/// Liberar memoria recursivamente:
-		borrarSkeleton(pix_caract);
-		delete pix_caract;
+	// Se umbraliza la imagen con el valor optimo encontrado:
+	for (int xy = 0; xy < my_height * my_width; xy++) {
+		*(my_img_data + xy) = (((*(my_img_data + xy) - my_min_intensity) / (my_max_intensity - my_min_intensity)) 
+			>= threshold_estimated_value)
+			? 1.0 : 0.0;
 	}
 }
-
-
-
-
-// O P E R A D O R E S  S O B R E C A R G A D O S
-// El operador de copia extrae unicamente el contenido de la imagen original
-IMGVTK& IMGVTK::operator= ( const IMGVTK &origen ){
-    max_dist = origen.max_dist;
-	
-	pix_caract = NULL;
-
-	my_base = origen.my_base;
-	my_groundtruth = origen.my_groundtruth;
-	my_mask = origen.my_mask;
-	my_response = origen.my_response;
-	my_skeleton = origen.my_skeleton;
-	my_distmap = origen.my_distmap;
-	my_boundaries = origen.my_boundaries;
-	my_segmented = origen.my_segmented;
-
-	return *this;
-}
-
-
-
-
-
-// M E T O D O S      P R I V A D O S
-/*  Metodo: setRuta
-    Funcion: Copia al argumento a una variable local.
-*/
-char* IMGVTK::setRuta( const char *ruta_input ){
-    const int l_src = (int)strlen( ruta_input ) + 1;
-    char *mi_ruta = new char [512];
-#if defined(_WIN32) || defined(_WIN64)
-	sprintf_s(mi_ruta, 512 * sizeof(char), "%s" , ruta_input);
-#else
-	strcpy(mi_ruta, ruta_input);
-#endif
-    return mi_ruta;
-}
-
-// C L A S E: IMGVTK  ------------------------------------------------------------------------------------------------- ^

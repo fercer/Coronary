@@ -185,7 +185,7 @@ class FILTROS{
 		double **mask;
 
 		int n_imgs;
-        int rows, cols, rows_cols;
+        int rows, my_width, rows_cols;
         int n_pob, max_iters, seleccion;
         double prob_mutacion, prob_cruza;
 

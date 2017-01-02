@@ -203,7 +203,7 @@ class IMGVTK{
 		IMGCONT* maskFOV(IMGCONT * img_src);
 		void fillMask(IMGCONT *img_src, IMGCONT *mask_src);
 
-        PIX_PAR *grafoSkeleton(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, bool *visitados);
+        PIX_PAR *computeSkeletonGraph(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, bool *visitados);
         void extraerCaract(IMG_IDX img_idx);
         void borrarSkeleton( PIX_PAR *raiz );
 

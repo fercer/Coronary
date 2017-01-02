@@ -72,7 +72,7 @@ void IMGVTK::mapaDistancias(IMG_IDX img_idx) {
 	double *zh = new double[my_distmap->my_height + 1];
 
 	// transform along columns
-	for (int x = 0; x < cols; x++) {
+	for (int x = 0; x < my_width; x++) {
 		for (int y = 0; y < my_distmap->my_height; y++) {
 			f[y] = *(my_distmap->my_img_data + y*my_distmap->my_width + x);
 		}
@@ -1128,7 +1128,7 @@ void IMGVTK::fillMask( IMGCONT *img_src, IMGCONT *mask_src ){
 /*  Metodo: grafoSkeleton
     Funcion: Genera un grafo a partir del esqueleto.
 */
-IMGVTK::PIX_PAR* IMGVTK::grafoSkeleton(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, bool *visitados) {
+IMGVTK::PIX_PAR* IMGVTK::computeSkeletonGraph(double *skl_tmp, const int x, const int y, int *nivel, const unsigned char *lutabla, bool *visitados) {
 	/*
 	if( *(visitados + x + y*cols) ){
 		return NULL;
@@ -1465,7 +1465,7 @@ void IMGVTK::skeletonization(IMG_IDX img_idx) {
 
 		// Segundo paso:
 		for (int y = 1; y <= rows; y++) {
-			for (int x = 1; x <= cols; x++) {
+			for (int x = 1; x <= my_width; x++) {
 				if (*(my_skeleton->my_img_data + x + y*my_skeleton->my_width) > 0.0) {
 					unsigned char resp = *(tabla + sklMask(my_skeleton, x, y));
 					if (resp == 2 || resp == 3) {
@@ -1525,7 +1525,7 @@ double IMGVTK::umbralizarOTSU( const double *img_ptr, const double min, const do
 
     suma *= fraccion;
 
-    double suma_back = 0;
+    double background_intensities_sum = 0;
     double peso_back = 0.0;
     double varianza_entre, max_varianza_entre = -1.0;
     double umbral;
@@ -1535,10 +1535,10 @@ double IMGVTK::umbralizarOTSU( const double *img_ptr, const double min, const do
         peso_back += (double)histograma_frecuencias[k];
 
         // Calcular la media del back y fore-ground:
-        suma_back += (double)(histograma_frecuencias[k]*(k+1));
+        background_intensities_sum += (double)(histograma_frecuencias[k]*(k+1));
 
         // Calcular la varianza entre el fore y back ground:
-        varianza_entre = (suma*peso_back - suma_back);
+        varianza_entre = (suma*peso_back - background_intensities_sum);
         varianza_entre *= varianza_entre;
         varianza_entre /= (peso_back*(1.0 - peso_back));
 

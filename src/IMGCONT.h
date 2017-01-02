@@ -41,6 +41,7 @@
 #include <stdio.h>
 
 #include <iostream>
+#include <vector>
 
 #include <omp.h>
 
@@ -138,11 +139,27 @@ public:
 	/** PIX_TYPE: **/
 	typedef enum PIX_TYPE { PIX_SKL, PIX_END, PIX_BRANCH, PIX_CROSS } PIX_TYPE;
 
-	/** THRESHOLD_TYPE: **/
-	typedef enum THRESHOLD_TYPE { TRESH_LEVEL, TRESH_OTSU, TRESH_RIDLER_CALVARD } THRESHOLD_TYPE;
+	/** THRESHOLD_ALG: **/
+	typedef enum THRESHOLD_ALG { THRESH_LEVEL, THRESH_OTSU, THRESH_RIDLER_CALVARD } THRESHOLD_ALG;
 
 	/** CONNECTED_ALG: **/
 	typedef enum CONNECTED_ALG { CONN_DYN, CONN_ITER } CONNECTED_ALG;
+	
+	/** PIX_PAIR:   **/
+	typedef struct PIX_PAIR {
+		double my_pos_x;
+		double my_pos_y;
+		double my_x_r;
+		double my_y_r;
+		double my_radious;
+		double my_angle_alpha;
+		int my_deep_level;
+		int my_n_children;
+		PIX_PAIR *my_children[3];
+		PIX_TYPE my_pix_type;
+	} PIX_PAIR;
+
+
 
 	IMGCONT();
 
@@ -168,9 +185,19 @@ public:
 
 	void lengthFilter(const unsigned int threshold_length, CONNECTED_ALG  my_connected_algorithm = CONN_DYN);
 
+	void regionFill();
+
+	void threshold(const THRESHOLD_ALG my_threshold_alg = THRESH_LEVEL, const double threshold_value = 0.5);
+
+	double * getDistancesMap();
+	double * getBoundaries();
+	double * getSkeleton();
+	PIX_PAIR * getSkeletonFeatures();
+	int getSkeletonFeaturesDeep();
+
 	/*----------------------------------------------------------------------------- PUBLIC ^ ------------- */
 
-protected:
+private:
 	/*----------------------------------------------------------------------------- PROTECTED v ---------- */
 
 
@@ -178,7 +205,11 @@ protected:
 	unsigned int my_width;        /* Width of the image */
 
 	/************************************************************************/
-	double *my_img_data;          /* The array where the image is contained */
+	double * my_img_data;          /* The array where the image is contained */
+	double * my_FOV_mask;
+	double * my_dist_map;
+	double * my_boundaries;
+	double * my_skeleton;
 	/************************************************************************/
 
 	/* DICOM extracted information */
@@ -186,8 +217,10 @@ protected:
 	double LAORAO, CRACAU;
 	double WCenter, WWidth;
 	double pixX, pixY, cenX, cenY;
-
-	double * my_FOV_mask;
+	
+	int my_max_distance;
+	int my_skeleton_graph_deep;
+	PIX_PAIR * my_skeleton_features;
 
 	void writeLog(const char *message);
 
@@ -205,11 +238,35 @@ protected:
 
 	void lengthFilter(double * img_ptr, const unsigned int threshold_length, CONNECTED_ALG my_connected_algorithm = CONN_ITER);
 
-	inline unsigned char erosionMask(double * ptr_tmp, const int x, const int y);
+	inline unsigned char erosionMask(double * erode_ptr, const int pos_x, const int pos_y);
 	void erode(double * img_src);
+	
+	inline unsigned char dilMask(double * mask_dil_ptr, const unsigned int pos_x, const unsigned int pos_y);
+	void fillMask();
 
 	void computeMaskFOV();
 	void computeMask();
+
+
+	void computeDistancesMap();
+	void computeBoundaries();
+
+	bool regionFilling9(const unsigned int pos_x, const unsigned int pos_y);
+	bool regionFilling7(const unsigned int pos_x, const unsigned int pos_y);
+	bool regionFilling5(const unsigned int pos_x, const unsigned int pos_y);
+	bool regionFilling3(const unsigned int pos_x, const unsigned int pos_y);
+
+	double threshold_by_Otsu(const double *img_ptr, const double min, const double max);
+	double threshold_by_Ridler_and_Calvard(const double min_intensity, const double max_intensity);
+
+	PIX_PAIR * computeSkeletonGraph(double * skl_tmp, const unsigned int pos_x, const unsigned int pos_y, int *nivel, const unsigned char *lutabla, bool *was_visited);
+
+	void deleteSkeletonGraph(PIX_PAIR *graph_root);
+
+	void extractSkeletonFeatures();
+
+	inline unsigned char sklMask(double * skl_temp, const unsigned int pos_x, const unsigned int pos_y);
+	void computeSkeleton();
 	/*----------------------------------------------------------------------------- PROTECTED ^ ---------- */
 };
 
