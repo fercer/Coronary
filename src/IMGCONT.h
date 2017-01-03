@@ -159,8 +159,6 @@ public:
 		PIX_TYPE my_pix_type;
 	} PIX_PAIR;
 
-
-
 	IMGCONT();
 
 	IMGCONT(const unsigned int new_height, const unsigned int new_width, const double init_val = 0.0);
@@ -173,6 +171,7 @@ public:
 	IMGCONT & operator=(const IMGCONT & img_src);
 	
 	void Load(const char * src_path, const unsigned int level = 0);
+
 	void Save(const char * out_path, const IMG_TYPE output_type = IMGPGM);
 
 	double getPix(const unsigned int row_y, const unsigned int col_x);
@@ -189,11 +188,13 @@ public:
 
 	void threshold(const THRESHOLD_ALG my_threshold_alg = THRESH_LEVEL, const double threshold_value = 0.5);
 
+	double * getMask();
 	double * getDistancesMap();
 	double * getBoundaries();
 	double * getSkeleton();
 	PIX_PAIR * getSkeletonFeatures();
 	int getSkeletonFeaturesDeep();
+
 
 	/*----------------------------------------------------------------------------- PUBLIC ^ ------------- */
 
@@ -256,7 +257,7 @@ private:
 	bool regionFilling5(const unsigned int pos_x, const unsigned int pos_y);
 	bool regionFilling3(const unsigned int pos_x, const unsigned int pos_y);
 
-	double threshold_by_Otsu(const double *img_ptr, const double min, const double max);
+	double threshold_by_Otsu(const double min, const double max);
 	double threshold_by_Ridler_and_Calvard(const double min_intensity, const double max_intensity);
 
 	PIX_PAIR * computeSkeletonGraph(double * skl_tmp, const unsigned int pos_x, const unsigned int pos_y, int *nivel, const unsigned char *lutabla, bool *was_visited);

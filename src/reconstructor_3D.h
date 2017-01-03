@@ -114,7 +114,7 @@
 #include <omp.h>
 
 #include "args_fercer.h"
-#include "IMGVTK.h"
+#include "IMGCONT.h"
 #include "filtros.h"
 
 
@@ -123,9 +123,12 @@
 
 // C L A S E: RECONS3D  ------------------------------------------------------------------------ v
 class RECONS3D{
+	public:
+	typedef enum IMG_IDX { IMG_BASE, IMG_GROUNDTRUTH, IMG_MASK, IMG_BOUNDARIES, IMG_DIST_MAP, IMG_THRESHOLD, IMG_RESPONSE, IMG_SKELETON }IMG_IDX;
 
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
     // T I P O S        D E     D A T O S       Y       E S T R U C T U R A S       P R I V A D A S
+
         // POS define la estructura para almacenar la posicion del artefacto que emula el detector.
         typedef struct POS {
             double puntos[5][3];
@@ -137,9 +140,114 @@ class RECONS3D{
 			double origen[3]; // El cenntro de la imagen.
 		} NORCEN;
 
+		/* IMGCONT_NODE */
+		typedef struct IMGCONT_NODE {
+			IMGCONT *my_img_container;
+			IMGCONT_NODE *my_next_node;
+			IMGCONT_NODE *my_previous_node;
+		} IMGCONT_NODE;
+
+		/* IMGCONT_LIST */
+		typedef struct IMGCONT_LIST {
+			unsigned int my_nodes_count;
+			IMGCONT_NODE *my_first_node;
+			IMGCONT_NODE *my_last_node;
+		} IMGCONT_LIST;
+
+		/* IMGCONT_FEAT_SET */
+		typedef struct IMGCONT_FEAT_SET {
+			IMGCONT *my_base_ptr;
+			IMGCONT *my_groundtruth_ptr;
+			IMGCONT *my_mask_ptr;
+			IMGCONT *my_response_ptr;
+			IMGCONT *my_response_threshold_ptr;
+			IMGCONT *my_thrs_response_map_dists_ptr;
+			IMGCONT *my_thrs_response_skeleton_ptr;
+			IMGCONT *my_thrs_response_boundaries_ptr;
+
+			IMGCONT_FEAT_SET() {
+				my_base_ptr = NULL;
+				my_groundtruth_ptr = NULL;
+				my_mask_ptr = NULL;
+				my_response_ptr = NULL;
+				my_response_threshold_ptr = NULL;
+				my_thrs_response_map_dists_ptr = NULL;
+				my_thrs_response_skeleton_ptr = NULL;
+				my_thrs_response_boundaries_ptr = NULL;
+			}
+
+			IMGCONT_FEAT_SET(const IMGCONT_FEAT_SET & src_feat_set) {
+				my_base_ptr = src_feat_set.my_base_ptr;
+				my_groundtruth_ptr = src_feat_set.my_groundtruth_ptr;
+				my_mask_ptr = src_feat_set.my_mask_ptr;
+				my_response_ptr = src_feat_set.my_response_ptr;
+				my_response_threshold_ptr = src_feat_set.my_response_threshold_ptr;
+				my_thrs_response_map_dists_ptr = src_feat_set.my_thrs_response_map_dists_ptr;
+				my_thrs_response_skeleton_ptr = src_feat_set.my_thrs_response_skeleton_ptr;
+				my_thrs_response_boundaries_ptr = src_feat_set.my_thrs_response_boundaries_ptr;
+			}
+
+			IMGCONT_FEAT_SET & operator= (const IMGCONT_FEAT_SET & src_feat_set) {
+				my_base_ptr = src_feat_set.my_base_ptr;
+				my_groundtruth_ptr = src_feat_set.my_groundtruth_ptr;
+				my_mask_ptr = src_feat_set.my_mask_ptr;
+				my_response_ptr = src_feat_set.my_response_ptr;
+				my_response_threshold_ptr = src_feat_set.my_response_threshold_ptr;
+				my_thrs_response_map_dists_ptr = src_feat_set.my_thrs_response_map_dists_ptr;
+				my_thrs_response_skeleton_ptr = src_feat_set.my_thrs_response_skeleton_ptr;
+				my_thrs_response_boundaries_ptr = src_feat_set.my_thrs_response_boundaries_ptr;
+			}
+
+
+			~IMGCONT_FEAT_SET() {
+				if (my_base_ptr) {
+					delete my_base_ptr;
+				}
+
+				if (my_groundtruth_ptr) {
+					delete my_groundtruth_ptr;
+				}
+
+				if (my_mask_ptr) {
+					delete my_mask_ptr;
+				}
+
+				if (my_response_ptr) {
+					delete my_response_ptr;
+				}
+
+				if (my_response_threshold_ptr) {
+					delete my_response_threshold_ptr;
+				}
+
+				if (my_thrs_response_map_dists_ptr) {
+					delete  my_thrs_response_map_dists_ptr;
+				}
+
+				if (my_thrs_response_skeleton_ptr) {
+					delete my_thrs_response_skeleton_ptr;
+				}
+
+				if (my_thrs_response_boundaries_ptr) {
+					delete my_thrs_response_boundaries_ptr;
+				}
+			}
+
+		} IMGCONT_FEAT_SET;
+
     // M I E M B R O S      P R I V A D O S
         // Miembros para cargar las imagenes:
-        IMGVTK **imgs_base;	/* Para evitar usar la clase vector */
+        IMGCONT_LIST *imgs_base;
+		IMGCONT_LIST *imgs_groundtruth;
+		IMGCONT_LIST *imgs_mask;
+		IMGCONT_LIST *imgs_response;
+		IMGCONT_LIST *imgs_response_threshold;
+		IMGCONT_LIST *imgs_thrs_response_map_dists;
+		IMGCONT_LIST *imgs_thrs_response_skeleton;
+		IMGCONT_LIST *imgs_thrs_response_boundaries;
+
+		std::vector< IMGCONT_FEAT_SET > my_img_features_ptr;
+
         std::vector< bool > existe_ground;
 
         int n_angios;
@@ -166,6 +274,8 @@ class RECONS3D{
 #endif
 
     // M E T O D O S       P R I V A D O S
+		IMGCONT * getIMGCONTPointer(const IMG_IDX my_img_idx, const unsigned int angios_ID);
+
         void escribirLog( const char *mensaje );
         void barraProgreso( const int avance, const int milestones );
 
@@ -186,7 +296,7 @@ class RECONS3D{
         void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> cilindros, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros);
         void mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<vtkCellArray> vert_skl, vtkSmartPointer<vtkUnsignedCharArray> grafo_nivel, int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int n_niveles);
 #endif
-        void mostrarRadios(int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros);
+        void mostrarRadios(int *n_pix, IMGCONT::PIX_PAIR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros);
 
     //-------------------------------------------------------------------------------------- PRIVATE ----- ^
 
@@ -211,7 +321,7 @@ class RECONS3D{
         void segmentarImagenBase(const int angios_ID );
         double medirExactitud(const int angios_ID);
 
-        void clasAnchos( IMGVTK::PIX_PAR *grafo, const int angios_ID);
+		void clasAnchos(IMGCONT::PIX_PAIR *my_graph_root, const int angios_ID);
 
         void skeletonize(const int angios_ID);
         void skeletonize(const int angios_ID, const int nivel_detalle);
@@ -230,7 +340,7 @@ class RECONS3D{
         void setFiltroParametros( const FILTROS::PARAMETRO par, const double val );
         void setFiltroParametros();
 
-        void Guardar(const char *ruta, IMGVTK::IMG_IDX img_idx, IMGVTK::TIPO_IMG tipo_img, const int angios_ID);
+        void Guardar(const char *ruta, IMG_IDX img_idx, IMGCONT::IMG_TYPE tipo_img, const int angios_ID);
 
         double getHist_desvest(const int angios_ID);
         double getHist_media(const int angios_ID);
@@ -238,7 +348,7 @@ class RECONS3D{
         int getRows( const int angios_ID );
         int getCols( const int angios_ID );
         int getNangios();
-        double *get_pixelData( const int angios_ID, IMGVTK::IMG_IDX img_idx );
+        double *get_pixelData( const int angios_ID, IMG_IDX img_idx );
 
 #ifdef BUILD_VTK_VERSION
         vtkRenderWindow *getHist(const int angios_ID);
@@ -258,8 +368,8 @@ class RECONS3D{
         void setFiltroProgressBar( QProgressBar *pBar );
 #endif
 
-        void umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angios_ID);
-        void lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angios_ID);
+        void umbralizar(const IMGCONT::THRESHOLD_ALG tipo_umb, const double nivel, const int angios_ID);
+        void lengthFilter(IMG_IDX my_img_idx, const int min_length, const int angios_ID);
 	
     // O P E R A D O R E S  S O B R E C A R G A D O S
     //--------------------------------------------------------------------------------------- PUBLIC ----- ^

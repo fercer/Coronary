@@ -1280,7 +1280,7 @@ inline unsigned char IMGCONT::dilMask(double * mask_dil_ptr, const unsigned int 
 void IMGCONT::fillMask()
 {
 	PIX_PAIR par_tmp;
-	par_tmp.pix_type = PIX_CROSS;
+	par_tmp.my_pix_type = PIX_CROSS;
 
 	double * fill_temp = new double[(my_height + 2) * (my_width + 2)];
 
@@ -1293,8 +1293,8 @@ void IMGCONT::fillMask()
 			for (unsigned int x = 0; x < my_width; x++) {
 				if (*(fill_temp + (x + 1) + (y + 1)*(my_width + 2)) < 1.0) {
 					if (dilMask(fill_temp, x + 1, y + 1) > 0) {
-						par_tmp.x = x;
-						par_tmp.y = y;
+						par_tmp.my_pos_x = x;
+						par_tmp.my_pos_y = y;
 						boundaries.push_back(par_tmp);
 					}
 				}
@@ -1310,8 +1310,8 @@ void IMGCONT::fillMask()
 
 		/* For each pixel in the boundary, its value in the FOV mask is defined as the average intensity of an 21x21 mask */
 		for (int b = 0; b < n_pixels_in_boundary; b++) {
-			const int curr_x = (int)boundaries[b].x;
-			const int curr_y = (int)boundaries[b].y;
+			const int curr_x = (int)boundaries[b].my_pos_x;
+			const int curr_y = (int)boundaries[b].my_pos_y;
 
 			const int offset_x_left = (curr_x < 10) ?
 				0 : (curr_x - 10);
@@ -1534,7 +1534,7 @@ IMGCONT::PIX_PAIR * IMGCONT::computeSkeletonGraph(double * skl_temp, const unsig
 	}
 
 	/* Check the final status of the current pixel: */
-	switch( pix_feratures_temp->n_hijos ){
+	switch( pix_feratures_temp->my_n_children ){
 		case 0: pix_feratures_temp->my_pix_type = PIX_END;
 				break;
 		case 1: pix_feratures_temp->my_pix_type = PIX_SKL;
@@ -1846,7 +1846,7 @@ int IMGCONT::getSkeletonFeaturesDeep()
 
 
 /************************************************************************************************************
-* IMGCONT::PRIVATE                                                                                          *
+* IMGCONT::PUBLIC                                                                                           *
 *                                                                                                           *
 * FUNCTION NAME: computeMask                                                                                *
 *                                                                                                           *
@@ -1875,6 +1875,34 @@ void IMGCONT::computeMask()
 
 
 /************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
+* FUNCTION NAME: getMask                                                                                    *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* --------                  ------------               -   ------------------------------------------       *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* A pointer to the FOV mask of the image data.                                                              *
+*                                                                                                           *
+************************************************************************************************************/
+double * IMGCONT::getMask()
+{
+	if (!my_FOV_mask) {
+		computeMask();
+	}
+
+	return my_FOV_mask;
+}
+
+
+
+
+
+
+
+/************************************************************************************************************
 * IMGCONT::PRIVATE                                                                                          *
 *                                                                                                           *
 * FUNCTION NAME: threshold_by_Otsu                                                                          *
@@ -1888,7 +1916,7 @@ void IMGCONT::computeMask()
 * The threshold value estimated by the Otsu's thresholding method.                                          *
 *                                                                                                           *
 ************************************************************************************************************/
-double IMGCONT::threshold_by_Otsu( const double *img_ptr, const double min, const double max)
+double IMGCONT::threshold_by_Otsu(const double min, const double max)
 {
     const int n_classes = 256;
     double * freq_histogram = new double[n_classes];
@@ -1899,7 +1927,7 @@ double IMGCONT::threshold_by_Otsu( const double *img_ptr, const double min, cons
     const double fraction = 1.0 / (double)(my_height * my_width);
 
     for( int xy = 0; xy < my_height * my_width; xy ++){
-        const int class_i = (int)((n_classes-1) * (*(img_ptr + xy) - min)/(max - min + 1e-12));
+        const int class_i = (int)((n_classes-1) * (*(my_img_data + xy) - min)/(max - min + 1e-12));
         freq_histogram[class_i] += fraction;
         intensities_sum += (double)(class_i +1);
     }

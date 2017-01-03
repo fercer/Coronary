@@ -14,6 +14,44 @@
 //------------------------------------------------------------------------------------------------ PRIVATE ----- v
 // M E T O D O S       P R I V A D O S
 
+
+/************************************************************************************************************
+* RECONS3D::PRIVATE                                                                                         *
+*                                                                                                           *
+* FUNCTION NAME: getIMGCONTPointer                                                                          *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* my_img_id                 const IMG_IDX              I   The image identificator to return its pointer.   *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The image container pointer                                                                               *
+*                                                                                                           *
+************************************************************************************************************/
+IMGCONT * RECONS3D::getIMGCONTPointer(const IMG_IDX my_img_idx, const unsigned int angios_ID)
+{
+	switch (my_img_idx) {
+	case IMG_BASE:
+		return my_img_features_ptr[angios_ID].my_base_ptr;
+	case IMG_BOUNDARIES:
+		return my_img_features_ptr[angios_ID].my_thrs_response_boundaries_ptr;
+	case IMG_DIST_MAP:
+		return my_img_features_ptr[angios_ID].my_thrs_response_map_dists_ptr;
+	case IMG_GROUNDTRUTH:
+		return my_img_features_ptr[angios_ID].my_groundtruth_ptr;
+	case IMG_MASK:
+		return my_img_features_ptr[angios_ID].my_mask_ptr;
+	case IMG_RESPONSE:
+		return my_img_features_ptr[angios_ID].my_response_ptr;
+	case IMG_SKELETON:
+		return my_img_features_ptr[angios_ID].my_thrs_response_skeleton_ptr;
+	case IMG_THRESHOLD:
+		return my_img_features_ptr[angios_ID].my_response_threshold_ptr;
+	}
+}
+
+
+
 /*  Metodo: escribirLog
 
     Funcion: Escribe un mensaje en el log.
@@ -639,9 +677,9 @@ const int mis_cols = (*(imgs_base + angios_ID))->cols;
 //-------------------------------------------------------------------------------------------------- PUBLIC----- v
 
 // M I E M B R O S      P U B L I C O S
-void RECONS3D::lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const int angios_ID)
+void RECONS3D::lengthFilter(IMG_IDX my_img_idx, const int min_length, const int angios_ID)
 {
-	(*(imgs_base + angios_ID))->lengthFilter(img_idx, min_length, IMGVTK::DINAMICO);
+	this->getIMGCONTPointer(my_img_idx, angios_ID)->lengthFilter(min_length);
 }
 
 
@@ -654,6 +692,7 @@ void RECONS3D::lengthFilter(IMGVTK::IMG_IDX img_idx, const int min_length, const
 */
 double RECONS3D::medirExactitud(const int angios_ID)
 {
+	/*
     DEB_MSG("midiendo exactitud ...");
 
     double acc = (*(imgs_base + angios_ID))->medirExactitud();
@@ -667,6 +706,8 @@ double RECONS3D::medirExactitud(const int angios_ID)
     escribirLog(mensaje);
 
     return acc;
+	*/
+	return 0.0;
 }
 
 
@@ -688,90 +729,47 @@ int RECONS3D::getNangios(){
     Funcion: Define las rutas de las imagenes que son usadas para reconstruir una arteria coronaria.
 */
 void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const int nivel_u, const char *rutaground_input, bool enmascarar) {
-	DEB_MSG("Ruta ground: " << rutaground_input);
-
-	if (nivel_u > nivel_l) { // Si hay varios niveles:
-
-		IMGVTK **swap = imgs_base;
-		imgs_base = (IMGVTK**)malloc((n_angios + (nivel_u - nivel_l + 1) + 1) * sizeof(IMGVTK*));
-		if (n_angios > 0) {
-			memcpy(imgs_base, swap, n_angios * sizeof(IMGVTK*));
-		}
-		if (swap) {
-			free(swap);
-		}
-
-		for (int i = nivel_l; i <= nivel_u; i++) {
-			n_angios++;
-
-			*(imgs_base + n_angios) = new IMGVTK(rutabase_input, enmascarar, i);
-			existe_ground.push_back(false);
-
-#ifdef BUILD_VTK_VERSION
-			NORCEN norcen_temp;
-			mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
-			puntos.push_back(vtkSmartPointer<vtkPoints>::New());
-			pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
-
-			view.push_back(vtkSmartPointer<vtkContextView>::New());
-
-			normal_centros.push_back(norcen_temp);
-			/// Mover el detector a su posicion definida por el archivo DICOM:
-			mallarPuntos(n_angios);
-			isoCentro(n_angios);
-#endif
-			hist.push_back(NULL);
-			h_suma.push_back(0.0);
-			h_media.push_back(0.0);
-			h_desvest.push_back(0.0);
-		}
-
-	}
-	else
-	{
+	for (int curr_level = nivel_l; curr_level <= nivel_u; curr_level++) {
 		n_angios++;
 
-		IMGVTK **swap = imgs_base;
-		imgs_base = (IMGVTK**)malloc((n_angios + 1) * sizeof(IMGVTK*));
-		if (n_angios > 0) {
-			memcpy(imgs_base, swap, n_angios * sizeof(IMGVTK*));
+		IMGCONT_FEAT_SET void_img_features_ptr;
+		my_img_features_ptr.push_back(void_img_features_ptr);
+
+		my_img_features_ptr[n_angios].my_base_ptr = new IMGCONT();
+		my_img_features_ptr[n_angios].my_groundtruth_ptr = new IMGCONT();
+		my_img_features_ptr[n_angios].my_response_ptr = new IMGCONT();
+		my_img_features_ptr[n_angios].my_response_threshold_ptr = new IMGCONT();
+		my_img_features_ptr[n_angios].my_thrs_response_boundaries_ptr = new IMGCONT();
+		my_img_features_ptr[n_angios].my_thrs_response_map_dists_ptr = new IMGCONT();
+		my_img_features_ptr[n_angios].my_thrs_response_skeleton_ptr = new IMGCONT();
+
+
+		/* Load the images from their corresponding paths */
+		my_img_features_ptr[n_angios].my_base_ptr->Load(rutabase_input, curr_level);
+		if (rutaground_input) {
+			my_img_features_ptr[n_angios].my_groundtruth_ptr->Load(rutaground_input);
+			existe_ground.push_back(true);
 		}
-		if (swap) {
-			free(swap);
+		else {
+			existe_ground.push_back(false);
 		}
 
-		*(imgs_base + n_angios) = new IMGVTK(rutabase_input, enmascarar, nivel_l);
-		existe_ground.push_back(false);
-
-#ifdef BUILD_VTK_VERSION
-		NORCEN norcen_temp;
-
-		mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
-		puntos.push_back(vtkSmartPointer<vtkPoints>::New());
-		pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
-		normal_centros.push_back(norcen_temp);
-
-		view.push_back(vtkSmartPointer<vtkContextView>::New());
-
-		/// Mover el detector a su posicion definida por el archivo DICOM:
-		mallarPuntos(n_angios);
-		isoCentro(n_angios);
-#endif
+		if (enmascarar) {
+			my_img_features_ptr[n_angios].my_mask_ptr = new IMGCONT(my_img_features_ptr[n_angios].my_base_ptr->getHeight(),
+				my_img_features_ptr[n_angios].my_base_ptr->getWidth(),
+				my_img_features_ptr[n_angios].my_base_ptr->getMask());
+		}
+		else {
+			my_img_features_ptr[n_angios].my_mask_ptr = new IMGCONT();
+		}
+		
 
 		hist.push_back(NULL);
 		h_suma.push_back(0.0);
 		h_media.push_back(0.0);
 		h_desvest.push_back(0.0);
-
-		if (strcmp(rutaground_input, "NULL")) {
-			DEB_MSG("Abriendo " << rutaground_input << " como ground truth");
-			(*(imgs_base + n_angios))->Cargar(IMGVTK::GROUNDTRUTH, rutaground_input, false, 0);
-			existe_ground[n_angios] = true;
-		}
-
 	}
 
-	//mostrarImagen(IMGVTK::BASE, mis_renderers.at(n_angios), n_angios);
 }
 
 
@@ -784,36 +782,32 @@ void RECONS3D::agregarInput( const char *rutabase_input, bool enmascarar ){
 
     n_angios++;
 
-	DEB_MSG("n_angios:" << n_angios << ", ruta: " << rutabase_input);
 
-	IMGVTK **swap = imgs_base;
-	imgs_base = (IMGVTK**)malloc((n_angios + 1) * sizeof(IMGVTK*));
-	if (n_angios > 0) {
-		memcpy(imgs_base, swap, n_angios * sizeof(IMGVTK*));
+	my_img_features_ptr[n_angios].my_base_ptr = new IMGCONT();
+	my_img_features_ptr[n_angios].my_groundtruth_ptr = new IMGCONT();
+	my_img_features_ptr[n_angios].my_response_ptr = new IMGCONT();
+	my_img_features_ptr[n_angios].my_response_threshold_ptr = new IMGCONT();
+	my_img_features_ptr[n_angios].my_thrs_response_boundaries_ptr = new IMGCONT();
+	my_img_features_ptr[n_angios].my_thrs_response_map_dists_ptr = new IMGCONT();
+	my_img_features_ptr[n_angios].my_thrs_response_skeleton_ptr = new IMGCONT();
+
+
+	/* Load the images from their corresponding paths */
+	my_img_features_ptr[n_angios].my_base_ptr->Load(rutabase_input);
+
+	existe_ground.push_back(false);
+
+	if (enmascarar) {
+		my_img_features_ptr[n_angios].my_mask_ptr = new IMGCONT(my_img_features_ptr[n_angios].my_base_ptr->getHeight(),
+			my_img_features_ptr[n_angios].my_base_ptr->getWidth(),
+			my_img_features_ptr[n_angios].my_base_ptr->getMask());
 	}
-	DEB_MSG("swap ptr: " << swap);
-
-	*(imgs_base + n_angios) = new IMGVTK(rutabase_input, enmascarar, 0);
-	if (swap) {
-		free(swap);
+	else {
+		my_img_features_ptr[n_angios].my_mask_ptr = new IMGCONT(my_img_features_ptr[n_angios].my_base_ptr->getHeight(),
+			my_img_features_ptr[n_angios].my_base_ptr->getWidth(), 1.0);
 	}
-    existe_ground.push_back( false );
 
-#ifdef BUILD_VTK_VERSION
-    NORCEN norcen_temp;
-
-    mis_renderers.push_back(vtkSmartPointer<vtkRenderer>::New());
-    puntos.push_back(vtkSmartPointer<vtkPoints>::New());
-    pixeles.push_back(vtkSmartPointer<vtkCellArray>::New());
-    normal_centros.push_back( norcen_temp );
-
-    view.push_back(vtkSmartPointer<vtkContextView>::New());
-
-    /// Mover el detector a su posicion definida por el archivo DICOM:
-    mallarPuntos(n_angios);
-    isoCentro(n_angios);
-#endif
-
+	
     hist.push_back( NULL );
     h_suma.push_back(0.0);
     h_media.push_back(0.0);
@@ -841,7 +835,8 @@ void RECONS3D::agregarGroundtruth(const char *rutaground_input, const int angios
 #endif
         escribirLog( mensaje );
     }else{
-        (*(imgs_base + angios_ID))->Cargar(IMGVTK::GROUNDTRUTH, rutaground_input, false, 0);
+		my_img_features_ptr[angios_ID].my_groundtruth_ptr->Load(rutaground_input);
+
         existe_ground[ angios_ID ] = true;
     }
 }
@@ -1091,8 +1086,8 @@ void RECONS3D::setFiltroParametros(){
 
     Funcion: Almacena una imagen del reconstructor a la ruta especificada, en formato PNG o PGM.
 */
-void RECONS3D::Guardar(const char *ruta, IMGVTK::IMG_IDX img_idx, IMGVTK::TIPO_IMG tipo_img, const int angios_ID){
-	(*(imgs_base + angios_ID))->Guardar( img_idx, ruta, tipo_img );
+void RECONS3D::Guardar(const char *ruta, IMG_IDX img_idx, IMGCONT::IMG_TYPE tipo_img, const int angios_ID){
+	this->getIMGCONTPointer(img_idx, angios_ID)->Save(ruta, tipo_img);
 }
 
 
@@ -1101,7 +1096,7 @@ void RECONS3D::Guardar(const char *ruta, IMGVTK::IMG_IDX img_idx, IMGVTK::TIPO_I
     Funcion:
 */
 int RECONS3D::getRows( const int angios_ID ){
-	return 0;//imgs_base + angios_ID))->rows;
+	return this->getIMGCONTPointer(IMG_BASE, angios_ID)->getHeight();
 }
 
 
@@ -1111,7 +1106,7 @@ int RECONS3D::getRows( const int angios_ID ){
     Funcion:
 */
 int RECONS3D::getCols( const int angios_ID ){
-	return 0;//imgs_base + angios_ID))->cols;
+	return this->getIMGCONTPointer(IMG_BASE, angios_ID)->getWidth();
 }
 
 
@@ -1121,7 +1116,7 @@ int RECONS3D::getCols( const int angios_ID ){
 
     Funcion: Retorna el apuntador a la informacion de la imagen seleccionada con img_idx
 */
-double* RECONS3D::get_pixelData(const int angios_ID, IMGVTK::IMG_IDX img_idx) {
+double* RECONS3D::get_pixelData(const int angios_ID, IMG_IDX img_idx) {
 	/*
 	double *img_ptr = NULL;
 
@@ -1432,33 +1427,33 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
 
     Funcion: Muestra el radio de cada pixel del esqueleto.
 */
-void RECONS3D::mostrarRadios(int *n_pix, IMGVTK::PIX_PAR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros){
+void RECONS3D::mostrarRadios(int *n_pix, IMGCONT::PIX_PAIR *grafo, const double DDP, const double crl, const double srl, const double ccc, const double scc, const int nivel_detalle, FILE *fp_cilindros){
 
-    const double xx = grafo->x;
-    const double yy = grafo->y;
+    const double xx = grafo->my_pos_x;
+    const double yy = grafo->my_pos_y;
 
-    for( int h = 0; h < grafo->n_hijos; h++){
+    for( int h = 0; h < grafo->my_n_children; h++){
 
-        double radio = grafo->radio;
+        double radio = grafo->my_radious;
 
-        IMGVTK::PIX_PAR *sig_hijo = grafo->hijos[h];
+        IMGCONT::PIX_PAIR *sig_hijo = grafo->my_children[h];
         int n_prof = 0;
         while( 1 ){
-            radio += sig_hijo->radio;
+            radio += sig_hijo->my_radious;
             n_prof++;
 
-            if( sig_hijo->pix_tipo != IMGVTK::PIX_SKL || n_prof >= nivel_detalle){
+            if( sig_hijo->my_pix_type != IMGCONT::PIX_SKL || n_prof >= nivel_detalle){
                 break;
             }
 
-            sig_hijo = sig_hijo->hijos[0];
+            sig_hijo = sig_hijo->my_children[0];
         }
 
         /// Promedio de los radios de esta seccion:
         radio /= (double)n_prof;
 
-        double x_fin = sig_hijo->x;
-        double y_fin = sig_hijo->y;
+        double x_fin = sig_hijo->my_pos_x;
+        double y_fin = sig_hijo->my_pos_y;
         double r_temp;
 
         if( fp_cilindros ){
@@ -1594,19 +1589,19 @@ void RECONS3D::mostrarRadios(vtkSmartPointer<vtkPoints> puntos, vtkSmartPointer<
 /*  Metodo: maxminAnchos
     Funcion: Obtiene el maximo y minimo de los anchos estimados.
 */
-void maxminAnchos( IMGVTK::PIX_PAR *grafo, double *max, double *min){
-    if( (2 * grafo->radio) > *max ){
-        *max = 2 * grafo->radio;
+void maxminAnchos( IMGCONT::PIX_PAIR *grafo, double *max, double *min){
+    if( (2 * grafo->my_radious) > *max ){
+        *max = 2 * grafo->my_radious;
     }
 
 
-    if( (2 * grafo->radio) < *min ){
-        *min = 2 * grafo->radio;
+    if( (2 * grafo->my_radious) < *min ){
+        *min = 2 * grafo->my_radious;
     }
 
 
-    for( int i = 0; i < grafo->n_hijos; i++){
-        maxminAnchos( grafo->hijos[i], max, min );
+    for( int i = 0; i < grafo->my_n_children; i++){
+        maxminAnchos( grafo->my_children[i], max, min );
     }
 }
 
@@ -1616,16 +1611,17 @@ void maxminAnchos( IMGVTK::PIX_PAR *grafo, double *max, double *min){
 /*  Metodo: clasAnchos
     Funcion: Clasifica los anchos en las clases del histograma ( las clases tienen un rango interclase de 0.5's)
 */
-void RECONS3D::clasAnchos(IMGVTK::PIX_PAR *grafo, const int angios_ID){
-    const double ancho = grafo->radio * 2.0;
+void RECONS3D::clasAnchos(IMGCONT::PIX_PAIR *my_graph_root, const int angios_ID){
+    const double ancho = my_graph_root->my_radious * 2.0;
+
     const int clase = (int)floor(ancho);
     const double residuo = ancho - floor(ancho);
     const int clase_med = (residuo >= 0.75 ) ? 2 : ((residuo >= 0.25) ? 1 : 0);
 
     hist[angios_ID][2*clase + clase_med]++;
 
-    for( int i = 0; i < grafo->n_hijos; i++){
-        clasAnchos( grafo->hijos[i], angios_ID );
+    for( int i = 0; i < my_graph_root->my_n_children; i++){
+        clasAnchos(my_graph_root->my_children[i], angios_ID );
     }
 
 }
@@ -1981,9 +1977,12 @@ void RECONS3D::setFiltroProgressBar(QProgressBar *pBar){
 
     Funcion: Umbraliza la imagen definida con 'img_idx'
 */
-void RECONS3D::umbralizar(IMGVTK::IMG_IDX img_idx, const IMGVTK::TIPO_UMBRAL tipo_umb, const double nivel, const int angios_ID)
+void RECONS3D::umbralizar(const IMGCONT::THRESHOLD_ALG tipo_umb, const double nivel, const int angios_ID)
 {
-	(*(imgs_base + angios_ID))->umbralizar(img_idx, tipo_umb, nivel);
+	IMGCONT *responses_threshold_temp = this->getIMGCONTPointer(IMG_THRESHOLD, angios_ID);
+	*responses_threshold_temp = *this->getIMGCONTPointer(IMG_RESPONSE, angios_ID);
+
+	responses_threshold_temp->threshold(tipo_umb, nivel);
 }
 
 
@@ -2009,7 +2008,46 @@ RECONS3D::RECONS3D(){
     mi_pBar = NULL;
 #endif
 
-	imgs_base = NULL;
+	imgs_base = new IMGCONT_LIST;
+	imgs_base->my_first_node = NULL;
+	imgs_base->my_last_node = NULL;
+	imgs_base->my_nodes_count = 0;
+
+	imgs_groundtruth = new IMGCONT_LIST;
+	imgs_groundtruth->my_first_node = NULL;
+	imgs_groundtruth->my_last_node = NULL;
+	imgs_groundtruth->my_nodes_count = 0;
+
+	imgs_mask = new IMGCONT_LIST;
+	imgs_mask->my_first_node = NULL;
+	imgs_mask->my_last_node = NULL;
+	imgs_mask->my_nodes_count = 0;
+
+	imgs_response = new IMGCONT_LIST;
+	imgs_response->my_first_node = NULL;
+	imgs_response->my_last_node = NULL;
+	imgs_response->my_nodes_count = 0;
+
+	imgs_response_threshold = new IMGCONT_LIST;
+	imgs_response_threshold->my_first_node = NULL;
+	imgs_response_threshold->my_last_node = NULL;
+	imgs_response_threshold->my_nodes_count = 0;
+
+	imgs_thrs_response_map_dists = new IMGCONT_LIST;
+	imgs_thrs_response_map_dists->my_first_node = NULL;
+	imgs_thrs_response_map_dists->my_last_node = NULL;
+	imgs_thrs_response_map_dists->my_nodes_count = 0;
+
+	imgs_thrs_response_skeleton = new IMGCONT_LIST;
+	imgs_thrs_response_skeleton->my_first_node = NULL;
+	imgs_thrs_response_skeleton->my_last_node = NULL;
+	imgs_thrs_response_skeleton->my_nodes_count = 0;
+
+	imgs_thrs_response_boundaries = new IMGCONT_LIST;
+	imgs_thrs_response_boundaries->my_first_node = NULL;
+	imgs_thrs_response_boundaries->my_last_node = NULL;
+	imgs_thrs_response_boundaries->my_nodes_count = 0;
+	
     n_angios = -1;
 }
 
@@ -2051,7 +2089,49 @@ RECONS3D::RECONS3D(ARGUMENTS *input_arguments)
 	mi_pBar = NULL;
 #endif
 
-	imgs_base = NULL;
+
+	imgs_base = new IMGCONT_LIST;
+	imgs_base->my_first_node = NULL;
+	imgs_base->my_last_node = NULL;
+	imgs_base->my_nodes_count = 0;
+	
+	imgs_groundtruth = new IMGCONT_LIST;
+	imgs_groundtruth->my_first_node = NULL;
+	imgs_groundtruth->my_last_node = NULL;
+	imgs_groundtruth->my_nodes_count = 0;
+	
+	imgs_mask = new IMGCONT_LIST;
+	imgs_mask->my_first_node = NULL;
+	imgs_mask->my_last_node = NULL;
+	imgs_mask->my_nodes_count = 0;
+
+
+	imgs_response = new IMGCONT_LIST;
+	imgs_response->my_first_node = NULL;
+	imgs_response->my_last_node = NULL;
+	imgs_response->my_nodes_count = 0;
+
+	imgs_response_threshold = new IMGCONT_LIST;
+	imgs_response_threshold->my_first_node = NULL;
+	imgs_response_threshold->my_last_node = NULL;
+	imgs_response_threshold->my_nodes_count = 0;
+
+	imgs_thrs_response_map_dists = new IMGCONT_LIST;
+	imgs_thrs_response_map_dists->my_first_node = NULL;
+	imgs_thrs_response_map_dists->my_last_node = NULL;
+	imgs_thrs_response_map_dists->my_nodes_count = 0;
+
+	imgs_thrs_response_skeleton = new IMGCONT_LIST;
+	imgs_thrs_response_skeleton->my_first_node = NULL;
+	imgs_thrs_response_skeleton->my_last_node = NULL;
+	imgs_thrs_response_skeleton->my_nodes_count = 0;
+
+	imgs_thrs_response_boundaries = new IMGCONT_LIST;
+	imgs_thrs_response_boundaries->my_first_node = NULL;
+	imgs_thrs_response_boundaries->my_last_node = NULL;
+	imgs_thrs_response_boundaries->my_nodes_count = 0;
+
+
 	n_angios = -1;
 }
 
@@ -2065,14 +2145,7 @@ RECONS3D::~RECONS3D() {
 		fclose(fp_log);
 		fp_log = NULL;
 	}
-
-	if (n_angios >= 0) {
-		for (int i = 0; i <= n_angios; i++) {
-			delete *(imgs_base);
-		}
-		free(imgs_base);
-	}
-
+	
     for( std::vector<int*>::iterator it = hist.begin(); it != hist.end(); it++){
         if( *it ){
             delete *it;

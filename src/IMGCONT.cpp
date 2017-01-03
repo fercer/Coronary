@@ -29,7 +29,6 @@
 * --------                  ----                       -   ----                                             *
 *                                                                                                           *
 ************************************************************************************************************/
-
 IMGCONT::IMGCONT()
 {
 	my_height = 0;
@@ -52,7 +51,7 @@ IMGCONT::IMGCONT()
 * init_val                  const double               I   The initial value in the whole image             *
 *                                                                                                           *
 ************************************************************************************************************/
-IMGCONT::IMGCONT(const unsigned int new_height, const unsigned int new_width, const double init_val = 0.0)
+IMGCONT::IMGCONT(const unsigned int new_height, const unsigned int new_width, const double init_val)
 {
 	my_height = new_height;
 	my_width = new_width;
@@ -162,9 +161,6 @@ IMGCONT & IMGCONT::operator= (const IMGCONT & img_src)
 		free(my_img_data);
 	}
 
-	if (my_img_data) {
-		free(my_img_data);
-	}
 	my_img_data = (double*)malloc(my_height * my_width * sizeof(double));
 	memcpy(my_img_data, img_src.my_img_data, my_height * my_width * sizeof(double));
 
@@ -290,7 +286,7 @@ int IMGCONT::LoadPGM(const char *src_path, const unsigned int level)
 	IMGCONT new_img(height, width);
 
 	int read_intensity;
-	for (int xy = 0; xy < (height* width); xy++) {
+	for (unsigned int xy = 0; xy < (height* width); xy++) {
 #if defined(_WIN32) || defined(_WIN64)
 		fscanf_s(img_file, "%i", &read_intensity);
 #else
@@ -739,10 +735,10 @@ void IMGCONT::Save(const char * out_path, const IMG_TYPE output_type)
 	double my_min = MY_INF;
 	double my_max = -MY_INF;
 
-	for (int y = 0; y < my_height; y++) {
-		for (int x = 0; x < my_width; x++) {
+	for (unsigned int y = 0; y < my_height; y++) {
+		for (unsigned int x = 0; x < my_width; x++) {
 			if (my_min > *(my_img_data + x + y*my_width)) {
-				my_min = *(my_img_data + x + y*my__width);
+				my_min = *(my_img_data + x + y*my_width);
 			}
 			if (my_max < *(my_img_data + x + y*my_width)) {
 				my_max = *(my_img_data + x + y*my_width);

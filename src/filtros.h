@@ -37,7 +37,7 @@
 //#include <vtkImageData.h>
 
 #include "args_fercer.h"
-#include "IMGVTK.h"
+#include "IMGCONT.h"
 
 
 // C L A S E: FILTRO  ---------------------------------------------------------------------------------------------- v
@@ -70,7 +70,7 @@ class FILTROS{
         void setFiltro( const SEG_FILTRO seg_fil);
         void setFitness( const FITNESS fit_fun);
 
-		void setInput(IMGVTK * img_org, const int input_ini, const int input_end);
+		void setInput(IMGCONT * img_org, const int input_ini, const int input_end);
 
 		void setPar();
         void setPar( const PARAMETRO par, const double val);

@@ -53,7 +53,7 @@ int main(int argc, char** argv ){
 		mi_reconstructor.agregarInput(parametros.getArgumentCHAR("-b"),parametros.getArgumentINT("-bl"), parametros.getArgumentINT("-bu"), parametros.getArgumentCHAR("-g"), false);
 
 		DEB_MSG("Saving image...");
-		mi_reconstructor.Guardar("img.pgm", IMGVTK::BASE, IMGVTK::PGM, 0);
+		mi_reconstructor.Guardar("img.pgm", RECONS3D::IMG_BASE, IMGCONT::IMGPGM, 0);
 	}
 
 	if ((strcmp(parametros.getArgumentCHAR("-dsb"), "NULL") != 0) &&

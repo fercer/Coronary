@@ -269,7 +269,7 @@ FILTROS::~FILTROS(){
 /*  Metodo: setInputOriginal
     Funcion: Establece las imagenes origen yu ground truth.
 */
-void FILTROS::setInput( IMGVTK *img_org, const int input_ini, const int input_end){
+void FILTROS::setInput( IMGCONT *img_org, const int input_ini, const int input_end){
 	/*
 	n_imgs = input_end - input_ini + 1;
 
