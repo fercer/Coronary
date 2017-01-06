@@ -1197,34 +1197,6 @@ void RECONS3D::setFiltroLog(QTextEdit *txtLog)
 
 
 
-/*  Metodo: segmentarImagenBase
-
-    Funcion: Aplica el filtro con los parametros definidos
-*/
-void RECONS3D::segmentarImagenBase( const int angios_ID ){
-
-    filtro.setInput(*(imgs_base + angios_ID), angios_ID, angios_ID);
-
-    if( filtro.getParametrosOptimizar() > 0 ){
-
-        DEB_MSG("Comenzando entrenamiento de parametros ...");
-
-        filtro.setPar();
-    }
-
-    TIMERS;
-    GETTIME_INI;
-    filtro.filtrar();
-    GETTIME_FIN;
-    char mensaje[512] = "XXX.XXXXXXXX\n";
-#if defined(_WIN32) || defined(_WIN64)
-	sprintf_s(mensaje, 512 *sizeof(char), "%3.8f\n", DIFTIME);
-#else
-    sprintf(mensaje, "%3.8f\n", DIFTIME);
-#endif
-    escribirLog( mensaje );
-}
-
 
 
 /*  Metodo: mostrarRadios

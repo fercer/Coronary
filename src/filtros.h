@@ -27,6 +27,7 @@
 #include <omp.h>
 
 #include <iostream>
+#include <vector>
 
 #ifdef BUILD_GUI_VERSION
     #include <QPlainTextEdit>
@@ -37,179 +38,88 @@
 //#include <vtkImageData.h>
 
 #include "args_fercer.h"
-#include "IMGCONT.h"
+#include "reconstructor_3D.h"
+
+
+#ifndef MY_PI
+#define Mi_PI 3.1415926535897932384626433832795
+#endif
+
 
 
 // C L A S E: FILTRO  ---------------------------------------------------------------------------------------------- v
-class FILTROS{
-    public: //----------------------------------------------------------------------------- PUBLIC ------- v
-        // T I P O S        D E     D A T O S      P U B L I C O S
-        typedef enum LIMITES { INFERIOR, SUPERIOR, DELTA } LIMITES;
-        typedef enum SEG_FILTRO { SEG_UNSET, GMF, SS_GABOR } SEG_FILTRO;
-        typedef enum EVO_MET { EVO_UNSET, EXHAUSTIVA, EDA_BUMDA, EDA_UMDA, EA_DE, EA_GA } EVO_MET;
-        typedef enum EVO_MET_PAR { POPSIZE, MAXGEN, CR, MR} EVO_MET_PAR;
-        typedef enum FITNESS { FIT_UNSET, ROC, CORCON } FITNESS;
-        typedef enum PARAMETRO { PAR_L, PAR_T, PAR_K, PAR_SIGMA } PARAMETRO;
+class FILTROS {
 
-        /** INDIV:	Define la estructura que contiene los atributos del individuo, y el valor de la funcion para este.  **/
-        typedef struct INDIV {
-            double eval;
-            double vars[4]; // 1: L, 2: T, 3: K, 4: sigma
-            unsigned char cadena[128];
-        } INDIV;
+public: //----------------------------------------------------------------------------- PUBLIC ------- v
+	typedef enum SEG_FILTER { SEG_UNSET, GMF, SS_GABOR } SEG_FILTER;
 
-        typedef double (*FITNESS_PTR)( FILTROS::INDIV *test );
+	FILTROS();
+	~FILTROS();
 
-        // M E T O D O S      P U B L I C O S
-        FILTROS();
-        ~FILTROS();
+	void setFilterMethod(const SEG_FILTER new_filtering_method);
 
-        void setEvoMet( const EVO_MET evo_met);
-        void setEvoMetPar( const EVO_MET_PAR evo_par, const double val);
+	void filtrar();
 
-        void setFiltro( const SEG_FILTRO seg_fil);
-        void setFitness( const FITNESS fit_fun);
-
-		void setInput(IMGCONT * img_org, const int input_ini, const int input_end);
-
-		void setPar();
-        void setPar( const PARAMETRO par, const double val);
-        INDIV getPars();
-        int getParametrosOptimizar();
-
-        void setLim(const PARAMETRO par, const LIMITES lim, const double val);
-
-        void filtrar();
-
-        void setLog( FILE *fplog );
-        void setLog(const char *ruta_log);
+	void setLog(FILE *fplog);
+	void setLog(const char *ruta_log);
 
 #ifdef BUILD_GUI_VERSION
-        void setLog( QTextEdit *txtLog );
-        void setProgressBar( QProgressBar *pBar );
+	void setLog(QTextEdit *txtLog);
+	void setProgressBar(QProgressBar *pBar);
 #endif
 
-    private: //----------------------------------------------------------------------------- PRIVATE ----- v
-        // T I P O S        D E     D A T O S      P R I V A D O S
-        /** STAUS:	Define una estructura que almacena las semillas requeridas por el generador de numeros pseudo-aleatorios Hybrid Taus    **/
-        typedef struct STAUS{
-            unsigned int z1, z2, z3;
-        } STAUS;
+	void setInputBase(std::vector<IMGCONT>* new_img_base);
+	void setInputBaseMask(std::vector<IMGCONT>* new_img_base_mask);
+	void setInputGroundtruth(std::vector<IMGCONT>* new_img_groundtruth);
+	void setInputResponse(std::vector<IMGCONT>* new_img_response);
 
-        /** GEN_PNT:	Define el apuntador a funcion generadora de numeros aleatorios. **/
-        typedef double (*GEN_PNT) (const double par1, const double par2);
+	void setParL(const double new_L_value);
+	void setParT(const unsigned int new_T_value);
+	void setParK(const unsigned int new_K_value);
+	void setParSigma(const double new_sigma_value);
 
-        // M E T O D O S      P R I V A D O S
+private:
+	bool input_already_set;
+	bool already_transformed;
 
-        void escribirLog( const char *mensaje );
-        void barraProgreso(const int avance, const int max_progress );
+	fftw_complex **Img_fft;
+	fftw_complex **Img_fft_HPF;
 
-        inline double interpolacion(const double *pix, const int j, const int i, const double x, const double y, const int mis_rens, const int mis_cols);
-        void rotateImg(const double *org, double *rot, const double ctheta, const double stheta, const int mis_rens, const int mis_cols, const int org_rens, const int org_cols);
+	void fftImgOrigen();
 
-        static int compIndiv(const void* A, const void* B);
+	ARGUMENTS *my_args;
+	SEG_FILTER chosen_filter;
 
-        //================================================================================== GENERADORES DE NUMEROS ALEATORIOS:
+	double my_L;
+	unsigned int my_T;
+	unsigned int my_K;
+	double my_sigma;
 
-        STAUS* ini_semilla(unsigned int semilla_i);
-        unsigned int lcg_s();
-        unsigned int lcg_r(unsigned int *mi_semilla);
-        unsigned int tausStep(unsigned int *z, const int S1, const int S2, const int S3, const unsigned int M);
-        double HybTaus(const double par1, const double par2);
+	std::vector< IMGCONT > * my_img_response;
+	std::vector< IMGCONT > * my_img_base;
+	std::vector< IMGCONT > * my_img_groundtruth;
+	std::vector< IMGCONT > * my_img_base_mask;
 
-        double anorm_est();
+	unsigned int my_filters_imgs_count;
 
-        /*	Metodo:        anorm
-            Funcion:: Genera un número aleatorio de la distribución normal con parámetros mu y sigma cuadrada, a partir de la transformación de una variable normal estandar.
-        */
-        double anorm(const double par1, const double par2){
-            return sqrt(par2)*anorm_est() + par1;
-        }
+	inline double interpolacion(const double *pix, const int j, const int i, const double x, const double y, const int mis_rens, const int mis_cols);
 
-        //================================================================================== ALGORITMOS EVOLUTIVOS:
-        //// FUNCIONES DE FITNESS:
-        double fitnessROC(INDIV *test);
-        double fitnessCorCon(INDIV *test);
+	void rotateImg(const double *org, double *rot, const double ctheta, const double stheta, const int mis_rens, const int mis_cols, const int org_rens, const int org_cols);
 
-        void generarPobInicial(INDIV *poblacion);
-        double generarPobInicial(INDIV *poblacion, const double *deltas_var);
+	void respGMF();
+	void respGabor();
 
-        //// ALGORITMOS:
-        //--------------------------------------------------------------------------------------------------------------------------------- BUMDA:
-        void generarPob(double medias[], double varianzas[], INDIV *poblacion);
-        void calcularPars(const INDIV *poblacion, const int truncamiento, double *medias, double *varianzas);
-        int seleccionarPob(double *theta_t, const INDIV *poblacion);
-        void BUMDA();
+	void escribirLog(const char *mensaje);
+	void barraProgreso(const int avance, const int max_progress);
 
-
-        //--------------------------------------------------------------------------------------------------------------------------------- UMDA:
-        void generarPob(INDIV *poblacion, const double *probs, const double *deltas_var);
-        void calcularPars(const INDIV *poblacion, const int n_bits, const int truncamiento, double *probs);
-        void UMDA();
-
-
-        //--------------------------------------------------------------------------------------------------------------------------------- GA:
-        void selecPob(INDIV *sel_grp, const INDIV* poblacion, double *fitness_acum, const double suma_fitness);
-        void cruzaPob(INDIV *cruza, const INDIV *sel_grp, const unsigned int n_bits);
-        double generarPob(INDIV *poblacion, const INDIV *cruza, const INDIV *sel_grp, const double *deltas_var);
-        void GA();
-
-
-        //--------------------------------------------------------------------------------------------------------------------------------- DE:
-        void diferenciarPoblacion( INDIV* poblacion, INDIV* pob_base );
-        void DE();
-
-        //--------------------------------------------------------------------------------------------------------------------------------- Exhaustive Search:
-        void busquedaExhaustiva();
-
-        // M I E M B R O S      P R I V A D O S
-		ARGUMENTS *my_args;
-
-        STAUS *semilla;
-        unsigned int semilla_g;
-
-        bool pars_optim[4]; // Indica cuales parametros se van a optimizar: 1: L, 2: T, 3: K, 4: sigma(GMF), 5: delta del umbralizado(Gabor).
-        unsigned int idx_pars[4], n_pars;
-        SEG_FILTRO filtro_elegido;
-        EVO_MET metodo_elegido;
-        FITNESS fitness_elegido;
-
-        // Parametros para los filtros:
-        INDIV *mi_elite;
-
-        // Entradas comunes:
-        double *resp;
-		double **org;
-		double **dest;
-		double **ground_truth;
-		double **mask;
-
-		int n_imgs;
-        int rows, my_width, rows_cols;
-        int n_pob, max_iters, seleccion;
-        double prob_mutacion, prob_cruza;
-
-        double min_vars[4], lim_inf[4], lim_sup[4];
-
-        char *mi_ruta_log;
-        FILE *mi_fplog;
+	char *mi_ruta_log;
+	FILE *mi_fplog;
 
 #ifdef BUILD_GUI_VERSION
-        QTextEdit *mi_txtLog;
-        QProgressBar *mi_pBar;
+	QTextEdit *mi_txtLog;
+	QProgressBar *mi_pBar;
 #endif
 
-        //================================================================================== FILTROS:
-        void respGMF(INDIV *test);
-        bool transformada;
-        fftw_complex **Img_fft;
-        fftw_complex **Img_fft_HPF;
-        void fftImgOrigen();
-		void respGabor(INDIV * test);
-
-
-        double calcROC();
-		double calcCorCon();
 };
 // C L A S E: FILTROS  ----------------------------------------------------------------------------------------- ^
 

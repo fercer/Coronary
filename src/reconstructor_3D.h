@@ -115,7 +115,6 @@
 
 #include "args_fercer.h"
 #include "IMGCONT.h"
-#include "filtros.h"
 
 
 #define MY_PI 3.14159265
@@ -265,7 +264,6 @@ class RECONS3D{
         std::vector<  vtkSmartPointer<vtkContextView> > view;
 #endif
 		ARGUMENTS *my_args;
-        FILTROS filtro;
         FILE *fp_log;
         
 #ifdef BUILD_GUI_VERSION
@@ -318,7 +316,6 @@ class RECONS3D{
 
         void leerConfiguracion( const char *ruta_conf);
 
-        void segmentarImagenBase(const int angios_ID );
         double medirExactitud(const int angios_ID);
 
 		void clasAnchos(IMGCONT::PIX_PAIR *my_graph_root, const int angios_ID);
