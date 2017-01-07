@@ -179,8 +179,8 @@ public:
 	void setDimensions(const unsigned int new_height, const unsigned int new_width, const double init_val = 0.0);
 
 
-	int getHeight();
-	int getWidth();
+	unsigned int getHeight();
+	unsigned int getWidth();
 
 	void lengthFilter(const unsigned int threshold_length, CONNECTED_ALG  my_connected_algorithm = CONN_DYN);
 

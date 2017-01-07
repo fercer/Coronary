@@ -115,10 +115,11 @@
 
 #include "args_fercer.h"
 #include "IMGCONT.h"
+#include "opti_pars.h"
 
-
-#define MY_PI 3.14159265
-
+#ifndef MY_PI
+#define MY_PI 3.1415926535897932384626433832795
+#endif
 
 // C L A S E: RECONS3D  ------------------------------------------------------------------------ v
 class RECONS3D{
@@ -254,6 +255,8 @@ class RECONS3D{
         std::vector<int*> hist;
         std::vector<double> h_media, h_desvest, h_suma;
 
+		OPTI_PARS my_optimized_parameters;
+
         // Miembros para visualizar la segmentacion 3D:
 #ifdef BUILD_VTK_VERSION
         std::vector< vtkSmartPointer<vtkRenderer> > mis_renderers;
@@ -328,13 +331,13 @@ class RECONS3D{
         void mostrarGroundtruth(  const int angios_ID  );
 #endif
 
-        void setFiltroEntrenamiento(const FILTROS::EVO_MET evo_met);
-        void setFiltroEntrenamientoPars(const FILTROS::EVO_MET_PAR evo_par, const double val);
-        void setFiltroEval( const FILTROS::FITNESS fit_fun);
-        void setFiltroMetodo( const FILTROS::SEG_FILTRO metodo_filtrado);
-
-        void setFiltroParametros( const FILTROS::PARAMETRO par, const FILTROS::LIMITES lim, const double val);
-        void setFiltroParametros( const FILTROS::PARAMETRO par, const double val );
+        void setFiltroEntrenamiento(const OPTI_PARS::EVO_MET evo_met);
+        void setFiltroEntrenamientoPars(const OPTI_PARS::EVO_MET_PAR evo_par, const double val);
+        void setFiltroEval( const OPTI_PARS::FITNESS fit_fun);
+        void setFiltroMetodo( const OPTI_PARS::SEG_FILTER metodo_filtrado);
+		
+        void setFiltroParametros( const OPTI_PARS::PARAMETRO par, const OPTI_PARS::LIMITES lim, const double val);
+        void setFiltroParametros( const OPTI_PARS::PARAMETRO par, const double val );
         void setFiltroParametros();
 
         void Guardar(const char *ruta, IMG_IDX img_idx, IMGCONT::IMG_TYPE tipo_img, const int angios_ID);

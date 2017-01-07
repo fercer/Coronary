@@ -250,7 +250,7 @@ double PERFORMANCE_FUNCTIONS::calcCorCon()
 	const double range = max_resp - min_resp;
 	const double scalar = (double)(levels - 1) / range;
 
-	int *scaled_resp = (int*)malloc(my_performance_imgs_count * (my_img_response->at(i)).getHeight() * (my_img_response->at(i)).getWidth() * sizeof(int));
+	int *scaled_resp = (int*)malloc(my_performance_imgs_count * (my_img_response->at(0)).getHeight() * (my_img_response->at(0)).getWidth() * sizeof(int));
 
 	for (unsigned int i = 0; i < my_performance_imgs_count; i++) {
 		for (unsigned int y = 0; y < (my_img_response->at(i)).getHeight(); y++) {
@@ -265,10 +265,17 @@ double PERFORMANCE_FUNCTIONS::calcCorCon()
 	//// Compute the GLCM matrix using an intensity at 8 levels, for 4 orientations:
 	double *GLCM_mat = (double*)calloc((levels * levels * 4), sizeof(double));
 
-	const double fraction_1 = 1.0 / (double)((my_img_response->at(0)).getWidth() - 1) *   (my_img_response->at(i)).getHeight());
-	const double fraction_2 = 1.0 / (double)(((my_img_response->at(0)).getWidth() - 1) * ((my_img_response->at(i)).getHeight() - 1));
-	const double fraction_3 = 1.0 / (double)((my_img_response->at(0)).getWidth()   * ((my_img_response->at(i)).getHeight() - 1));
-	const double fraction_4 = 1.0 / (double)(((my_img_response->at(0)).getWidth() - 1) * ((my_img_response->at(i)).getHeight() - 1));
+	const double fraction_1 = 1.0 / (double)((my_img_response->at(0)).getWidth() - 1) *
+		((my_img_response->at(0)).getHeight());
+
+	const double fraction_2 = 1.0 / (double)(((my_img_response->at(0)).getWidth() - 1) *
+		((my_img_response->at(0)).getHeight() - 1));
+
+	const double fraction_3 = 1.0 / (double)((my_img_response->at(0)).getWidth()   *
+		((my_img_response->at(0)).getHeight() - 1));
+
+	const double fraction_4 = 1.0 / (double)(((my_img_response->at(0)).getWidth() - 1) *
+		((my_img_response->at(0)).getHeight() - 1));
 
 	double contrast_1 = 0.0, contrast_2 = 0.0, contrast_3 = 0.0, contrast_4 = 0.0;
 
@@ -311,8 +318,8 @@ double PERFORMANCE_FUNCTIONS::calcCorCon()
 
 			}
 			{// SI(x + 1, y - 1)
-				const int i = *(scaled_resp + (x)+(y)*(n_imgs*(my_img_response->at(0)).getWidth()));
-				const int j = *(scaled_resp + (x + 1) + (y - 1)*(n_imgs*(my_img_response->at(0)).getWidth()));
+				const int i = *(scaled_resp + (x)+(y)*(my_performance_imgs_count*(my_img_response->at(0)).getWidth()));
+				const int j = *(scaled_resp + (x + 1) + (y - 1)*(my_performance_imgs_count*(my_img_response->at(0)).getWidth()));
 				*(GLCM_mat + (levels * 4)*i + 4 * j + 1) = *(GLCM_mat + (levels * 4)*i + 4 * j + 1) + fraction_2;
 				contrast_2 += (double)((i - j)*(i - j)) * fraction_2;
 
@@ -496,7 +503,7 @@ void PERFORMANCE_FUNCTIONS::setInputResponse(std::vector<IMGCONT>* new_img_respo
 {
 	my_img_response = new_img_response;
 
-	my_performance_imgs_count = new_img_response->size();
+	my_performance_imgs_count = (unsigned int)new_img_response->size();
 }
 
 
@@ -527,7 +534,7 @@ void PERFORMANCE_FUNCTIONS::setInputThreshold(std::vector<IMGCONT>* new_img_resp
 {
 	my_img_thresholded_response = new_img_response_threshold;
 
-	my_performance_imgs_count = new_img_response_threshold->size();
+	my_performance_imgs_count = (unsigned int)new_img_response_threshold->size();
 }
 
 
@@ -558,7 +565,7 @@ void PERFORMANCE_FUNCTIONS::setInputGroundtruth(std::vector<IMGCONT>* new_img_gr
 {
 	my_img_groundtruth = new_img_groundtruth;
 
-	my_performance_imgs_count = new_img_groundtruth->size();
+	my_performance_imgs_count = (unsigned int)new_img_groundtruth->size();
 }
 
 
@@ -589,5 +596,5 @@ void PERFORMANCE_FUNCTIONS::setInputResponseMask(std::vector<IMGCONT>* new_img_r
 {
 	my_img_response_mask = new_img_response_mask;
 
-	my_performance_imgs_count = new_img_response_mask->size();
+	my_performance_imgs_count = (unsigned int)new_img_response_mask->size();
 }

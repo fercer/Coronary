@@ -132,3 +132,58 @@ double HybTaus(const double par1, const double par2, STAUS *my_seed) {
 		);
 	return (par2 - par1) * num + par1;
 }
+
+
+
+
+
+
+/************************************************************************************************************
+*                                                                                                           *
+* FUNCTION NAME: anorm_est                                                                                  *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT        TYPE                I/O        DESCRIPTION                                                *
+* my_seed         STAUS*              input      The seed used to generate the random number                *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* A random from a normal standard distribution.                                                             *
+*                                                                                                           *
+************************************************************************************************************/
+double anorm_est(STAUS *my_seed)
+{
+	double x1, x2, w, y1;//, y2;
+	do {
+		x1 = HybTaus(-1.0, 1.0, my_seed);
+		x2 = HybTaus(-1.0, 1.0, my_seed);
+		w = x1*x1 + x2*x2;
+	} while (w >= 1.0);
+	w = sqrt((-2.0 * log(w)) / w);
+	y1 = x1 * w;
+	//	y2 = x2 * w;
+	return y1;
+}
+
+
+
+
+
+
+/************************************************************************************************************
+*                                                                                                           *
+* FUNCTION NAME: anorm_est                                                                                  *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT        TYPE                I/O        DESCRIPTION                                                *
+* par1            const double         I         Parameter of localization of the normal distribution (mean)*
+* par2            const double         I         Parameter of scale of the normal distribution (varianze)   *
+* my_seed         STAUS*              input      The seed used to generate the random number                *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* A random from a normal distribution.                                                                      *
+*                                                                                                           *
+************************************************************************************************************/
+double anorm(const double par1, const double par2, STAUS *my_seed)
+{
+	return sqrt(par2)*anorm_est(my_seed) + par1;
+}

@@ -34,20 +34,13 @@
     #include <QProgressBar>
 #endif
 
-//#include <vtkSmartPointer.h>
-//#include <vtkImageData.h>
-
 #include "args_fercer.h"
-#include "reconstructor_3D.h"
-
+#include "IMGCONT.h"
 
 #ifndef MY_PI
-#define Mi_PI 3.1415926535897932384626433832795
+	#define MY_PI 3.1415926535897932384626433832795
 #endif
 
-
-
-// C L A S E: FILTRO  ---------------------------------------------------------------------------------------------- v
 class FILTROS {
 
 public: //----------------------------------------------------------------------------- PUBLIC ------- v
@@ -58,7 +51,7 @@ public: //----------------------------------------------------------------------
 
 	void setFilterMethod(const SEG_FILTER new_filtering_method);
 
-	void filtrar();
+	void filter();
 
 	void setLog(FILE *fplog);
 	void setLog(const char *ruta_log);
@@ -78,7 +71,7 @@ public: //----------------------------------------------------------------------
 	void setParK(const unsigned int new_K_value);
 	void setParSigma(const double new_sigma_value);
 
-private:
+protected:
 	bool input_already_set;
 	bool already_transformed;
 
@@ -121,6 +114,6 @@ private:
 #endif
 
 };
-// C L A S E: FILTROS  ----------------------------------------------------------------------------------------- ^
+
 
 #endif //FILTROS_H_INCLUDED

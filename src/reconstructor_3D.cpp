@@ -31,8 +31,6 @@
 IMGCONT * RECONS3D::getIMGCONTPointer(const IMG_IDX my_img_idx, const unsigned int angios_ID)
 {
 	switch (my_img_idx) {
-	case IMG_BASE:
-		return my_img_features_ptr[angios_ID].my_base_ptr;
 	case IMG_BOUNDARIES:
 		return my_img_features_ptr[angios_ID].my_thrs_response_boundaries_ptr;
 	case IMG_DIST_MAP:
@@ -48,6 +46,7 @@ IMGCONT * RECONS3D::getIMGCONTPointer(const IMG_IDX my_img_idx, const unsigned i
 	case IMG_THRESHOLD:
 		return my_img_features_ptr[angios_ID].my_response_threshold_ptr;
 	}
+	return my_img_features_ptr[angios_ID].my_base_ptr;
 }
 
 
@@ -881,117 +880,117 @@ void RECONS3D::leerConfiguracion(const char *ruta_conf){
 
             if( strcmp( tmp_par, "GMF" ) == 0 ){
                 if( atoi(tmp_val) ){
-                    filtro.setFiltro( FILTROS::GMF );
+                    my_optimized_parameters.setFilterMethod( OPTI_PARS::GMF );
                 }
             }else if( strcmp( tmp_par, "SSG") == 0 ){
                 if( atoi(tmp_val) ){
-                    filtro.setFiltro( FILTROS::SS_GABOR );
+                    my_optimized_parameters.setFilterMethod( OPTI_PARS::SS_GABOR );
                 }
             }else if( strcmp( tmp_par, "T") == 0 ){
                 if( tmp_val[0] != 'o' ){
                     const double par_t = atof(tmp_val);
-                    filtro.setPar( FILTROS::PAR_T, par_t );
+                    my_optimized_parameters.setPar( OPTI_PARS::PAR_T, par_t );
                     fixed[0] = true;
                 }
             }else if( strcmp( tmp_par, "L") == 0 ){
                 if( tmp_val[0] != 'o' ){
                     const double par_l = atof(tmp_val);
-                    filtro.setPar( FILTROS::PAR_L, par_l );
+                    my_optimized_parameters.setPar( OPTI_PARS::PAR_L, par_l );
                     fixed[1] = true;
                 }
             }else if( strcmp( tmp_par, "K") == 0 ){
                 if( tmp_val[0] != 'o' ){
                     const double par_k = atof(tmp_val);
-                    filtro.setPar( FILTROS::PAR_K, par_k);
+                    my_optimized_parameters.setPar( OPTI_PARS::PAR_K, par_k);
                     fixed[2] = true;
                 }
             }else if( strcmp( tmp_par, "sig") == 0 ){
                 if( tmp_val[0] != 'o' ){
                     const double par_s = atof(tmp_val);
-                    filtro.setPar( FILTROS::PAR_SIGMA, par_s);
+                    my_optimized_parameters.setPar( OPTI_PARS::PAR_SIGMA, par_s);
                     fixed[3] = true;
                 }
             }else if( strcmp( tmp_par, "Tinf") == 0 && !fixed[0] ){
                 const double inf_t = atof(tmp_val);
-                filtro.setLim( FILTROS::PAR_T, FILTROS::INFERIOR, inf_t );
+                my_optimized_parameters.setLim( OPTI_PARS::PAR_T, OPTI_PARS::INFERIOR, inf_t );
             }else if( strcmp( tmp_par, "Tsup") == 0 && !fixed[0] ){
                 const double sup_t = atof(tmp_val);
-                filtro.setLim( FILTROS::PAR_T, FILTROS::SUPERIOR, sup_t );
+                my_optimized_parameters.setLim( OPTI_PARS::PAR_T, OPTI_PARS::SUPERIOR, sup_t );
             }else if( strcmp( tmp_par, "Tdel") == 0 && !fixed[0] ){
                 const double del_t = atof(tmp_val);
-                filtro.setLim( FILTROS::PAR_T, FILTROS::DELTA, del_t );
+                my_optimized_parameters.setLim( OPTI_PARS::PAR_T, OPTI_PARS::DELTA, del_t );
             }else if( strcmp( tmp_par, "Linf") == 0 && !fixed[1] ){
                 const double inf_l = atof(tmp_val);
-                filtro.setLim( FILTROS::PAR_L, FILTROS::INFERIOR, inf_l );
+                my_optimized_parameters.setLim( OPTI_PARS::PAR_L, OPTI_PARS::INFERIOR, inf_l );
             }else if( strcmp( tmp_par, "Lsup") == 0 && !fixed[1] ){
                 const double sup_l = atof(tmp_val);
-                filtro.setLim( FILTROS::PAR_L, FILTROS::SUPERIOR, sup_l );
+                my_optimized_parameters.setLim( OPTI_PARS::PAR_L, OPTI_PARS::SUPERIOR, sup_l );
             }else if( strcmp( tmp_par, "Ldel") == 0 && !fixed[1] ){
                 const double del_l = atof(tmp_val);
-                filtro.setLim( FILTROS::PAR_L, FILTROS::DELTA, del_l );
+                my_optimized_parameters.setLim( OPTI_PARS::PAR_L, OPTI_PARS::DELTA, del_l );
             }else if( strcmp( tmp_par, "Kinf") == 0 && !fixed[2] ){
                 const double inf_k = atof(tmp_val);
-                filtro.setLim( FILTROS::PAR_K, FILTROS::INFERIOR, inf_k );
+                my_optimized_parameters.setLim( OPTI_PARS::PAR_K, OPTI_PARS::INFERIOR, inf_k );
             }else if( strcmp( tmp_par, "Ksup") == 0 && !fixed[2] ){
                 const double sup_k = atof(tmp_val);
-                filtro.setLim( FILTROS::PAR_K, FILTROS::SUPERIOR, sup_k );
+                my_optimized_parameters.setLim( OPTI_PARS::PAR_K, OPTI_PARS::SUPERIOR, sup_k );
             }else if( strcmp( tmp_par, "Kdel") == 0 && !fixed[2] ){
                 const double del_k = atof(tmp_val);
-                filtro.setLim( FILTROS::PAR_K, FILTROS::DELTA, del_k );
+                my_optimized_parameters.setLim( OPTI_PARS::PAR_K, OPTI_PARS::DELTA, del_k );
             }else if( strcmp( tmp_par, "Sinf") == 0 && !fixed[3] ){
                 const double inf_s = atof(tmp_val);
-                filtro.setLim( FILTROS::PAR_SIGMA, FILTROS::INFERIOR, inf_s );
+                my_optimized_parameters.setLim( OPTI_PARS::PAR_SIGMA, OPTI_PARS::INFERIOR, inf_s );
             }else if( strcmp( tmp_par, "Ssup") == 0 && !fixed[3] ){
                 const double sup_s = atof(tmp_val);
-                filtro.setLim( FILTROS::PAR_SIGMA, FILTROS::SUPERIOR, sup_s );
+                my_optimized_parameters.setLim( OPTI_PARS::PAR_SIGMA, OPTI_PARS::SUPERIOR, sup_s );
             }else if( strcmp( tmp_par, "Sdel") == 0 && !fixed[3] ){
                 const double del_s = atof(tmp_val);
-                filtro.setLim( FILTROS::PAR_SIGMA, FILTROS::DELTA, del_s );
+                my_optimized_parameters.setLim( OPTI_PARS::PAR_SIGMA, OPTI_PARS::DELTA, del_s );
             }else if( strcmp( tmp_par, "ROC") == 0 ){
                 if( atoi(tmp_val) ){
-                    filtro.setFitness( FILTROS::ROC );
+                    my_optimized_parameters.setFitness( OPTI_PARS::ROC );
                 }
             }else if( strcmp( tmp_par, "CC") == 0 ){
                 if( atoi(tmp_val) ){
-                    filtro.setFitness( FILTROS::CORCON );
+                    my_optimized_parameters.setFitness( OPTI_PARS::CORCON );
                 }
             }else if( strcmp( tmp_par, "Unset") == 0 ){
                 if( atoi(tmp_val) ){
-                    filtro.setEvoMet( FILTROS::EVO_UNSET );
+                    my_optimized_parameters.setEvoMet( OPTI_PARS::EVO_UNSET );
                 }
             }else if( strcmp( tmp_par, "Exh") == 0 ){
                 if( atoi(tmp_val) ){
-                    filtro.setEvoMet( FILTROS::EXHAUSTIVA );
+                    my_optimized_parameters.setEvoMet( OPTI_PARS::EXHAUSTIVA );
                 }
             }else if( strcmp( tmp_par, "GA") == 0 ){
                 if( atoi(tmp_val) ){
-                    filtro.setEvoMet( FILTROS::EA_GA );
+                    my_optimized_parameters.setEvoMet( OPTI_PARS::EA_GA );
                 }
             }else if( strcmp( tmp_par, "UMDA") == 0 ){
                 if( atoi(tmp_val) ){
-                    filtro.setEvoMet( FILTROS::EDA_UMDA );
+                    my_optimized_parameters.setEvoMet( OPTI_PARS::EDA_UMDA );
                 }
             }else if( strcmp( tmp_par, "BUMDA") == 0 ){
                 if( atoi(tmp_val) ){
-                    filtro.setEvoMet( FILTROS::EDA_BUMDA );
+                    my_optimized_parameters.setEvoMet( OPTI_PARS::EDA_BUMDA );
                 }
             }else if( strcmp( tmp_par, "DE") == 0 ){
                 if( atoi(tmp_val) ){
-                    filtro.setEvoMet( FILTROS::EA_DE );
+                    my_optimized_parameters.setEvoMet( OPTI_PARS::EA_DE );
                 }
             }else if( strcmp( tmp_par, "pop_size") == 0 ){
                 const int pop_size = atoi(tmp_val);
-                filtro.setEvoMetPar( FILTROS::POPSIZE, (double)pop_size);
+                my_optimized_parameters.setEvoMetPar( OPTI_PARS::POPSIZE, (double)pop_size);
             }else if( strcmp( tmp_par, "max_gen") == 0 ){
                 const int max_gen = atoi(tmp_val);
-                filtro.setEvoMetPar( FILTROS::MAXGEN, (double)max_gen);
+                my_optimized_parameters.setEvoMetPar( OPTI_PARS::MAXGEN, (double)max_gen);
             }else if( strcmp( tmp_par, "CR") == 0 ){
                 const double cr = atof(tmp_val);
                 DEB_MSG("CR: " << cr << " / " << tmp_val);
-                filtro.setEvoMetPar( FILTROS::CR, cr);
+                my_optimized_parameters.setEvoMetPar( OPTI_PARS::CR, cr);
             }else if( strcmp( tmp_par, "MR") == 0 ){
                 const double mr = atof(tmp_val);
-                filtro.setEvoMetPar( FILTROS::MR, mr);
+                my_optimized_parameters.setEvoMetPar( OPTI_PARS::MR, mr);
             }
 
             tmp_str_ptr = tmp_par;
@@ -1015,8 +1014,8 @@ void RECONS3D::leerConfiguracion(const char *ruta_conf){
 
     Funcion:
 */
-void RECONS3D::setFiltroEntrenamiento(const FILTROS::EVO_MET evo_met){
-    filtro.setEvoMet(evo_met);
+void RECONS3D::setFiltroEntrenamiento(const OPTI_PARS::EVO_MET evo_met){
+    my_optimized_parameters.setEvoMet(evo_met);
 }
 
 
@@ -1025,8 +1024,8 @@ void RECONS3D::setFiltroEntrenamiento(const FILTROS::EVO_MET evo_met){
 
     Funcion:
 */
-void RECONS3D::setFiltroEntrenamientoPars(const FILTROS::EVO_MET_PAR evo_par, const double val){
-    filtro.setEvoMetPar(evo_par, val);
+void RECONS3D::setFiltroEntrenamientoPars(const OPTI_PARS::EVO_MET_PAR evo_par, const double val){
+    my_optimized_parameters.setEvoMetPar(evo_par, val);
 }
 
 
@@ -1034,8 +1033,8 @@ void RECONS3D::setFiltroEntrenamientoPars(const FILTROS::EVO_MET_PAR evo_par, co
 
     Funcion:
 */
-void RECONS3D::setFiltroEval(const FILTROS::FITNESS fit_fun){
-    filtro.setFitness( fit_fun );
+void RECONS3D::setFiltroEval(const OPTI_PARS::FITNESS fit_fun){
+    my_optimized_parameters.setFitness( fit_fun );
 }
 
 
@@ -1044,8 +1043,8 @@ void RECONS3D::setFiltroEval(const FILTROS::FITNESS fit_fun){
 
     Funcion:
 */
-void RECONS3D::setFiltroMetodo(const FILTROS::SEG_FILTRO metodo_filtrado){
-    filtro.setFiltro( metodo_filtrado );
+void RECONS3D::setFiltroMetodo(const OPTI_PARS::SEG_FILTER metodo_filtrado){
+    my_optimized_parameters.setFilterMethod( metodo_filtrado );
 }
 
 
@@ -1055,8 +1054,8 @@ void RECONS3D::setFiltroMetodo(const FILTROS::SEG_FILTRO metodo_filtrado){
 
     Funcion:
 */
-void RECONS3D::setFiltroParametros(const FILTROS::PARAMETRO par, const FILTROS::LIMITES lim, const double val){
-    filtro.setLim( par, lim, val );
+void RECONS3D::setFiltroParametros(const OPTI_PARS::PARAMETRO par, const OPTI_PARS::LIMITES lim, const double val){
+    my_optimized_parameters.setLim( par, lim, val );
 }
 
 
@@ -1065,8 +1064,8 @@ void RECONS3D::setFiltroParametros(const FILTROS::PARAMETRO par, const FILTROS::
 
     Funcion:
 */
-void RECONS3D::setFiltroParametros(const FILTROS::PARAMETRO par, const double val){
-    filtro.setPar(par, val);
+void RECONS3D::setFiltroParametros(const OPTI_PARS::PARAMETRO par, const double val){
+    my_optimized_parameters.setPar(par, val);
 }
 
 
@@ -1076,7 +1075,7 @@ void RECONS3D::setFiltroParametros(const FILTROS::PARAMETRO par, const double va
     Funcion:
 */
 void RECONS3D::setFiltroParametros(){
-    filtro.setPar();
+    my_optimized_parameters.setPar();
 }
 
 
@@ -1191,7 +1190,7 @@ void RECONS3D::setLog(QTextEdit *txtLog)
 #ifdef BUILD_GUI_VERSION
 void RECONS3D::setFiltroLog(QTextEdit *txtLog)
 {
-    filtro.setLog( txtLog );
+    my_optimized_parameters.setLog( txtLog );
 }
 #endif
 
@@ -1904,7 +1903,7 @@ vtkSmartPointer< vtkRenderer > RECONS3D::getRenderer( const int angios_ID ){
     Funcion: Define el editor donde se escribiran todos los logs del filtrado
 */
 void RECONS3D::setFiltroLog( FILE *fplog ){
-    filtro.setLog( fplog );
+    my_optimized_parameters.setLog( fplog );
 }
 
 
@@ -1914,7 +1913,7 @@ void RECONS3D::setFiltroLog( FILE *fplog ){
     Funcion: Define el editor donde se escribiran todos los logs del filtrado
 */
 void RECONS3D::setFiltroLog( const char *ruta_log ){
-    filtro.setLog( ruta_log );
+    my_optimized_parameters.setLog( ruta_log );
 }
 
 
@@ -1938,7 +1937,7 @@ void RECONS3D::setProgressBar(QProgressBar *pBar){
 */
 #ifdef BUILD_GUI_VERSION
 void RECONS3D::setFiltroProgressBar(QProgressBar *pBar){
-    filtro.setProgressBar( pBar );
+    my_optimized_parameters.setProgressBar( pBar );
 }
 #endif
 

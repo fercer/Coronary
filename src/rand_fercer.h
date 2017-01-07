@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <math.h>
 
 
 /* STAUS is the structure that stores the information necesary for the random number generator Hybrid Taus */
@@ -36,5 +37,10 @@ STAUS* initSeed(unsigned int initial_seed);
 unsigned int lcgR(unsigned int *my_seed);
 unsigned int tausStep(unsigned int *z, const int S1, const int S2, const int S3, const unsigned int M);
 double HybTaus(const double par1, const double par2, STAUS *my_seed);
+
+double anorm_est(STAUS *my_seed);
+double anorm(const double par1, const double par2, STAUS *my_seed);
+
+
 
 #endif //RAND_FERCER_H_INCLUDED

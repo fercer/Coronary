@@ -847,7 +847,7 @@ void IMGCONT::setDimensions(const unsigned int new_height, const unsigned int ne
 * The image height.                                                                                         *
 *                                                                                                           *
 ************************************************************************************************************/
-int IMGCONT::getHeight()
+unsigned int IMGCONT::getHeight()
 {
 	return my_height;
 }
@@ -871,7 +871,7 @@ int IMGCONT::getHeight()
 * The image width.                                                                                          *
 *                                                                                                           *
 ************************************************************************************************************/
-int IMGCONT::getWidth()
+unsigned int IMGCONT::getWidth()
 {
 	return my_width;
 }
