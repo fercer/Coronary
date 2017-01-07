@@ -282,7 +282,7 @@ double PERFORMANCE_FUNCTIONS::calcCorCon()
 	double m_i[4] = { 0.0, 0.0, 0.0, 0.0 };
 	double m_j[4] = { 0.0, 0.0, 0.0, 0.0 };
 
-	for (int x = 0; x < my_performance_imgs_count*(my_img_response->at(0)).getWidth() - 1; x++) {
+	for (unsigned int x = 0; x < my_performance_imgs_count*(my_img_response->at(0)).getWidth() - 1; x++) {
 		// SI(x + 1, y    )
 		const int i = *(scaled_resp + x);
 		const int j = *(scaled_resp + (x + 1));
@@ -294,7 +294,7 @@ double PERFORMANCE_FUNCTIONS::calcCorCon()
 		*(m_j) += (double)(j + 1) * fraction_1;
 	}
 
-	for (int y = 1; y < (my_img_response->at(0)).getHeight(); y++) {
+	for (unsigned int y = 1; y < (my_img_response->at(0)).getHeight(); y++) {
 		// SI(x   , y - 1)
 		const int i = *(scaled_resp + (y + 1)*(my_performance_imgs_count*(my_img_response->at(0)).getWidth()) - 1);
 		const int j = *(scaled_resp + y  *(my_performance_imgs_count*(my_img_response->at(0)).getWidth()) - 1);
@@ -305,8 +305,8 @@ double PERFORMANCE_FUNCTIONS::calcCorCon()
 		*(m_j + 2) += (double)(j + 1) * fraction_3;
 	}
 
-	for (int y = 1; y < (my_img_response->at(0)).getHeight(); y++) {
-		for (int x = 0; x < my_performance_imgs_count*(my_img_response->at(0)).getWidth() - 1; x++) {
+	for (unsigned int y = 1; y < (my_img_response->at(0)).getHeight(); y++) {
+		for (unsigned int x = 0; x < my_performance_imgs_count*(my_img_response->at(0)).getWidth() - 1; x++) {
 			{// SI(x + 1, y    )
 				const int i = *(scaled_resp + (x)+(y)*(my_performance_imgs_count*(my_img_response->at(0)).getWidth()));
 				const int j = *(scaled_resp + (x + 1) + (y)*(my_performance_imgs_count*(my_img_response->at(0)).getWidth()));
@@ -489,7 +489,7 @@ double PERFORMANCE_FUNCTIONS::calcAccuracy()
 /************************************************************************************************************
 * PERFORMANCE_FUNCTIONS::PUBLIC                                                                             *
 *                                                                                                           *
-* FUNCTION NAME: setInputResponse                                                                           *
+* FUNCTION NAME: setInputPerformanceResponse                                                                *
 *                                                                                                           *
 * ARGUMENTS:                                                                                                *
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
@@ -499,7 +499,7 @@ double PERFORMANCE_FUNCTIONS::calcAccuracy()
 * Nothing.                                                                                                  *
 *                                                                                                           *
 ************************************************************************************************************/
-void PERFORMANCE_FUNCTIONS::setInputResponse(std::vector<IMGCONT>* new_img_response)
+void PERFORMANCE_FUNCTIONS::setInputPerformanceResponse(std::vector<IMGCONT>* new_img_response)
 {
 	my_img_response = new_img_response;
 
@@ -520,7 +520,7 @@ void PERFORMANCE_FUNCTIONS::setInputResponse(std::vector<IMGCONT>* new_img_respo
 /************************************************************************************************************
 * PERFORMANCE_FUNCTIONS::PUBLIC                                                                             *
 *                                                                                                           *
-* FUNCTION NAME: setInputThreshold                                                                          *
+* FUNCTION NAME: setInputPerformanceThreshold                                                               *
 *                                                                                                           *
 * ARGUMENTS:                                                                                                *
 * ARGUMENT                   TYPE                      I/O  DESCRIPTION                                     *
@@ -530,7 +530,7 @@ void PERFORMANCE_FUNCTIONS::setInputResponse(std::vector<IMGCONT>* new_img_respo
 * Nothing.                                                                                                  *
 *                                                                                                           *
 ************************************************************************************************************/
-void PERFORMANCE_FUNCTIONS::setInputThreshold(std::vector<IMGCONT>* new_img_response_threshold)
+void PERFORMANCE_FUNCTIONS::setInputPerformanceThreshold(std::vector<IMGCONT>* new_img_response_threshold)
 {
 	my_img_thresholded_response = new_img_response_threshold;
 
@@ -551,7 +551,7 @@ void PERFORMANCE_FUNCTIONS::setInputThreshold(std::vector<IMGCONT>* new_img_resp
 /************************************************************************************************************
 * PERFORMANCE_FUNCTIONS::PUBLIC                                                                             *
 *                                                                                                           *
-* FUNCTION NAME: setInputGroundtruth                                                                        *
+* FUNCTION NAME: setInputPerformanceGroundtruth                                                             *
 *                                                                                                           *
 * ARGUMENTS:                                                                                                *
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
@@ -561,7 +561,7 @@ void PERFORMANCE_FUNCTIONS::setInputThreshold(std::vector<IMGCONT>* new_img_resp
 * Nothing.                                                                                                  *
 *                                                                                                           *
 ************************************************************************************************************/
-void PERFORMANCE_FUNCTIONS::setInputGroundtruth(std::vector<IMGCONT>* new_img_groundtruth)
+void PERFORMANCE_FUNCTIONS::setInputPerformanceGroundtruth(std::vector<IMGCONT>* new_img_groundtruth)
 {
 	my_img_groundtruth = new_img_groundtruth;
 
@@ -582,19 +582,19 @@ void PERFORMANCE_FUNCTIONS::setInputGroundtruth(std::vector<IMGCONT>* new_img_gr
 /************************************************************************************************************
 * PERFORMANCE_FUNCTIONS::PUBLIC                                                                             *
 *                                                                                                           *
-* FUNCTION NAME: setInputResponseMask                                                                       *
+* FUNCTION NAME: setInputPerformanceMask                                                                    *
 *                                                                                                           *
 * ARGUMENTS:                                                                                                *
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
-* new_img_response_mask     std::vector<IMGCONT>*      I   The pointer to a vector of IMGCONT objects.      *
+* new_img_mask              std::vector<IMGCONT>*      I   The pointer to a vector of IMGCONT objects.      *
 *                                                                                                           *
 * RETURNS:                                                                                                  *
 * Nothing.                                                                                                  *
 *                                                                                                           *
 ************************************************************************************************************/
-void PERFORMANCE_FUNCTIONS::setInputResponseMask(std::vector<IMGCONT>* new_img_response_mask)
+void PERFORMANCE_FUNCTIONS::setInputPerformanceMask(std::vector<IMGCONT>* new_img_mask)
 {
-	my_img_response_mask = new_img_response_mask;
+	my_img_response_mask = new_img_mask;
 
-	my_performance_imgs_count = (unsigned int)new_img_response_mask->size();
+	my_performance_imgs_count = (unsigned int)new_img_mask->size();
 }

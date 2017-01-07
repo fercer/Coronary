@@ -61,10 +61,10 @@ public: //----------------------------------------------------------------------
 	void setProgressBar(QProgressBar *pBar);
 #endif
 
-	void setInputBase(std::vector<IMGCONT>* new_img_base);
-	void setInputBaseMask(std::vector<IMGCONT>* new_img_base_mask);
-	void setInputGroundtruth(std::vector<IMGCONT>* new_img_groundtruth);
-	void setInputResponse(std::vector<IMGCONT>* new_img_response);
+	void setInputFilterBase(std::vector<IMGCONT>* new_img_base);
+	void setInputFilterMask(std::vector<IMGCONT>* new_img_mask);
+	void setInputFilterGroundtruth(std::vector<IMGCONT>* new_img_groundtruth);
+	void setInputFilterResponse(std::vector<IMGCONT>* new_img_response);
 
 	void setParL(const double new_L_value);
 	void setParT(const unsigned int new_T_value);

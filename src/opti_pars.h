@@ -86,6 +86,12 @@ class OPTI_PARS : public FILTROS, public PERFORMANCE_FUNCTIONS {
         int getParametrosOptimizar();
         void setLim(const PARAMETRO par, const LIMITES lim, const double val);
 
+		void setInputBase(std::vector<IMGCONT>* new_img_base);
+		void setInputMask(std::vector<IMGCONT>* new_img_mask);
+		void setInputGroundtruth(std::vector<IMGCONT>* new_img_groundtruth);
+		void setInputResponse(std::vector<IMGCONT>* new_img_response);
+		void setInputThreshold(std::vector<IMGCONT> * new_img_response_threshold);
+
     private: //----------------------------------------------------------------------------- PRIVATE ----- v
         static int compIndiv(const void* A, const void* B);
 

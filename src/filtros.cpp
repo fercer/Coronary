@@ -676,7 +676,7 @@ void FILTROS::respGabor() {
 /************************************************************************************************************
 * FILTROS::PUBLIC                                                                                           *
 *                                                                                                           *
-* FUNCTION NAME: setInputBase                                                                               *
+* FUNCTION NAME: setInputFilterBase                                                                         *
 *                                                                                                           *
 * ARGUMENTS:                                                                                                *
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
@@ -686,7 +686,7 @@ void FILTROS::respGabor() {
 * Nothing.                                                                                                  *
 *                                                                                                           *
 ************************************************************************************************************/
-void FILTROS::setInputBase(std::vector<IMGCONT>* new_img_base)
+void FILTROS::setInputFilterBase(std::vector<IMGCONT>* new_img_base)
 {
 	my_img_base = new_img_base;
 
@@ -708,21 +708,21 @@ void FILTROS::setInputBase(std::vector<IMGCONT>* new_img_base)
 /************************************************************************************************************
 * FILTROS::PUBLIC                                                                                           *
 *                                                                                                           *
-* FUNCTION NAME: setInputResponseMask                                                                       *
+* FUNCTION NAME: setInputFilterMask                                                                         *
 *                                                                                                           *
 * ARGUMENTS:                                                                                                *
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
-* new_img_base_mask         std::vector<IMGCONT>*      I   The pointer to a vector of IMGCONT objects.      *
+* new_img_mask              std::vector<IMGCONT>*      I   The pointer to a vector of IMGCONT objects.      *
 *                                                                                                           *
 * RETURNS:                                                                                                  *
 * Nothing.                                                                                                  *
 *                                                                                                           *
 ************************************************************************************************************/
-void FILTROS::setInputBaseMask(std::vector<IMGCONT>* new_img_base_mask)
+void FILTROS::setInputFilterMask(std::vector<IMGCONT>* new_img_mask)
 {
-	my_img_base_mask = new_img_base_mask;
+	my_img_base_mask = new_img_mask;
 
-	my_filters_imgs_count = (unsigned int)new_img_base_mask->size();
+	my_filters_imgs_count = (unsigned int)new_img_mask->size();
 }
 
 
@@ -740,7 +740,7 @@ void FILTROS::setInputBaseMask(std::vector<IMGCONT>* new_img_base_mask)
 /************************************************************************************************************
 * FILTROS::PUBLIC                                                                                           *
 *                                                                                                           *
-* FUNCTION NAME: setInputGroundtruth                                                                        *
+* FUNCTION NAME: setInputFilterGroundtruth                                                                  *
 *                                                                                                           *
 * ARGUMENTS:                                                                                                *
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
@@ -750,7 +750,7 @@ void FILTROS::setInputBaseMask(std::vector<IMGCONT>* new_img_base_mask)
 * Nothing.                                                                                                  *
 *                                                                                                           *
 ************************************************************************************************************/
-void FILTROS::setInputGroundtruth(std::vector<IMGCONT>* new_img_groundtruth)
+void FILTROS::setInputFilterGroundtruth(std::vector<IMGCONT>* new_img_groundtruth)
 {
 	my_img_groundtruth = new_img_groundtruth;
 
@@ -772,7 +772,7 @@ void FILTROS::setInputGroundtruth(std::vector<IMGCONT>* new_img_groundtruth)
 /************************************************************************************************************
 * FILTROS::PUBLIC                                                                                           *
 *                                                                                                           *
-* FUNCTION NAME: setInputResponse                                                                           *
+* FUNCTION NAME: setInputFilterResponse                                                                     *
 *                                                                                                           *
 * ARGUMENTS:                                                                                                *
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
@@ -782,7 +782,7 @@ void FILTROS::setInputGroundtruth(std::vector<IMGCONT>* new_img_groundtruth)
 * Nothing.                                                                                                  *
 *                                                                                                           *
 ************************************************************************************************************/
-void FILTROS::setInputResponse(std::vector<IMGCONT>* new_img_response)
+void FILTROS::setInputFilterResponse(std::vector<IMGCONT>* new_img_response)
 {
 	my_img_response = new_img_response;
 

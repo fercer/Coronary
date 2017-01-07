@@ -1005,6 +1005,10 @@ void OPTI_PARS::DE(){
     delete [] pob_anterior;
 }
 
+
+
+
+
 /*
     Metodo:     busquedaExhaustiva
     Funcion:    Realiza una busqueda exhaustiva en los limites de los parametros
@@ -1085,4 +1089,160 @@ void OPTI_PARS::busquedaExhaustiva(){
     barraProgreso( idx, n_bits);
 
     delete test;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/************************************************************************************************************
+* OPTI_PARS::PUBLIC                                                                                         *
+*                                                                                                           *
+* FUNCTION NAME: setInputBase                                                                               *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* new_img_base              std::vector<IMGCONT>*      I   The pointer to a vector of IMGCONT objects.      *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Nothing.                                                                                                  *
+*                                                                                                           *
+************************************************************************************************************/
+void OPTI_PARS::setInputBase(std::vector<IMGCONT>* new_img_base)
+{
+	this->setInputFilterBase(new_img_base);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+/************************************************************************************************************
+* OPTI_PARS::PUBLIC                                                                                         *
+*                                                                                                           *
+* FUNCTION NAME: setInputMask                                                                               *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* new_img_base_mask         std::vector<IMGCONT>*      I   The pointer to a vector of IMGCONT objects.      *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Nothing.                                                                                                  *
+*                                                                                                           *
+************************************************************************************************************/
+void OPTI_PARS::setInputMask(std::vector<IMGCONT>* new_img_mask)
+{
+	this->setInputFilterMask(new_img_mask);
+	this->setInputPerformanceMask(new_img_mask);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+/************************************************************************************************************
+* OPTI_PARS::PUBLIC                                                                                         *
+*                                                                                                           *
+* FUNCTION NAME: setInputGroundtruth                                                                        *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* new_img_groundtruth       std::vector<IMGCONT>*      I   The pointer to a vector of IMGCONT objects.      *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Nothing.                                                                                                  *
+*                                                                                                           *
+************************************************************************************************************/
+void OPTI_PARS::setInputGroundtruth(std::vector<IMGCONT>* new_img_groundtruth)
+{
+	this->setInputFilterGroundtruth(new_img_groundtruth);
+	this->setInputPerformanceGroundtruth(new_img_groundtruth);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+/************************************************************************************************************
+* OPTI_PARS::PUBLIC                                                                                         *
+*                                                                                                           *
+* FUNCTION NAME: setInputResponse                                                                           *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* new_img_response          std::vector<IMGCONT>*      I   The pointer to a vector of IMGCONT objects.      *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Nothing.                                                                                                  *
+*                                                                                                           *
+************************************************************************************************************/
+void OPTI_PARS::setInputResponse(std::vector<IMGCONT>* new_img_response)
+{
+	this->setInputFilterResponse(new_img_response);
+	this->setInputPerformanceResponse(new_img_response);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+/************************************************************************************************************
+* OPTI_PARS::PUBLIC                                                                                         *
+*                                                                                                           *
+* FUNCTION NAME: setInputThreshold                                                                          *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                   TYPE                      I/O  DESCRIPTION                                     *
+* new_img_response_threshold std::vector<IMGCONT>*      I   The pointer to a vector of IMGCONT objects.     *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Nothing.                                                                                                  *
+*                                                                                                           *
+************************************************************************************************************/
+void OPTI_PARS::setInputThreshold(std::vector<IMGCONT>* new_img_response_threshold)
+{
+	this->setInputPerformanceThreshold(new_img_response_threshold);
 }

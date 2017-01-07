@@ -40,9 +40,9 @@ public:
 	double calcCorCon();
 	double calcAccuracy();
 
-	void setInputResponse(std::vector<IMGCONT> * new_img_response );
-	void setInputThreshold(std::vector<IMGCONT> * new_img_response_threshold);
-	void setInputGroundtruth(std::vector<IMGCONT> * new_img_groundtruth);
-	void setInputResponseMask(std::vector<IMGCONT>* new_img_response_mask);
+	void setInputPerformanceResponse(std::vector<IMGCONT> * new_img_response );
+	void setInputPerformanceThreshold(std::vector<IMGCONT> * new_img_response_threshold);
+	void setInputPerformanceGroundtruth(std::vector<IMGCONT> * new_img_groundtruth);
+	void setInputPerformanceMask(std::vector<IMGCONT>* new_img_mask);
 };
 #endif //PERFORMANCE_FUNCTIONS_H_INCLUDED
