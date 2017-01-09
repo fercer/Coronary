@@ -131,3 +131,5 @@ int writepng_encode_row(mainprog_info *mainprog_ptr);
 int writepng_encode_finish(mainprog_info *mainprog_ptr);
 
 void writepng_cleanup(mainprog_info *mainprog_ptr);
+
+static void writepng_error_handler(png_structp png_ptr, png_const_charp msg);

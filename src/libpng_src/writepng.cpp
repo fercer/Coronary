@@ -387,7 +387,7 @@ static void writepng_error_handler(png_structp png_ptr, png_const_charp msg)
     fprintf(stderr, "writepng libpng error: %s\n", msg);
     fflush(stderr);
 
-    mainprog_ptr = png_get_error_ptr(png_ptr);
+    mainprog_ptr = (mainprog_info*)png_get_error_ptr(png_ptr);
     if (mainprog_ptr == NULL) {         /* we are completely hosed now */
         fprintf(stderr,
           "writepng severe error:  jmpbuf not recoverable; terminating.\n");

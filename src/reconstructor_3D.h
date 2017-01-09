@@ -140,113 +140,15 @@ class RECONS3D{
 			double origen[3]; // El cenntro de la imagen.
 		} NORCEN;
 
-		/* IMGCONT_NODE */
-		typedef struct IMGCONT_NODE {
-			IMGCONT *my_img_container;
-			IMGCONT_NODE *my_next_node;
-			IMGCONT_NODE *my_previous_node;
-		} IMGCONT_NODE;
-
-		/* IMGCONT_LIST */
-		typedef struct IMGCONT_LIST {
-			unsigned int my_nodes_count;
-			IMGCONT_NODE *my_first_node;
-			IMGCONT_NODE *my_last_node;
-		} IMGCONT_LIST;
-
-		/* IMGCONT_FEAT_SET */
-		typedef struct IMGCONT_FEAT_SET {
-			IMGCONT *my_base_ptr;
-			IMGCONT *my_groundtruth_ptr;
-			IMGCONT *my_mask_ptr;
-			IMGCONT *my_response_ptr;
-			IMGCONT *my_response_threshold_ptr;
-			IMGCONT *my_thrs_response_map_dists_ptr;
-			IMGCONT *my_thrs_response_skeleton_ptr;
-			IMGCONT *my_thrs_response_boundaries_ptr;
-
-			IMGCONT_FEAT_SET() {
-				my_base_ptr = NULL;
-				my_groundtruth_ptr = NULL;
-				my_mask_ptr = NULL;
-				my_response_ptr = NULL;
-				my_response_threshold_ptr = NULL;
-				my_thrs_response_map_dists_ptr = NULL;
-				my_thrs_response_skeleton_ptr = NULL;
-				my_thrs_response_boundaries_ptr = NULL;
-			}
-
-			IMGCONT_FEAT_SET(const IMGCONT_FEAT_SET & src_feat_set) {
-				my_base_ptr = src_feat_set.my_base_ptr;
-				my_groundtruth_ptr = src_feat_set.my_groundtruth_ptr;
-				my_mask_ptr = src_feat_set.my_mask_ptr;
-				my_response_ptr = src_feat_set.my_response_ptr;
-				my_response_threshold_ptr = src_feat_set.my_response_threshold_ptr;
-				my_thrs_response_map_dists_ptr = src_feat_set.my_thrs_response_map_dists_ptr;
-				my_thrs_response_skeleton_ptr = src_feat_set.my_thrs_response_skeleton_ptr;
-				my_thrs_response_boundaries_ptr = src_feat_set.my_thrs_response_boundaries_ptr;
-			}
-
-			IMGCONT_FEAT_SET & operator= (const IMGCONT_FEAT_SET & src_feat_set) {
-				my_base_ptr = src_feat_set.my_base_ptr;
-				my_groundtruth_ptr = src_feat_set.my_groundtruth_ptr;
-				my_mask_ptr = src_feat_set.my_mask_ptr;
-				my_response_ptr = src_feat_set.my_response_ptr;
-				my_response_threshold_ptr = src_feat_set.my_response_threshold_ptr;
-				my_thrs_response_map_dists_ptr = src_feat_set.my_thrs_response_map_dists_ptr;
-				my_thrs_response_skeleton_ptr = src_feat_set.my_thrs_response_skeleton_ptr;
-				my_thrs_response_boundaries_ptr = src_feat_set.my_thrs_response_boundaries_ptr;
-			}
-
-
-			~IMGCONT_FEAT_SET() {
-				if (my_base_ptr) {
-					delete my_base_ptr;
-				}
-
-				if (my_groundtruth_ptr) {
-					delete my_groundtruth_ptr;
-				}
-
-				if (my_mask_ptr) {
-					delete my_mask_ptr;
-				}
-
-				if (my_response_ptr) {
-					delete my_response_ptr;
-				}
-
-				if (my_response_threshold_ptr) {
-					delete my_response_threshold_ptr;
-				}
-
-				if (my_thrs_response_map_dists_ptr) {
-					delete  my_thrs_response_map_dists_ptr;
-				}
-
-				if (my_thrs_response_skeleton_ptr) {
-					delete my_thrs_response_skeleton_ptr;
-				}
-
-				if (my_thrs_response_boundaries_ptr) {
-					delete my_thrs_response_boundaries_ptr;
-				}
-			}
-
-		} IMGCONT_FEAT_SET;
-
     // M I E M B R O S      P R I V A D O S
-        // Miembros para cargar las imagenes:
-        IMGCONT_LIST *imgs_base;
-		IMGCONT_LIST *imgs_groundtruth;
-		IMGCONT_LIST *imgs_mask;
-		IMGCONT_LIST *imgs_response;
-		IMGCONT_LIST *imgs_response_threshold;
-		IMGCONT_LIST *imgs_thrs_response_map_dists;
-		IMGCONT_LIST *imgs_thrs_response_skeleton;
-		IMGCONT_LIST *imgs_thrs_response_boundaries;
-
-		std::vector< IMGCONT_FEAT_SET > my_img_features_ptr;
+		std::vector< IMGCONT > my_img_base;
+		std::vector< IMGCONT > my_img_groundtruth;
+		std::vector< IMGCONT > my_img_mask;
+		std::vector< IMGCONT > my_img_response;
+		std::vector< IMGCONT > my_img_thresholded_response;
+		std::vector< IMGCONT > my_img_thrs_skeleton;
+		std::vector< IMGCONT > my_img_thrs_boundaries;
+		std::vector< IMGCONT > my_img_thrs_map_dist;
 
         std::vector< bool > existe_ground;
 
@@ -371,6 +273,9 @@ class RECONS3D{
         void umbralizar(const IMGCONT::THRESHOLD_ALG tipo_umb, const double nivel, const int angios_ID);
         void lengthFilter(IMG_IDX my_img_idx, const int min_length, const int angios_ID);
 	
+
+
+		void segmentar();
     // O P E R A D O R E S  S O B R E C A R G A D O S
     //--------------------------------------------------------------------------------------- PUBLIC ----- ^
 };

@@ -33,8 +33,32 @@ IMGCONT::IMGCONT()
 {
 	my_height = 0;
 	my_width = 0;
-		
 	my_img_data = NULL;
+
+	my_FOV_mask = NULL;
+	my_dist_map = NULL;
+	my_boundaries = NULL;
+
+	my_skeleton = NULL;
+
+	/* DICOM extracted information */
+	SID = 0;
+	SOD = 0;
+	DDP = 0;
+	DISO = 0;
+	LAORAO = 0;
+	CRACAU = 0;
+	WCenter = 0;
+	WWidth = 0;
+	pixX = 0;
+	pixY = 0;
+	cenX = 0;
+	cenY = 0;
+
+	my_max_distance = 0;
+	my_skeleton_graph_deep = 0;
+
+	my_skeleton_features = NULL;
 }
 
 
@@ -53,6 +77,31 @@ IMGCONT::IMGCONT()
 ************************************************************************************************************/
 IMGCONT::IMGCONT(const unsigned int new_height, const unsigned int new_width, const double init_val)
 {
+	my_FOV_mask = NULL;
+	my_dist_map = NULL;
+	my_boundaries = NULL;
+
+	my_skeleton = NULL;
+
+	/* DICOM extracted information */
+	SID = 0;
+	SOD = 0;
+	DDP = 0;
+	DISO = 0;
+	LAORAO = 0;
+	CRACAU = 0;
+	WCenter = 0;
+	WWidth = 0;
+	pixX = 0;
+	pixY = 0;
+	cenX = 0;
+	cenY = 0;
+
+	my_max_distance = 0;
+	my_skeleton_graph_deep = 0;
+
+	my_skeleton_features = NULL;
+
 	my_height = new_height;
 	my_width = new_width;
 	
@@ -79,11 +128,36 @@ IMGCONT::IMGCONT(const unsigned int new_height, const unsigned int new_width, co
 ************************************************************************************************************/
 IMGCONT::IMGCONT(const unsigned int new_height, const unsigned int new_width, const double * src_data)
 {
-	my_height = new_height;
-	my_width = new_width;
+	my_height = 0;
+	my_width = 0;
+	my_img_data = NULL;
 
-	my_img_data = (double *)malloc((my_height * my_width) * sizeof(double));
-	memcpy(my_img_data, src_data, my_width * my_height * sizeof(double));
+	my_FOV_mask = NULL;
+	my_dist_map = NULL;
+	my_boundaries = NULL;
+
+	my_skeleton = NULL;
+
+	/* DICOM extracted information */
+	SID = 0;
+	SOD = 0;
+	DDP = 0;
+	DISO = 0;
+	LAORAO = 0;
+	CRACAU = 0;
+	WCenter = 0;
+	WWidth = 0;
+	pixX = 0;
+	pixY = 0;
+	cenX = 0;
+	cenY = 0;
+
+	my_max_distance = 0;
+	my_skeleton_graph_deep = 0;
+
+	my_skeleton_features = NULL;
+
+	setImageData(new_height, new_width, src_data);
 }
 
 
@@ -103,16 +177,36 @@ IMGCONT::IMGCONT(const unsigned int new_height, const unsigned int new_width, co
 *                                                                                                           *
 ************************************************************************************************************/
 IMGCONT::IMGCONT(const IMGCONT& img_src) {
-	my_height = img_src.my_height;
-	my_width = img_src.my_width;
+	my_height = 0;
+	my_width = 0;
+	my_img_data = NULL;
 
-	if (my_img_data) {
-		free(my_img_data);
-	}
+	my_FOV_mask = NULL;
+	my_dist_map = NULL;
+	my_boundaries = NULL;
 
-	my_img_data = (double *)malloc((my_height * my_width) * sizeof(double));
+	my_skeleton = NULL;
 
-	memcpy(my_img_data, img_src.my_img_data, (my_height * my_width) * sizeof(double));
+	/* DICOM extracted information */
+	SID = 0;
+	SOD = 0;
+	DDP = 0;
+	DISO = 0;
+	LAORAO = 0;
+	CRACAU = 0;
+	WCenter = 0;
+	WWidth = 0;
+	pixX = 0;
+	pixY = 0;
+	cenX = 0;
+	cenY = 0;
+
+	my_max_distance = 0;
+	my_skeleton_graph_deep = 0;
+
+	my_skeleton_features = NULL;
+
+	this->copyFrom(img_src);
 }
 
 
@@ -131,9 +225,173 @@ IMGCONT::IMGCONT(const IMGCONT& img_src) {
 * --------                  ----                       -   ----                                             *
 *                                                                                                           *
 ************************************************************************************************************/
-IMGCONT::~IMGCONT() {
+IMGCONT::~IMGCONT()
+{
 	if (my_img_data) {
 		free(my_img_data);
+		my_img_data = NULL;
+	}
+
+	if (my_FOV_mask) {
+		free(my_FOV_mask);
+		my_FOV_mask = NULL;
+	}
+
+	if (my_dist_map) {
+		free(my_dist_map);
+		my_dist_map = NULL;
+	}
+
+	if (my_boundaries) {
+		free(my_boundaries);
+		my_boundaries = NULL;
+	}
+
+	if (my_skeleton) {
+		free(my_skeleton);
+		my_skeleton = NULL;
+	}
+
+	if (my_skeleton_features) {
+		deleteSkeletonGraph(my_skeleton_features);
+		my_skeleton_features = NULL;
+	}
+}
+
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: copySkeletonGraph                                                                          *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* my_graph_root             PIX_PAIR *                 I   My graph current root.                           *
+* src_graph_root            PIX_PAIR *                 I   Source graph current root.                       *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Nothing.                                                                                                  *
+*                                                                                                           *
+************************************************************************************************************/
+IMGCONT::PIX_PAIR * IMGCONT::copySkeletonGraph(PIX_PAIR * src_graph_root)
+{
+	PIX_PAIR *pix_feratures_temp = new PIX_PAIR;
+
+	memcpy(pix_feratures_temp, src_graph_root, sizeof(PIX_PAIR));
+
+	/* If the current source graph node has children, the pointers must be redirectec: */
+	for (int i = 0; i < pix_feratures_temp->my_n_children; i++) {
+		pix_feratures_temp->my_children[i] = copySkeletonGraph( src_graph_root->my_children[i]);
+	}
+
+	return pix_feratures_temp;
+}
+
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: copyFrom                                                                                   *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* img_src                   const IMGCONT&             I   An image containter to copy to this new image.   *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Nothing.                                                                                                  *
+*                                                                                                           *
+************************************************************************************************************/
+void IMGCONT::copyFrom(const IMGCONT & img_src)
+{
+	DEB_MSG("img_src data: " << img_src.my_img_data << ", height: " << img_src.my_height << ", width: " << img_src.my_width);
+
+	if (!img_src.my_img_data) {
+		return;
+	}
+
+	my_height = img_src.my_height;
+	my_width = img_src.my_width;
+
+	if (my_img_data) {
+		free(my_img_data);
+	}
+
+	my_img_data = (double*)malloc(my_height * my_width * sizeof(double));
+	memcpy(my_img_data, img_src.my_img_data, my_height * my_width * sizeof(double));
+
+
+	if (my_FOV_mask) {
+		free(my_FOV_mask);
+		my_FOV_mask = NULL;
+	}
+	if (img_src.my_FOV_mask) {
+		my_FOV_mask = (double*)malloc(my_height * my_width * sizeof(double));
+		memcpy(my_FOV_mask, img_src.my_FOV_mask, my_height * my_width * sizeof(double));
+	}
+
+
+	if (my_dist_map) {
+		free(my_dist_map);
+		my_dist_map = NULL;
+	}
+	if (img_src.my_dist_map) {
+		my_dist_map = (double*)malloc(my_height * my_width * sizeof(double));
+		memcpy(my_dist_map, img_src.my_dist_map, my_height * my_width * sizeof(double));
+	}
+
+
+	if (my_boundaries) {
+		free(my_boundaries);
+		my_boundaries = NULL;
+	}
+	if (img_src.my_boundaries) {
+		my_boundaries = (double*)malloc(my_height * my_width * sizeof(double));
+		memcpy(my_boundaries, img_src.my_boundaries, my_height * my_width * sizeof(double));
+	}
+
+	if (my_skeleton) {
+		free(my_skeleton);
+		my_skeleton = NULL;
+	}
+	if (img_src.my_skeleton) {
+		my_skeleton = (double*)malloc((my_height + 2) * (my_width + 2) * sizeof(double));
+		memcpy(my_skeleton, img_src.my_skeleton, (my_height + 2) * (my_width + 2) * sizeof(double));
+	}
+
+	/* DICOM extracted information */
+	SID = img_src.SID;
+	SOD = img_src.SOD;
+	DDP = img_src.DDP;
+	DISO = img_src.DISO;
+	LAORAO = img_src.LAORAO;
+	CRACAU = img_src.CRACAU;
+	WCenter = img_src.WCenter;
+	WWidth = img_src.WWidth;
+	pixX = img_src.pixX;
+	pixY = img_src.pixY;
+	cenX = img_src.cenX;
+	cenY = img_src.cenY;
+
+	my_max_distance = img_src.my_max_distance;
+	my_skeleton_graph_deep = img_src.my_skeleton_graph_deep;
+
+	if (my_skeleton_features) {
+		deleteSkeletonGraph(my_skeleton_features);
+		my_skeleton_features = NULL;
+	}
+	
+	if (img_src.my_skeleton_features) {
+		my_skeleton_features = copySkeletonGraph(img_src.my_skeleton_features);
 	}
 }
 
@@ -154,16 +412,7 @@ IMGCONT::~IMGCONT() {
 ************************************************************************************************************/
 IMGCONT & IMGCONT::operator= (const IMGCONT & img_src)
 {
-	my_height = img_src.my_height;
-	my_width = img_src.my_width;
-
-	if (my_img_data) {
-		free(my_img_data);
-	}
-
-	my_img_data = (double*)malloc(my_height * my_width * sizeof(double));
-	memcpy(my_img_data, img_src.my_img_data, my_height * my_width * sizeof(double));
-
+	this->copyFrom(img_src);
 	return *this;
 }
 
@@ -243,7 +492,7 @@ int IMGCONT::LoadPGM(const char *src_path, const unsigned int level)
 #if defined(_WIN32) || defined(_WIN64)
 	fopen_s(&img_file, src_path, "r");
 #else
-	img_file = fopen(ruta_origen, "r");
+	img_file = fopen(src_path, "r");
 #endif
 
 	char temp_str[512] = "";
@@ -257,31 +506,39 @@ int IMGCONT::LoadPGM(const char *src_path, const unsigned int level)
 	}
 
 	/* Read commentary, if there is not any commentary, jump to read the image dimensions */
-	fpos_t position;
-	fgetpos(img_file, &position);
-
+	char * temp_str_ptr = temp_str;
 	temp_str[0] = getc(img_file);
-	if (temp_str[0] == '#') {
-		/* Read the remaining of the commentary */
-		fgets(temp_str, 512, img_file);
-		fgetpos(img_file, &position);
+	while(*temp_str_ptr != '\n') {
+		temp_str_ptr++;
+		*temp_str_ptr = getc(img_file);
 	}
 
-	double max_intensity;
-	unsigned int height;
-	unsigned int width;
 
-	fsetpos(img_file, &position);
+	double max_intensity;
+	int height;
+	int width;
+
+	if (temp_str[0] != '#') {
+		width = atoi(temp_str);
+	}
+	else {
+		DEB_MSG("commentary: " << temp_str);
+#if defined(_WIN32) || defined(_WIN64)
+		fscanf_s(img_file, "%i", &width);
+#else
+		fscanf(img_file, "%i", &width);
+#endif
+	}
 
 #if defined(_WIN32) || defined(_WIN64)
-	fscanf_s(img_file, "%i", &width);
 	fscanf_s(img_file, "%i", &height);
 	fscanf_s(img_file, "%lf", &max_intensity);
 #else
-	fscanf(img_file, "%i", &width);
 	fscanf(img_file, "%i", &height);
 	fscanf(img_file, "%lf", &max_intensity);
 #endif
+
+	DEB_MSG("height: " << height << ", width: " << width <<  ", max intensity: " << max_intensity);
 
 	IMGCONT new_img(height, width);
 
@@ -297,7 +554,7 @@ int IMGCONT::LoadPGM(const char *src_path, const unsigned int level)
 
 	fclose(img_file);
 
-	*this = new_img;
+	(*this) = new_img;
 
 	return 0;
 }
@@ -771,6 +1028,40 @@ void IMGCONT::Save(const char * out_path, const IMG_TYPE output_type)
 /************************************************************************************************************
 * IMGCONT::PUBLIC                                                                                           *
 *                                                                                                           *
+* FUNCTION NAME: setImageData                                                                               *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* new_height                const unsigned int         I   Height of the new image                          *
+* new_width                 const unsigned int         I   Width of the new image                           *
+* src_data                  const double *             I   An array to form the image data.                 *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The pixel value in the defined position.                                                                  *
+*                                                                                                           *
+************************************************************************************************************/
+void IMGCONT::setImageData(const unsigned int new_height, const unsigned int new_width, const double * src_data)
+{
+	my_height = new_height;
+	my_width = new_width;
+
+	if (my_img_data) {
+		free(my_img_data);
+	}
+
+	my_img_data = (double *)malloc(my_height * my_width * sizeof(double));
+	memcpy(my_img_data, src_data, my_width * my_height * sizeof(double));
+}
+
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
 * FUNCTION NAME: getPix                                                                                     *
 *                                                                                                           *
 * ARGUMENTS:                                                                                                *
@@ -784,7 +1075,7 @@ void IMGCONT::Save(const char * out_path, const IMG_TYPE output_type)
 ************************************************************************************************************/
 double IMGCONT::getPix(const unsigned int row_y, const unsigned int col_x)
 {
-	return *(my_img_data + row_y + col_x);
+	return *(my_img_data + row_y * my_width + col_x);
 }
 
 
@@ -810,9 +1101,30 @@ double IMGCONT::getPix(const unsigned int row_y, const unsigned int col_x)
 ************************************************************************************************************/
 void IMGCONT::setPix(const unsigned int row_y, const unsigned int col_x, const double new_val)
 {
-	*(my_img_data + row_y + col_x) = new_val;
+	*(my_img_data + row_y*my_width + col_x) = new_val;
 }
 
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
+* FUNCTION NAME: setDimensions                                                                              *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* new_height                const unsigned int         I   Height of the new image                          *
+* new_width                 const unsigned int         I   Width of the new image                           *
+* init_val                  const double               I   The initial value in the whole image             *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Nothing.                                                                                                  *
+*                                                                                                           *
+************************************************************************************************************/
 void IMGCONT::setDimensions(const unsigned int new_height, const unsigned int new_width, const double init_val)
 {
 	my_height = new_height;

@@ -1194,7 +1194,7 @@ void IMGCONT::computeMaskFOV()
 			*(my_FOV_mask + x + y * my_width) = (this->getPix(y, x) < 0.1) ? 0.0 : 1.0;
 		}
     }
-
+	
     /* Remove the small connected sets */
     lengthFilter(my_FOV_mask, 1000);
 
@@ -1202,16 +1202,14 @@ void IMGCONT::computeMaskFOV()
     erode(my_FOV_mask);
 	
 	/* Identify the connected sets of the corners of the image */
-    for( int xy = 0; xy < my_width * my_height; xy++){
+    for( int xy = 0; xy < (my_width * my_height); xy++){
         *(my_FOV_mask + xy) = 1.0 - *(my_FOV_mask + xy);
     }
 
     int *my_sets = new int [my_width * my_height];
 	unsigned int *my_sets_lengths = connectedSets_Iterative(my_FOV_mask, my_sets);
-    delete [] my_sets_lengths;
+    delete[] my_sets_lengths;
 
-
-    //// etiqueta de los conjuntos donde existe una esquina
 	const int NorthWest = *(my_sets);
 	const int NorthEast = *(my_sets + my_width - 1);
 	const int SouthWest = *(my_sets + (my_height - 1)*my_width);
@@ -1226,7 +1224,7 @@ void IMGCONT::computeMaskFOV()
         }
     }
 
-    delete [] my_sets;
+    delete[] my_sets;
 }
 
 
@@ -1283,6 +1281,15 @@ void IMGCONT::fillMask()
 	par_tmp.my_pix_type = PIX_CROSS;
 
 	double * fill_temp = new double[(my_height + 2) * (my_width + 2)];
+
+	memset(fill_temp, 0, (my_width + 2) * sizeof(double));
+	memset(fill_temp + (my_height + 1)*(my_width + 2), 0, (my_width + 2) * sizeof(double));
+
+	for (unsigned int y = 0; y < my_height; y++) {
+		*(fill_temp + (y + 1)*(my_width + 2)) = 0.0;
+		memcpy(fill_temp + (y + 1) * (my_width + 2) + 1, my_FOV_mask + y * my_width, my_width * sizeof(double));
+		*(fill_temp + (y + 1)*(my_width + 2) + my_width + 1) = 0.0;
+	}
 
 	int iter = 0;
 	while (iter < my_width) {
@@ -1602,7 +1609,6 @@ void IMGCONT::extractSkeletonFeatures()
 
 	my_skeleton_features = computeSkeletonGraph(skl_temp, start_x, start_y, &deep_level, reference_table, was_visited);
 	my_skeleton_graph_deep = deep_level;
-
 
 	delete[] was_visited;
 	delete[] skl_temp;

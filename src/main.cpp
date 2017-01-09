@@ -50,10 +50,17 @@ int main(int argc, char** argv ){
 	if ((strcmp(parametros.getArgumentCHAR("-b"), "NULL") != 0) &&
 		(strcmp(parametros.getArgumentCHAR("-g"), "NULL") != 0)) {
 		/// Reconstruir arteria:
-		mi_reconstructor.agregarInput(parametros.getArgumentCHAR("-b"),parametros.getArgumentINT("-bl"), parametros.getArgumentINT("-bu"), parametros.getArgumentCHAR("-g"), false);
+		mi_reconstructor.agregarInput(parametros.getArgumentCHAR("-b"),parametros.getArgumentINT("-bl"), parametros.getArgumentINT("-bu"), parametros.getArgumentCHAR("-g"), true);
 
-		DEB_MSG("Saving image...");
-		mi_reconstructor.Guardar("img.pgm", RECONS3D::IMG_BASE, IMGCONT::IMGPGM, 0);
+		mi_reconstructor.Guardar("Mask.pgm", RECONS3D::IMG_MASK, IMGCONT::IMGPGM, 0);
+		mi_reconstructor.Guardar("Base.pgm", RECONS3D::IMG_BASE, IMGCONT::IMGPGM, 0);
+
+		mi_reconstructor.leerConfiguracion(parametros.getArgumentCHAR("-c"));
+		mi_reconstructor.segmentar();
+
+
+		DEB_MSG("Saving response image...");
+		mi_reconstructor.Guardar("img.pgm", RECONS3D::IMG_RESPONSE, IMGCONT::IMGPGM, 0);
 	}
 
 	if ((strcmp(parametros.getArgumentCHAR("-dsb"), "NULL") != 0) &&
@@ -95,8 +102,6 @@ int main(int argc, char** argv ){
 		fclose(fp_base);
 		fclose(fp_gt);
 	}
-
-	getchar();
-
+	
     return EXIT_SUCCESS;
 }

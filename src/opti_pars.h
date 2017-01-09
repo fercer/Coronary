@@ -67,7 +67,7 @@ class OPTI_PARS : public FILTROS, public PERFORMANCE_FUNCTIONS {
         /** INDIV:	Define la estructura que contiene los atributos del individuo, y el valor de la funcion para este.  **/
         typedef struct INDIV {
             double eval;
-            double vars[4]; // 1: L, 2: T, 3: K, 4: sigma
+            double vars[4]; // 0: L, 1: T, 2: K, 3: sigma
             unsigned char cadena[128];
         } INDIV;
 

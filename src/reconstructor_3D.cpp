@@ -32,21 +32,21 @@ IMGCONT * RECONS3D::getIMGCONTPointer(const IMG_IDX my_img_idx, const unsigned i
 {
 	switch (my_img_idx) {
 	case IMG_BOUNDARIES:
-		return my_img_features_ptr[angios_ID].my_thrs_response_boundaries_ptr;
+		return &my_img_thrs_boundaries.at(angios_ID);
 	case IMG_DIST_MAP:
-		return my_img_features_ptr[angios_ID].my_thrs_response_map_dists_ptr;
+		return &my_img_thrs_map_dist.at(angios_ID);
 	case IMG_GROUNDTRUTH:
-		return my_img_features_ptr[angios_ID].my_groundtruth_ptr;
+		return &my_img_groundtruth.at(angios_ID);
 	case IMG_MASK:
-		return my_img_features_ptr[angios_ID].my_mask_ptr;
+		return &my_img_mask.at(angios_ID);
 	case IMG_RESPONSE:
-		return my_img_features_ptr[angios_ID].my_response_ptr;
+		return &my_img_response.at(angios_ID);
 	case IMG_SKELETON:
-		return my_img_features_ptr[angios_ID].my_thrs_response_skeleton_ptr;
+		return &my_img_thrs_skeleton.at(angios_ID);
 	case IMG_THRESHOLD:
-		return my_img_features_ptr[angios_ID].my_response_threshold_ptr;
+		return &my_img_thresholded_response.at(angios_ID);
 	}
-	return my_img_features_ptr[angios_ID].my_base_ptr;
+	return &my_img_base.at(angios_ID);
 }
 
 
@@ -731,22 +731,14 @@ void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const
 	for (int curr_level = nivel_l; curr_level <= nivel_u; curr_level++) {
 		n_angios++;
 
-		IMGCONT_FEAT_SET void_img_features_ptr;
-		my_img_features_ptr.push_back(void_img_features_ptr);
-
-		my_img_features_ptr[n_angios].my_base_ptr = new IMGCONT();
-		my_img_features_ptr[n_angios].my_groundtruth_ptr = new IMGCONT();
-		my_img_features_ptr[n_angios].my_response_ptr = new IMGCONT();
-		my_img_features_ptr[n_angios].my_response_threshold_ptr = new IMGCONT();
-		my_img_features_ptr[n_angios].my_thrs_response_boundaries_ptr = new IMGCONT();
-		my_img_features_ptr[n_angios].my_thrs_response_map_dists_ptr = new IMGCONT();
-		my_img_features_ptr[n_angios].my_thrs_response_skeleton_ptr = new IMGCONT();
-
+		my_img_base.push_back(IMGCONT());
+		my_img_groundtruth.push_back(IMGCONT());
 
 		/* Load the images from their corresponding paths */
-		my_img_features_ptr[n_angios].my_base_ptr->Load(rutabase_input, curr_level);
+		(my_img_base.at(n_angios)).Load(rutabase_input, curr_level);
+
 		if (rutaground_input) {
-			my_img_features_ptr[n_angios].my_groundtruth_ptr->Load(rutaground_input);
+			(my_img_groundtruth.at(n_angios)).Load(rutaground_input);
 			existe_ground.push_back(true);
 		}
 		else {
@@ -754,22 +746,31 @@ void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const
 		}
 
 		if (enmascarar) {
-			my_img_features_ptr[n_angios].my_mask_ptr = new IMGCONT(my_img_features_ptr[n_angios].my_base_ptr->getHeight(),
-				my_img_features_ptr[n_angios].my_base_ptr->getWidth(),
-				my_img_features_ptr[n_angios].my_base_ptr->getMask());
+			my_img_mask.push_back(IMGCONT((my_img_base.at(n_angios)).getHeight(),
+				(my_img_base.at(n_angios)).getWidth(),
+				(my_img_base.at(n_angios)).getMask()));
 		}
 		else {
-			my_img_features_ptr[n_angios].my_mask_ptr = new IMGCONT();
+			my_img_mask.push_back(IMGCONT((my_img_base.at(n_angios)).getHeight(),
+				(my_img_base.at(n_angios)).getWidth(),
+				1.0));
 		}
-		
+
+		my_img_response.push_back(IMGCONT());
+		my_img_thresholded_response.push_back(IMGCONT());
+		my_img_thrs_boundaries.push_back(IMGCONT());
+		my_img_thrs_map_dist.push_back(IMGCONT());
+		my_img_thrs_skeleton.push_back(IMGCONT());
 
 		hist.push_back(NULL);
 		h_suma.push_back(0.0);
 		h_media.push_back(0.0);
 		h_desvest.push_back(0.0);
 	}
-
 }
+
+
+
 
 
 
@@ -781,38 +782,34 @@ void RECONS3D::agregarInput( const char *rutabase_input, bool enmascarar ){
 
     n_angios++;
 
-
-	my_img_features_ptr[n_angios].my_base_ptr = new IMGCONT();
-	my_img_features_ptr[n_angios].my_groundtruth_ptr = new IMGCONT();
-	my_img_features_ptr[n_angios].my_response_ptr = new IMGCONT();
-	my_img_features_ptr[n_angios].my_response_threshold_ptr = new IMGCONT();
-	my_img_features_ptr[n_angios].my_thrs_response_boundaries_ptr = new IMGCONT();
-	my_img_features_ptr[n_angios].my_thrs_response_map_dists_ptr = new IMGCONT();
-	my_img_features_ptr[n_angios].my_thrs_response_skeleton_ptr = new IMGCONT();
-
+	my_img_base.push_back(IMGCONT());
 
 	/* Load the images from their corresponding paths */
-	my_img_features_ptr[n_angios].my_base_ptr->Load(rutabase_input);
+	(my_img_base.at(n_angios)).Load(rutabase_input, 0);
 
-	existe_ground.push_back(false);
+	existe_ground.push_back(false);		
+	my_img_groundtruth.push_back(IMGCONT());
 
 	if (enmascarar) {
-		my_img_features_ptr[n_angios].my_mask_ptr = new IMGCONT(my_img_features_ptr[n_angios].my_base_ptr->getHeight(),
-			my_img_features_ptr[n_angios].my_base_ptr->getWidth(),
-			my_img_features_ptr[n_angios].my_base_ptr->getMask());
+		my_img_mask.push_back(IMGCONT((my_img_base.at(n_angios)).getHeight(),
+			(my_img_base.at(n_angios)).getWidth(),
+			(my_img_base.at(n_angios)).getMask()));
 	}
 	else {
-		my_img_features_ptr[n_angios].my_mask_ptr = new IMGCONT(my_img_features_ptr[n_angios].my_base_ptr->getHeight(),
-			my_img_features_ptr[n_angios].my_base_ptr->getWidth(), 1.0);
+		my_img_mask.push_back(IMGCONT((my_img_base.at(n_angios)).getHeight(),
+			(my_img_base.at(n_angios)).getWidth(), 1.0));
 	}
 
+	my_img_response.push_back(IMGCONT());
+	my_img_thresholded_response.push_back(IMGCONT());
+	my_img_thrs_boundaries.push_back(IMGCONT());
+	my_img_thrs_map_dist.push_back(IMGCONT());
+	my_img_thrs_skeleton.push_back(IMGCONT());
 	
     hist.push_back( NULL );
     h_suma.push_back(0.0);
     h_media.push_back(0.0);
     h_desvest.push_back(0.0);
-
-	//mostrarImagen(IMGVTK::BASE, mis_renderers.at(n_angios), n_angios);
 
 }
 
@@ -834,8 +831,7 @@ void RECONS3D::agregarGroundtruth(const char *rutaground_input, const int angios
 #endif
         escribirLog( mensaje );
     }else{
-		my_img_features_ptr[angios_ID].my_groundtruth_ptr->Load(rutaground_input);
-
+		(my_img_groundtruth.at(angios_ID)).Load(rutaground_input);
         existe_ground[ angios_ID ] = true;
     }
 }
@@ -846,7 +842,8 @@ void RECONS3D::agregarGroundtruth(const char *rutaground_input, const int angios
 /*  Metodo: leerConfiguracion
     Funcion: Carga una configuracion predefinida para el filtro de deteccion
 */
-void RECONS3D::leerConfiguracion(const char *ruta_conf){
+void RECONS3D::leerConfiguracion(const char *ruta_conf)
+{
 #if defined(_WIN32) || defined(_WIN64)
 	FILE *fp_config;
 	fopen_s(&fp_config, ruta_conf, "r");
@@ -1979,46 +1976,6 @@ RECONS3D::RECONS3D(){
     mi_pBar = NULL;
 #endif
 
-	imgs_base = new IMGCONT_LIST;
-	imgs_base->my_first_node = NULL;
-	imgs_base->my_last_node = NULL;
-	imgs_base->my_nodes_count = 0;
-
-	imgs_groundtruth = new IMGCONT_LIST;
-	imgs_groundtruth->my_first_node = NULL;
-	imgs_groundtruth->my_last_node = NULL;
-	imgs_groundtruth->my_nodes_count = 0;
-
-	imgs_mask = new IMGCONT_LIST;
-	imgs_mask->my_first_node = NULL;
-	imgs_mask->my_last_node = NULL;
-	imgs_mask->my_nodes_count = 0;
-
-	imgs_response = new IMGCONT_LIST;
-	imgs_response->my_first_node = NULL;
-	imgs_response->my_last_node = NULL;
-	imgs_response->my_nodes_count = 0;
-
-	imgs_response_threshold = new IMGCONT_LIST;
-	imgs_response_threshold->my_first_node = NULL;
-	imgs_response_threshold->my_last_node = NULL;
-	imgs_response_threshold->my_nodes_count = 0;
-
-	imgs_thrs_response_map_dists = new IMGCONT_LIST;
-	imgs_thrs_response_map_dists->my_first_node = NULL;
-	imgs_thrs_response_map_dists->my_last_node = NULL;
-	imgs_thrs_response_map_dists->my_nodes_count = 0;
-
-	imgs_thrs_response_skeleton = new IMGCONT_LIST;
-	imgs_thrs_response_skeleton->my_first_node = NULL;
-	imgs_thrs_response_skeleton->my_last_node = NULL;
-	imgs_thrs_response_skeleton->my_nodes_count = 0;
-
-	imgs_thrs_response_boundaries = new IMGCONT_LIST;
-	imgs_thrs_response_boundaries->my_first_node = NULL;
-	imgs_thrs_response_boundaries->my_last_node = NULL;
-	imgs_thrs_response_boundaries->my_nodes_count = 0;
-	
     n_angios = -1;
 }
 
@@ -2059,49 +2016,6 @@ RECONS3D::RECONS3D(ARGUMENTS *input_arguments)
 	mi_txtLog = NULL;
 	mi_pBar = NULL;
 #endif
-
-
-	imgs_base = new IMGCONT_LIST;
-	imgs_base->my_first_node = NULL;
-	imgs_base->my_last_node = NULL;
-	imgs_base->my_nodes_count = 0;
-	
-	imgs_groundtruth = new IMGCONT_LIST;
-	imgs_groundtruth->my_first_node = NULL;
-	imgs_groundtruth->my_last_node = NULL;
-	imgs_groundtruth->my_nodes_count = 0;
-	
-	imgs_mask = new IMGCONT_LIST;
-	imgs_mask->my_first_node = NULL;
-	imgs_mask->my_last_node = NULL;
-	imgs_mask->my_nodes_count = 0;
-
-
-	imgs_response = new IMGCONT_LIST;
-	imgs_response->my_first_node = NULL;
-	imgs_response->my_last_node = NULL;
-	imgs_response->my_nodes_count = 0;
-
-	imgs_response_threshold = new IMGCONT_LIST;
-	imgs_response_threshold->my_first_node = NULL;
-	imgs_response_threshold->my_last_node = NULL;
-	imgs_response_threshold->my_nodes_count = 0;
-
-	imgs_thrs_response_map_dists = new IMGCONT_LIST;
-	imgs_thrs_response_map_dists->my_first_node = NULL;
-	imgs_thrs_response_map_dists->my_last_node = NULL;
-	imgs_thrs_response_map_dists->my_nodes_count = 0;
-
-	imgs_thrs_response_skeleton = new IMGCONT_LIST;
-	imgs_thrs_response_skeleton->my_first_node = NULL;
-	imgs_thrs_response_skeleton->my_last_node = NULL;
-	imgs_thrs_response_skeleton->my_nodes_count = 0;
-
-	imgs_thrs_response_boundaries = new IMGCONT_LIST;
-	imgs_thrs_response_boundaries->my_first_node = NULL;
-	imgs_thrs_response_boundaries->my_last_node = NULL;
-	imgs_thrs_response_boundaries->my_nodes_count = 0;
-
 
 	n_angios = -1;
 }
@@ -2172,6 +2086,25 @@ void RECONS3D::defineArguments()
 
 }
 
+
+
+
+
+
+
+void RECONS3D::segmentar()
+{
+	my_optimized_parameters.setInputBase(&my_img_base);
+	my_optimized_parameters.setInputGroundtruth(&my_img_groundtruth);
+	my_optimized_parameters.setInputMask(&my_img_mask);
+	my_optimized_parameters.setInputResponse(&my_img_response);
+	my_optimized_parameters.setInputThreshold(&my_img_thresholded_response);
+
+	my_optimized_parameters.setPar();
+
+
+	my_optimized_parameters.filter();
+}
 //---- ----------------------------------------------------------------------------- PUBLIC----- ^
 
 // C L A S E: RECONS3D  ------------------------------------------------------------------------ ^

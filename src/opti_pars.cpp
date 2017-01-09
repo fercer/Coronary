@@ -134,6 +134,11 @@ void OPTI_PARS::setPar(){
             busquedaExhaustiva();
             break;
     }
+
+	this->setParL(mi_elite->vars[0]);
+	this->setParT(mi_elite->vars[1]);
+	this->setParK(mi_elite->vars[2]);
+	this->setParSigma(mi_elite->vars[3]);
 }
 
 
@@ -211,7 +216,13 @@ void OPTI_PARS::setLim( const PARAMETRO par, const LIMITES lim, const double val
 */
 double OPTI_PARS::fitnessROC( INDIV *test )
 {
+	this->setParL(test->vars[0]);
+	this->setParT(test->vars[1]);
+	this->setParK(test->vars[2]);
+	this->setParSigma(test->vars[3]);
+
 	this->filter();
+
 	return this->calcROC();
 }
 
@@ -223,7 +234,13 @@ double OPTI_PARS::fitnessROC( INDIV *test )
 */
 double OPTI_PARS::fitnessCorCon( INDIV *test )
 {
+	this->setParL(test->vars[0]);
+	this->setParT(test->vars[1]);
+	this->setParK(test->vars[2]);
+	this->setParSigma(test->vars[3]);
+
 	this->filter();
+
     return this->calcCorCon();
 }
 
@@ -1071,7 +1088,7 @@ void OPTI_PARS::busquedaExhaustiva(){
 #if defined(_WIN32) || defined(_WIN64)
 					sprintf_s(mensaje_iter, 512 * sizeof(char), "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\n", idx, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K]);
 #else
-                    sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%5.4f\n", idx, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
+                    sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\n", idx, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K]);
 #endif
                     escribirLog( mensaje_iter );
                     barraProgreso( idx, n_bits);

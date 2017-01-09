@@ -44,6 +44,7 @@
 #include <vector>
 
 #include <omp.h>
+#include <math.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 	#include <time.h>
@@ -169,15 +170,14 @@ public:
 	~IMGCONT();
 
 	IMGCONT & operator=(const IMGCONT & img_src);
-	
-	void Load(const char * src_path, const unsigned int level = 0);
 
+	void Load(const char * src_path, const unsigned int level = 0);
 	void Save(const char * out_path, const IMG_TYPE output_type = IMGPGM);
 
+	void setImageData(const unsigned int new_height, const unsigned int new_width, const double * src_data);
 	double getPix(const unsigned int row_y, const unsigned int col_x);
 	void setPix(const unsigned int row_y, const unsigned int col_x, const double new_val);
 	void setDimensions(const unsigned int new_height, const unsigned int new_width, const double init_val = 0.0);
-
 
 	unsigned int getHeight();
 	unsigned int getWidth();
@@ -263,8 +263,10 @@ private:
 	PIX_PAIR * computeSkeletonGraph(double * skl_tmp, const unsigned int pos_x, const unsigned int pos_y, int *nivel, const unsigned char *lutabla, bool *was_visited);
 
 	void deleteSkeletonGraph(PIX_PAIR *graph_root);
-
 	void extractSkeletonFeatures();
+
+	PIX_PAIR * copySkeletonGraph(PIX_PAIR * src_graph_root);
+	void copyFrom(const IMGCONT & img_src);
 
 	inline unsigned char sklMask(double * skl_temp, const unsigned int pos_x, const unsigned int pos_y);
 	void computeSkeleton();
