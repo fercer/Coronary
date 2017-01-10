@@ -1,27 +1,18 @@
 /*---------------------------------------------------------------------------
-
    rpng - simple PNG display program                              readpng.c
-
   ---------------------------------------------------------------------------
-
       Copyright (c) 1998-2007 Greg Roelofs.  All rights reserved.
-
       This software is provided "as is," without warranty of any kind,
       express or implied.  In no event shall the author or contributors
       be held liable for any damages arising in any way from the use of
       this software.
-
       The contents of this file are DUAL-LICENSED.  You may modify and/or
       redistribute this software according to the terms of one of the
       following two licenses (at your option):
-
-
       LICENSE 1 ("BSD-like with advertising clause"):
-
       Permission is granted to anyone to use this software for any purpose,
       including commercial applications, and to alter it and redistribute
       it freely, subject to the following restrictions:
-
       1. Redistributions of source code must retain the above copyright
          notice, disclaimer, and this list of conditions.
       2. Redistributions in binary form must reproduce the above copyright
@@ -29,28 +20,21 @@
          tion and/or other materials provided with the distribution.
       3. All advertising materials mentioning features or use of this
          software must display the following acknowledgment:
-
             This product includes software developed by Greg Roelofs
             and contributors for the book, "PNG: The Definitive Guide,"
             published by O'Reilly and Associates.
-
-
       LICENSE 2 (GNU GPL v2 or later):
-
       This program is free software; you can redistribute it and/or modify
       it under the terms of the GNU General Public License as published by
       the Free Software Foundation; either version 2 of the License, or
       (at your option) any later version.
-
       This program is distributed in the hope that it will be useful,
       but WITHOUT ANY WARRANTY; without even the implied warranty of
       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
       GNU General Public License for more details.
-
       You should have received a copy of the GNU General Public License
       along with this program; if not, write to the Free Software Foundation,
       Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
   ---------------------------------------------------------------------------*/
 
 #include <stdio.h>
@@ -93,15 +77,17 @@ void readpng_version_info(void)
 
 int readpng_init(FILE *infile, ulg *pWidth, ulg *pHeight)
 {
-    uch sig[8];
+	uch sig[8];
 
 
-    /* first do a quick check that the file really is a PNG image; could
-     * have used slightly more general png_sig_cmp() function instead */
+	/* first do a quick check that the file really is a PNG image; could
+	 * have used slightly more general png_sig_cmp() function instead */
 
-    fread(sig, 1, 8, infile);
-    if (png_sig_cmp(sig, 0, 8))
-        return 1;   /* bad signature */
+	fread(sig, 1, 8, infile);
+	if (png_sig_cmp(sig, 1, 8)) {
+		printf("bad signature: %i\n", png_sig_cmp(sig, 1, 8));
+		return 1;   /* bad signature */
+	}
 
 
     /* could pass pointers to user-defined error handlers instead of NULLs: */
@@ -148,6 +134,9 @@ int readpng_init(FILE *infile, ulg *pWidth, ulg *pHeight)
 
 
     /* OK, that's all we need for now; return happy */
+#ifndef NDEBUG
+	printf("Successfully initialized...\n");
+#endif // !NDEBUG
 
     return 0;
 }

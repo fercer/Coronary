@@ -46,6 +46,8 @@
 #include <omp.h>
 #include <math.h>
 
+#include "libpng_src/readpng.h"
+
 #if defined(_WIN32) || defined(_WIN64)
 	#include <time.h>
 	#define COLOR_NORMAL
@@ -188,6 +190,12 @@ public:
 
 	void threshold(const THRESHOLD_ALG my_threshold_alg = THRESH_LEVEL, const double threshold_value = 0.5);
 
+	double getMaximum();
+	double getMinimum();
+
+	void normalize(const double fixed_min, const double fixed_max);
+	void normalize();
+
 	double * getMask();
 	double * getDistancesMap();
 	double * getBoundaries();
@@ -223,6 +231,7 @@ private:
 	int my_skeleton_graph_deep;
 	PIX_PAIR * my_skeleton_features;
 
+	char my_err_msg[512];
 	void writeLog(const char *message);
 
 	int LoadPNG(const char *src_path, const unsigned int level = 0);

@@ -17,6 +17,129 @@
 
 #include "IMGCONT.h"
 
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
+* FUNCTION NAME: getMaximum                                                                                 *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* -------                   --------                   -   -------------------------------------------      *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Returns the maximum value of the image data.                                                              *
+*                                                                                                           *
+************************************************************************************************************/
+double IMGCONT::getMaximum()
+{
+	double my_maximum = -MY_INF;
+
+	for (unsigned int xy = 0; xy < my_height * my_width; xy++) {
+		if (my_maximum < *(my_img_data + xy)) {
+			my_maximum = *(my_img_data + xy);
+		}
+	}
+
+	return my_maximum;
+}
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
+* FUNCTION NAME: getMinimum                                                                                 *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* -------                   --------                   -   -------------------------------------------      *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Returns the minimum value of the image data.                                                              *
+*                                                                                                           *
+************************************************************************************************************/
+double IMGCONT::getMinimum()
+{
+	double my_minimum = MY_INF;
+
+	for (unsigned int xy = 0; xy < my_height * my_width; xy++) {
+		if (my_minimum > *(my_img_data + xy)) {
+			my_minimum = *(my_img_data + xy);
+		}
+	}
+
+	return my_minimum;
+}
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
+* FUNCTION NAME: normalize                                                                                  *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* fixed_min                 const double               I   A fixed minimum value.                           *
+* fixed_max                 const double               I   A fixed maximum value.                           *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Nothing.                                                                                                  *
+*                                                                                                           *
+************************************************************************************************************/
+void  IMGCONT::normalize(const double fixed_min, const double fixed_max)
+{
+	const double my_range = fixed_max - fixed_min;
+
+	for (unsigned int xy = 0; xy < my_height * my_width; xy++) {
+		*(my_img_data + xy) = fixed_max * (*(my_img_data + xy) - fixed_min) / my_range;
+	}
+}
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
+* FUNCTION NAME: normalize                                                                                  *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* -------                   --------                   -   -------------------------------------------      *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Nothing.                                                                                                  *
+*                                                                                                           *
+************************************************************************************************************/
+void  IMGCONT::normalize()
+{
+	const double my_minimum = this->getMinimum();
+	const double my_maximum = this->getMaximum();
+
+	const double my_range = my_maximum - my_minimum;
+
+	for (unsigned int xy = 0; xy < my_height * my_width; xy++) {
+		*(my_img_data + xy) = my_maximum * (*(my_img_data + xy) - my_minimum) / my_range;
+	}
+}
+
+
+
+
 /************************************************************************************************************
 * IMGCONT::PRIVATE                                                                                          *
 *                                                                                                           *

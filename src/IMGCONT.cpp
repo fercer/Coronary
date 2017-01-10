@@ -56,6 +56,7 @@ IMGCONT::IMGCONT()
 	cenY = 0;
 
 	my_max_distance = 0;
+
 	my_skeleton_graph_deep = 0;
 
 	my_skeleton_features = NULL;
@@ -98,6 +99,7 @@ IMGCONT::IMGCONT(const unsigned int new_height, const unsigned int new_width, co
 	cenY = 0;
 
 	my_max_distance = 0;
+
 	my_skeleton_graph_deep = 0;
 
 	my_skeleton_features = NULL;
@@ -153,6 +155,7 @@ IMGCONT::IMGCONT(const unsigned int new_height, const unsigned int new_width, co
 	cenY = 0;
 
 	my_max_distance = 0;
+
 	my_skeleton_graph_deep = 0;
 
 	my_skeleton_features = NULL;
@@ -202,6 +205,7 @@ IMGCONT::IMGCONT(const IMGCONT& img_src) {
 	cenY = 0;
 
 	my_max_distance = 0;
+
 	my_skeleton_graph_deep = 0;
 
 	my_skeleton_features = NULL;
@@ -462,7 +466,88 @@ void IMGCONT::writeLog( const char *message )
 ************************************************************************************************************/
 int IMGCONT::LoadPNG(const char *src_path, const unsigned int level)
 {
-	return -1;
+	unsigned long read_height;
+	unsigned long read_width;
+
+	FILE *img_file = NULL;
+	img_file = fopen(src_path, "rb");
+	if (!img_file) {
+		sprintf(my_err_msg, "Cannot open file: << %s >>\n", src_path);
+		writeLog(my_err_msg);
+		return -1;
+	}
+
+
+	int response = readpng_init(img_file, &read_width, &read_height);
+	if (response) {
+		sprintf(my_err_msg, "Something went wrong at reading the png file: error number << %i >>\n", response);
+		writeLog(my_err_msg);
+		fclose(img_file);
+		return response;
+	}
+
+	unsigned char read_bg_red;
+	unsigned char read_bg_green;
+	unsigned char read_bg_blue;
+
+	response = readpng_get_bgcolor(&read_bg_red, &read_bg_green, &read_bg_blue);
+	if (response == 1) {
+		read_bg_red = 0;
+		read_bg_green = 0;
+		read_bg_blue = 0;
+	}
+
+	int read_channels;
+	unsigned long read_row_bytes;
+
+	unsigned char *read_img_data = readpng_get_image(1.0, &read_channels, &read_row_bytes);
+
+	DEB_MSG("row_pixel " << read_row_bytes << ", channels: " << read_channels);
+
+	this->setDimensions((unsigned int)read_height, (unsigned int)read_width);
+	double read_pixel;
+
+	switch( read_channels ){
+	case 1: {
+		for (unsigned int y = 0; y < (unsigned int)read_height; y++) {
+			for (unsigned int x = 0; x < (unsigned int)read_width; x++) {
+				read_pixel = (double)*(read_img_data + x + y*read_row_bytes);
+
+				this->setPix(y, x, read_pixel);
+			}
+		}
+		break;
+	}
+	case 3: {
+		for (unsigned int y = 0; y < (unsigned int)read_height; y++) {
+			for (unsigned int x = 0; x < (unsigned int)read_width; x++) {
+				read_pixel = (0.297)*(double)*(read_img_data + 3 * x + y*read_row_bytes);
+				read_pixel += (0.589)*(double)*(read_img_data + 3 * x + y*read_row_bytes + 1);
+				read_pixel += (0.114)*(double)*(read_img_data + 3 * x + y*read_row_bytes + 2);
+
+				this->setPix(y, x, read_pixel);
+			}
+		}
+		break;
+	}
+	case 4: {
+		for (unsigned int y = 0; y < (unsigned int)read_height; y++) {
+			for (unsigned int x = 0; x < (unsigned int)read_width; x++) {
+				read_pixel = (0.297)*(double)*(read_img_data + 4 * x + y*read_row_bytes);
+				read_pixel += (0.589)*(double)*(read_img_data + 4 * x + y*read_row_bytes + 1);
+				read_pixel += (0.114)*(double)*(read_img_data + 4 * x + y*read_row_bytes + 2);
+
+				this->setPix(y, x, read_pixel);
+			}
+		}
+		break;
+	}
+	}
+
+	readpng_cleanup(1);
+	fclose(img_file);
+
+	return 0;
 }
 
 
@@ -513,11 +598,9 @@ int IMGCONT::LoadPGM(const char *src_path, const unsigned int level)
 		*temp_str_ptr = getc(img_file);
 	}
 
-
-	double max_intensity;
 	int height;
 	int width;
-
+	int max_intensity;
 	if (temp_str[0] != '#') {
 		width = atoi(temp_str);
 	}
@@ -537,9 +620,7 @@ int IMGCONT::LoadPGM(const char *src_path, const unsigned int level)
 	fscanf(img_file, "%i", &height);
 	fscanf(img_file, "%lf", &max_intensity);
 #endif
-
-	DEB_MSG("height: " << height << ", width: " << width <<  ", max intensity: " << max_intensity);
-
+	
 	IMGCONT new_img(height, width);
 
 	int read_intensity;
@@ -932,10 +1013,11 @@ void IMGCONT::SavePGM(const char * out_path, const double my_min, const double m
 	fprintf(img_file, "%i %i\n", my_width, my_height);
 	fprintf(img_file, "255\n");
 
+	const double my_range = my_max - my_min;
 	int intensity;
 	for (unsigned int y = 0; y < my_height; y++) {
 		for (unsigned int x = 0; x < my_width; x++) {
-			intensity = (unsigned char)(255.0 * (*(my_img_data + x + y*my_width) - my_min) / (my_max - my_min));
+			intensity = (unsigned char)(255.0 * (*(my_img_data + x + y*my_width) - my_min) / my_range);
 			fprintf(img_file, "%i\n", intensity);
 		}
 	}

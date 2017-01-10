@@ -9,8 +9,7 @@
 
 
 int main(int argc, char** argv ){
-
-    // Definir los parametros de entrada:
+	// Definir los parametros de entrada:
     ARGUMENTS parametros( argc, argv);
 	RECONS3D mi_reconstructor(&parametros);
 
@@ -51,15 +50,14 @@ int main(int argc, char** argv ){
 		(strcmp(parametros.getArgumentCHAR("-g"), "NULL") != 0)) {
 		/// Reconstruir arteria:
 		mi_reconstructor.agregarInput(parametros.getArgumentCHAR("-b"),parametros.getArgumentINT("-bl"), parametros.getArgumentINT("-bu"), parametros.getArgumentCHAR("-g"), true);
-
-		mi_reconstructor.Guardar("Mask.pgm", RECONS3D::IMG_MASK, IMGCONT::IMGPGM, 0);
-		mi_reconstructor.Guardar("Base.pgm", RECONS3D::IMG_BASE, IMGCONT::IMGPGM, 0);
+		
+#ifndef NDEBUG
+		mi_reconstructor.Guardar("img_base.pgm", RECONS3D::IMG_BASE, IMGCONT::IMGPGM, 0);
+		mi_reconstructor.Guardar("img_mask.pgm", RECONS3D::IMG_MASK, IMGCONT::IMGPGM, 0);
+#endif // !NDEBUG
 
 		mi_reconstructor.leerConfiguracion(parametros.getArgumentCHAR("-c"));
 		mi_reconstructor.segmentar();
-
-
-		DEB_MSG("Saving response image...");
 		mi_reconstructor.Guardar("img.pgm", RECONS3D::IMG_RESPONSE, IMGCONT::IMGPGM, 0);
 	}
 
@@ -78,30 +76,26 @@ int main(int argc, char** argv ){
 
 		char *ruta_base = new char[512];
 		char *ruta_gt   = new char[512];
-		int ruta_len;
-		char *resp;
+
 		for (int i = 0; i < n_imgs; i++) {
-			resp = fgets(ruta_base, 512, fp_base);
-			resp = fgets(ruta_gt, 512, fp_gt);
-
-			ruta_len = (int)strlen(ruta_base);
-			if ((int)*(ruta_base + ruta_len - 1) == 10) {
-				*(ruta_base + ruta_len - 1) = '\0';
-			}
-
-			ruta_len = (int)strlen(ruta_gt);
-			if ((int)*(ruta_gt + ruta_len - 1) == 10) {
-				*(ruta_gt + ruta_len - 1) = '\0';
-			}
-
+			fscanf(fp_base, "%s", ruta_base);
+			fscanf(fp_gt, "%s", ruta_gt);
+			
 			DEB_MSG("[" << i << "] base: " << ruta_base <<", gt: " << ruta_gt);
 			mi_reconstructor.agregarInput(ruta_base, 0, 0, ruta_gt, true);
+		}
 
+		mi_reconstructor.leerConfiguracion(parametros.getArgumentCHAR("-c"));
+		mi_reconstructor.segmentar();
+
+		char response_filename[512];
+		for (int i = 0; i < n_imgs; i++) {
+			sprintf(response_filename, "segment_%i.pgm", i);
+			mi_reconstructor.Guardar(response_filename, RECONS3D::IMG_RESPONSE, IMGCONT::IMGPGM, i);
 		}
 
 		fclose(fp_base);
 		fclose(fp_gt);
 	}
-	
     return EXIT_SUCCESS;
 }
