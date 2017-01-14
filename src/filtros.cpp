@@ -549,10 +549,6 @@ void FILTROS::respGabor() {
 		}
 	}
 
-#ifndef NDEBUG
-	HPF.Save("High_pass_filter.pgm", IMGCONT::IMGPGM);
-#endif
-
 	/* 'Img_filter' is the temporal filtered image in the frequencies domain: */
 	fftw_complex *Img_filter = (fftw_complex*)fftw_malloc((my_img_base->at(0)).getHeight()*((my_img_base->at(0)).getWidth() / 2 + 1) * sizeof(fftw_complex));
 
@@ -586,6 +582,9 @@ void FILTROS::respGabor() {
 
 	unsigned int k = 0;
 	for (double theta = 0.0; theta < 180.0; theta += theta_increment, k++) {
+
+		DEB_MSG("theta: " << theta);
+
 		const double stheta = sin(theta*MY_PI / 180.0);
 		const double ctheta = cos(theta*MY_PI / 180.0);
 
@@ -628,12 +627,6 @@ void FILTROS::respGabor() {
 				* cosh(2.0*MY_PI*(sx2*fx*Ur + sy2*fy*Vr)));
 		}
 
-#ifndef NDEBUG
-		char gabor_filter_name[512] = "Gabor_filter_XXX.pgm";
-		sprintf(gabor_filter_name, "Gabor_filter_%i.pgm", k);
-		Gabor_filter.Save(gabor_filter_name, IMGCONT::IMGPGM);
-#endif
-
 		/* Apply the filter to the n images: */
 		for (unsigned int i = 0; i < my_filters_imgs_count; i++) {
 			for (unsigned int y = 0; y < (my_img_base->at(i)).getHeight(); y++) {
@@ -663,7 +656,11 @@ void FILTROS::respGabor() {
 		}
 	}
 
+
 	for (unsigned int i = 0; i < my_filters_imgs_count; i++) {
+
+		DEB_MSG("Image " << i << " filtered ...");
+
 		(my_img_response->at(i)).setDimensions((my_img_base->at(i)).getHeight(), (my_img_base->at(i)).getWidth());
 
 		for (unsigned int y = 0; y < (my_img_base->at(i)).getHeight(); y++) {
@@ -676,6 +673,8 @@ void FILTROS::respGabor() {
 
 		free(*(max_resp + i));
 	}
+
+	DEB_MSG("All images filtered ...................................");
 
 	fftw_free(Img_filter);
 	free(Img_resp);

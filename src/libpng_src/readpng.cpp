@@ -134,10 +134,6 @@ int readpng_init(FILE *infile, ulg *pWidth, ulg *pHeight)
 
 
     /* OK, that's all we need for now; return happy */
-#ifndef NDEBUG
-	printf("Successfully initialized...\n");
-#endif // !NDEBUG
-
     return 0;
 }
 
@@ -255,6 +251,7 @@ uch *readpng_get_image(double display_exponent, int *pChannels, ulg *pRowbytes)
 
     png_read_update_info(png_ptr, info_ptr);
 
+
     *pRowbytes = rowbytes = png_get_rowbytes(png_ptr, info_ptr);
     *pChannels = (int)png_get_channels(png_ptr, info_ptr);
 
@@ -268,6 +265,7 @@ uch *readpng_get_image(double display_exponent, int *pChannels, ulg *pRowbytes)
         image_data = NULL;
         return NULL;
     }
+
 
     Trace((stderr, "readpng_get_image:  channels = %d, rowbytes = %ld, height = %ld\n",
         *pChannels, rowbytes, height));

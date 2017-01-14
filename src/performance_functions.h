@@ -23,6 +23,13 @@
 #include "IMGCONT.h"
 
 class PERFORMANCE_FUNCTIONS {
+private:
+	typedef struct PERFORMANCE_PAIR {
+		unsigned int my_idx;
+		double my_intensity;
+	} PERFORMANCE_PAIR;
+
+	static int comp_resp(const void *pix_A, const void * pix_B);
 
 protected:
 	std::vector< IMGCONT > * my_img_response;

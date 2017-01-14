@@ -27,11 +27,11 @@
 
 
 
-int comp_resp( const void *pix_A, const void * pix_B ) {
-	if (*(double*)pix_A > *(double*)pix_B) {
+int PERFORMANCE_FUNCTIONS::comp_resp( const void *pix_A, const void * pix_B ) {
+	if ( ((PERFORMANCE_PAIR*)pix_A)->my_intensity < ((PERFORMANCE_PAIR*)pix_B)->my_intensity) {
 		return -1;
 	}
-	else if (*(double*)pix_A < *(double*)pix_B) {
+	else if (((PERFORMANCE_PAIR*)pix_A)->my_intensity > ((PERFORMANCE_PAIR*)pix_B)->my_intensity) {
 		return 1;
 	}
 	else {
@@ -67,74 +67,70 @@ int comp_resp( const void *pix_A, const void * pix_B ) {
 ************************************************************************************************************/
 double PERFORMANCE_FUNCTIONS::calcROC() {
 	
-	const double default_delta = 1e-4;
+	DEB_MSG("Calculating Az ...");
+
+	unsigned int total_active_response = 0;
+	PERFORMANCE_PAIR *all_active_response = (PERFORMANCE_PAIR*)malloc(my_performance_imgs_count *
+		(my_img_groundtruth->at(0)).getHeight() * (my_img_groundtruth->at(0)).getWidth() * sizeof(PERFORMANCE_PAIR));
+
+	PERFORMANCE_PAIR *all_groundtruth = (PERFORMANCE_PAIR*)malloc(my_performance_imgs_count *
+		(my_img_groundtruth->at(0)).getHeight() * (my_img_groundtruth->at(0)).getWidth() * sizeof(PERFORMANCE_PAIR));
 
 	/* Count the number of positive and negative individuals on the ground-truth that belong to the masked area: */
-	unsigned int n_positive = 0, n_negative = 0;
+	unsigned int n_true_positive = 0;
 	for (unsigned int i = 0; i < my_performance_imgs_count; i++) {
 		for (unsigned int y = 0; y < (my_img_groundtruth->at(i)).getHeight(); y++) {
 			for (unsigned int x = 0; x < (my_img_groundtruth->at(i)).getWidth(); x++) {
-				if (((my_img_groundtruth->at(i)).getPix(y, x) > 0.5) && ((my_img_response_mask->at(i)).getPix(y, x) > 0.5)) {
-					n_positive++;
-				}
-				else {
-					n_negative++;
-				}
-			}
-		}
-	}
-
-	double *positive_array = (double*)malloc(n_positive * sizeof(double));
-	double *negative_array = (double*)malloc(n_negative * sizeof(double));
-	n_positive = 0;
-	n_negative = 0;
-
-	/* Store the values of the response in the corresponding array according to the ground-truth: */
-	double max_resp = -MY_INF;
-	double min_resp = MY_INF;
-
-	for (unsigned int i = 0; i < my_performance_imgs_count; i++) {
-		for (unsigned int y = 0; y < (my_img_response->at(i)).getHeight(); y++) {
-			for (unsigned int x = 0; x < (my_img_response->at(i)).getWidth(); x++) {
-				/* Store the value only if belongs to the masked area: */
 				if ((my_img_response_mask->at(i)).getPix(y, x) > 0.5) {
 
-					const double curr_pixel_intensity = (my_img_response->at(i)).getPix(y, x);
-
-					if ((my_img_groundtruth->at(i)).getPix(y, x) >= 0.5) {
-						*(positive_array + n_positive) = curr_pixel_intensity;
-						n_positive++;
-					}
-					else {
-						*(negative_array + n_negative) = curr_pixel_intensity;
-						n_negative++;
+					if ((my_img_groundtruth->at(i)).getPix(y, x) > 0.5) {
+						n_true_positive++;
 					}
 
-					/* Determine minima and maxima in the response: */
-					if (max_resp < curr_pixel_intensity) {
-						max_resp = curr_pixel_intensity;
-					}
-					if (min_resp > curr_pixel_intensity) {
-						min_resp = curr_pixel_intensity;
-					}
+					(all_active_response + total_active_response)->my_idx = total_active_response;
+					(all_active_response + total_active_response)->my_intensity = (my_img_response->at(i)).getPix(y, x);
+
+					(all_groundtruth + total_active_response)->my_idx = total_active_response;
+					(all_groundtruth + total_active_response)->my_intensity = (my_img_groundtruth->at(i)).getPix(y, x);
+
+					total_active_response++;
 				}
 			}
 		}
 	}
 
-	/* Sort both arrays: */
-	qsort(positive_array, n_positive, sizeof(double), comp_resp);
-	qsort(negative_array, n_negative, sizeof(double), comp_resp);
+	unsigned n_true_negative = total_active_response - n_true_positive;
 
-	/* Start with the most discriminant threshold */
-	double threshold = max_resp;
-	int i_positive = (n_positive - 1), i_negative = (n_negative - 1), i_threshold = 0;
-	double TP = 0.0, TN = (double)n_negative;
+	qsort(all_active_response, total_active_response, sizeof(PERFORMANCE_PAIR), comp_resp);
 
-	double TPF_old = 0.0;
-	double FPF_old = 0.0;
+	DEB_MSG("n negative: " << n_true_negative << ", n positive: " << n_true_positive);
+	double *true_positive_fraction_array = (double*)malloc(total_active_response * sizeof(double));
+	double *false_positive_fraction_array = (double*)malloc(total_active_response * sizeof(double));
 
-	double TPF_new, FPF_new;
+	unsigned int cumulative_false_negative = 0;
+	unsigned int cumulative_true_negative = 0;
+
+
+	for (unsigned int i = 0; i < total_active_response; i++) {
+		const double curr_groundtruth = (all_groundtruth + (all_active_response + i)->my_idx)->my_intensity;
+
+		if (curr_groundtruth > 0.5) {
+			cumulative_false_negative++;
+		}
+		else {
+			cumulative_true_negative++;
+		}
+
+		*(true_positive_fraction_array + i) = (double)(n_true_positive - cumulative_false_negative) /
+			(double)n_true_positive;
+
+		*(false_positive_fraction_array + i) = (double)(n_true_negative - cumulative_true_negative) /
+			(double)n_true_negative;
+	}
+	free(all_active_response);
+	free(all_groundtruth);
+
+	/* Calculate the Area underd the ROC curve: */
 	double Az = 0.0;
 
 #if !defined(NDEBUG)
@@ -146,51 +142,16 @@ double PERFORMANCE_FUNCTIONS::calcROC() {
 #endif
 #endif
 
-	min_resp -= default_delta;
-	while (threshold > min_resp) {
-		/* Count the positive and negative individuals at this threshold: */
-		if (i_negative == 0 && i_positive == 0) {
-			break;
-		}
-
-		while (i_positive > 0) {
-			if (*(positive_array + i_positive) >= threshold) {
-				TP += 1.0;
-				i_positive--;
-			}
-			else {
-				break;
-			}
-		}
-
-		while (i_negative > 0) {
-			if (*(negative_array + i_negative) >= threshold) {
-				TN -= 1.0;
-				i_negative--;
-			}
-			else {
-				break;
-			}
-		}
-
-		/* Compute the True Positive Fraction and the False Positive Fraction: */
-		TPF_new = TP / (double)n_positive;
-		FPF_new = 1.0 - TN / (double)n_negative;
-
+	for(unsigned int i = 0; i < (total_active_response  -  1); i++) {
 		/* Approximate the area under the ROC curve with the Trapezoid Rule: */
-		Az += (FPF_new - FPF_old)*(TPF_new + TPF_old) / 2.0;
+		Az += 0.5 * (*(true_positive_fraction_array + i) + *(true_positive_fraction_array + i + 1)) *
+			(*(false_positive_fraction_array + i) - *(false_positive_fraction_array + i + 1));
 
-		/* Update the threshold: */
-		threshold -= default_delta;
-		i_threshold++;
-
-		TPF_old = TPF_new;
-		FPF_old = FPF_new;
 #ifndef NDEBUG
 #if defined(_WIN32) || defined(_WIN64)
-		fprintf_s(fp_ROC, "%1.12f %1.12f\n", TPF_old, FPF_old);
+		fprintf_s(fp_ROC, "%1.12f %1.12f\n", *(true_positive_fraction_array + i), *(false_positive_fraction_array + i));
 #else
-		fprintf(fp_ROC, "%1.12f %1.12f\n", TPF_old, FPF_old);
+		fprintf(fp_ROC, "%1.12f %1.12f\n", *(true_positive_fraction_array + i), *(false_positive_fraction_array + i));
 #endif
 #endif
 	}
@@ -199,8 +160,10 @@ double PERFORMANCE_FUNCTIONS::calcROC() {
 	fclose(fp_ROC);
 #endif
 
-	free(positive_array);
-	free(negative_array);
+	free(true_positive_fraction_array);
+	free(false_positive_fraction_array);
+
+	DEB_MSG("Overall area under the ROC curve: " << Az);
 
 	return Az;
 }

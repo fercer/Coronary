@@ -103,7 +103,7 @@ OPTI_PARS::OPTI_PARS(){
 OPTI_PARS::~OPTI_PARS(){
     delete mi_elite;
     if ( semilla ){
-        delete semilla;
+		free(semilla);
     }
 }
 
@@ -113,24 +113,30 @@ OPTI_PARS::~OPTI_PARS(){
     Funcion: Ejecuta el metodo de optimizacion seleccionado para encontrar los mejores parametros para el filtro sobre la imagen de origen.
 */
 void OPTI_PARS::setPar(){
+
     switch( metodo_elegido ){
         case EA_DE:
+			DEB_MSG("Optimizing with DE ...");
             DE();
             break;
 
         case EA_GA:
+			DEB_MSG("Optimizing with GA ...");
             GA();
             break;
 
         case EDA_BUMDA:
+			DEB_MSG("Optimizing with BUMDA ...");
             BUMDA();
             break;
 
         case EDA_UMDA:
+			DEB_MSG("Optimizing with UMDA ...");
             UMDA();
             break;
 
         case EXHAUSTIVA:
+			DEB_MSG("Optimizing with Exhaustive search ...");
             busquedaExhaustiva();
             break;
     }
@@ -275,6 +281,9 @@ void OPTI_PARS::generarPobInicial(INDIV *poblacion){
     // VERIFICAR CUALES PARAMETROS SE BUSCAN:
     using namespace std;
     for(int i = 0; i < n_pob; i++){
+
+		DEB_MSG("Individual " << i);
+
         memcpy( poblacion[i].vars, mi_elite->vars, 5*sizeof(double) );
 
         for( unsigned int j = 0; j < n_pars; j++){
@@ -982,7 +991,9 @@ void OPTI_PARS::DE(){
     bool procesar = true;
 
     //// Generar la primer poblacion:
+	DEB_MSG("Generating initial population ...");
     generarPobInicial(poblacion);
+	DEB_MSG("Initial population generated successfully ...");
     qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv); // El mejor fitness queda en la posicion 0
 
     //Se define el theta en el tiempo 0 como el minimo de la poblacion inicial.

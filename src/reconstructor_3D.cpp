@@ -2102,8 +2102,8 @@ void RECONS3D::segmentar()
 
 	my_optimized_parameters.setPar();
 
-
 	my_optimized_parameters.filter();
+	my_optimized_parameters.calcROC();
 }
 //---- ----------------------------------------------------------------------------- PUBLIC----- ^
 

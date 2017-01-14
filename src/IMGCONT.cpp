@@ -470,7 +470,11 @@ int IMGCONT::LoadPNG(const char *src_path, const unsigned int level)
 	unsigned long read_width;
 
 	FILE *img_file = NULL;
+#if defined(_WIN32) || defined(_WIN64) 
+	fopen_s(&img_file, src_path, "rb");
+#else 
 	img_file = fopen(src_path, "rb");
+#endif
 	if (!img_file) {
 		sprintf(my_err_msg, "Cannot open file: << %s >>\n", src_path);
 		writeLog(my_err_msg);
@@ -499,7 +503,6 @@ int IMGCONT::LoadPNG(const char *src_path, const unsigned int level)
 
 	int read_channels;
 	unsigned long read_row_bytes;
-
 	unsigned char *read_img_data = readpng_get_image(1.0, &read_channels, &read_row_bytes);
 
 	DEB_MSG("row_pixel " << read_row_bytes << ", channels: " << read_channels);
