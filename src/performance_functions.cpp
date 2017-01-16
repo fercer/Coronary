@@ -53,31 +53,31 @@ int PERFORMANCE_FUNCTIONS::comp_resp( const void *pix_A, const void * pix_B ) {
 
 
 /************************************************************************************************************
-* PERFORMANCE_FUNCTIONS::PUBLIC                                                                             *
+* PERFORMANCE_FUNCTIONS::PRIVATE                                                                            *
 *                                                                                                           *
-* FUNCTION NAME: calcAccuracy                                                                               *
+* FUNCTION NAME: computeActiveGroundTruth                                                                   *
 *                                                                                                           *
 * ARGUMENTS:                                                                                                *
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
 * --------                  ------------               -   ------------------------------------------       *
 *                                                                                                           *
 * RETURNS:                                                                                                  *
-* Calculates the area under the ROC curve constructed form the response and its ground-truth.               *
+* Computes the active ground truth and the true negative and false negative pixels according to the mask.   *
 *                                                                                                           *
 ************************************************************************************************************/
-double PERFORMANCE_FUNCTIONS::calcROC() {
-	
-	DEB_MSG("Calculating Az ...");
+void PERFORMANCE_FUNCTIONS::computeActiveGroundTruth()
+{
+	if (active_gt_already_computed) {
+		return;
+	}
 
-	unsigned int total_active_response = 0;
-	PERFORMANCE_PAIR *all_active_response = (PERFORMANCE_PAIR*)malloc(my_performance_imgs_count *
+	all_groundtruth = (PERFORMANCE_PAIR*)malloc(my_performance_imgs_count *
 		(my_img_groundtruth->at(0)).getHeight() * (my_img_groundtruth->at(0)).getWidth() * sizeof(PERFORMANCE_PAIR));
 
-	PERFORMANCE_PAIR *all_groundtruth = (PERFORMANCE_PAIR*)malloc(my_performance_imgs_count *
-		(my_img_groundtruth->at(0)).getHeight() * (my_img_groundtruth->at(0)).getWidth() * sizeof(PERFORMANCE_PAIR));
+	total_active_response = 0;
+	n_true_positive = 0;
 
 	/* Count the number of positive and negative individuals on the ground-truth that belong to the masked area: */
-	unsigned int n_true_positive = 0;
 	for (unsigned int i = 0; i < my_performance_imgs_count; i++) {
 		for (unsigned int y = 0; y < (my_img_groundtruth->at(i)).getHeight(); y++) {
 			for (unsigned int x = 0; x < (my_img_groundtruth->at(i)).getWidth(); x++) {
@@ -87,25 +87,67 @@ double PERFORMANCE_FUNCTIONS::calcROC() {
 						n_true_positive++;
 					}
 
-					(all_active_response + total_active_response)->my_idx = total_active_response;
-					(all_active_response + total_active_response)->my_intensity = (my_img_response->at(i)).getPix(y, x);
-
-					(all_groundtruth + total_active_response)->my_idx = total_active_response;
+					(all_groundtruth + total_active_response)->my_x = x;
+						(all_groundtruth + total_active_response)->my_y = y;
+					(all_groundtruth + total_active_response)->my_idx = i;
 					(all_groundtruth + total_active_response)->my_intensity = (my_img_groundtruth->at(i)).getPix(y, x);
-
 					total_active_response++;
 				}
 			}
 		}
 	}
 
-	unsigned n_true_negative = total_active_response - n_true_positive;
+	n_true_negative = total_active_response - n_true_positive;
+
+	all_active_response = (PERFORMANCE_PAIR*)malloc(total_active_response * sizeof(PERFORMANCE_PAIR));
+	true_positive_fraction_array = (double*)malloc(total_active_response * sizeof(double));
+	false_positive_fraction_array = (double*)malloc(total_active_response * sizeof(double));
+
+	active_gt_already_computed = true;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+/************************************************************************************************************
+* PERFORMANCE_FUNCTIONS::PUBLIC                                                                             *
+*                                                                                                           *
+* FUNCTION NAME: calcROC                                                                                    *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* --------                  ------------               -   ------------------------------------------       *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Calculates the area under the ROC curve constructed form the response and its ground-truth.               *
+*                                                                                                           *
+************************************************************************************************************/
+double PERFORMANCE_FUNCTIONS::calcROC() 
+{
+
+	computeActiveGroundTruth();
+
+	/* Store the active response: */
+	for (unsigned int i = 0; i < total_active_response; i++) {
+		unsigned int curr_img = (all_groundtruth + i)->my_idx;
+		unsigned int curr_y = (all_groundtruth + i)->my_y;
+		unsigned int curr_x = (all_groundtruth + i)->my_x;
+
+		(all_active_response + i)->my_idx = i;
+		(all_active_response + i)->my_intensity = (my_img_response->at(curr_img)).getPix( curr_y, curr_x);
+	}
 
 	qsort(all_active_response, total_active_response, sizeof(PERFORMANCE_PAIR), comp_resp);
 
 	DEB_MSG("n negative: " << n_true_negative << ", n positive: " << n_true_positive);
-	double *true_positive_fraction_array = (double*)malloc(total_active_response * sizeof(double));
-	double *false_positive_fraction_array = (double*)malloc(total_active_response * sizeof(double));
 
 	unsigned int cumulative_false_negative = 0;
 	unsigned int cumulative_true_negative = 0;
@@ -127,8 +169,6 @@ double PERFORMANCE_FUNCTIONS::calcROC() {
 		*(false_positive_fraction_array + i) = (double)(n_true_negative - cumulative_true_negative) /
 			(double)n_true_negative;
 	}
-	free(all_active_response);
-	free(all_groundtruth);
 
 	/* Calculate the Area underd the ROC curve: */
 	double Az = 0.0;
@@ -159,10 +199,7 @@ double PERFORMANCE_FUNCTIONS::calcROC() {
 #ifndef NDEBUG
 	fclose(fp_ROC);
 #endif
-
-	free(true_positive_fraction_array);
-	free(false_positive_fraction_array);
-
+	
 	DEB_MSG("Overall area under the ROC curve: " << Az);
 
 	return Az;
@@ -560,4 +597,48 @@ void PERFORMANCE_FUNCTIONS::setInputPerformanceMask(std::vector<IMGCONT>* new_im
 	my_img_response_mask = new_img_mask;
 
 	my_performance_imgs_count = (unsigned int)new_img_mask->size();
+}
+
+
+
+
+
+
+
+
+
+PERFORMANCE_FUNCTIONS::PERFORMANCE_FUNCTIONS()
+{
+	active_gt_already_computed = false;
+
+
+	all_groundtruth = NULL;
+	all_active_response = NULL;
+	true_positive_fraction_array = NULL;
+	false_positive_fraction_array = NULL;
+}
+
+
+
+
+
+
+
+PERFORMANCE_FUNCTIONS::~PERFORMANCE_FUNCTIONS()
+{
+	if (all_groundtruth) {
+		free(all_groundtruth);
+	}
+
+	if (all_active_response) {
+		free(all_active_response);
+	}
+
+	if (true_positive_fraction_array) {
+		free(true_positive_fraction_array);
+	}
+
+	if (false_positive_fraction_array) {
+		free(false_positive_fraction_array);
+	}
 }

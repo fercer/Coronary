@@ -56,6 +56,9 @@ int main(int argc, char** argv ){
 		mi_reconstructor.Guardar("img_mask.pgm", RECONS3D::IMG_MASK, IMGCONT::IMGPGM, 0);
 #endif // !NDEBUG
 
+		if (strcmp(parametros.getArgumentCHAR("-lf"), "NULL") != 0) {
+			mi_reconstructor.setFiltroLog(parametros.getArgumentCHAR("-lf"));
+		}
 		mi_reconstructor.leerConfiguracion(parametros.getArgumentCHAR("-c"));
 		mi_reconstructor.segmentar();
 		mi_reconstructor.Guardar("img.pgm", RECONS3D::IMG_RESPONSE, IMGCONT::IMGPGM, 0);
@@ -83,6 +86,10 @@ int main(int argc, char** argv ){
 			
 			DEB_MSG("[" << i << "] base: " << ruta_base <<", gt: " << ruta_gt);
 			mi_reconstructor.agregarInput(ruta_base, 0, 0, ruta_gt, true);
+		}
+
+		if (strcmp(parametros.getArgumentCHAR("-lf"), "NULL") != 0) {
+			mi_reconstructor.setFiltroLog(parametros.getArgumentCHAR("-lf"));
 		}
 
 		mi_reconstructor.leerConfiguracion(parametros.getArgumentCHAR("-c"));

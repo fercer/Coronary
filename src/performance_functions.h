@@ -25,11 +25,26 @@
 class PERFORMANCE_FUNCTIONS {
 private:
 	typedef struct PERFORMANCE_PAIR {
+		unsigned int my_x;
+		unsigned int my_y;
 		unsigned int my_idx;
 		double my_intensity;
 	} PERFORMANCE_PAIR;
 
 	static int comp_resp(const void *pix_A, const void * pix_B);
+	void computeActiveGroundTruth();
+	bool active_gt_already_computed;
+
+	unsigned int n_true_positive;
+	unsigned int n_true_negative;
+	unsigned int total_active_response;
+
+	PERFORMANCE_PAIR *all_groundtruth;
+	PERFORMANCE_PAIR *all_active_response;
+
+	double *true_positive_fraction_array;
+	double *false_positive_fraction_array;
+
 
 protected:
 	std::vector< IMGCONT > * my_img_response;
@@ -51,5 +66,8 @@ public:
 	void setInputPerformanceThreshold(std::vector<IMGCONT> * new_img_response_threshold);
 	void setInputPerformanceGroundtruth(std::vector<IMGCONT> * new_img_groundtruth);
 	void setInputPerformanceMask(std::vector<IMGCONT>* new_img_mask);
+
+	PERFORMANCE_FUNCTIONS();
+	~PERFORMANCE_FUNCTIONS();
 };
 #endif //PERFORMANCE_FUNCTIONS_H_INCLUDED

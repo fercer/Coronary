@@ -46,9 +46,6 @@ void FILTROS::barraProgreso( const int avance, const int max_progress ){
     }
 #endif
 
-
-    //DEB_MSG("No se definio el pBar");
-
     /// Limpiar el resto de la linea:
     int max_ancho = 100;
     for( int i = 0; i <= max_ancho; i++){
@@ -57,7 +54,11 @@ void FILTROS::barraProgreso( const int avance, const int max_progress ){
     printf(COLOR_BACK_RED "[");
     int avance_progreso = (int)((double)max_ancho * (double)avance / (double)max_progress);
     for( int i = 0; i < avance_progreso; i++){
+#if defined(_WIN32) || defined(_WIN64)
+		printf("=");
+#else
         printf(COLOR_BACK_GREEN " ");
+#endif
     }
     for( int i = avance_progreso; i < max_ancho; i++){
         printf(COLOR_BACK_CYAN " ");
@@ -451,18 +452,15 @@ void FILTROS::respGMF() {
 ************************************************************************************************************/
 void FILTROS::fftImgOrigen()
 {
+	if (!already_transformed) {
+		if (input_already_set) {
+			if (!Img_fft) {
+				Img_fft = new fftw_complex*[my_filters_imgs_count];
+			}
+			if (!Img_fft_HPF) {
+				Img_fft_HPF = new fftw_complex*[my_filters_imgs_count];
+			}
 
-	DEB_MSG("my img base ptr: " << my_img_base);
-
-    if(input_already_set){
-		if (!Img_fft) {
-			Img_fft = new fftw_complex*[my_filters_imgs_count];
-		}
-		if (!Img_fft_HPF) {
-			Img_fft_HPF = new fftw_complex*[my_filters_imgs_count];
-		}
-
-		if (!already_transformed) {
 			for (unsigned int i = 0; i < my_filters_imgs_count; i++) {
 				*(Img_fft + i) = (fftw_complex*)fftw_malloc((my_img_base->at(i)).getHeight() *
 					((my_img_base->at(i)).getWidth() / 2 + 1) * sizeof(fftw_complex));
@@ -488,7 +486,7 @@ void FILTROS::fftImgOrigen()
 
 			delete[] Img_org;
 		}
-    }
+	}
 }
 
 
@@ -500,9 +498,6 @@ void FILTROS::fftImgOrigen()
 void FILTROS::respGabor() {
 
 	fftImgOrigen();
-
-	DEB_MSG("L: " << my_L << ", T: " << my_T << ", K: " << my_K);
-	DEB_MSG("height: " << (my_img_base->at(0)).getHeight() << ", width: " << (my_img_base->at(0)).getWidth());
 
 	// Calculate sx y sy:
 	double sx2 = (double)my_T / (2.0*sqrt(2.0 * log(2.0)));
@@ -582,9 +577,6 @@ void FILTROS::respGabor() {
 
 	unsigned int k = 0;
 	for (double theta = 0.0; theta < 180.0; theta += theta_increment, k++) {
-
-		DEB_MSG("theta: " << theta);
-
 		const double stheta = sin(theta*MY_PI / 180.0);
 		const double ctheta = cos(theta*MY_PI / 180.0);
 
@@ -658,9 +650,6 @@ void FILTROS::respGabor() {
 
 
 	for (unsigned int i = 0; i < my_filters_imgs_count; i++) {
-
-		DEB_MSG("Image " << i << " filtered ...");
-
 		(my_img_response->at(i)).setDimensions((my_img_base->at(i)).getHeight(), (my_img_base->at(i)).getWidth());
 
 		for (unsigned int y = 0; y < (my_img_base->at(i)).getHeight(); y++) {
@@ -673,8 +662,6 @@ void FILTROS::respGabor() {
 
 		free(*(max_resp + i));
 	}
-
-	DEB_MSG("All images filtered ...................................");
 
 	fftw_free(Img_filter);
 	free(Img_resp);

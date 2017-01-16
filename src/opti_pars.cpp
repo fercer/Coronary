@@ -34,18 +34,22 @@ void OPTI_PARS::setEvoMet(const EVO_MET evo_met){
 void OPTI_PARS::setEvoMetPar(const EVO_MET_PAR evo_par, const double val){
     switch( evo_par ){
     case POPSIZE:
+		DEB_MSG("New popsize: " << val);
         n_pob = (int)val;
         break;
     case MAXGEN:
+		DEB_MSG("New MAXGEN: " << val);
         max_iters = (int)val;
         break;
     case CR:
         prob_cruza = val;
+		DEB_MSG("New CR: " << val);
         seleccion = (int)(val * (double)n_pob);
         seleccion += (seleccion%2);
         DEB_MSG("Selection size: " << seleccion);
         break;
     case MR:
+		DEB_MSG("New MR: " << val);
         prob_mutacion = val;
         break;
     }
@@ -114,6 +118,10 @@ OPTI_PARS::~OPTI_PARS(){
 */
 void OPTI_PARS::setPar(){
 
+	TIMERS;
+
+	GETTIME_INI;
+
     switch( metodo_elegido ){
         case EA_DE:
 			DEB_MSG("Optimizing with DE ...");
@@ -140,6 +148,13 @@ void OPTI_PARS::setPar(){
             busquedaExhaustiva();
             break;
     }
+
+	GETTIME_FIN;
+
+	char mensaje_iter[512] = "Best parameters found in %f s.\n";
+	sprintf(mensaje_iter, "Best parameters found in %f s.\n", DIFTIME);
+	escribirLog(mensaje_iter);
+
 
 	this->setParL(mi_elite->vars[0]);
 	this->setParT(mi_elite->vars[1]);
@@ -908,27 +923,28 @@ void OPTI_PARS::diferenciarPoblacion( INDIV* poblacion, INDIV* pob_base ){
     memcpy( pob_base, poblacion, n_pob * sizeof(INDIV) );
 
     for(int i = 0; i < n_pob; i++){
+
+		DEB_MSG("Indiv [" << i << "]");
+
         // Diferenciar el individuo unicamente si se cumple la probabilidad de cruza:
         if( HybTaus(0.0, 1.0, semilla) <= prob_cruza ){
 
             // Generar tres indices aleatorios diferentes (excluyendo el indice actual):
-            int idx_1 = (int)round(HybTaus(-0.5, (double)(n_pob-2) + 0.49, semilla));
+            int idx_1 = (int)fabs(round(HybTaus(-0.49, (double)n_pob - 1.51, semilla)));
             idx_1 += (idx_1 >= i) ? 1 : 0;
 
             int idx_2 = idx_1;
             do{
-                idx_2 = (int)round(HybTaus(-0.5, (double)(n_pob-2) + 0.49, semilla));
+                idx_2 = (int)fabs(round(HybTaus(-0.49, (double)n_pob - 1.51, semilla)));
                 idx_2 += (idx_2 >= i) ? 1 : 0;
             }while( idx_2 == idx_1 );
 
             int idx_3 = idx_1;
             do{
-                idx_3 = (int)round(HybTaus(-0.5, (double)(n_pob-2) + 0.49, semilla));
+				idx_3 = (int)fabs(round(HybTaus(-0.49, (double)n_pob - 1.51, semilla)));
                 idx_3 += (idx_3 >= i) ? 1 : 0;
             }while( (idx_3 == idx_1) || (idx_3 == idx_2) );
-
-            DEB_MSG("[" << i << "]: {" << idx_1 << ", " << idx_2 << ", " << idx_3 << "}");
-
+			
             // Diferenciar todas las variables del individuo:
             for(unsigned int j = 0; j < n_pars; j++){
                 const unsigned int k = idx_pars[j];
@@ -974,15 +990,15 @@ void OPTI_PARS::DE(){
 
     // Se cuentan los parametros activos:
     n_pars = 0;
-    for( int p = 0; p < 4; p++){
-        if( pars_optim[p] ){
-            idx_pars[n_pars] = p;
-            n_pars ++;
-        }
-    }
+	for (int p = 0; p < 4; p++) {
+		if (pars_optim[p]) {
+			idx_pars[n_pars] = p;
+			n_pars++;
+		}
+	}
 
     if(semilla){
-        delete semilla;
+		free(semilla);
     }
     semilla = initSeed(0);
 
@@ -999,18 +1015,24 @@ void OPTI_PARS::DE(){
     //Se define el theta en el tiempo 0 como el minimo de la poblacion inicial.
     char mensaje_iter[512] = "Best fit: X.XXXXXXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: Laste eval: X.XXXX, L: XX.XXX , T: XX.XXX, Sigma: XX.XXX, K: XXX.X :: en XXXXX.XXXX s.\n";
     escribirLog( "iteration\tbest_fit\tT\tL\tSigma\tK\telapsed_time\n" );
-
+	TIMERS;
+	GETTIME_INI;
     do{
+		GETTIME_FIN;
 #if defined(_WIN32) || defined(_WIN64)
-		sprintf_s(mensaje_iter, 512 * sizeof(char), "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\n", k, poblacion->eval, poblacion->vars[PAR_T], poblacion->vars[PAR_L], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K]);
+		sprintf_s(mensaje_iter, 512 * sizeof(char), "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%f\n", k, poblacion->eval, poblacion->vars[PAR_T], poblacion->vars[PAR_L], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K], DIFTIME);
 #else
-        sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\n", k, poblacion->eval, poblacion->vars[PAR_T], poblacion->vars[PAR_L], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K]);
+        sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%f\n", k, poblacion->eval, poblacion->vars[PAR_T], poblacion->vars[PAR_L], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K], DIFTIME);
 #endif
         escribirLog( mensaje_iter );
-        barraProgreso( k, max_iters);
+        //barraProgreso( k, max_iters);
 
         diferenciarPoblacion( poblacion, pob_anterior );
-        qsort((void*)poblacion, n_pob, sizeof(INDIV), compIndiv); // El mejor fitness queda en la posicion 0 ya comparando el elite
+        qsort(poblacion, n_pob, sizeof(INDIV), compIndiv); 
+
+		if (poblacion->eval > mi_elite->eval) {
+			memcpy(mi_elite, poblacion, sizeof(INDIV));
+		}
 
         k++;
 
@@ -1019,15 +1041,15 @@ void OPTI_PARS::DE(){
 
     }while(procesar);
 
-    memcpy(mi_elite, poblacion, sizeof(INDIV));
+	GETTIME_FIN;
 
 #if defined(_WIN32) || defined(_WIN64)
-	sprintf_s(mensaje_iter, 512 * sizeof(char), "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K]);
+	sprintf_s(mensaje_iter, 512 * sizeof(char), "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
 #else
-    sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K]);
+    sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
 #endif
     escribirLog( mensaje_iter );
-    barraProgreso( max_iters, max_iters);
+    //barraProgreso( max_iters, max_iters);
 
     delete [] poblacion;
     delete [] pob_anterior;
