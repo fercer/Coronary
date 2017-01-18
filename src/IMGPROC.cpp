@@ -1473,6 +1473,8 @@ void IMGCONT::fillMask()
 		iter++;
 	}
 
+	DEB_MSG("Mask filled");
+
 	delete[] fill_temp;
 }
 
@@ -2019,6 +2021,7 @@ void IMGCONT::computeMask()
 double * IMGCONT::getMask()
 {
 	if (!my_FOV_mask) {
+		DEB_MSG("Computing the FOV_mask");
 		computeMask();
 	}
 
@@ -2208,4 +2211,104 @@ void IMGCONT::threshold(const THRESHOLD_ALG my_threshold_alg, const double thres
 			>= threshold_estimated_value)
 			? 1.0 : 0.0;
 	}
+}
+
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: linearInterpolation                                                                        *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* pos_i                     const int                  I   The original Y-axis position in the image data   *
+* pos_j                     const int                  I   The original X-axis position in the image data   *
+* mapping_y                 const double               I   The new Y_axis position after rotating           *
+* mapping_x                 const double               I   The new X_axis position after rotating           *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The interpolated intensity of the pixel in the position (mapping_x, mapping_y) after a rotation           *
+*                                                                                                           *
+************************************************************************************************************/
+inline double IMGCONT::linearInterpolation(const int pos_i, const int pos_j, const double mapping_y, const double mapping_x) {
+	double intensidad = 0.0;
+
+	if (pos_j >= 0 && pos_j < my_width) {
+		if (pos_i >= 0 && pos_i < my_height) {
+			intensidad += *(my_img_data + pos_i*my_width + pos_j) * (1.0 - mapping_x) * (1.0 - mapping_y);
+		}
+		if (pos_i >= -1 && pos_i < (my_height - 1)) {
+			intensidad += *(my_img_data + (pos_i + 1)*my_width + pos_j) * (1.0 - mapping_x) * (mapping_y);
+		}
+	}
+
+	if (pos_j >= -1 && pos_j < (my_width - 1)) {
+		if (pos_i >= 0 && pos_i < my_height) {
+			intensidad += *(my_img_data + pos_i*my_width + (pos_j + 1)) * (mapping_x) * (1.0 - mapping_y);
+		}
+		if (pos_i >= -1 && pos_i < (my_height - 1)) {
+			intensidad += *(my_img_data + (pos_i + 1)*my_width + (pos_j + 1)) * (mapping_x) * (mapping_y);
+		}
+	}
+
+	return intensidad;
+}
+
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
+* FUNCTION NAME: Ratate                                                                        *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* pos_i                     const unsinged int         I   The original Y-axis position in the image data   *
+* pos_j                     const unsinged int         I   The original X-axis position in the image data   *
+* mapping_y                 const double               I   The new Y_axis position after rotating           *
+* mapping_x                 const double               I   The new X_axis position after rotating           *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* The trhesholded image inside the same image data array.                                                   *
+*                                                                                                           *
+************************************************************************************************************/
+void IMGCONT::Rotate(const double my_rotation_tetha)
+{
+	const double half_rotated_width = (double)(my_width - 1) / 2.0;
+	const double half_rotated_height = (double)(my_height - 1) / 2.0;
+	const double half_width = (double)(my_width - 1) / 2.0;
+	const double half_height = (double)(my_height - 1) / 2.0;
+
+	double *rotated_img_data = (double*)calloc(my_height * my_width, sizeof(double));
+
+	const double ctheta = cos(my_rotation_tetha);
+	const double stheta = sin(my_rotation_tetha);
+	
+	double pos_x;
+	double pos_y;
+	for (unsigned int i = 0; i < (my_height - 1); i++) {
+		for (unsigned int j = 0; j < (my_width - 1); j++) {
+			pos_x =  ((double)j - half_rotated_width)*ctheta + ((double)i - half_rotated_height)*stheta + half_width;
+			pos_y = -((double)j - half_rotated_width)*stheta + ((double)i - half_rotated_height)*ctheta + half_height;
+
+			const int flx = (int)floor(pos_x);
+			const int fly = (int)floor(pos_y);
+			const double delta_x = pos_x - (double)flx;
+			const double delta_y = pos_y - (double)fly;
+
+			*(rotated_img_data + i*my_width + j) = linearInterpolation(fly, flx, delta_y, delta_x);
+		}
+	}
+
+	memcpy(my_img_data, rotated_img_data, my_width * my_height * sizeof(double));
+	free(rotated_img_data);
 }

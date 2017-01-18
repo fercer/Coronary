@@ -203,12 +203,9 @@ public:
 	PIX_PAIR * getSkeletonFeatures();
 	int getSkeletonFeaturesDeep();
 
-
-	/*----------------------------------------------------------------------------- PUBLIC ^ ------------- */
+	void Rotate(const double my_rotation_tetha);
 
 private:
-	/*----------------------------------------------------------------------------- PROTECTED v ---------- */
-
 
 	unsigned int my_height;       /* Height of the image */
 	unsigned int my_width;        /* Width of the image */
@@ -279,7 +276,8 @@ private:
 
 	inline unsigned char sklMask(double * skl_temp, const unsigned int pos_x, const unsigned int pos_y);
 	void computeSkeleton();
-	/*----------------------------------------------------------------------------- PROTECTED ^ ---------- */
+
+	inline double linearInterpolation(const int pos_i, const int pos_j, const double mapping_y, const double mapping_x);
 };
 
 #endif // IMGCONT_H_INCLUDED

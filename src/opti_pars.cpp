@@ -1025,7 +1025,7 @@ void OPTI_PARS::DE(){
         sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%f\n", k, poblacion->eval, poblacion->vars[PAR_T], poblacion->vars[PAR_L], poblacion->vars[PAR_SIGMA], poblacion->vars[PAR_K], DIFTIME);
 #endif
         escribirLog( mensaje_iter );
-        //barraProgreso( k, max_iters);
+        barraProgreso( k, max_iters);
 
         diferenciarPoblacion( poblacion, pob_anterior );
         qsort(poblacion, n_pob, sizeof(INDIV), compIndiv); 
@@ -1049,7 +1049,7 @@ void OPTI_PARS::DE(){
     sprintf( mensaje_iter, "%i\t%1.8f\t%1.3f\t%1.3f\t%2.3f\t%3.0f\t%f\n", k, mi_elite->eval, mi_elite->vars[PAR_T], mi_elite->vars[PAR_L], mi_elite->vars[PAR_SIGMA], mi_elite->vars[PAR_K], DIFTIME);
 #endif
     escribirLog( mensaje_iter );
-    //barraProgreso( max_iters, max_iters);
+    barraProgreso( max_iters, max_iters);
 
     delete [] poblacion;
     delete [] pob_anterior;

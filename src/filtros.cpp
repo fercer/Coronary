@@ -70,64 +70,6 @@ void FILTROS::barraProgreso( const int avance, const int max_progress ){
 
 
 
-/*  Metodo: interpolacion (Lineal)
-    Funcion: Interpola el valor del pixel destino en base a los 4 pixeles origen.
-*/
-inline double FILTROS::interpolacion(const double *pix, const int j, const int i, const double x, const double y, const int mis_rens, const int mis_cols){
-    double intensidad = 0.0;
-
-    if( j >= 0 && j < mis_cols ){
-        if( i >= 0 && i < mis_rens ){
-            intensidad += *(pix +   i  *mis_cols +   j  ) * (1.0 - x) * (1.0 - y);
-        }
-        if( i >= -1  && i < (mis_rens-1) ){
-            intensidad += *(pix + (i+1)*mis_cols +   j  ) * (1.0 - x) * (   y   );
-        }
-    }
-    if( j >= -1 && j < (mis_cols-1)){
-        if( i >=  0 && i < mis_rens ){
-            intensidad += *(pix +   i  *mis_cols + (j+1)) * (   x   ) * (1.0 - y);
-        }
-        if( i >= -1 && i < (mis_rens-1) ){
-            intensidad += *(pix + (i+1)*mis_cols + (j+1)) * (   x   ) * (   y   );
-        }
-    }
-
-    return intensidad;
-}
-
-
-
-
-/*  Metodo: rotarImg
-    Funcion: Rota una imagen almacenada como intensidad de 0 a 1 en un angulo theta.
-*/
-void FILTROS::rotateImg( const double *org, double *rot, const double ctheta, const double stheta, const int mis_rens, const int mis_cols, const int org_rens, const int org_cols){
-
-    const double mitad_x = (double)(mis_cols - 1) / 2.0;
-    const double mitad_y = (double)(mis_rens - 1) / 2.0;
-    const double mitad_orgx = (double)(org_cols - 1) / 2.0;
-    const double mitad_orgy = (double)(org_rens - 1) / 2.0;
-
-
-    double x, y;
-    for(int i = 0; i < (mis_rens-1); i++){
-        for(int j = 0; j < (mis_cols-1); j++){
-            x = ((double)j-mitad_x)*ctheta + ((double)i-mitad_y)*stheta + mitad_orgx;
-            y =-((double)j-mitad_x)*stheta + ((double)i-mitad_y)*ctheta + mitad_orgy;
-            const int flx = (int)x;
-            const int fly = (int)y;
-            const double delta_x = x - (double)flx;
-            const double delta_y = y - (double)fly;
-
-            *(rot + i*mis_cols + j) = interpolacion(org, flx, fly, delta_x, delta_y, org_rens, org_cols);
-        }
-    }
-}
-
-
-
-
 
 
 
@@ -300,13 +242,13 @@ void FILTROS::setProgressBar( QProgressBar *pBar ){
 
     *************************************
 */
-void FILTROS::respGMF() {
-
+void FILTROS::respGMF()
+{
 	const unsigned int temp_dims = (int)(1.5*((my_T > (unsigned int)my_L) ? my_T : (unsigned int)my_L));
 
-	double **templates = (double**)malloc(my_K * sizeof(double*));
+	IMGCONT *GMF_templates = new IMGCONT[my_K];
 
-	////// Calculate a single Gaussian curve along the template width, at 0 degrees:
+	/* Calculate a single Gaussian curve along the template width, at 0 degrees: */
 	double *gauss_0 = (double*)malloc(my_T * sizeof(double));
 	double *gauss_ptr = gauss_0;
 	const double sig_2 = 2.0 * my_sigma * my_sigma;
@@ -331,17 +273,18 @@ void FILTROS::respGMF() {
 		*(gauss_ptr) = (*(gauss_ptr)-mean) / sum;
 		gauss_ptr++;
 	}
-	*(templates) = (double*)malloc(temp_dims * temp_dims * sizeof(double));
 
-	//// Copy the Gaussian curve along the template height:
-	memset(*(templates), 0, temp_dims*temp_dims * sizeof(double));
+	/* Copy the Gaussian curve along the template height: */
+	(GMF_templates)->setDimensions(temp_dims, temp_dims);
+
 	for (unsigned int y = 0; y < (unsigned int)my_L; y++)
 	{
-		memcpy(*(templates) + (temp_dims / 2 - (unsigned int)my_L / 2 + y)*temp_dims + (temp_dims / 2 - my_T / 2), gauss_0, my_T * sizeof(double));
+		for (unsigned int x = 0; x < my_T; x++) {
+			(GMF_templates)->setPix( (temp_dims / 2 - (unsigned int)my_L / 2 + y), temp_dims / 2 - my_T / 2 + x, *(gauss_0 + x));
+		}
 	}
 
-
-	// Rotate template at each 'my_K' orientation:
+	/* Rotate template at each 'my_K' orientation: */
 	const double theta_inc = 180.0 / (double)my_K;
 	double theta = 0.0;
 
@@ -351,84 +294,87 @@ void FILTROS::respGMF() {
 		const double ctheta = cos(-theta * MY_PI / 180.0);
 		const double stheta = sin(-theta * MY_PI / 180.0);
 
-		*(templates + k) = (double*)malloc(temp_dims * temp_dims * sizeof(double));
-		memset(*(templates + k), 0, temp_dims*temp_dims * sizeof(double));
-		rotateImg(templates[0], templates[k], ctheta, stheta, temp_dims, temp_dims, temp_dims, temp_dims);
+		*(GMF_templates + k) = *(GMF_templates);
+
+		(GMF_templates + k)->Rotate(theta);
 	}
 
 	free(gauss_0);
-
-
-	//// Initialize the filter response:
-	double *resp_tmp = (double*)malloc(((my_img_base->at(0)).getWidth() + temp_dims - 1) *
-		((my_img_base->at(0)).getHeight() + temp_dims - 1) * sizeof(double));
+	
+	/* Initialize the filter response: */
+	IMGCONT *resp_tmp = new IMGCONT[my_filters_imgs_count];
 
 	const unsigned int offset = (unsigned int)(temp_dims / 2);
-
-	//// Convolve the image with the templates at each 'my_K' orientation:
 	for (unsigned int i = 0; i < my_filters_imgs_count; i++)
 	{
-		for (unsigned int y = 0; y < ((my_img_base->at(i)).getHeight() + temp_dims - 1); y++) {
-			for (unsigned int x = 0; x < ((my_img_base->at(i)).getWidth() + temp_dims - 1); x++) {
-				*(resp_tmp + x + y * ((my_img_base->at(i)).getWidth() + temp_dims - 1)) = -MY_INF;
-			}
-		}
+		(resp_tmp + i)->setDimensions((my_img_base->at(i)).getHeight() + temp_dims - 1,
+			(my_img_base->at(i)).getWidth() + temp_dims - 1, -MY_INF);
+	}
 
-		for (unsigned int k = 0; k < my_K; k++)
+
+	/* Convolve the image with the templates at each 'my_K' orientation: */
+	for (unsigned int k = 0; k < my_K; k++)
+	{
+
+		DEB_MSG("rotation: " << k);
+
+		for (unsigned int i = 0; i < my_filters_imgs_count; i++)
 		{
 			for (unsigned int yR = 0; yR < ((my_img_base->at(i)).getHeight() + temp_dims - 1); yR++)
 			{
-				//// Determine the limits in the 'y' axis to keep the convolution inside the image rows:
-				const unsigned int min_y = (yR > (temp_dims - 1)) ? (yR - temp_dims + 1) : 0;
-				const unsigned int max_y = (yR < (my_img_base->at(i)).getHeight()) ? (yR + 1) : (my_img_base->at(i)).getHeight();
+				/* Determine the limits in the 'y' axis to keep the convolution inside the image rows: */
+				const unsigned int min_y = (yR > (temp_dims - 1)) ?
+					(yR - temp_dims + 1) : 0;
+
+				const unsigned int max_y = (yR < (my_img_base->at(i)).getHeight()) ?
+					(yR + 1) : (my_img_base->at(i)).getHeight();
+
+
 				for (unsigned int xR = 0; xR < ((my_img_base->at(i)).getWidth() + temp_dims - 1); xR++)
 				{
-					//// Determine the limits in the 'x' axis to keep the convolution inside the image columns:
+					/* Determine the limits in the 'x' axis to keep the convolution inside the image columns:*/
 					const unsigned int min_x = (xR > (temp_dims - 1)) ? (xR - temp_dims + 1) : 0;
 					const unsigned int max_x = (xR < (my_img_base->at(i)).getWidth()) ? (xR + 1) : (my_img_base->at(i)).getWidth();
 
-						double resp_k = 0.0;
-						//// Convolve the template with the input image:
-						for (unsigned int y = min_y; y < max_y; y++)
-						{
-							for (unsigned int x = min_x; x < max_x; x++)
-							{
-								resp_k += *(*(templates + k) + (max_y - y - 1)*temp_dims + (max_x - x - 1)) *
-									(my_img_base->at(i)).getPix(y, x);
-							}
-						}
-
-					//// Save the response for each pixel among the 'my_K' orientations:
-					if (resp_k > *(resp_tmp + yR*((my_img_base->at(i)).getWidth() + temp_dims - 1) + xR))
+					double resp_k = 0.0;
+					/* Convolve the template with the input image: */
+					for (unsigned int y = min_y; y < max_y; y++)
 					{
-						*(resp_tmp +
-							yR*((my_img_base->at(i)).getWidth() + temp_dims - 1) + xR +
-							((my_img_base->at(i)).getWidth() + temp_dims - 1) *
-								((my_img_base->at(i)).getHeight() + temp_dims - 1)) = resp_k;
+						for (unsigned int x = min_x; x < max_x; x++)
+						{
+							resp_k += (GMF_templates + k)->getPix(max_y - y - 1, max_x - x - 1) *
+								(my_img_base->at(i)).getPix(y, x);
+						}
+					}
+
+					/* Save the response for each pixel among the 'my_K' orientations: */
+					if (resp_k > (resp_tmp + i)->getPix(yR, xR))
+					{
+						(resp_tmp + i)->setPix(yR, xR, resp_k);
 					}
 				}
 			}
 		}
+	}
 
-		//// Keep the highest response for each pixel among the whole orientations as the final filter response:
+	/* Keep the highest response for each pixel among the whole orientations as the final filter response:*/
+	for (unsigned int i = 0; i < my_filters_imgs_count; i++) {
+		(my_img_response->at(i)).setDimensions((my_img_base->at(i)).getHeight(),
+			(my_img_base->at(i)).getWidth());
+
 		for (unsigned int y = 0; y < (my_img_base->at(i)).getHeight(); y++)
 		{
 			for (unsigned int x = 0; x < (my_img_base->at(i)).getWidth(); x++)
 			{
-				(my_img_response->at(i)).setPix(y, x,
-					*(resp_tmp + (x + offset) + (y + offset)*((my_img_base->at(i)).getWidth() + temp_dims - 1)));
+				(my_img_response->at(i)).setPix(y, x, (resp_tmp + i)->getPix(y + offset, x + offset));
 
 			}
 		}
 	}
 
-	// Free memory
-	for (unsigned int k = 0; k < my_K; k++)
-	{
-		free(*(templates + k));
-	}
-	free(templates);
-	free(resp_tmp);
+	/* Free memory */
+	delete[] GMF_templates;
+	delete[] resp_tmp;
 }
 
 

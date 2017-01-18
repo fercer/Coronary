@@ -737,6 +737,8 @@ void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const
 		/* Load the images from their corresponding paths */
 		(my_img_base.at(n_angios)).Load(rutabase_input, curr_level);
 
+		DEB_MSG("Min value: " << (my_img_base.at(n_angios)).getMinimum() << ", max value: " << (my_img_base.at(n_angios)).getMaximum());
+
 		if (rutaground_input) {
 			(my_img_groundtruth.at(n_angios)).Load(rutaground_input);
 			existe_ground.push_back(true);
@@ -745,6 +747,7 @@ void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const
 			existe_ground.push_back(false);
 		}
 
+		DEB_MSG("Enmascarar? " << enmascarar);
 		if (enmascarar) {
 			my_img_mask.push_back(IMGCONT((my_img_base.at(n_angios)).getHeight(),
 				(my_img_base.at(n_angios)).getWidth(),
@@ -886,7 +889,7 @@ void RECONS3D::leerConfiguracion(const char *ruta_conf)
             }else if( strcmp( tmp_par, "T") == 0 ){
                 if( tmp_val[0] != 'o' ){
                     const double par_t = atof(tmp_val);
-                    my_optimized_parameters.setPar( OPTI_PARS::PAR_T, par_t );
+                    my_optimized_parameters.setPar( OPTI_PARS::PAR_T, (unsigned int)par_t );
                     fixed[0] = true;
                 }
             }else if( strcmp( tmp_par, "L") == 0 ){
@@ -898,7 +901,7 @@ void RECONS3D::leerConfiguracion(const char *ruta_conf)
             }else if( strcmp( tmp_par, "K") == 0 ){
                 if( tmp_val[0] != 'o' ){
                     const double par_k = atof(tmp_val);
-                    my_optimized_parameters.setPar( OPTI_PARS::PAR_K, par_k);
+                    my_optimized_parameters.setPar( OPTI_PARS::PAR_K, (unsigned int)par_k);
                     fixed[2] = true;
                 }
             }else if( strcmp( tmp_par, "sig") == 0 ){

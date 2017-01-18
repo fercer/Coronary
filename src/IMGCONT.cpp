@@ -516,7 +516,7 @@ int IMGCONT::LoadPNG(const char *src_path, const unsigned int level)
 			for (unsigned int x = 0; x < (unsigned int)read_width; x++) {
 				read_pixel = (double)*(read_img_data + x + y*read_row_bytes);
 
-				this->setPix(y, x, read_pixel);
+				this->setPix(y, x, read_pixel / 255.0);
 			}
 		}
 		break;
@@ -528,7 +528,7 @@ int IMGCONT::LoadPNG(const char *src_path, const unsigned int level)
 				read_pixel += (0.589)*(double)*(read_img_data + 3 * x + y*read_row_bytes + 1);
 				read_pixel += (0.114)*(double)*(read_img_data + 3 * x + y*read_row_bytes + 2);
 
-				this->setPix(y, x, read_pixel);
+				this->setPix(y, x, read_pixel/255.0);
 			}
 		}
 		break;
@@ -540,7 +540,7 @@ int IMGCONT::LoadPNG(const char *src_path, const unsigned int level)
 				read_pixel += (0.589)*(double)*(read_img_data + 4 * x + y*read_row_bytes + 1);
 				read_pixel += (0.114)*(double)*(read_img_data + 4 * x + y*read_row_bytes + 2);
 
-				this->setPix(y, x, read_pixel);
+				this->setPix(y, x, read_pixel/255.0);
 			}
 		}
 		break;
@@ -618,10 +618,10 @@ int IMGCONT::LoadPGM(const char *src_path, const unsigned int level)
 
 #if defined(_WIN32) || defined(_WIN64)
 	fscanf_s(img_file, "%i", &height);
-	fscanf_s(img_file, "%lf", &max_intensity);
+	fscanf_s(img_file, "%i", &max_intensity);
 #else
 	fscanf(img_file, "%i", &height);
-	fscanf(img_file, "%lf", &max_intensity);
+	fscanf(img_file, "%i", &max_intensity);
 #endif
 	
 	IMGCONT new_img(height, width);

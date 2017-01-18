@@ -200,7 +200,7 @@ double PERFORMANCE_FUNCTIONS::calcROC()
 	fclose(fp_ROC);
 #endif
 	
-	DEB_MSG("Overall area under the ROC curve: " << Az);
+	printf("\nOverall area under the ROC curve: %f\n", Az);
 
 	return Az;
 }
