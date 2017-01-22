@@ -2087,6 +2087,9 @@ void RECONS3D::defineArguments()
 	my_args->newArgument(
 		"Treshold segmented image?", "thr", "threshold", "no", true);
 
+	my_args->newArgument(
+		"Directory to store the segmentation output", "odir", "output-dir", ".", true);
+
 }
 
 
@@ -2106,7 +2109,10 @@ void RECONS3D::segmentar()
 	my_optimized_parameters.setPar();
 
 	my_optimized_parameters.filter();
-	my_optimized_parameters.calcROC();
+
+	char message_roc[] = "00.0000000000\n";
+	sprintf(message_roc, "%1.9f\n", my_optimized_parameters.calcROC());
+	escribirLog(message_roc);
 }
 //---- ----------------------------------------------------------------------------- PUBLIC----- ^
 

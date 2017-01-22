@@ -95,10 +95,6 @@ protected:
 
 	unsigned int my_filters_imgs_count;
 
-	inline double interpolacion(const double *pix, const int j, const int i, const double x, const double y, const int mis_rens, const int mis_cols);
-
-	void rotateImg(const double *org, double *rot, const double ctheta, const double stheta, const int mis_rens, const int mis_cols, const int org_rens, const int org_cols);
-
 	void respGMF();
 	void respGabor();
 

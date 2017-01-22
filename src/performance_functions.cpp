@@ -173,35 +173,33 @@ double PERFORMANCE_FUNCTIONS::calcROC()
 	/* Calculate the Area underd the ROC curve: */
 	double Az = 0.0;
 
-#if !defined(NDEBUG)
+//#if !defined(NDEBUG)
 #if defined(_WIN32) || defined(_WIN64)
 	FILE *fp_ROC;
 	fopen_s(&fp_ROC, "ROC_curve.fcs", "w");
 #else
 	FILE *fp_ROC = fopen("ROC_curve.fcs", "w");
 #endif
-#endif
+//#endif
 
 	for(unsigned int i = 0; i < (total_active_response  -  1); i++) {
 		/* Approximate the area under the ROC curve with the Trapezoid Rule: */
 		Az += 0.5 * (*(true_positive_fraction_array + i) + *(true_positive_fraction_array + i + 1)) *
 			(*(false_positive_fraction_array + i) - *(false_positive_fraction_array + i + 1));
 
-#ifndef NDEBUG
+//#ifndef NDEBUG
 #if defined(_WIN32) || defined(_WIN64)
 		fprintf_s(fp_ROC, "%1.12f %1.12f\n", *(true_positive_fraction_array + i), *(false_positive_fraction_array + i));
 #else
 		fprintf(fp_ROC, "%1.12f %1.12f\n", *(true_positive_fraction_array + i), *(false_positive_fraction_array + i));
 #endif
-#endif
+//#endif
 	}
 
-#ifndef NDEBUG
+//#ifndef NDEBUG
 	fclose(fp_ROC);
-#endif
+//#endif
 	
-	printf("\nOverall area under the ROC curve: %f\n", Az);
-
 	return Az;
 }
 

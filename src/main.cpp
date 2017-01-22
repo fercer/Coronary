@@ -92,12 +92,21 @@ int main(int argc, char** argv ){
 			mi_reconstructor.setFiltroLog(parametros.getArgumentCHAR("-lf"));
 		}
 
+		if (strcmp(parametros.getArgumentCHAR("-lr"), "NULL") != 0) {
+			mi_reconstructor.setLog(parametros.getArgumentCHAR("-lr"));
+		}
+
 		mi_reconstructor.leerConfiguracion(parametros.getArgumentCHAR("-c"));
 		mi_reconstructor.segmentar();
 
 		char response_filename[512];
 		for (int i = 0; i < n_imgs; i++) {
-			sprintf(response_filename, "segment_%i.pgm", i);
+#if defined(_WIN32) || defined(_WIN64)
+			sprintf_s(response_filename, 512, "%s/%i_res.pgm", parametros.getArgumentCHAR("-odir"), i);
+#else
+			sprintf(response_filename, "%s/%i_res.pgm", parametros.getArgumentCHAR("-odir"), i);
+#endif
+			printf("Response file: %s\n", response_filename);
 			mi_reconstructor.Guardar(response_filename, RECONS3D::IMG_RESPONSE, IMGCONT::IMGPGM, i);
 		}
 
