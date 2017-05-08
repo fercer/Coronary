@@ -254,7 +254,6 @@ private:
 	void computeMaskFOV();
 	void computeMask();
 
-
 	void computeDistancesMap();
 	void computeBoundaries();
 

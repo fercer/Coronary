@@ -41,13 +41,32 @@ int main(int argc, char** argv ){
         return EXIT_SUCCESS;
     }/* Segmentar una unica imagen: */
 
-	DEB_MSG("Input: " << parametros.getArgumentCHAR("-b"));
-	DEB_MSG("Groundtruth: " << parametros.getArgumentCHAR("-g"));
-	DEB_MSG("Data base dir: " << parametros.getArgumentCHAR("-dsb"));
-	DEB_MSG("Data Groundtruth dir: " << parametros.getArgumentCHAR("-dsg"));
-
+	
 	if ((strcmp(parametros.getArgumentCHAR("-b"), "NULL") != 0) &&
 		(strcmp(parametros.getArgumentCHAR("-g"), "NULL") != 0)) {
+
+		DEB_MSG("Input: " << parametros.getArgumentCHAR("-b"));
+		DEB_MSG("Groundtruth: " << parametros.getArgumentCHAR("-g"));
+		DEB_MSG("Data base dir: " << parametros.getArgumentCHAR("-dsb"));
+		DEB_MSG("Data Groundtruth dir: " << parametros.getArgumentCHAR("-dsg"));
+
+		mi_reconstructor.agregarInput(parametros.getArgumentCHAR("-b"), parametros.getArgumentINT("-bl"), parametros.getArgumentINT("-bu"), parametros.getArgumentCHAR("-g"), true);
+		
+		mi_reconstructor.setFiltroMetodo(FILTROS::SS_GABOR);
+
+		mi_reconstructor.setFiltroParametros(OPTI_PARS::PAR_K, 180.0);
+		mi_reconstructor.setFiltroParametros(OPTI_PARS::PAR_T, 12.0);
+		mi_reconstructor.setFiltroParametros(OPTI_PARS::PAR_L, 2.5);
+
+		mi_reconstructor.segmentar();
+
+		mi_reconstructor.Guardar("img_resp.pgm", RECONS3D::IMG_RESPONSE, IMGCONT::IMGPGM, 0);
+	}
+
+
+	if ((strcmp(parametros.getArgumentCHAR("-b"), "NULL") != 0) &&
+		(strcmp(parametros.getArgumentCHAR("-g"), "NULL") != 0) &&
+		(strcmp(parametros.getArgumentCHAR("-c"), "NULL") != 0)) {
 		/// Reconstruir arteria:
 		mi_reconstructor.agregarInput(parametros.getArgumentCHAR("-b"),parametros.getArgumentINT("-bl"), parametros.getArgumentINT("-bu"), parametros.getArgumentCHAR("-g"), true);
 		
@@ -92,17 +111,29 @@ int main(int argc, char** argv ){
 			mi_reconstructor.setFiltroLog(parametros.getArgumentCHAR("-lf"));
 		}
 
+		if (strcmp(parametros.getArgumentCHAR("-lr"), "NULL") != 0) {
+			mi_reconstructor.setLog(parametros.getArgumentCHAR("-lr"));
+		}
+
 		mi_reconstructor.leerConfiguracion(parametros.getArgumentCHAR("-c"));
 		mi_reconstructor.segmentar();
 
-		char response_filename[512];
+		char out_path[512] = "000_res.pgm";
 		for (int i = 0; i < n_imgs; i++) {
-			sprintf(response_filename, "segment_%i.pgm", i);
-			mi_reconstructor.Guardar(response_filename, RECONS3D::IMG_RESPONSE, IMGCONT::IMGPGM, i);
+#if defined(_WIN32) || defined(_WIN64)
+			sprintf_s(out_path, 512, "%s/%i_res.pgm", parametros.getArgumentCHAR("-odir"), i);
+#else
+	sprintf(out_path, "%s/%i_res.pgm", parametros.getArgumentCHAR("-odir"), i);
+#endif
+			printf("\n<<%s>>\n", out_path);	
+			mi_reconstructor.Guardar(out_path, RECONS3D::IMG_RESPONSE, IMGCONT::IMGPGM, i);
 		}
 
 		fclose(fp_base);
 		fclose(fp_gt);
+
+		delete[] ruta_base;
+		delete[] ruta_gt;
 	}
     return EXIT_SUCCESS;
 }

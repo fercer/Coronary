@@ -142,6 +142,7 @@ double PERFORMANCE_FUNCTIONS::calcROC()
 		unsigned int curr_x = (all_groundtruth + i)->my_x;
 
 		(all_active_response + i)->my_idx = i;
+		DEB_MSG("index: " << i << ": " << (my_img_response->at(curr_img)).getPix(curr_y, curr_x));
 		(all_active_response + i)->my_intensity = (my_img_response->at(curr_img)).getPix( curr_y, curr_x);
 	}
 
@@ -200,8 +201,6 @@ double PERFORMANCE_FUNCTIONS::calcROC()
 	fclose(fp_ROC);
 #endif
 	
-	printf("\nOverall area under the ROC curve: %f\n", Az);
-
 	return Az;
 }
 
@@ -452,7 +451,7 @@ double PERFORMANCE_FUNCTIONS::calcAccuracy()
 			for (unsigned int x = 0; x < (my_img_thresholded_response->at(i)).getWidth(); x++) {
 				if ( (my_img_response_mask->at(i)).getPix(y, x) > 0.5) {
 					if ( (my_img_groundtruth->at(i)).getPix(y, x) > 0.5) {
-						if ( (my_img_thresholded_response->at(i)).getPix(y, x) > 0.5) {
+						if ((my_img_thresholded_response->at(i)).getPix(y, x) > 0.5) {
 							TP++;
 						}
 						else {

@@ -75,8 +75,8 @@ protected:
 	bool input_already_set;
 	bool already_transformed;
 
-	fftw_complex **Img_fft;
-	fftw_complex **Img_fft_HPF;
+	fftwl_complex **Img_fft;
+	fftwl_complex **Img_fft_HPF;
 
 	void fftImgOrigen();
 
@@ -88,16 +88,12 @@ protected:
 	unsigned int my_K;
 	double my_sigma;
 
-	std::vector< IMGCONT > * my_img_response;
-	std::vector< IMGCONT > * my_img_base;
-	std::vector< IMGCONT > * my_img_groundtruth;
-	std::vector< IMGCONT > * my_img_base_mask;
+	std::vector< IMGCONT> * my_img_response;
+	std::vector< IMGCONT> * my_img_base;
+	std::vector< IMGCONT> * my_img_groundtruth;
+	std::vector< IMGCONT> * my_img_base_mask;
 
 	unsigned int my_filters_imgs_count;
-
-	inline double interpolacion(const double *pix, const int j, const int i, const double x, const double y, const int mis_rens, const int mis_cols);
-
-	void rotateImg(const double *org, double *rot, const double ctheta, const double stheta, const int mis_rens, const int mis_cols, const int org_rens, const int org_cols);
 
 	void respGMF();
 	void respGabor();
