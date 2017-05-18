@@ -462,7 +462,7 @@ void IMGCONT::writeLog( const char *message )
 /************************************************************************************************************
 * IMGCONT::PRIVATE                                                                                          *
 *                                                                                                           *
-* FUNCTION NAME: LoadPNG                                                                                    *
+* FUNCTION NAME: LoadCV2                                                                                    *
 *                                                                                                           *
 * ARGUMENTS:                                                                                                *
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
@@ -470,96 +470,50 @@ void IMGCONT::writeLog( const char *message )
 * level                     const unsigned int         -   Not used                                         *
 *                                                                                                           *
 * RETURNS:                                                                                                  *
-* The .png image loaded in the image data array.                                                            *
+* The image loaded in the image data array using OpenCV library to load the arbitrary extension.            *
 *                                                                                                           *
 ************************************************************************************************************/
 
-int IMGCONT::LoadPNG(const char *src_path, const unsigned int level)
+int IMGCONT::LoadCV2(const char *src_path, const unsigned int level)
 {
-	unsigned long read_height;
-	unsigned long read_width;
+	cv::Mat img = cv::imread(src_path);
 
-	FILE *img_file = NULL;
-#if defined(_WIN32) || defined(_WIN64) 
-	fopen_s(&img_file, src_path, "rb");
-#else 
-	img_file = fopen(src_path, "rb");
-#endif
-	if (!img_file) {
-		sprintf(my_err_msg, "Cannot open file: << %s >>\n", src_path);
-		writeLog(my_err_msg);
-		return -1;
+	const int n_channels = img.channels();
+
+	int height = img.rows;
+	int width = img.cols;
+
+	IMGCONT new_img(height, width);
+
+	if (img.isContinuous())
+	{
+
 	}
-
-
-	int response = readpng_init(img_file, &read_width, &read_height);
-	if (response) {
-		sprintf(my_err_msg, "Something went wrong at reading the png file: error number << %i >>\n", response);
-		writeLog(my_err_msg);
-		fclose(img_file);
-		return response;
-	}
-
-	unsigned char read_bg_red;
-	unsigned char read_bg_green;
-	unsigned char read_bg_blue;
-
-	response = readpng_get_bgcolor(&read_bg_red, &read_bg_green, &read_bg_blue);
-	if (response == 1) {
-		read_bg_red = 0;
-		read_bg_green = 0;
-		read_bg_blue = 0;
-	}
-
-	int read_channels;
-	unsigned long read_row_bytes;
-	unsigned char *read_img_data = readpng_get_image(1.0, &read_channels, &read_row_bytes);
-
-	DEB_MSG("row_pixel " << read_row_bytes << ", channels: " << read_channels);
-
-	this->setDimensions((unsigned int)read_height, (unsigned int)read_width);
-	double read_pixel;
-
-	switch( read_channels ){
-	case 1: {
-		for (unsigned int y = 0; y < (unsigned int)read_height; y++) {
-			for (unsigned int x = 0; x < (unsigned int)read_width; x++) {
-				read_pixel = (double)*(read_img_data + x + y*read_row_bytes);
-
-				this->setPix(y, x, read_pixel / 255.0);
+	else
+	{
+		switch (n_channels)
+		{
+		case 1:
+			cv::MatIterator_<uchar> p, end;
+			unsigned int xy = 0;
+			for (p = img.begin<uchar>(), end = img.end<uchar>(); p != end; p++, xy++)
+			{
+				*(new_img.my_img_data + xy) = (double)((unsigned int)*p) / 225.0;
+			}
+		case 3:
+			for (unsigned int y = 0; y < height; y++)
+			{
+				cv::MatIterator_<cv::Vec3b> p, end;
+				unsigned int xy = 0;
+				for (p = img.begin<cv::Vec3b>(), end = img.end<cv::Vec3b>(); p != end; p++, xy++)
+				{
+					*(new_img.my_img_data + xy) = (double)((unsigned int)(*p)[0]) / 225.0;
+				}
 			}
 		}
-		break;
 	}
-	case 3: {
-		for (unsigned int y = 0; y < (unsigned int)read_height; y++) {
-			for (unsigned int x = 0; x < (unsigned int)read_width; x++) {
-				read_pixel = (0.297)*(double)*(read_img_data + 3 * x + y*read_row_bytes);
-				read_pixel += (0.589)*(double)*(read_img_data + 3 * x + y*read_row_bytes + 1);
-				read_pixel += (0.114)*(double)*(read_img_data + 3 * x + y*read_row_bytes + 2);
-
-				this->setPix(y, x, read_pixel/255.0);
-			}
-		}
-		break;
-	}
-	case 4: {
-		for (unsigned int y = 0; y < (unsigned int)read_height; y++) {
-			for (unsigned int x = 0; x < (unsigned int)read_width; x++) {
-				read_pixel = (0.297)*(double)*(read_img_data + 4 * x + y*read_row_bytes);
-				read_pixel += (0.589)*(double)*(read_img_data + 4 * x + y*read_row_bytes + 1);
-				read_pixel += (0.114)*(double)*(read_img_data + 4 * x + y*read_row_bytes + 2);
-
-				this->setPix(y, x, read_pixel/255.0);
-			}
-		}
-		break;
-	}
-	}
-
-	readpng_cleanup(1);
-	fclose(img_file);
-
+	
+	(*this) = new_img;
 	return 0;
 }
 
@@ -982,13 +936,13 @@ int IMGCONT::LoadDICOM(const char *src_path, const unsigned int level)
 
 void IMGCONT::Load(const char *src_path, const unsigned int level)
 {
-	if (LoadPNG(src_path) == 0) {
+	if (LoadDICOM(src_path, level) == 0) {
 		return;
 	}
 	else if (LoadPGM(src_path) == 0) {
 		return;
 	}
-	else if (LoadDICOM(src_path, level) == 0) {
+	else if (LoadCV2(src_path) == 0) {
 		return;
 	}
 }

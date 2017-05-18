@@ -29,13 +29,6 @@
     #include <gdcmTag.h>
 #endif
 
-#if defined(_WIN32)
-	#include MY_ZLIB
-	#include MY_PNG
-#else
-	#include <png.h>
-#endif
-
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -46,7 +39,7 @@
 #include <omp.h>
 #include <math.h>
 
-#include "libpng_src/readpng.h"
+#include <opencv2/opencv.hpp>
 
 #if defined(_WIN32) || defined(_WIN64)
 	#include <time.h>
@@ -231,7 +224,7 @@ private:
 	char my_err_msg[512];
 	void writeLog(const char *message);
 
-	int LoadPNG(const char *src_path, const unsigned int level = 0);
+	int LoadCV2(const char *src_path, const unsigned int level = 0);
 	int LoadPGM(const char *src_path, const unsigned int level = 0);
 	int LoadDICOM(const char *src_path, const unsigned int level = 0);
 
