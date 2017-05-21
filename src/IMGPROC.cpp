@@ -35,7 +35,8 @@
 * Returns the maximum value of the image data.                                                              *
 *                                                                                                           *
 ************************************************************************************************************/
-double IMGCONT::getMaximum()
+
+double IMGCONT ::getMaximum()
 {
 	double my_maximum = -MY_INF;
 
@@ -66,6 +67,7 @@ double IMGCONT::getMaximum()
 * Returns the minimum value of the image data.                                                              *
 *                                                                                                           *
 ************************************************************************************************************/
+
 double IMGCONT::getMinimum()
 {
 	double my_minimum = MY_INF;
@@ -98,6 +100,7 @@ double IMGCONT::getMinimum()
 * Nothing.                                                                                                  *
 *                                                                                                           *
 ************************************************************************************************************/
+
 void  IMGCONT::normalize(const double fixed_min, const double fixed_max)
 {
 	const double my_range = fixed_max - fixed_min;
@@ -125,6 +128,7 @@ void  IMGCONT::normalize(const double fixed_min, const double fixed_max)
 * Nothing.                                                                                                  *
 *                                                                                                           *
 ************************************************************************************************************/
+
 void  IMGCONT::normalize()
 {
 	const double my_minimum = this->getMinimum();
@@ -153,11 +157,12 @@ void  IMGCONT::normalize()
 * Calculates the distances map of the image data (a black and white image is required).                     *
 *                                                                                                           *
 ************************************************************************************************************/
+
 void IMGCONT::computeDistancesMap()
 {
 	my_dist_map = new double[my_height * my_width];
 
-	for (int xy = 0; xy < (my_height * my_width); xy++) {
+	for (unsigned int xy = 0; xy < (my_height * my_width); xy++) {
 		*(my_dist_map + xy) = (*(my_img_data + xy) < 1.0) ? 0.0 : MY_INF;
 	}
 
@@ -167,8 +172,8 @@ void IMGCONT::computeDistancesMap()
 	double *zh = new double[my_height + 1];
 
 	// transform along columns
-	for (int x = 0; x < my_width; x++) {
-		for (int y = 0; y < my_height; y++) {
+	for (unsigned int x = 0; x < my_width; x++) {
+		for (unsigned int y = 0; y < my_height; y++) {
 			f[y] = *(my_dist_map + y*my_width + x);
 		}
 
@@ -177,7 +182,7 @@ void IMGCONT::computeDistancesMap()
 		zh[0] = -MY_INF;
 		zh[1] = MY_INF;
 
-		for (int q = 1; q < my_height; q++) {
+		for (unsigned int q = 1; q < my_height; q++) {
 			double s = ((f[q] + (q*q)) - (f[vh[k]] + (vh[k] * vh[k]))) / (2 * q - 2 * vh[k]);
 
 			while (s <= zh[k]) {
@@ -192,7 +197,7 @@ void IMGCONT::computeDistancesMap()
 		}
 
 		k = 0;
-		for (int y = 0; y < my_height; y++) {
+		for (unsigned int y = 0; y < my_height; y++) {
 			while (zh[k + 1] < y) {
 				k++;
 			}
@@ -208,8 +213,8 @@ void IMGCONT::computeDistancesMap()
 	double *zw = new double[my_width + 1];
 
 	// transform along my_height
-	for (int y = 0; y < my_height; y++) {
-		for (int x = 0; x < my_width; x++) {
+	for (unsigned int y = 0; y < my_height; y++) {
+		for (unsigned int x = 0; x < my_width; x++) {
 			f[x] = *(my_dist_map + y*my_width + x);
 		}
 		int k = 0;
@@ -217,7 +222,7 @@ void IMGCONT::computeDistancesMap()
 		zw[0] = -MY_INF;
 		zw[1] = +MY_INF;
 
-		for (int q = 1; q < my_width; q++) {
+		for (unsigned int q = 1; q < my_width; q++) {
 			double s = ((f[q] + (q*q)) - (f[vw[k]] + (vw[k] * vw[k]))) / (2 * q - 2 * vw[k]);
 			while (s <= zw[k]) {
 				k--;
@@ -230,7 +235,7 @@ void IMGCONT::computeDistancesMap()
 		}
 
 		k = 0;
-		for (int x = 0; x < my_width; x++) {
+		for (unsigned int x = 0; x < my_width; x++) {
 			while (zw[k + 1] < x) {
 				k++;
 			}
@@ -267,6 +272,7 @@ void IMGCONT::computeDistancesMap()
 * The pointer to the distances map array.                                                                   *
 *                                                                                                           *
 ************************************************************************************************************/
+
 double * IMGCONT::getDistancesMap()
 {
 
@@ -297,6 +303,7 @@ double * IMGCONT::getDistancesMap()
 * Computes the boudaries of the image data (a black and white image is required).                           *
 *                                                                                                           *
 ************************************************************************************************************/
+
 void IMGCONT::computeBoundaries()
 {
 	/* If the distances map has not been computed, it is calculated */
@@ -304,7 +311,7 @@ void IMGCONT::computeBoundaries()
 		computeDistancesMap();
 	}
 
-	for (int xy = 0; xy < (my_height * my_width); xy++) {
+	for (unsigned int xy = 0; xy < (my_height * my_width); xy++) {
 		if ((*(my_img_data + xy) > 0.5) && (*(my_dist_map + xy) < 2.0)) {
 			*(my_boundaries + xy) = 1.0;
 		}
@@ -330,6 +337,7 @@ void IMGCONT::computeBoundaries()
 * The pointer to the boundaries array.                                                                      *
 *                                                                                                           *
 ************************************************************************************************************/
+
 double * IMGCONT::getBoundaries()
 {
 	/* If the boundaries have not been computed, their are calculated */
@@ -361,6 +369,7 @@ double * IMGCONT::getBoundaries()
 * The fit, hit or miss response of a square shaped mask of 9x9 pixels.                                      *
 *                                                                                                           *
 ************************************************************************************************************/
+
 bool IMGCONT::regionFilling9(const unsigned int pos_x, const unsigned int pos_y)
 {
 	int n_hits = 0;
@@ -441,6 +450,7 @@ bool IMGCONT::regionFilling9(const unsigned int pos_x, const unsigned int pos_y)
 * The fit, hit or miss response of a square shaped mask of 7x7 pixels.                                      *
 *                                                                                                           *
 ************************************************************************************************************/
+
 bool IMGCONT::regionFilling7(const unsigned int pos_x, const unsigned int pos_y)
 {
 
@@ -523,6 +533,7 @@ bool IMGCONT::regionFilling7(const unsigned int pos_x, const unsigned int pos_y)
 * The fit, hit or miss response of a square shaped mask of 5x5 pixels.                                      *
 *                                                                                                           *
 ************************************************************************************************************/
+
 bool IMGCONT::regionFilling5(const unsigned int pos_x, const unsigned int pos_y)
 {
 	int n_hits = 0;
@@ -604,6 +615,7 @@ bool IMGCONT::regionFilling5(const unsigned int pos_x, const unsigned int pos_y)
 * The fit, hit or miss response of a square shaped mask of 3x3 pixels.                                      *
 *                                                                                                           *
 ************************************************************************************************************/
+
 bool IMGCONT::regionFilling3(const unsigned int pos_x, const unsigned int pos_y)
 {
 	int n_hits = 0;
@@ -684,6 +696,7 @@ bool IMGCONT::regionFilling3(const unsigned int pos_x, const unsigned int pos_y)
 * Fills the blank space inside the image data (a black and white image is required).                        *
 *                                                                                                           *
 ************************************************************************************************************/
+
 void IMGCONT::regionFill()
 {
 	// -------- Mascara 9x9
@@ -746,7 +759,8 @@ void IMGCONT::regionFill()
 * The label of the current pixel's set                                                                      *
 *                                                                                                           *
 ************************************************************************************************************/
-void IMGCONT::computeConnected(double * img_ptr, const int x, const int y, int *my_sets, unsigned int* number_of_labeled, bool* was_visited, const int number_of_labels)
+
+void IMGCONT::computeConnected(double * img_ptr, const unsigned int x, const unsigned int y, int *my_sets, unsigned int* number_of_labeled, bool* was_visited, const int number_of_labels)
 {
 	*(was_visited + x + y*my_width) = true;
 
@@ -829,6 +843,7 @@ void IMGCONT::computeConnected(double * img_ptr, const int x, const int y, int *
 * The number of pixels that belong to each set                                                              *
 *                                                                                                           *
 ************************************************************************************************************/
+
 unsigned int* IMGCONT::connectedSets_Dynamic(double * img_ptr, int * my_sets) {
 	int number_of_labels = 0;
 
@@ -840,8 +855,8 @@ unsigned int* IMGCONT::connectedSets_Dynamic(double * img_ptr, int * my_sets) {
 
 	memset(my_sets, -1, sizeof(int) * my_height * my_width);
 
-	for (int y = 0; y < my_height; y++) {
-		for (int x = 0; x < my_width; x++) {
+	for (unsigned int y = 0; y < my_height; y++) {
+		for (unsigned int x = 0; x < my_width; x++) {
 			/// Se mueve la etiqueta si el pixel es de un nuevo conjunto:
 			if (!was_visited[x + y*my_width]) {
 				computeConnected(img_ptr, x, y, my_sets, temp_labels, was_visited, number_of_labels);
@@ -882,6 +897,7 @@ unsigned int* IMGCONT::connectedSets_Dynamic(double * img_ptr, int * my_sets) {
 * Creates a new equivalency between the label A and B.                                                      *
 *                                                                                                           *
 ************************************************************************************************************/
+
 inline void IMGCONT::increaseSetSize(int * my_labels, const int equiv_A, const int equiv_B, const int max_number_of_labels) {
 	int default_label, previous_label;
 
@@ -923,6 +939,7 @@ inline void IMGCONT::increaseSetSize(int * my_labels, const int equiv_A, const i
 * The number of pixels that belong to each set                                                              *
 *                                                                                                           *
 ************************************************************************************************************/
+
 unsigned int* IMGCONT::connectedSets_Iterative(double * img_ptr, int * my_sets) {
 
 	int max_number_of_labels = my_height * my_width;
@@ -934,8 +951,8 @@ unsigned int* IMGCONT::connectedSets_Iterative(double * img_ptr, int * my_sets) 
 
 	int number_of_sets = -1;
 
-	for (int y = 1; y <= my_height; y++) {
-		for (int x = 1; x <= my_width; x++) {
+	for (unsigned int y = 1; y <= my_height; y++) {
+		for (unsigned int x = 1; x <= my_width; x++) {
 			if (*(img_ptr + (y - 1)*my_width + (x - 1)) > 0.0) {
 
 				const int NorthWest = *(pix_labels + (y - 1)*(my_width + 2) + (x - 1));
@@ -1040,8 +1057,8 @@ unsigned int* IMGCONT::connectedSets_Iterative(double * img_ptr, int * my_sets) 
 
 	// Indicar a que conjunto pertenece cada pixel:
 	memset(my_sets, -1, my_height * my_width * sizeof(int));
-	for (int y = 0; y < my_height; y++) {
-		for (int x = 0; x < my_width; x++) {
+	for (unsigned int y = 0; y < my_height; y++) {
+		for (unsigned int x = 0; x < my_width; x++) {
 			const int pixel_label = *(pix_labels + (y + 1)*(my_width + 2) + (x + 1));
 			if (pixel_label >= 0) {
 				*(my_sets + x + y*my_width) = *(labels_values + pixel_label);
@@ -1058,7 +1075,7 @@ unsigned int* IMGCONT::connectedSets_Iterative(double * img_ptr, int * my_sets) 
 	memset(sets_length + 1, 0, number_of_sets * sizeof(unsigned int));
 	sets_length[0] = number_of_sets;
 
-	for (int xy = 0; xy < my_height * my_width; xy++) {
+	for (unsigned int xy = 0; xy < my_height * my_width; xy++) {
 		if (*(my_sets + xy) >= 0) {
 			*(sets_length + 1 + *(my_sets + xy)) = *(sets_length + 1 + *(my_sets + xy)) + 1;
 		}
@@ -1086,6 +1103,7 @@ unsigned int* IMGCONT::connectedSets_Iterative(double * img_ptr, int * my_sets) 
 * The array in 'img_ptr' filtered by the length of its sets.                                                *
 *                                                                                                           *
 ************************************************************************************************************/
+
 void IMGCONT::lengthFilter(double *img_ptr, const unsigned int threshold_length, CONNECTED_ALG  my_connected_algorithm)
 {
     int *my_sets = new int [my_height * my_width];
@@ -1101,7 +1119,7 @@ void IMGCONT::lengthFilter(double *img_ptr, const unsigned int threshold_length,
         break;
     }
 
-    for( int xy = 0; xy < (my_height * my_width); xy++){
+    for(unsigned int xy = 0; xy < (my_height * my_width); xy++){
         if( ( *(my_sets + xy) >= 0) && ( *(my_sets_lengths + *(my_sets + xy ) + 1 ) < threshold_length)){
             *(img_ptr + xy) = 0.0;
         }
@@ -1129,6 +1147,7 @@ void IMGCONT::lengthFilter(double *img_ptr, const unsigned int threshold_length,
 * The image contained in the 'my_img_data' array filtered by length.                                        *
 *                                                                                                           *
 ************************************************************************************************************/
+
 void IMGCONT::lengthFilter(const unsigned int threshold_length, CONNECTED_ALG  my_connected_algorithm)
 {
     lengthFilter(my_img_data, threshold_length, my_connected_algorithm);
@@ -1155,6 +1174,7 @@ void IMGCONT::lengthFilter(const unsigned int threshold_length, CONNECTED_ALG  m
 * A fit hit or miss response for the erosion of a 8x8 disk shaped mask.                                     *
 *                                                                                                           *
 ************************************************************************************************************/
+
 inline unsigned char IMGCONT::erosionMask(double * erode_ptr, const int pos_x, const int pos_y)
 {
 	return (*(erode_ptr + (pos_x - 2) + (pos_y - 4)*(my_width + 8)) > 0.0) +
@@ -1246,6 +1266,7 @@ inline unsigned char IMGCONT::erosionMask(double * erode_ptr, const int pos_x, c
 * Estimates the field of view of the image and stores it in the 'img_FOV_mask' array.                       *
 *                                                                                                           *
 ************************************************************************************************************/
+
 void IMGCONT::erode(double * img_ptr)
 {
 	double *erosion_temp = new double[(my_height + 8) *  (my_width + 8)];
@@ -1276,8 +1297,8 @@ void IMGCONT::erode(double * img_ptr)
 		*(erosion_temp + (y+4) * (my_width + 8) + my_width + 7) = 1.0;
 	}
 
-	for (int y = 0; y < my_height; y++) {
-		for (int x = 0; x < my_width; x++) {
+	for (unsigned int y = 0; y < my_height; y++) {
+		for (unsigned int x = 0; x < my_width; x++) {
 			if (*(erosion_temp + (x + 4) + (y + 4)*(my_width + 8)) > 0) {
 				const unsigned char resp = erosionMask(erosion_temp, x + 4, y + 4);
 				if ((0 < resp) && (resp < 68)) {
@@ -1309,6 +1330,7 @@ void IMGCONT::erode(double * img_ptr)
 * Estimates the field of view of the image and stores it in the 'img_FOV_mask' array.                       *
 *                                                                                                           *
 ************************************************************************************************************/
+
 void IMGCONT::computeMaskFOV()
 {
     /* Threshold the image */
@@ -1325,7 +1347,7 @@ void IMGCONT::computeMaskFOV()
     erode(my_FOV_mask);
 	
 	/* Identify the connected sets of the corners of the image */
-    for( int xy = 0; xy < (my_width * my_height); xy++){
+    for(unsigned int xy = 0; xy < (my_width * my_height); xy++){
         *(my_FOV_mask + xy) = 1.0 - *(my_FOV_mask + xy);
     }
 
@@ -1338,7 +1360,7 @@ void IMGCONT::computeMaskFOV()
 	const int SouthWest = *(my_sets + (my_height - 1)*my_width);
 	const int SouthEast = *(my_sets + my_height * my_width - 1);
 
-    for( int xy = 0; xy < (my_height * my_width); xy++){
+    for(unsigned int xy = 0; xy < (my_height * my_width); xy++){
         if( (*(my_sets + xy) >= 0) && ((*(my_sets + xy) == NorthWest) || (*(my_sets + xy) == NorthEast) ||
 			(*(my_sets + xy) == SouthWest) || (*(my_sets + xy) == SouthEast)) ){
             *(my_FOV_mask + xy) = 0.0;
@@ -1370,6 +1392,7 @@ void IMGCONT::computeMaskFOV()
 * A hit, fit or miss response for an 1x1 dilatation mask.                                                   *
 *                                                                                                           *
 ************************************************************************************************************/
+
 inline unsigned char IMGCONT::dilMask(double * mask_dil_ptr, const unsigned int pos_x, const unsigned int pos_y)
 {
 	return (*(mask_dil_ptr + (pos_x)+(pos_y - 1)*(my_width + 2)) > 0.0) +
@@ -1398,6 +1421,7 @@ inline unsigned char IMGCONT::dilMask(double * mask_dil_ptr, const unsigned int 
 * hood values in a mask of 21x21 pixels.                                                                    *
 *                                                                                                           *
 ************************************************************************************************************/
+
 void IMGCONT::fillMask()
 {
 	PIX_PAIR par_tmp;
@@ -1414,7 +1438,7 @@ void IMGCONT::fillMask()
 		*(fill_temp + (y + 1)*(my_width + 2) + my_width + 1) = 0.0;
 	}
 
-	int iter = 0;
+	unsigned int iter = 0;
 	while (iter < my_width) {
 		std::vector< PIX_PAIR > boundaries;
 
@@ -1440,26 +1464,26 @@ void IMGCONT::fillMask()
 
 		/* For each pixel in the boundary, its value in the FOV mask is defined as the average intensity of an 21x21 mask */
 		for (int b = 0; b < n_pixels_in_boundary; b++) {
-			const int curr_x = (int)boundaries[b].my_pos_x;
-			const int curr_y = (int)boundaries[b].my_pos_y;
+			const unsigned int curr_x = (int)boundaries[b].my_pos_x;
+			const unsigned int curr_y = (int)boundaries[b].my_pos_y;
 
-			const int offset_x_left = (curr_x < 10) ?
+			const unsigned int offset_x_left = (curr_x < 10) ?
 				0 : (curr_x - 10);
 
-			const int offset_x_right = (curr_x >= (my_width - 10)) ?
+			const unsigned int offset_x_right = (curr_x >= (my_width - 10)) ?
 				(my_width - 1) : (curr_x + 10);
 
-			const int offset_y_upper = (curr_y < 10) ?
+			const unsigned int offset_y_upper = (curr_y < 10) ?
 				0 : (curr_y - 10);
 
-			const int offset_y_lower = (curr_y >= (my_height - 10)) ?
+			const unsigned int offset_y_lower = (curr_y >= (my_height - 10)) ?
 				(my_height - 1) : (curr_y + 10);
 
 			double intensities_sum = 0.0;
 			int n_in_neighborhood = 0;
 
-			for (int y = offset_y_upper; y <= offset_y_lower; y++) {
-				for (int x = offset_x_left; x <= offset_x_right; x++) {
+			for (unsigned int y = offset_y_upper; y <= offset_y_lower; y++) {
+				for (unsigned int x = offset_x_left; x <= offset_x_right; x++) {
 					if (*(fill_temp + (x + 1) + (y + 1)*(my_width + 2)) > 0.0) {
 						intensities_sum += *(my_img_data + x + y*my_width);
 						n_in_neighborhood++;
@@ -1500,6 +1524,7 @@ void IMGCONT::fillMask()
 * A graph with the pixles of the skeleton characterized by its pixel type.                                  *
 *                                                                                                           *
 ************************************************************************************************************/
+
 IMGCONT::PIX_PAIR * IMGCONT::computeSkeletonGraph(double * skl_temp, const unsigned int pos_x, const unsigned int pos_y, int *deep_level, const unsigned char *lutable, bool *was_visited)
 {
 	if( *(was_visited + pos_x + pos_y*my_width) ){
@@ -1697,6 +1722,7 @@ IMGCONT::PIX_PAIR * IMGCONT::computeSkeletonGraph(double * skl_temp, const unsig
 * The features of each pixel in the skeleton.                                                               *
 *                                                                                                           *
 ************************************************************************************************************/
+
 void IMGCONT::extractSkeletonFeatures()
 {
 	if (!my_boundaries) {
@@ -1755,6 +1781,7 @@ void IMGCONT::extractSkeletonFeatures()
 * Nothing.                                                                                                  *
 *                                                                                                           *
 ************************************************************************************************************/
+
 void IMGCONT::deleteSkeletonGraph(PIX_PAIR *graph_root)
 {
 	if (graph_root->my_n_children > 0) {
@@ -1794,6 +1821,7 @@ void IMGCONT::deleteSkeletonGraph(PIX_PAIR *graph_root)
 * The fit, hit or miss response of the skeleton mask                                                        *
 *                                                                                                           *
 ************************************************************************************************************/
+
 inline unsigned char IMGCONT::sklMask(double * skl_temp, const unsigned int pos_x, const unsigned int pos_y) {
 	return   1 * (*(skl_temp + (pos_x - 1) + (pos_y - 1)*my_width) > 0.0) + /* P2 */
 		2 * (*(skl_temp + pos_x + (pos_y - 1)*(my_width + 2)) > 0.0) + /* P3 */
@@ -1825,6 +1853,7 @@ inline unsigned char IMGCONT::sklMask(double * skl_temp, const unsigned int pos_
 * image is required).                                                                                       *
 *                                                                                                           *
 ************************************************************************************************************/
+
 void IMGCONT::computeSkeleton()
 {
 	if (!my_skeleton) {
@@ -1905,6 +1934,7 @@ void IMGCONT::computeSkeleton()
 * Returns a pointer to the skeleton of the image data.                                                      *
 *                                                                                                           *
 ************************************************************************************************************/
+
 double * IMGCONT::getSkeleton()
 {
 	if (!my_skeleton) {
@@ -1933,6 +1963,7 @@ double * IMGCONT::getSkeleton()
 * Returns a pointer to the skeleton features of each pixel in a graph structure.                            *
 *                                                                                                           *
 ************************************************************************************************************/
+
 IMGCONT::PIX_PAIR * IMGCONT::getSkeletonFeatures()
 {
 	if (!my_skeleton_features) {
@@ -1961,6 +1992,7 @@ IMGCONT::PIX_PAIR * IMGCONT::getSkeletonFeatures()
 * Returns a pointer to the skeleton features of each pixel in a graph structure.                            *
 *                                                                                                           *
 ************************************************************************************************************/
+
 int IMGCONT::getSkeletonFeaturesDeep()
 {
 	if (!my_skeleton_features) {
@@ -1989,6 +2021,7 @@ int IMGCONT::getSkeletonFeaturesDeep()
 * Defines the mask from the image data.                                                                     *
 *                                                                                                           *
 ************************************************************************************************************/
+
 void IMGCONT::computeMask()
 {
 
@@ -2018,6 +2051,7 @@ void IMGCONT::computeMask()
 * A pointer to the FOV mask of the image data.                                                              *
 *                                                                                                           *
 ************************************************************************************************************/
+
 double * IMGCONT::getMask()
 {
 	if (!my_FOV_mask) {
@@ -2048,17 +2082,18 @@ double * IMGCONT::getMask()
 * The threshold value estimated by the Otsu's thresholding method.                                          *
 *                                                                                                           *
 ************************************************************************************************************/
+
 double IMGCONT::threshold_by_Otsu(const double min, const double max)
 {
     const int n_classes = 256;
-    double * freq_histogram = new double[n_classes];
+	double * freq_histogram = new double[n_classes];
 	memset(freq_histogram, 0, n_classes*sizeof(double));
 
     /* Calculate the frequencies histogram */
     double intensities_sum = 0.0;
     const double fraction = 1.0 / (double)(my_height * my_width);
 
-    for( int xy = 0; xy < my_height * my_width; xy ++){
+    for(unsigned int xy = 0; xy < my_height * my_width; xy ++){
         const int class_i = (int)((n_classes-1) * (*(my_img_data + xy) - min)/(max - min + 1e-12));
         freq_histogram[class_i] += fraction;
         intensities_sum += (double)(class_i +1);
@@ -2066,10 +2101,10 @@ double IMGCONT::threshold_by_Otsu(const double min, const double max)
 
     intensities_sum *= fraction;
 
-    double background_intensities_sum = 0;
-    double background_weight = 0.0;
-    double between_var, max_between_var = -1.0;
-    double threshold_value;
+	double background_intensities_sum = 0;
+	double background_weight = 0.0;
+	double between_var, max_between_var = -1.0;
+	double threshold_value;
 
     for( int k = 0; k < n_classes; k++){
         background_weight += (double)freq_histogram[k];
@@ -2111,13 +2146,14 @@ double IMGCONT::threshold_by_Otsu(const double min, const double max)
 * The threshold value estimated by the Ridler and Calvard's method.                                         *
 *                                                                                                           *
 ************************************************************************************************************/
+
 double IMGCONT::threshold_by_Ridler_and_Calvard(const double min_intensity, const double max_intensity)
 {
 	double new_threshold_value = 0.0;
 	const double range = 1.0 / (max_intensity - min_intensity);
 	const double fraction = 1.0 / (double)(my_height * my_width);
 
-	for (int xy = 0; xy < my_height * my_width; xy++) {
+	for (unsigned int xy = 0; xy < my_height * my_width; xy++) {
 		new_threshold_value += (*(my_img_data + xy) - min_intensity) * range;
 	}
 	new_threshold_value *= fraction;
@@ -2132,7 +2168,7 @@ double IMGCONT::threshold_by_Ridler_and_Calvard(const double min_intensity, cons
 		int upper_count = 0;
 		int lower_count = 0;
 
-		for (int xy = 0; xy < my_height * my_width; xy++) {
+		for (unsigned int xy = 0; xy < my_height * my_width; xy++) {
 
 			if ((*(my_img_data + xy) - min_intensity) * range <= threshold_value) {
 				upper_mean += (*(my_img_data + xy) - min_intensity) * range;
@@ -2177,12 +2213,13 @@ double IMGCONT::threshold_by_Ridler_and_Calvard(const double min_intensity, cons
 * The trhesholded image inside the same image data array.                                                   *
 *                                                                                                           *
 ************************************************************************************************************/
+
 void IMGCONT::threshold(const THRESHOLD_ALG my_threshold_alg, const double threshold_value)
 {
 	double my_max_intensity = -MY_INF;
 	double my_min_intensity = MY_INF;
 
-	for (int xy = 0; xy < my_height * my_width; xy++) {
+	for (unsigned int xy = 0; xy < my_height * my_width; xy++) {
 		if (*(my_img_data + xy) < my_min_intensity) {
 			my_min_intensity = *(my_img_data + xy);
 		}
@@ -2206,7 +2243,7 @@ void IMGCONT::threshold(const THRESHOLD_ALG my_threshold_alg, const double thres
 	}
 
 	// Se umbraliza la imagen con el valor optimo encontrado:
-	for (int xy = 0; xy < my_height * my_width; xy++) {
+	for (unsigned int xy = 0; xy < my_height * my_width; xy++) {
 		*(my_img_data + xy) = (((*(my_img_data + xy) - my_min_intensity) / (my_max_intensity - my_min_intensity)) 
 			>= threshold_estimated_value)
 			? 1.0 : 0.0;
@@ -2226,8 +2263,8 @@ void IMGCONT::threshold(const THRESHOLD_ALG my_threshold_alg, const double thres
 *                                                                                                           *
 * ARGUMENTS:                                                                                                *
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
-* pos_i                     const int                  I   The original Y-axis position in the image data   *
-* pos_j                     const int                  I   The original X-axis position in the image data   *
+* pos_i                     const unsigned int         I   The original Y-axis position in the image data   *
+* pos_j                     const unsigned int         I   The original X-axis position in the image data   *
 * mapping_y                 const double               I   The new Y_axis position after rotating           *
 * mapping_x                 const double               I   The new X_axis position after rotating           *
 *                                                                                                           *
@@ -2235,7 +2272,8 @@ void IMGCONT::threshold(const THRESHOLD_ALG my_threshold_alg, const double thres
 * The interpolated intensity of the pixel in the position (mapping_x, mapping_y) after a rotation           *
 *                                                                                                           *
 ************************************************************************************************************/
-inline double IMGCONT::linearInterpolation(const int pos_i, const int pos_j, const double mapping_y, const double mapping_x) {
+
+inline double IMGCONT::linearInterpolation(const unsigned int pos_i, const unsigned int pos_j, const double mapping_y, const double mapping_x) {
 	double intensidad = 0.0;
 
 	if (pos_j >= 0 && pos_j < my_width) {

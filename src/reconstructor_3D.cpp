@@ -770,6 +770,8 @@ void RECONS3D::agregarInput(const char *rutabase_input, const int nivel_l, const
 		h_media.push_back(0.0);
 		h_desvest.push_back(0.0);
 	}
+
+	(my_img_base.at(n_angios)).showImage();
 }
 
 
@@ -2088,7 +2090,7 @@ void RECONS3D::defineArguments()
 		"Treshold segmented image?", "thr", "threshold", "no", true);
 
 	my_args->newArgument(
-		"Directory to store the segmentation output", "odir", "output-dir", ".", true);
+		"Output directory for response images", "odir", "output-directory", ".", true);
 
 }
 
@@ -2110,9 +2112,9 @@ void RECONS3D::segmentar()
 
 	my_optimized_parameters.filter();
 
-	char message_roc[] = "00.0000000000\n";
-	sprintf(message_roc, "%1.9f\n", my_optimized_parameters.calcROC());
-	escribirLog(message_roc);
+	char mensaje_az[512] = "00.0000000000";
+	//sprintf_s(mensaje_az, 512, "%1.9f", my_optimized_parameters.calcROC());
+	escribirLog(mensaje_az);
 }
 //---- ----------------------------------------------------------------------------- PUBLIC----- ^
 

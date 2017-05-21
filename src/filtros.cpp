@@ -30,8 +30,6 @@ void FILTROS::escribirLog( const char *mensaje )
 
 
 
-
-
 /*  Metodo: barraProgreso
 
     Funcion: Actualiza la barra de progreso.
@@ -139,8 +137,8 @@ FILTROS::~FILTROS() {
 	if (already_transformed) {
 
 		for (unsigned int i = 0; i < my_filters_imgs_count; i++) {
-			fftw_free(Img_fft[i]);
-			fftw_free(Img_fft_HPF[i]);
+			fftwl_free(Img_fft[i]);
+			fftwl_free(Img_fft_HPF[i]);
 		}
 
 		delete[] Img_fft;
@@ -246,7 +244,7 @@ void FILTROS::respGMF()
 {
 	const unsigned int temp_dims = (int)(1.5*((my_T > (unsigned int)my_L) ? my_T : (unsigned int)my_L));
 
-	IMGCONT *GMF_templates = new IMGCONT[my_K];
+	IMGCONT*GMF_templates = new IMGCONT[my_K];
 
 	/* Calculate a single Gaussian curve along the template width, at 0 degrees: */
 	double *gauss_0 = (double*)malloc(my_T * sizeof(double));
@@ -302,7 +300,7 @@ void FILTROS::respGMF()
 	free(gauss_0);
 	
 	/* Initialize the filter response: */
-	IMGCONT *resp_tmp = new IMGCONT[my_filters_imgs_count];
+	IMGCONT*resp_tmp = new IMGCONT[my_filters_imgs_count];
 
 	const unsigned int offset = (unsigned int)(temp_dims / 2);
 	for (unsigned int i = 0; i < my_filters_imgs_count; i++)
@@ -398,40 +396,59 @@ void FILTROS::respGMF()
 ************************************************************************************************************/
 void FILTROS::fftImgOrigen()
 {
+	DEB_MSG("Transform image to the Fourier space");
+
 	if (!already_transformed) {
 		if (input_already_set) {
 			if (!Img_fft) {
-				Img_fft = new fftw_complex*[my_filters_imgs_count];
+				Img_fft = new fftwl_complex*[my_filters_imgs_count];
 			}
 			if (!Img_fft_HPF) {
-				Img_fft_HPF = new fftw_complex*[my_filters_imgs_count];
+				Img_fft_HPF = new fftwl_complex*[my_filters_imgs_count];
 			}
 
 			for (unsigned int i = 0; i < my_filters_imgs_count; i++) {
-				*(Img_fft + i) = (fftw_complex*)fftw_malloc((my_img_base->at(i)).getHeight() *
-					((my_img_base->at(i)).getWidth() / 2 + 1) * sizeof(fftw_complex));
-				*(Img_fft_HPF + i) = (fftw_complex*)fftw_malloc((my_img_base->at(i)).getHeight() *
-					((my_img_base->at(i)).getWidth() / 2 + 1) * sizeof(fftw_complex));
+				*(Img_fft + i) = (fftwl_complex*)fftwl_malloc((my_img_base->at(i)).getHeight() *
+					(my_img_base->at(i)).getWidth() * sizeof(fftwl_complex));
+
+				*(Img_fft_HPF + i) = (fftwl_complex*)fftwl_malloc((my_img_base->at(i)).getHeight() *
+					(my_img_base->at(i)).getWidth() * sizeof(fftwl_complex));
 			}
 			already_transformed = true;
 
-			double *Img_org = new double[(my_img_base->at(0)).getHeight() * (my_img_base->at(0)).getWidth()];
+			fftwl_complex *Img_org = (fftwl_complex*) fftwl_malloc((my_img_base->at(0)).getHeight() * (my_img_base->at(0)).getWidth() * sizeof(fftwl_complex));
+			
+			DEB_MSG("Height: " << (my_img_base->at(0)).getHeight());
+			DEB_MSG("Width: " << (my_img_base->at(0)).getWidth());
 
 			for (unsigned int i = 0; i < my_filters_imgs_count; i++) {
-				for (unsigned int y = 0; y < (my_img_base->at(i)).getHeight(); y++) {
-					for (unsigned int x = 0; x < (my_img_base->at(i)).getWidth(); x++) {
-						*(Img_org + x + y * (my_img_base->at(i)).getWidth()) = 1.0 - (my_img_base->at(i)).getPix(y, x);
-					}
+				const unsigned int my_img_width = (my_img_base->at(i)).getWidth();
+				const unsigned int my_img_height = (my_img_base->at(i)).getHeight();
+
+				/* Copy data from image 'i' to temporal Img_org array */
+				for (unsigned int xy = 0; xy < (my_img_height*my_img_width); xy++) {
+					*(*(Img_org + xy)) = 1.0L - (long double)(my_img_base->at(i)).getPix(xy);
+					*(*(Img_org + xy)+1) = 0.0L;
 				}
 
-				fftw_plan p_r2c = fftw_plan_dft_r2c_2d((my_img_base->at(i)).getHeight(), (my_img_base->at(i)).getWidth(),
-					Img_org, *(Img_fft + i), FFTW_ESTIMATE);
-				fftw_execute(p_r2c);
-				fftw_destroy_plan(p_r2c);
-			}
+				DEB_MSG("img: " << *(*(Img_org)));
 
-			delete[] Img_org;
+				fftwl_plan p_r2c = fftwl_plan_dft_2d(my_img_width, my_img_height, Img_org, *(Img_fft + i), FFTW_FORWARD, FFTW_ESTIMATE);
+				fftwl_execute(p_r2c);
+
+				fftwl_destroy_plan(p_r2c);
+				
+				DEB_MSG("fft 0: " << *(*(*(Img_fft + i) + 0)) << " + " << *(*(*(Img_fft + i) + 0) + 1) << "i");
+				DEB_MSG("fft 1: " << *(*(*(Img_fft + i) + 1)) << " + " << *(*(*(Img_fft + i) + 1) + 1) << "i");
+				DEB_MSG("fft 2: " << *(*(*(Img_fft + i) + 2)) << " + " << *(*(*(Img_fft + i) + 2) + 1) << "i");
+				DEB_MSG("fft 3: " << *(*(*(Img_fft + i) + 3)) << " + " << *(*(*(Img_fft + i) + 3) + 1) << "i");
+				DEB_MSG("fft 4: " << *(*(*(Img_fft + i) + 4)) << " + " << *(*(*(Img_fft + i) + 4) + 1) << "i");
+			}
+			fftwl_free(Img_org);
 		}
+
+		fftwl_cleanup();
+
 	}
 }
 
@@ -446,87 +463,91 @@ void FILTROS::respGabor() {
 	fftImgOrigen();
 
 	// Calculate sx y sy:
-	double sx2 = (double)my_T / (2.0*sqrt(2.0 * log(2.0)));
+	long double sx2 = (long double)my_T / (2.0*sqrt(2.0 * log(2.0)));
 	sx2 *= sx2;
-	const double sy2 = my_L*my_L * sx2;
+	const long double sy2 = my_L*my_L * sx2;
 
-	const double fx = 1.0 / (double)my_T;
-	const double fy = 0.0;
+	const long double fx = 1.0 / (long double)my_T;
+	const long double fy = 0.0;
 
-	double *u = (double*)malloc((my_img_base->at(0)).getWidth() * sizeof(double));
-	double *v = (double*)malloc((my_img_base->at(0)).getHeight() * sizeof(double));
-
-	for (unsigned int x = 0; x < (my_img_base->at(0)).getWidth(); x++) {
-		*(u + x) = (x - (double)(my_img_base->at(0)).getWidth() / 2.0) * (2.0 * MY_PI / (double)(my_img_base->at(0)).getWidth());
-	}
-	for (unsigned int y = 0; y < (my_img_base->at(0)).getHeight(); y++) {
-		*(v + y) = (y - (double)(my_img_base->at(0)).getHeight() / 2.0) * (2.0 * MY_PI / (double)(my_img_base->at(0)).getHeight());
-	}
-
-	/* Generate the high-pass template HPF */
+	/* Generate the shifted high-pass template HPF */
 	IMGCONT HPF((my_img_base->at(0)).getHeight(), (my_img_base->at(0)).getWidth()/2 + 1);
 
+	long double *u = (long double*)malloc((my_img_base->at(0)).getWidth() * sizeof(long double));
+	long double *v = (long double*)malloc((my_img_base->at(0)).getHeight() * sizeof(long double));
+
+	const long double my_half_kernel_width = (long double)(my_img_base->at(0)).getWidth() / 2.0;
+	const long double my_kernel_width_denominator = 2.0 * MY_PI / (long double)(my_img_base->at(0)).getWidth();
+	const long double my_half_kernel_height = (long double)(my_img_base->at(0)).getHeight() / 2.0;
+	const long double my_kernel_height_denominator = 2.0 * MY_PI / (long double)(my_img_base->at(0)).getHeight();
+
+	for (unsigned int x = 0; x < (my_img_base->at(0)).getWidth(); x++) {
+		*(u + x) = (x - my_half_kernel_width) / my_kernel_width_denominator;
+	}
+	for (unsigned int y = 0; y < (my_img_base->at(0)).getHeight(); y++) {
+		*(v + y) = (y - my_half_kernel_height) / my_kernel_height_denominator;
+	}
+
 	for (unsigned int y = 0; y < (my_img_base->at(0)).getHeight() / 2; y++) {
-		const double v_y2 = *(v + y) * *(v + y);
+		const long double v_y2 = *(v + y) * *(v + y);
 		{
-			const double u_x2 = *(u) * *(u);
+			const long double u_x2 = *(u) * *(u);
 			HPF.setPix(y + (my_img_base->at(0)).getHeight() / 2, (my_img_base->at(0)).getWidth() / 2, 1.0 - exp(-(sy2*(u_x2 + v_y2)) / 2.0));
 		}
 		for (unsigned int x = (my_img_base->at(0)).getWidth() / 2; x < (my_img_base->at(0)).getWidth(); x++) {
-			const double u_x2 = *(u + x) * *(u + x);
+			const long double u_x2 = *(u + x) * *(u + x);
 			HPF.setPix(y + (my_img_base->at(0)).getHeight() / 2, x - (my_img_base->at(0)).getWidth() / 2, 1.0 - exp(-(sy2*(u_x2 + v_y2)) / 2.0));
 		}
 	}
 
 	for (unsigned int y = (my_img_base->at(0)).getHeight() / 2; y < (my_img_base->at(0)).getHeight(); y++) {
-		const double v_y2 = *(v + y) * *(v + y);
+		const long double v_y2 = *(v + y) * *(v + y);
 		{
-			const double u_x2 = *(u) * *(u);
+			const long double u_x2 = *(u) * *(u);
 			HPF.setPix(y - (my_img_base->at(0)).getHeight() / 2, (my_img_base->at(0)).getWidth() / 2, 1.0 - exp(-(sy2*(u_x2 + v_y2)) / 2.0));
 		}
 		for (unsigned int x = (my_img_base->at(0)).getWidth() / 2; x < (my_img_base->at(0)).getWidth(); x++) {
-			const double u_x2 = *(u + x) * *(u + x);
+			const long double u_x2 = *(u + x) * *(u + x);
 			HPF.setPix(y - (my_img_base->at(0)).getHeight() / 2,  x - (my_img_base->at(0)).getWidth() / 2, 1.0 - exp(-(sy2*(u_x2 + v_y2)) / 2.0));
 		}
 	}
 
 	/* 'Img_filter' is the temporal filtered image in the frequencies domain: */
-	fftw_complex *Img_filter = (fftw_complex*)fftw_malloc((my_img_base->at(0)).getHeight()*((my_img_base->at(0)).getWidth() / 2 + 1) * sizeof(fftw_complex));
+	fftwl_complex *Img_filter = (fftwl_complex*)fftwl_malloc((my_img_base->at(0)).getHeight()*((my_img_base->at(0)).getWidth() / 2 + 1) * sizeof(fftwl_complex));
 
 	/* 'Img_resp' contains the response of the gabor filter at certain orientation 'theta': */
-	double *Img_resp = (double*)calloc((my_img_base->at(0)).getHeight() * (my_img_base->at(0)).getWidth(), sizeof(double));
+	fftwl_complex *Img_resp = (fftwl_complex*)fftwl_malloc((my_img_base->at(0)).getHeight() * (my_img_base->at(0)).getWidth() * sizeof(fftwl_complex));
 
 	/* 'max_resp' saves the highest response for every pixel of the input: */
-	double **max_resp = (double**)malloc(my_filters_imgs_count * sizeof(double*));
+	long double **max_resp = (long double**)malloc(my_filters_imgs_count * sizeof(long double*));
 
-	fftw_plan p_c2r;
+	fftwl_plan p_c2r;
 	/* Apply the high-pass filter to the image in the frequencies domain: */
 	for (unsigned int i = 0; i < my_filters_imgs_count; i++) {
 		for (unsigned int y = 0; y < (my_img_base->at(i)).getHeight(); y++) {
-			for (unsigned int x = 0; x <= (my_img_base->at(i)).getWidth() / 2; x++) {
-				*(*(*(Img_fft_HPF + i) + x + y*((my_img_base->at(i)).getWidth() / 2 + 1))) =
-					*(*(*(Img_fft + i) + x + y*((my_img_base->at(i)).getWidth() / 2 + 1))) * HPF.getPix(y, x);
-				*(*(*(Img_fft_HPF + i) + x + y*((my_img_base->at(i)).getWidth() / 2 + 1)) + 1) =
-					*(*(*(Img_fft + i) + x + y*((my_img_base->at(i)).getWidth() / 2 + 1)) + 1) * HPF.getPix(y, x);
+			for (unsigned int x = 0; x <= (my_img_base->at(i)).getWidth(); x++) {
+				*(*(*(Img_fft_HPF + i) + x + y*((my_img_base->at(i)).getWidth()))) =
+					*(*(*(Img_fft + i) + x + y*((my_img_base->at(i)).getWidth()))) * HPF.getPix(y, x);
 			}
 		}
 
-		*(max_resp + i) = (double*)malloc((my_img_base->at(i)).getHeight() * (my_img_base->at(i)).getWidth() * sizeof(double));
+		*(max_resp + i) = (long double*)malloc((my_img_base->at(i)).getHeight() * (my_img_base->at(i)).getWidth() * sizeof(long double));
 		for (unsigned int xy = 0; xy < (my_img_base->at(i)).getHeight() * (my_img_base->at(i)).getWidth(); xy++) {
 			*(*(max_resp + i) + xy) = -MY_INF;
 		}
 	}
 
-	const double theta_increment = 180.0 / (double)my_K;
+	const long double theta_increment = 180.0 / (long double)my_K;
 
-	double Vr, Ur;
+	long double Vr, Ur;
+
+	long double * Gabor_filter = (long double *)malloc((my_img_base->at(0)).getHeight() * (my_img_base->at(0)).getWidth() * sizeof(long double));
+	const unsigned int gabor_kernel_width = (my_img_base->at(0)).getWidth();
 
 	unsigned int k = 0;
-	for (double theta = 0.0; theta < 180.0; theta += theta_increment, k++) {
-		const double stheta = sin(theta*MY_PI / 180.0);
-		const double ctheta = cos(theta*MY_PI / 180.0);
-
-		IMGCONT Gabor_filter((my_img_base->at(0)).getHeight(), ((my_img_base->at(0)).getWidth() / 2 + 1));
+	for (long double theta = 0.0; theta < 180.0; theta += theta_increment, k++) {
+		const long double stheta = sin(theta*MY_PI / 180.0);
+		const long double ctheta = cos(theta*MY_PI / 180.0);
 
 		/* The Gabor filter is calculated for the rotated base at 'theta' degrees: */
 		for (unsigned int y = 0; y < (my_img_base->at(0)).getHeight() / 2; y++) {
@@ -537,32 +558,31 @@ void FILTROS::respGabor() {
 				Ur = *(u + x + (my_img_base->at(0)).getWidth() / 2)*ctheta + v_y*stheta;
 				Vr = -*(u + x + (my_img_base->at(0)).getWidth() / 2)*stheta + v_y*ctheta;
 
-				Gabor_filter.setPix(y, x, exp(-(0.5)*(sx2*(Ur*Ur + 4.0*MY_PI*fx*MY_PI*fx) + sy2*(Vr*Vr + 4.0*MY_PI*fy*MY_PI*fy))) * cosh(2.0*MY_PI*(sx2*fx*Ur + sy2*fy*Vr)));
+				*(Gabor_filter + y*gabor_kernel_width + x) = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*MY_PI*fx*MY_PI*fx) + sy2*(Vr*Vr + 4.0*MY_PI*fy*MY_PI*fy))) * cosh(2.0*MY_PI*(sx2*fx*Ur + sy2*fy*Vr));
 			}
 
 			Ur = *(u)*ctheta + v_y*stheta;
 			Vr = -*(u)*stheta + v_y*ctheta;
 
-			Gabor_filter.setPix(y, x, exp(-(0.5)*(sx2*(Ur*Ur + 4.0*MY_PI*fx*MY_PI*fx) + sy2*(Vr*Vr + 4.0*MY_PI*fy*MY_PI*fy))) * cosh(2.0*MY_PI*(sx2*fx*Ur + sy2*fy*Vr)));
+			*(Gabor_filter + y*gabor_kernel_width + x) = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*MY_PI*fx*MY_PI*fx) + sy2*(Vr*Vr + 4.0*MY_PI*fy*MY_PI*fy))) * cosh(2.0*MY_PI*(sx2*fx*Ur + sy2*fy*Vr));
 		}
 
 		for (unsigned int y = (my_img_base->at(0)).getHeight() / 2; y < (my_img_base->at(0)).getHeight(); y++) {
-			const double v_y = *(v + y - (my_img_base->at(0)).getHeight() / 2);
+			const long double v_y = *(v + y - (my_img_base->at(0)).getHeight() / 2);
 
 			unsigned int x;
 			for (x = 0; x < (my_img_base->at(0)).getWidth() / 2; x++) {
 				Ur = *(u + x + (my_img_base->at(0)).getWidth() / 2)*ctheta + v_y*stheta;
 				Vr = -*(u + x + (my_img_base->at(0)).getWidth() / 2)*stheta + v_y*ctheta;
 
-				Gabor_filter.setPix(y, x, exp(-(0.5)*(sx2*(Ur*Ur + 4.0*MY_PI*fx*MY_PI*fx) + sy2*(Vr*Vr + 4.0*MY_PI*fy*MY_PI*fy)))	* cosh(2.0*MY_PI*(sx2*fx*Ur + sy2*fy*Vr)));
-
+				*(Gabor_filter + y*gabor_kernel_width + x) = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*MY_PI*fx*MY_PI*fx) + sy2*(Vr*Vr + 4.0*MY_PI*fy*MY_PI*fy)))	* cosh(2.0*MY_PI*(sx2*fx*Ur + sy2*fy*Vr));
 			}
 
 			Ur = *(u)*ctheta + v_y*stheta;
 			Vr = -*(u)*stheta + v_y*ctheta;
 
-			Gabor_filter.setPix(y, x, exp(-(0.5)*(sx2*(Ur*Ur + 4.0*MY_PI*fx*MY_PI*fx) + sy2*(Vr*Vr + 4.0*MY_PI*fy*MY_PI*fy)))
-				* cosh(2.0*MY_PI*(sx2*fx*Ur + sy2*fy*Vr)));
+			*(Gabor_filter + y*gabor_kernel_width + x) = exp(-(0.5)*(sx2*(Ur*Ur + 4.0*MY_PI*fx*MY_PI*fx) + sy2*(Vr*Vr + 4.0*MY_PI*fy*MY_PI*fy)))
+				* cosh(2.0*MY_PI*(sx2*fx*Ur + sy2*fy*Vr));
 		}
 
 		/* Apply the filter to the n images: */
@@ -571,26 +591,26 @@ void FILTROS::respGabor() {
 				for (unsigned int x = 0; x <= (my_img_base->at(i)).getWidth() / 2; x++) {
 					*(*(Img_filter + y*((my_img_base->at(i)).getWidth() / 2 + 1) + x)) =
 						*(*(*(Img_fft_HPF + i) + y*((my_img_base->at(i)).getWidth() / 2 + 1) + x)) *
-						Gabor_filter.getPix(y, x);
+						*(Gabor_filter + y*gabor_kernel_width + x);
 
 					*(*(Img_filter + y*((my_img_base->at(i)).getWidth() / 2 + 1) + x) + 1) =
 						*(*(*(Img_fft_HPF + i) + y*((my_img_base->at(i)).getWidth() / 2 + 1) + x) + 1) *
-						Gabor_filter.getPix(y, x);
+						*(Gabor_filter + y*gabor_kernel_width + x);
 				}
 			}
 
 			/* Transform the response to the original domain: */
-			p_c2r = fftw_plan_dft_c2r_2d((my_img_base->at(i)).getHeight(), (my_img_base->at(i)).getWidth(), Img_filter, Img_resp, FFTW_ESTIMATE);
-			fftw_execute(p_c2r);
+			p_c2r = fftwl_plan_dft_2d((my_img_base->at(i)).getWidth(), (my_img_base->at(i)).getHeight(), Img_filter, Img_resp, FFTW_FORWARD, FFTW_ESTIMATE);
+			fftwl_execute(p_c2r);
 
 			/* Update the highest response for every pixel: */
 			for (unsigned int xy = 0; xy < (my_img_base->at(i)).getHeight() * (my_img_base->at(i)).getWidth(); xy++) {
-				if (*(*(max_resp + i) + xy) < *(Img_resp + xy)) {
-					*(*(max_resp + i) + xy) = *(Img_resp + xy);
+				if (*(*(max_resp + i) + xy) < *(*(Img_resp + xy))) {
+					*(*(max_resp + i) + xy) = *(*(Img_resp + xy));
 				} 
 			}
 
-			fftw_destroy_plan(p_c2r);
+			fftwl_destroy_plan(p_c2r);
 		}
 	}
 
@@ -609,10 +629,11 @@ void FILTROS::respGabor() {
 		free(*(max_resp + i));
 	}
 
-	fftw_free(Img_filter);
-	free(Img_resp);
+	fftwl_free(Img_filter);
+	fftwl_free(Img_resp);
 	free(u);
 	free(v);
+	free(Gabor_filter);
 	free(max_resp);
 }
 

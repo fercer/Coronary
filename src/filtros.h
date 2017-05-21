@@ -17,11 +17,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#if defined(_WIN32)
-    #include MY_FFTW_PATH
-#else
-    #include <fftw3.h>
-#endif
+#include <fftw3.h>
 
 #include <math.h>
 #include <omp.h>
@@ -75,8 +71,8 @@ protected:
 	bool input_already_set;
 	bool already_transformed;
 
-	fftw_complex **Img_fft;
-	fftw_complex **Img_fft_HPF;
+	fftwl_complex **Img_fft;
+	fftwl_complex **Img_fft_HPF;
 
 	void fftImgOrigen();
 
@@ -88,10 +84,10 @@ protected:
 	unsigned int my_K;
 	double my_sigma;
 
-	std::vector< IMGCONT > * my_img_response;
-	std::vector< IMGCONT > * my_img_base;
-	std::vector< IMGCONT > * my_img_groundtruth;
-	std::vector< IMGCONT > * my_img_base_mask;
+	std::vector< IMGCONT> * my_img_response;
+	std::vector< IMGCONT> * my_img_base;
+	std::vector< IMGCONT> * my_img_groundtruth;
+	std::vector< IMGCONT> * my_img_base_mask;
 
 	unsigned int my_filters_imgs_count;
 

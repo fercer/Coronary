@@ -31,11 +31,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#if defined(_WIN32)
-    #include MY_FFTW_PATH
-#else
-    #include <fftw3.h>
-#endif
+#include <fftw3.h>
 
 #include <math.h>
 #include <omp.h>

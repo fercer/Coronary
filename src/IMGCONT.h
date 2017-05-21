@@ -29,13 +29,6 @@
     #include <gdcmTag.h>
 #endif
 
-#if defined(_WIN32)
-	#include MY_ZLIB
-	#include MY_PNG
-#else
-	#include <png.h>
-#endif
-
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -46,7 +39,7 @@
 #include <omp.h>
 #include <math.h>
 
-#include "libpng_src/readpng.h"
+#include <opencv2/opencv.hpp>
 
 #if defined(_WIN32) || defined(_WIN64)
 	#include <time.h>
@@ -178,6 +171,7 @@ public:
 
 	void setImageData(const unsigned int new_height, const unsigned int new_width, const double * src_data);
 	double getPix(const unsigned int row_y, const unsigned int col_x);
+	double getPix(const unsigned int pos_xy);
 	void setPix(const unsigned int row_y, const unsigned int col_x, const double new_val);
 	void setDimensions(const unsigned int new_height, const unsigned int new_width, const double init_val = 0.0);
 
@@ -204,6 +198,7 @@ public:
 	int getSkeletonFeaturesDeep();
 
 	void Rotate(const double my_rotation_tetha);
+	void showImage();
 
 private:
 
@@ -231,14 +226,14 @@ private:
 	char my_err_msg[512];
 	void writeLog(const char *message);
 
-	int LoadPNG(const char *src_path, const unsigned int level = 0);
+	int LoadCV2(const char *src_path, const unsigned int level = 0);
 	int LoadPGM(const char *src_path, const unsigned int level = 0);
 	int LoadDICOM(const char *src_path, const unsigned int level = 0);
 
 	void SavePGM(const char *out_path, const double my_min, const double my_max);
 	void SavePNG(const char *out_path, const double my_min, const double my_max);
 
-	void computeConnected(double * img_ptr, const int x, const int y, int *my_sets, unsigned int* number_of_labeled, bool* was_visited, const int number_of_labels);
+	void computeConnected(double * img_ptr, const unsigned int x, const unsigned int y, int *my_sets, unsigned int* number_of_labeled, bool* was_visited, const int number_of_labels);
 	inline void increaseSetSize(int * my_labels, const int equiv_A, const int equiv_B, const int max_number_of_labels);
 	unsigned int * connectedSets_Iterative(double * img_ptr, int * my_sets);
 	unsigned int * connectedSets_Dynamic(double * img_ptr, int * my_sets);
@@ -253,7 +248,6 @@ private:
 
 	void computeMaskFOV();
 	void computeMask();
-
 
 	void computeDistancesMap();
 	void computeBoundaries();
@@ -277,7 +271,7 @@ private:
 	inline unsigned char sklMask(double * skl_temp, const unsigned int pos_x, const unsigned int pos_y);
 	void computeSkeleton();
 
-	inline double linearInterpolation(const int pos_i, const int pos_j, const double mapping_y, const double mapping_x);
+	inline double linearInterpolation(const unsigned int pos_i, const unsigned int pos_j, const double mapping_y, const double mapping_x);
 };
 
 #endif // IMGCONT_H_INCLUDED
