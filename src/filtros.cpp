@@ -408,15 +408,15 @@ void FILTROS::fftImgOrigen()
 			}
 
 			for (unsigned int i = 0; i < my_filters_imgs_count; i++) {
-				*(Img_fft + i) = (fftwl_complex*)fftwl_malloc((my_img_base->at(i)).getHeight() *
+				*(Img_fft + i) = fftwl_alloc_complex((my_img_base->at(i)).getHeight() *
 					(my_img_base->at(i)).getWidth() * sizeof(fftwl_complex));
 
-				*(Img_fft_HPF + i) = (fftwl_complex*)fftwl_malloc((my_img_base->at(i)).getHeight() *
+				*(Img_fft_HPF + i) = fftwl_alloc_complex((my_img_base->at(i)).getHeight() *
 					(my_img_base->at(i)).getWidth() * sizeof(fftwl_complex));
 			}
 			already_transformed = true;
 
-			fftwl_complex *Img_org = (fftwl_complex*) fftwl_malloc((my_img_base->at(0)).getHeight() * (my_img_base->at(0)).getWidth() * sizeof(fftwl_complex));
+			fftwl_complex *Img_org = fftwl_alloc_complex((my_img_base->at(0)).getHeight() * (my_img_base->at(0)).getWidth() * sizeof(fftwl_complex));
 			
 			DEB_MSG("Height: " << (my_img_base->at(0)).getHeight());
 			DEB_MSG("Width: " << (my_img_base->at(0)).getWidth());
@@ -513,10 +513,10 @@ void FILTROS::respGabor() {
 	}
 
 	/* 'Img_filter' is the temporal filtered image in the frequencies domain: */
-	fftwl_complex *Img_filter = (fftwl_complex*)fftwl_malloc((my_img_base->at(0)).getHeight()*((my_img_base->at(0)).getWidth() / 2 + 1) * sizeof(fftwl_complex));
+	fftwl_complex *Img_filter = fftwl_alloc_complex((my_img_base->at(0)).getHeight()*((my_img_base->at(0)).getWidth() / 2 + 1) * sizeof(fftwl_complex));
 
 	/* 'Img_resp' contains the response of the gabor filter at certain orientation 'theta': */
-	fftwl_complex *Img_resp = (fftwl_complex*)fftwl_malloc((my_img_base->at(0)).getHeight() * (my_img_base->at(0)).getWidth() * sizeof(fftwl_complex));
+	fftwl_complex *Img_resp = fftwl_alloc_complex((my_img_base->at(0)).getHeight() * (my_img_base->at(0)).getWidth() * sizeof(fftwl_complex));
 
 	/* 'max_resp' saves the highest response for every pixel of the input: */
 	long double **max_resp = (long double**)malloc(my_filters_imgs_count * sizeof(long double*));

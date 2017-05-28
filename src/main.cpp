@@ -58,7 +58,7 @@ int main(int argc, char** argv ){
 
 		mi_reconstructor.segmentar();
 
-		mi_reconstructor.Guardar("img_resp.pgm", RECONS3D::IMG_RESPONSE, IMGCONT::IMGPGM, 0);
+		mi_reconstructor.Guardar("img_resp.png", RECONS3D::IMG_RESPONSE, IMGCONT::IMGPNG, 0);
 	}
 
 
