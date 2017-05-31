@@ -53,12 +53,13 @@ int main(int argc, char** argv ){
 		mi_reconstructor.setFiltroMetodo(FILTROS::SS_GABOR);
 
 		mi_reconstructor.setFiltroParametros(OPTI_PARS::PAR_K, 180.0);
-		mi_reconstructor.setFiltroParametros(OPTI_PARS::PAR_T, 12.0);
-		mi_reconstructor.setFiltroParametros(OPTI_PARS::PAR_L, 2.5);
+		mi_reconstructor.setFiltroParametros(OPTI_PARS::PAR_T, 8.0);
+		mi_reconstructor.setFiltroParametros(OPTI_PARS::PAR_L, 2.9);
 
 		mi_reconstructor.segmentar();
 
-		mi_reconstructor.Guardar("img_resp.png", RECONS3D::IMG_RESPONSE, IMGCONT::IMGPNG, 0);
+		DEB_MSG("Saving response image");
+		mi_reconstructor.Guardar("img_resp.dat", RECONS3D::IMG_RESPONSE, IMGCONT::IMGDATA, 0);
 	}
 
 
@@ -124,7 +125,7 @@ int main(int argc, char** argv ){
 	sprintf(out_path, "%s/%i_res.pgm", parametros.getArgumentCHAR("-odir"), i);
 #endif
 			printf("\n<<%s>>\n", out_path);	
-			mi_reconstructor.Guardar(out_path, RECONS3D::IMG_RESPONSE, IMGCONT::IMGPGM, i);
+			mi_reconstructor.Guardar(out_path, RECONS3D::IMG_RESPONSE, IMGCONT::IMGDATA, i);
 		}
 
 		fclose(fp_base);

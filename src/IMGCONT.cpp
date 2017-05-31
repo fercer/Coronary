@@ -74,11 +74,11 @@ IMGCONT::IMGCONT()
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
 * new_height                const unsigned int         I   Height of the new image                          *
 * new_width                 const unsigned int         I   Width of the new image                           *
-* init_val                  const double         I   The initial value in the whole image             *
+* init_val                  const long double          I   The initial value in the whole image             *
 *                                                                                                           *
 ************************************************************************************************************/
 
-IMGCONT::IMGCONT(const unsigned int new_height, const unsigned int new_width, const double init_val)
+IMGCONT::IMGCONT(const unsigned int new_height, const unsigned int new_width, const long double init_val)
 {
 	my_FOV_mask = NULL;
 	my_dist_map = NULL;
@@ -109,7 +109,7 @@ IMGCONT::IMGCONT(const unsigned int new_height, const unsigned int new_width, co
 	my_height = new_height;
 	my_width = new_width;
 	
-	my_img_data = (double*)malloc((my_height * my_width) * sizeof(double));
+	my_img_data = (long double*)malloc((my_height * my_width) * sizeof(long double));
 
 	for (unsigned int xy = 0; xy < (my_height * my_width); xy++) {
 		*(my_img_data + xy) = init_val;
@@ -127,11 +127,11 @@ IMGCONT::IMGCONT(const unsigned int new_height, const unsigned int new_width, co
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
 * new_height                const unsigned int         I   Height of the new image                          *
 * new_width                 const unsigned int         I   Width of the new image                           *
-* src_data                  const double*        I   An array to form the image data.                 *
+* src_data                  const long double*         I   An array to form the image data.                 *
 *                                                                                                           *
 ************************************************************************************************************/
 
-IMGCONT::IMGCONT(const unsigned int new_height, const unsigned int new_width, const double * src_data)
+IMGCONT::IMGCONT(const unsigned int new_height, const unsigned int new_width, const long double * src_data)
 {
 	my_height = 0;
 	my_width = 0;
@@ -337,8 +337,8 @@ void IMGCONT::copyFrom(const IMGCONT & img_src)
 		free(my_img_data);
 	}
 
-	my_img_data = (double*)malloc(my_height * my_width * sizeof(double));
-	memcpy(my_img_data, img_src.my_img_data, my_height * my_width * sizeof(double));
+	my_img_data = (long double*)malloc(my_height * my_width * sizeof(long double));
+	memcpy(my_img_data, img_src.my_img_data, my_height * my_width * sizeof(long double));
 
 
 	if (my_FOV_mask) {
@@ -346,8 +346,8 @@ void IMGCONT::copyFrom(const IMGCONT & img_src)
 		my_FOV_mask = NULL;
 	}
 	if (img_src.my_FOV_mask) {
-		my_FOV_mask = (double*)malloc(my_height * my_width * sizeof(double));
-		memcpy(my_FOV_mask, img_src.my_FOV_mask, my_height * my_width * sizeof(double));
+		my_FOV_mask = (long double*)malloc(my_height * my_width * sizeof(long double));
+		memcpy(my_FOV_mask, img_src.my_FOV_mask, my_height * my_width * sizeof(long double));
 	}
 
 
@@ -356,8 +356,8 @@ void IMGCONT::copyFrom(const IMGCONT & img_src)
 		my_dist_map = NULL;
 	}
 	if (img_src.my_dist_map) {
-		my_dist_map = (double*)malloc(my_height * my_width * sizeof(double));
-		memcpy(my_dist_map, img_src.my_dist_map, my_height * my_width * sizeof(double));
+		my_dist_map = (long double*)malloc(my_height * my_width * sizeof(long double));
+		memcpy(my_dist_map, img_src.my_dist_map, my_height * my_width * sizeof(long double));
 	}
 
 
@@ -366,8 +366,8 @@ void IMGCONT::copyFrom(const IMGCONT & img_src)
 		my_boundaries = NULL;
 	}
 	if (img_src.my_boundaries) {
-		my_boundaries = (double*)malloc(my_height * my_width * sizeof(double));
-		memcpy(my_boundaries, img_src.my_boundaries, my_height * my_width * sizeof(double));
+		my_boundaries = (long double*)malloc(my_height * my_width * sizeof(long double));
+		memcpy(my_boundaries, img_src.my_boundaries, my_height * my_width * sizeof(long double));
 	}
 
 	if (my_skeleton) {
@@ -375,8 +375,8 @@ void IMGCONT::copyFrom(const IMGCONT & img_src)
 		my_skeleton = NULL;
 	}
 	if (img_src.my_skeleton) {
-		my_skeleton = (double*)malloc((my_height + 2) * (my_width + 2) * sizeof(double));
-		memcpy(my_skeleton, img_src.my_skeleton, (my_height + 2) * (my_width + 2) * sizeof(double));
+		my_skeleton = (long double*)malloc((my_height + 2) * (my_width + 2) * sizeof(long double));
+		memcpy(my_skeleton, img_src.my_skeleton, (my_height + 2) * (my_width + 2) * sizeof(long double));
 	}
 
 	/* DICOM extracted information */
@@ -492,7 +492,7 @@ int IMGCONT::LoadCV2(const char *src_path, const unsigned int level)
 			unsigned int xy = 0;
 			for (p = img.begin<uchar>(), end = img.end<uchar>(); p != end; p++, xy++)
 			{
-				*(new_img.my_img_data + xy) = (double)((unsigned int)*p) / 255.0;
+				*(new_img.my_img_data + xy) = (long double)((unsigned int)*p) / 255.0;
 			}
 		}
 		case 3: {
@@ -502,7 +502,7 @@ int IMGCONT::LoadCV2(const char *src_path, const unsigned int level)
 				unsigned int xy = 0;
 				for (p = img.begin<cv::Vec3b>(), end = img.end<cv::Vec3b>(); p != end; p++, xy++)
 				{
-					*(new_img.my_img_data + xy) = (double)((unsigned int)(*p)[0]) / 255.0;
+					*(new_img.my_img_data + xy) = (long double)((unsigned int)(*p)[0]) / 255.0;
 				}
 			}
 		}
@@ -596,7 +596,7 @@ int IMGCONT::LoadPGM(const char *src_path, const unsigned int level)
 #else
 		fscanf(img_file, "%i", &read_intensity);
 #endif
-		*(new_img.my_img_data + xy) = (double)read_intensity / max_intensity;
+		*(new_img.my_img_data + xy) = (long double)read_intensity / max_intensity;
 	}
 
 	fclose(img_file);
@@ -658,7 +658,7 @@ int IMGCONT::LoadDICOM(const char *src_path, const unsigned int level)
 	}
 
 	DDP = SID - SOD;
-	const double Magnification = SID / SOD;
+	const long double Magnification = SID / SOD;
 
 	/* Extract pixY\pixX */
 	{
@@ -710,7 +710,7 @@ int IMGCONT::LoadDICOM(const char *src_path, const unsigned int level)
 		if (bv) {
 			gdcm::Element<gdcm::VR::SL, gdcm::VM::VM1_n> el;
 			el.Set(de.GetValue());
-			const double SISO = el.GetValue();
+			const long double SISO = el.GetValue();
 			DISO = SID - SISO;
 		}
 	}
@@ -830,10 +830,10 @@ int IMGCONT::LoadDICOM(const char *src_path, const unsigned int level)
 		if (pix_format == gdcm::PixelFormat::UINT8) {
 			for (int y = 0; y < my_height; y++) {
 				for (int x = 0; x < my_width; x++) {
-					const double pixR = (double)(unsigned char)*(buffer + 3 * x + y*my_width * 3 + level*my_rows_cols * 3) - WCenter + 0.5;
-					const double pixG = (double)(unsigned char)*(buffer + 3 * x + 1 + y*my_width * 3 + level*my_rows_cols * 3) - WCenter + 0.5;
-					const double pixB = (double)(unsigned char)*(buffer + 3 * x + 2 + y*my_width * 3 + level*my_rows_cols * 3) - WCenter + 0.5;
-					double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
+					const long double pixR = (long double)(unsigned char)*(buffer + 3 * x + y*my_width * 3 + level*my_rows_cols * 3) - WCenter + 0.5;
+					const long double pixG = (long double)(unsigned char)*(buffer + 3 * x + 1 + y*my_width * 3 + level*my_rows_cols * 3) - WCenter + 0.5;
+					const long double pixB = (long double)(unsigned char)*(buffer + 3 * x + 2 + y*my_width * 3 + level*my_rows_cols * 3) - WCenter + 0.5;
+					long double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
 					if (pix <= -((WWidth - 1) / 2)) {
 						pix = 0.0;
 					}
@@ -858,7 +858,7 @@ int IMGCONT::LoadDICOM(const char *src_path, const unsigned int level)
 		if (pix_format == gdcm::PixelFormat::UINT8) {
 			for (int y = 0; y < my_height; y++) {
 				for (int x = 0; x < my_width; x++) {
-					double pix = (double)(unsigned char)*(buffer + level*my_rows_cols + x + y*my_width) - WCenter + 0.5;
+					long double pix = (long double)(unsigned char)*(buffer + level*my_rows_cols + x + y*my_width) - WCenter + 0.5;
 
 					if (pix <= -((WWidth - 1) / 2)) {
 						pix = 0.0;
@@ -878,10 +878,10 @@ int IMGCONT::LoadDICOM(const char *src_path, const unsigned int level)
 			unsigned short *buffer16 = (unsigned short*)buffer;
 			for (int y = 0; y < my_height; y++) {
 				for (int x = 0; x < my_width; x++) {
-					const double pixR = (double)((unsigned char)*(buffer16 + 3 * x + y*my_width * 3 + level*my_rows_cols * 3) / 16) - WCenter + 0.5;
-					const double pixG = (double)((unsigned char)*(buffer16 + 3 * x + 1 + y*my_width * 3 + level*my_rows_cols * 3) / 16) - WCenter + 0.5;
-					const double pixB = (double)((unsigned char)*(buffer16 + 3 * x + 2 + y*my_width * 3 + level*my_rows_cols * 3) / 16) - WCenter + 0.5;
-					double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
+					const long double pixR = (long double)((unsigned char)*(buffer16 + 3 * x + y*my_width * 3 + level*my_rows_cols * 3) / 16) - WCenter + 0.5;
+					const long double pixG = (long double)((unsigned char)*(buffer16 + 3 * x + 1 + y*my_width * 3 + level*my_rows_cols * 3) / 16) - WCenter + 0.5;
+					const long double pixB = (long double)((unsigned char)*(buffer16 + 3 * x + 2 + y*my_width * 3 + level*my_rows_cols * 3) / 16) - WCenter + 0.5;
+					long double pix = (0.297)*pixR + (0.589)*pixG + (0.114)*pixB;
 					if (pix <= -((WWidth - 1) / 2)) {
 						pix = 0.0;
 					}
@@ -961,15 +961,15 @@ void IMGCONT::Load(const char *src_path, const unsigned int level)
 * ARGUMENTS:                                                                                                *
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
 * out_path                  const char *               I   The source path from the image is loaded.        *
-* my_min                    const double         I   Minimum intensity in the image.                  *
-* my_max                    const double         I   Maximum intensity in the image.                  *
+* my_min                    const long double         I   Minimum intensity in the image.                  *
+* my_max                    const long double         I   Maximum intensity in the image.                  *
 *                                                                                                           *
 * RETURNS:                                                                                                  *
 * Nothing.                                                                                                  *
 *                                                                                                           *
 ************************************************************************************************************/
 
-void IMGCONT::SavePGM(const char * out_path, const double my_min, const double my_max)
+void IMGCONT::SavePGM(const char * out_path, const long double my_min, const long double my_max)
 {
 	FILE *img_file = NULL;
 
@@ -990,15 +990,13 @@ void IMGCONT::SavePGM(const char * out_path, const double my_min, const double m
 		return;
 	}
 
-
-
 	fprintf(img_file, "P2\n");
 	fprintf(img_file, "# by FerCer\n");
 
 	fprintf(img_file, "%i %i\n", my_width, my_height);
 	fprintf(img_file, "255\n");
 
-	const double my_range = my_max - my_min;
+	const long double my_range = my_max - my_min;
 	int intensity;
 	for (unsigned int y = 0; y < my_height; y++) {
 		for (unsigned int x = 0; x < my_width; x++) {
@@ -1024,18 +1022,83 @@ void IMGCONT::SavePGM(const char * out_path, const double my_min, const double m
 * ARGUMENTS:                                                                                                *
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
 * out_path                  const char *               I   The source path from the image is loaded.        *
-* my_min                    const double         I   Minimum intensity in the image.                  *
-* my_max                    const double         I   Maximum intensity in the image.                  *
+* my_min                    const long double         I   Minimum intensity in the image.                  *
+* my_max                    const long double         I   Maximum intensity in the image.                  *
 *                                                                                                           *
 * RETURNS:                                                                                                  *
 * Nothing.                                                                                                  *
 *                                                                                                           *
 ************************************************************************************************************/
 
-void IMGCONT::SavePNG(const char * out_path, const double my_min, const double my_max)
+void IMGCONT::SavePNG(const char * out_path, const long double my_min, const long double my_max)
 {
+	cv::Mat saving_img(my_height, my_width, CV_8UC1);
+
+	DEB_MSG("my max: " << my_max << ", my min: " << my_min);
+
+	std::vector<int> compression_params;
+	compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+	compression_params.push_back(0);
+	
+	cv::MatIterator_<uchar> it = saving_img.begin<uchar>();
+	cv::MatIterator_<uchar> end = saving_img.end<uchar>();
+	unsigned int xy;
+
+	for (xy = 0; it != end; it++, xy++)
+	{
+		*it = (unsigned char)((unsigned int) floor(255.0 * (*(my_img_data + xy) - my_min)/(my_max- my_min)));
+	}
+
+	cv::imwrite(out_path, saving_img, compression_params);
 }
 
+
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PRIVATE                                                                                          *
+*                                                                                                           *
+* FUNCTION NAME: SaveDATA                                                                                   *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* out_path                  const char *               I   The source path from the image is loaded.        *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Nothing.                                                                                                  *
+*                                                                                                           *
+************************************************************************************************************/
+
+void IMGCONT::SaveDATA(const char * out_path)
+{
+	FILE *img_file = NULL;
+
+#if defined(_WIN32) || defined(_WIN64)
+	fopen_s(&img_file, out_path, "w");
+#else
+	img_file = fopen(out_path, "w");
+#endif
+
+	if (!img_file) {
+		char err_msg[512];
+#if defined(_WIN32) || defined(_WIN64)
+		sprintf_s(err_msg, 512, "<<Error: The file \'%s\' could not be created>>\n", out_path);
+#else
+		sprintf(err_msg, "<<Error: The file \'%s\' could not be created>>\n", out_path);
+#endif
+		writeLog(err_msg);
+		return;
+	}
+
+	for (unsigned int xy = 0; xy < my_height*my_width; xy++) {
+			fprintf(img_file, "%1.64Le\n", *(my_img_data + xy));
+	}
+
+	fclose(img_file);
+}
 
 
 
@@ -1058,8 +1121,8 @@ void IMGCONT::SavePNG(const char * out_path, const double my_min, const double m
 
 void IMGCONT::Save(const char * out_path, const IMG_TYPE output_type)
 {
-	double my_min = MY_INF;
-	double my_max = -MY_INF;
+	long double my_min = MY_INF;
+	long double my_max = -MY_INF;
 
 	for (unsigned int y = 0; y < my_height; y++) {
 		for (unsigned int x = 0; x < my_width; x++) {
@@ -1084,6 +1147,11 @@ void IMGCONT::Save(const char * out_path, const IMG_TYPE output_type)
 		break;
 	case IMGPNG:
 		DEB_MSG("As png");
+		SavePNG(out_path, my_min, my_max);
+		break;
+	case IMGDATA:
+		DEB_MSG("As data");
+		SaveDATA(out_path);
 		break;
 	}
 }
@@ -1103,14 +1171,14 @@ void IMGCONT::Save(const char * out_path, const IMG_TYPE output_type)
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
 * new_height                const unsigned int         I   Height of the new image                          *
 * new_width                 const unsigned int         I   Width of the new image                           *
-* src_data                  const double*        I   An array to form the image data.                 *
+* src_data                  const long double*        I   An array to form the image data.                 *
 *                                                                                                           *
 * RETURNS:                                                                                                  *
 * The pixel value in the defined position.                                                                  *
 *                                                                                                           *
 ************************************************************************************************************/
 
-void IMGCONT::setImageData(const unsigned int new_height, const unsigned int new_width, const double * src_data)
+void IMGCONT::setImageData(const unsigned int new_height, const unsigned int new_width, const long double * src_data)
 {
 	my_height = new_height;
 	my_width = new_width;
@@ -1119,8 +1187,8 @@ void IMGCONT::setImageData(const unsigned int new_height, const unsigned int new
 		free(my_img_data);
 	}
 
-	my_img_data = (double*)malloc(my_height * my_width * sizeof(double));
-	memcpy(my_img_data, src_data, my_width * my_height * sizeof(double));
+	my_img_data = (long double*)malloc(my_height * my_width * sizeof(long double));
+	memcpy(my_img_data, src_data, my_width * my_height * sizeof(long double));
 }
 
 
@@ -1144,7 +1212,7 @@ void IMGCONT::setImageData(const unsigned int new_height, const unsigned int new
 *                                                                                                           *
 ************************************************************************************************************/
 
-double IMGCONT::getPix(const unsigned int row_y, const unsigned int col_x)
+long double IMGCONT::getPix(const unsigned int row_y, const unsigned int col_x)
 {
 	return *(my_img_data + row_y * my_width + col_x);
 }
@@ -1170,7 +1238,7 @@ double IMGCONT::getPix(const unsigned int row_y, const unsigned int col_x)
 *                                                                                                           *
 ************************************************************************************************************/
 
-double IMGCONT::getPix(const unsigned int pos_xy)
+long double IMGCONT::getPix(const unsigned int pos_xy)
 {
 	return *(my_img_data + pos_xy);
 }
@@ -1189,18 +1257,42 @@ double IMGCONT::getPix(const unsigned int pos_xy)
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
 * row_y                     const unsigned int         I   Row position.                                    *
 * col_x                     const unsigned int         I   Column position.                                 *
-* new_val                   const double         I   New value to assign to the current position.     *
+* new_val                   const long double         I   New value to assign to the current position.     *
 *                                                                                                           *
 * RETURNS:                                                                                                  *
 * Nothing.                                                                                                  *
 *                                                                                                           *
 ************************************************************************************************************/
 
-void IMGCONT::setPix(const unsigned int row_y, const unsigned int col_x, const double new_val)
+void IMGCONT::setPix(const unsigned int row_y, const unsigned int col_x, const long double new_val)
 {
 	*(my_img_data + row_y*my_width + col_x) = new_val;
 }
 
+
+
+
+
+
+/************************************************************************************************************
+* IMGCONT::PUBLIC                                                                                           *
+*                                                                                                           *
+* FUNCTION NAME: setPix                                                                                     *
+*                                                                                                           *
+* ARGUMENTS:                                                                                                *
+* ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
+* pos_xy                    const unsigned int         I   Position.                                        *
+* new_val                   const long double               I   New value to assign to the current position.     *
+*                                                                                                           *
+* RETURNS:                                                                                                  *
+* Nothing.                                                                                                  *
+*                                                                                                           *
+************************************************************************************************************/
+
+void IMGCONT::setPix(const unsigned int pos_xy, const long double new_val)
+{
+	*(my_img_data + pos_xy) = new_val;
+}
 
 
 
@@ -1216,14 +1308,14 @@ void IMGCONT::setPix(const unsigned int row_y, const unsigned int col_x, const d
 * ARGUMENT                  TYPE                      I/O  DESCRIPTION                                      *
 * new_height                const unsigned int         I   Height of the new image                          *
 * new_width                 const unsigned int         I   Width of the new image                           *
-* init_val                  const double         I   The initial value in the whole image             *
+* init_val                  const long double         I   The initial value in the whole image             *
 *                                                                                                           *
 * RETURNS:                                                                                                  *
 * Nothing.                                                                                                  *
 *                                                                                                           *
 ************************************************************************************************************/
 
-void IMGCONT::setDimensions(const unsigned int new_height, const unsigned int new_width, const double init_val)
+void IMGCONT::setDimensions(const unsigned int new_height, const unsigned int new_width, const long double init_val)
 {
 	my_height = new_height;
 	my_width = new_width;
@@ -1231,7 +1323,7 @@ void IMGCONT::setDimensions(const unsigned int new_height, const unsigned int ne
 	if (my_img_data) {
 		free(my_img_data);
 	}
-	my_img_data = (double*)malloc((my_height * my_width) * sizeof(double));
+	my_img_data = (long double*)malloc((my_height * my_width) * sizeof(long double));
 
 	for (unsigned int xy = 0; xy < (my_height * my_width); xy++) {
 		*(my_img_data + xy) = init_val;
@@ -1311,14 +1403,18 @@ unsigned int IMGCONT::getWidth()
 ************************************************************************************************************/
 void IMGCONT::showImage()
 {
+
+	const long double my_max = (*this).getMaximum();
+	const long double my_min = (*this).getMinimum();
+
+	DEB_MSG("my min: " << my_min << ", my max: " << my_max);
+
 	cv::Mat showing_img(my_height, my_width, CV_8UC1);
-
 	cv::MatIterator_<uchar> p, end;
-
 	unsigned int xy = 0;
 	for (p = showing_img.begin<uchar>(), end = showing_img.end<uchar>(); p != end; p++, xy++)
 	{
-		*p = (char)(unsigned int) floor(*(my_img_data + xy) * 255.0);
+		*p = (char)(unsigned int) floor((*(my_img_data + xy) - my_min) / (my_max - my_min) * 255.0);
 	}
 
 	cv::imshow("Coronary image", showing_img);

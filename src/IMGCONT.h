@@ -92,7 +92,7 @@
 
 
 #ifdef _OPENM
-    #define TIMERS double t_ini, t_fin
+    #define TIMERS long double t_ini, t_fin
     #define GETTIME_INI t_ini = omp_get_wtime()
     #define GETTIME_FIN t_fin = omp_get_wtime()
     #define DIFTIME (t_fin - t_ini)
@@ -130,7 +130,7 @@ class IMGCONT {
 public:
 	/*----------------------------------------------------------------------------- PUBLIC v ------------- */
 	/** IMG_TYPE: **/
-	typedef enum IMG_TYPE { IMGPNG, IMGPGM } IMG_TYPE;
+	typedef enum IMG_TYPE { IMGPNG, IMGPGM, IMGDATA } IMG_TYPE;
 
 	/** PIX_TYPE: **/
 	typedef enum PIX_TYPE { PIX_SKL, PIX_END, PIX_BRANCH, PIX_CROSS } PIX_TYPE;
@@ -143,12 +143,12 @@ public:
 	
 	/** PIX_PAIR:   **/
 	typedef struct PIX_PAIR {
-		double my_pos_x;
-		double my_pos_y;
-		double my_x_r;
-		double my_y_r;
-		double my_radious;
-		double my_angle_alpha;
+		long double my_pos_x;
+		long double my_pos_y;
+		long double my_x_r;
+		long double my_y_r;
+		long double my_radious;
+		long double my_angle_alpha;
 		int my_deep_level;
 		int my_n_children;
 		PIX_PAIR *my_children[3];
@@ -157,8 +157,8 @@ public:
 
 	IMGCONT();
 
-	IMGCONT(const unsigned int new_height, const unsigned int new_width, const double init_val = 0.0);
-	IMGCONT(const unsigned int new_height, const unsigned int new_width, const double * src_data);
+	IMGCONT(const unsigned int new_height, const unsigned int new_width, const long double init_val = 0.0);
+	IMGCONT(const unsigned int new_height, const unsigned int new_width, const long double * src_data);
 
 	IMGCONT(const IMGCONT & img_src);
 
@@ -169,11 +169,13 @@ public:
 	void Load(const char * src_path, const unsigned int level = 0);
 	void Save(const char * out_path, const IMG_TYPE output_type = IMGPGM);
 
-	void setImageData(const unsigned int new_height, const unsigned int new_width, const double * src_data);
-	double getPix(const unsigned int row_y, const unsigned int col_x);
-	double getPix(const unsigned int pos_xy);
-	void setPix(const unsigned int row_y, const unsigned int col_x, const double new_val);
-	void setDimensions(const unsigned int new_height, const unsigned int new_width, const double init_val = 0.0);
+	void setImageData(const unsigned int new_height, const unsigned int new_width, const long double * src_data);
+	long double getPix(const unsigned int row_y, const unsigned int col_x);
+	long double getPix(const unsigned int pos_xy);
+	void setPix(const unsigned int row_y, const unsigned int col_x, const long double new_val);
+	void setPix(const unsigned int pos_xy, const long double new_val);
+
+	void setDimensions(const unsigned int new_height, const unsigned int new_width, const long double init_val = 0.0);
 
 	unsigned int getHeight();
 	unsigned int getWidth();
@@ -182,22 +184,22 @@ public:
 
 	void regionFill();
 
-	void threshold(const THRESHOLD_ALG my_threshold_alg = THRESH_LEVEL, const double threshold_value = 0.5);
+	void threshold(const THRESHOLD_ALG my_threshold_alg = THRESH_LEVEL, const long double threshold_value = 0.5);
 
-	double getMaximum();
-	double getMinimum();
+	long double getMaximum();
+	long double getMinimum();
 
-	void normalize(const double fixed_min, const double fixed_max);
+	void normalize(const long double fixed_min, const long double fixed_max);
 	void normalize();
 
-	double * getMask();
-	double * getDistancesMap();
-	double * getBoundaries();
-	double * getSkeleton();
+	long double * getMask();
+	long double * getDistancesMap();
+	long double * getBoundaries();
+	long double * getSkeleton();
 	PIX_PAIR * getSkeletonFeatures();
 	int getSkeletonFeaturesDeep();
 
-	void Rotate(const double my_rotation_tetha);
+	void Rotate(const long double my_rotation_tetha);
 	void showImage();
 
 private:
@@ -206,18 +208,18 @@ private:
 	unsigned int my_width;        /* Width of the image */
 
 	/************************************************************************/
-	double * my_img_data;          /* The array where the image is contained */
-	double * my_FOV_mask;
-	double * my_dist_map;
-	double * my_boundaries;
-	double * my_skeleton;
+	long double * my_img_data;          /* The array where the image is contained */
+	long double * my_FOV_mask;
+	long double * my_dist_map;
+	long double * my_boundaries;
+	long double * my_skeleton;
 	/************************************************************************/
 
 	/* DICOM extracted information */
-	double SID, SOD, DDP, DISO;
-	double LAORAO, CRACAU;
-	double WCenter, WWidth;
-	double pixX, pixY, cenX, cenY;
+	long double SID, SOD, DDP, DISO;
+	long double LAORAO, CRACAU;
+	long double WCenter, WWidth;
+	long double pixX, pixY, cenX, cenY;
 	
 	int my_max_distance;
 	int my_skeleton_graph_deep;
@@ -230,20 +232,21 @@ private:
 	int LoadPGM(const char *src_path, const unsigned int level = 0);
 	int LoadDICOM(const char *src_path, const unsigned int level = 0);
 
-	void SavePGM(const char *out_path, const double my_min, const double my_max);
-	void SavePNG(const char *out_path, const double my_min, const double my_max);
+	void SavePGM(const char *out_path, const long double my_min, const long double my_max);
+	void SavePNG(const char *out_path, const long double my_min, const long double my_max);
+	void SaveDATA(const char *out_path);
 
-	void computeConnected(double * img_ptr, const unsigned int x, const unsigned int y, int *my_sets, unsigned int* number_of_labeled, bool* was_visited, const int number_of_labels);
+	void computeConnected(long double * img_ptr, const unsigned int x, const unsigned int y, int *my_sets, unsigned int* number_of_labeled, bool* was_visited, const int number_of_labels);
 	inline void increaseSetSize(int * my_labels, const int equiv_A, const int equiv_B, const int max_number_of_labels);
-	unsigned int * connectedSets_Iterative(double * img_ptr, int * my_sets);
-	unsigned int * connectedSets_Dynamic(double * img_ptr, int * my_sets);
+	unsigned int * connectedSets_Iterative(long double * img_ptr, int * my_sets);
+	unsigned int * connectedSets_Dynamic(long double * img_ptr, int * my_sets);
 
-	void lengthFilter(double * img_ptr, const unsigned int threshold_length, CONNECTED_ALG my_connected_algorithm = CONN_ITER);
+	void lengthFilter(long double * img_ptr, const unsigned int threshold_length, CONNECTED_ALG my_connected_algorithm = CONN_ITER);
 
-	inline unsigned char erosionMask(double * erode_ptr, const int pos_x, const int pos_y);
-	void erode(double * img_src);
+	inline unsigned char erosionMask(long double * erode_ptr, const int pos_x, const int pos_y);
+	void erode(long double * img_src);
 	
-	inline unsigned char dilMask(double * mask_dil_ptr, const unsigned int pos_x, const unsigned int pos_y);
+	inline unsigned char dilMask(long double * mask_dil_ptr, const unsigned int pos_x, const unsigned int pos_y);
 	void fillMask();
 
 	void computeMaskFOV();
@@ -257,10 +260,10 @@ private:
 	bool regionFilling5(const unsigned int pos_x, const unsigned int pos_y);
 	bool regionFilling3(const unsigned int pos_x, const unsigned int pos_y);
 
-	double threshold_by_Otsu(const double min, const double max);
-	double threshold_by_Ridler_and_Calvard(const double min_intensity, const double max_intensity);
+	long double threshold_by_Otsu(const long double min, const long double max);
+	long double threshold_by_Ridler_and_Calvard(const long double min_intensity, const long double max_intensity);
 
-	PIX_PAIR * computeSkeletonGraph(double * skl_tmp, const unsigned int pos_x, const unsigned int pos_y, int *nivel, const unsigned char *lutabla, bool *was_visited);
+	PIX_PAIR * computeSkeletonGraph(long double * skl_tmp, const unsigned int pos_x, const unsigned int pos_y, int *nivel, const unsigned char *lutabla, bool *was_visited);
 
 	void deleteSkeletonGraph(PIX_PAIR *graph_root);
 	void extractSkeletonFeatures();
@@ -268,10 +271,10 @@ private:
 	PIX_PAIR * copySkeletonGraph(PIX_PAIR * src_graph_root);
 	void copyFrom(const IMGCONT & img_src);
 
-	inline unsigned char sklMask(double * skl_temp, const unsigned int pos_x, const unsigned int pos_y);
+	inline unsigned char sklMask(long double * skl_temp, const unsigned int pos_x, const unsigned int pos_y);
 	void computeSkeleton();
 
-	inline double linearInterpolation(const unsigned int pos_i, const unsigned int pos_j, const double mapping_y, const double mapping_x);
+	inline long double linearInterpolation(const unsigned int pos_i, const unsigned int pos_j, const long double mapping_y, const long double mapping_x);
 };
 
 #endif // IMGCONT_H_INCLUDED
